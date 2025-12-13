@@ -715,7 +715,8 @@ const downloadZip = async (storeData: StoreData) => {
     URL.revokeObjectURL(url);
 };
 
-const importZip = async (file: File): Promise<Brand[]> => {
+// Updated importZip to use uploadFileToStorage for assets sequentially
+const importZip = async (file: File, onProgress?: (msg: string) => void): Promise<Brand[]> => {
     const zip = new JSZip();
     let loadedZip;
     try {
@@ -726,16 +727,6 @@ const importZip = async (file: File): Promise<Brand[]> => {
     
     const newBrands: Record<string, Brand> = {};
     
-    // Helper to get Base64 from ZipObj
-    const getBase64 = async (zipObj: any): Promise<string> => {
-        const blob = await zipObj.async("blob");
-        return new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-        });
-    };
-
     // Helper: Normalize path to avoid Windows/Mac slash issues
     const getCleanPath = (filename: string) => filename.replace(/\\/g, '/');
 
@@ -757,8 +748,50 @@ const importZip = async (file: File): Promise<Brand[]> => {
         }
     }
 
+    // Helper: Determine MIME type
+    const getMimeType = (filename: string) => {
+        const ext = filename.split('.').pop()?.toLowerCase();
+        if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+        if (ext === 'png') return 'image/png';
+        if (ext === 'webp') return 'image/webp';
+        if (ext === 'gif') return 'image/gif';
+        if (ext === 'mp4') return 'video/mp4';
+        if (ext === 'webm') return 'video/webm';
+        if (ext === 'pdf') return 'application/pdf';
+        return 'application/octet-stream';
+    };
+
+    // Helper: Process Asset (Upload to Cloud if available to save JSON size)
+    const processAsset = async (zipObj: any, filename: string): Promise<string> => {
+        const blob = await zipObj.async("blob");
+        
+        // Try Cloud Upload First (To keep JSON small)
+        if (supabase) {
+             try {
+                 const mimeType = getMimeType(filename);
+                 // Sanitize filename
+                 const safeName = filename.replace(/[^a-z0-9._-]/gi, '_');
+                 // Create File object
+                 const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType });
+                 // Upload sequentially (this function is called inside sequential loop)
+                 const url = await uploadFileToStorage(fileToUpload);
+                 return url;
+             } catch (e) {
+                 console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e);
+             }
+        }
+
+        // Fallback Base64 (Only if offline or upload failed)
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+        });
+    };
+
     // Iterate files
     const filePaths = Object.keys(loadedZip.files);
+    let processedCount = 0;
     
     for (const rawPath of filePaths) {
         let path = getCleanPath(rawPath);
@@ -781,6 +814,9 @@ const importZip = async (file: File): Promise<Brand[]> => {
         // Skip root files if any (files not inside a Brand folder)
         if (parts.length < 2) continue;
 
+        processedCount++;
+        if (onProgress && processedCount % 5 === 0) onProgress(`Processing item ${processedCount}/${validFiles.length}...`);
+
         const brandName = parts[0];
 
         // Init Brand
@@ -797,8 +833,8 @@ const importZip = async (file: File): Promise<Brand[]> => {
              const fileName = parts[1].toLowerCase();
              // Parse brand logo
              if (fileName.includes('brand_logo') || fileName.includes('logo')) {
-                  const b64 = await getBase64(fileObj);
-                  newBrands[brandName].logoUrl = b64;
+                  const url = await processAsset(fileObj, parts[1]);
+                  newBrands[brandName].logoUrl = url;
              }
              // Parse Brand JSON metadata if exists
              if (fileName.endsWith('.json') && fileName.includes('brand')) {
@@ -872,26 +908,26 @@ const importZip = async (file: File): Promise<Brand[]> => {
         }
         // Handle Images
         else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
-             const b64 = await getBase64(fileObj);
+             const url = await processAsset(fileObj, parts.slice(3).join('_'));
              if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
-                 product.imageUrl = b64;
+                 product.imageUrl = url;
              } else {
-                 product.galleryUrls = [...(product.galleryUrls || []), b64];
+                 product.galleryUrls = [...(product.galleryUrls || []), url];
              }
         }
         // Handle Videos
         else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
-            const b64 = await getBase64(fileObj);
-            product.videoUrls = [...(product.videoUrls || []), b64];
+            const url = await processAsset(fileObj, parts.slice(3).join('_'));
+            product.videoUrls = [...(product.videoUrls || []), url];
         }
         // Handle Manuals
         else if (lowerFile.endsWith('.pdf')) {
-             const b64 = await getBase64(fileObj);
+             const url = await processAsset(fileObj, parts.slice(3).join('_'));
              product.manuals?.push({
                  id: generateId('man'),
                  title: fileName.replace('.pdf', '').replace(/_/g, ' '),
                  images: [],
-                 pdfUrl: b64,
+                 pdfUrl: url,
                  thumbnailUrl: '' 
              });
         }
@@ -2064,6 +2100,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [localData, setLocalData] = useState<StoreData | null>(storeData);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [importProcessing, setImportProcessing] = useState(false);
+  const [importProgress, setImportProgress] = useState<string>('');
   const [exportProcessing, setExportProcessing] = useState(false);
 
   const availableTabs = [
@@ -2259,7 +2296,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       return date.toLocaleDateString();
   };
 
-  const importZip = async (file: File): Promise<Brand[]> => {
+const importZip = async (file: File, onProgress?: (msg: string) => void): Promise<Brand[]> => {
     const zip = new JSZip();
     let loadedZip;
     try {
@@ -2270,21 +2307,10 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
     
     const newBrands: Record<string, Brand> = {};
     
-    // Helper to get Base64 from ZipObj
-    const getBase64 = async (zipObj: any): Promise<string> => {
-        const blob = await zipObj.async("blob");
-        return new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-        });
-    };
-
     // Helper: Normalize path to avoid Windows/Mac slash issues
     const getCleanPath = (filename: string) => filename.replace(/\\/g, '/');
 
     // 1. Detect Root Wrapper (e.g. user zipped a folder "Backup" containing Brands)
-    // Filter valid files (ignore Mac junk)
     const validFiles = Object.keys(loadedZip.files).filter(path => {
         return !loadedZip.files[path].dir && !path.includes('__MACOSX') && !path.includes('.DS_Store');
     });
@@ -2292,7 +2318,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
     let rootPrefix = "";
     if (validFiles.length > 0) {
         const firstFileParts = getCleanPath(validFiles[0]).split('/').filter(p => p);
-        // If the first file has depth > 1, checking if the first folder is common to ALL files
         if (firstFileParts.length > 1) {
             const possibleRoot = firstFileParts[0];
             const allHaveRoot = validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'));
@@ -2303,8 +2328,50 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
         }
     }
 
+    // Helper: Determine MIME type
+    const getMimeType = (filename: string) => {
+        const ext = filename.split('.').pop()?.toLowerCase();
+        if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+        if (ext === 'png') return 'image/png';
+        if (ext === 'webp') return 'image/webp';
+        if (ext === 'gif') return 'image/gif';
+        if (ext === 'mp4') return 'video/mp4';
+        if (ext === 'webm') return 'video/webm';
+        if (ext === 'pdf') return 'application/pdf';
+        return 'application/octet-stream';
+    };
+
+    // Helper: Process Asset (Upload to Cloud if available to save JSON size)
+    const processAsset = async (zipObj: any, filename: string): Promise<string> => {
+        const blob = await zipObj.async("blob");
+        
+        // Try Cloud Upload First (To keep JSON small)
+        if (supabase) {
+             try {
+                 const mimeType = getMimeType(filename);
+                 // Sanitize filename
+                 const safeName = filename.replace(/[^a-z0-9._-]/gi, '_');
+                 // Create File object
+                 const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType });
+                 // Upload sequentially (this function is called inside sequential loop)
+                 const url = await uploadFileToStorage(fileToUpload);
+                 return url;
+             } catch (e) {
+                 console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e);
+             }
+        }
+
+        // Fallback Base64 (Only if offline or upload failed)
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+        });
+    };
+
     // Iterate files
     const filePaths = Object.keys(loadedZip.files);
+    let processedCount = 0;
     
     for (const rawPath of filePaths) {
         let path = getCleanPath(rawPath);
@@ -2327,6 +2394,9 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
         // Skip root files if any (files not inside a Brand folder)
         if (parts.length < 2) continue;
 
+        processedCount++;
+        if (onProgress && processedCount % 5 === 0) onProgress(`Processing item ${processedCount}/${validFiles.length}...`);
+
         const brandName = parts[0];
 
         // Init Brand
@@ -2343,8 +2413,8 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
              const fileName = parts[1].toLowerCase();
              // Parse brand logo
              if (fileName.includes('brand_logo') || fileName.includes('logo')) {
-                  const b64 = await getBase64(fileObj);
-                  newBrands[brandName].logoUrl = b64;
+                  const url = await processAsset(fileObj, parts[1]);
+                  newBrands[brandName].logoUrl = url;
              }
              // Parse Brand JSON metadata if exists
              if (fileName.endsWith('.json') && fileName.includes('brand')) {
@@ -2418,26 +2488,26 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
         }
         // Handle Images
         else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
-             const b64 = await getBase64(fileObj);
+             const url = await processAsset(fileObj, parts.slice(3).join('_'));
              if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
-                 product.imageUrl = b64;
+                 product.imageUrl = url;
              } else {
-                 product.galleryUrls = [...(product.galleryUrls || []), b64];
+                 product.galleryUrls = [...(product.galleryUrls || []), url];
              }
         }
         // Handle Videos
         else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
-            const b64 = await getBase64(fileObj);
-            product.videoUrls = [...(product.videoUrls || []), b64];
+            const url = await processAsset(fileObj, parts.slice(3).join('_'));
+            product.videoUrls = [...(product.videoUrls || []), url];
         }
         // Handle Manuals
         else if (lowerFile.endsWith('.pdf')) {
-             const b64 = await getBase64(fileObj);
+             const url = await processAsset(fileObj, parts.slice(3).join('_'));
              product.manuals?.push({
                  id: generateId('man'),
                  title: fileName.replace('.pdf', '').replace(/_/g, ' '),
                  images: [],
-                 pdfUrl: b64,
+                 pdfUrl: url,
                  thumbnailUrl: '' 
              });
         }
@@ -3137,12 +3207,12 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                    <ul className="list-disc pl-4 mt-2 space-y-1 text-[10px] text-slate-500 font-bold">
                                        <li>Folder Structure: <code>Brand/Category/Product/</code></li>
                                        <li>Place images (.jpg/.png) & manuals (.pdf) inside product folders.</li>
-                                       <li>Images & PDFs are automatically converted.</li>
+                                       <li>Images & PDFs are uploaded to Cloud Storage sequentially.</li>
                                    </ul>
                                </div>
-                               <label className={`w-full py-4 ${importProcessing ? 'bg-slate-300 cursor-wait' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl`}>
+                               <label className={`w-full py-4 ${importProcessing ? 'bg-slate-300 cursor-wait' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl relative overflow-hidden`}>
                                    {importProcessing ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16} />} 
-                                   {importProcessing ? 'Processing Backup...' : 'Import Data from ZIP'}
+                                   <span className="relative z-10">{importProcessing ? importProgress || 'Processing...' : 'Import Data from ZIP'}</span>
                                    <input 
                                      type="file" 
                                      accept=".zip" 
@@ -3152,8 +3222,9 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                          if(e.target.files && e.target.files[0]) {
                                              if(confirm("This will merge imported data into your current inventory. Continue?")) {
                                                  setImportProcessing(true);
+                                                 setImportProgress('Initializing...');
                                                  try {
-                                                     const newBrands = await importZip(e.target.files[0]);
+                                                     const newBrands = await importZip(e.target.files[0], (msg) => setImportProgress(msg));
                                                      // Merge Logic: Add new brands, or merge categories if brand exists
                                                      let mergedBrands = [...localData.brands];
                                                      
@@ -3193,6 +3264,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                                      alert("Failed to read ZIP file. Ensure structure is correct.");
                                                  } finally {
                                                      setImportProcessing(false);
+                                                     setImportProgress('');
                                                  }
                                              }
                                          }
