@@ -1,9 +1,14 @@
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  esbuild: {
+    target: "es2022"
+  },
   build: {
+    target: "es2022",
     // Increase the chunk size warning limit to 1600kb (default is 500kb)
     // This accommodates larger libraries like PDF.js and Supabase without warning.
     chunkSizeWarningLimit: 1600,
