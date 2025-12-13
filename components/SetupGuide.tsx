@@ -1,13 +1,13 @@
 
 import React, { useState } from 'react';
-import { X, Server, Copy, Check, ArrowRight, ExternalLink, ShieldCheck, Database, Key, Settings, Layers, Smartphone, Globe, Cpu, Cloud, ToggleRight, CloudLightning, Book, AlertTriangle, PlayCircle, FolderOpen, Lock, MousePointer, Terminal, Package, HardDrive, Box } from 'lucide-react';
+import { X, Server, Copy, Check, ArrowRight, ExternalLink, ShieldCheck, Database, Key, Settings, Layers, Smartphone, Globe, Cpu, Cloud, ToggleRight, CloudLightning, Book, AlertTriangle, PlayCircle, FolderOpen, Lock, MousePointer, Terminal, Package, HardDrive, Box, Code, Hammer } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
 }
 
 const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'local' | 'split' | 'vercel' | 'supabase'>('supabase');
+  const [activeTab, setActiveTab] = useState<'local' | 'build' | 'vercel' | 'supabase'>('supabase');
   const [copiedStep, setCopiedStep] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, stepId: string) => {
@@ -43,7 +43,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
              </div>
              <h1 className="text-2xl font-black tracking-tight">System Setup Manual</h1>
            </div>
-           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest pl-12">Zero-to-Hero Guide v2.4</p>
+           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest pl-12">Zero-to-Hero Guide v2.5</p>
         </div>
         <button onClick={onClose} className="p-3 hover:bg-white/10 rounded-full transition-colors">
           <X size={28} />
@@ -84,13 +84,13 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
            </button>
 
            <button 
-             onClick={() => setActiveTab('split')}
-             className={`p-3 rounded-xl border text-left mb-3 transition-all group relative overflow-hidden ${activeTab === 'split' ? 'border-purple-600 bg-purple-50 shadow-md' : 'border-transparent hover:bg-slate-50'}`}
+             onClick={() => setActiveTab('build')}
+             className={`p-3 rounded-xl border text-left mb-3 transition-all group relative overflow-hidden ${activeTab === 'build' ? 'border-purple-600 bg-purple-50 shadow-md' : 'border-transparent hover:bg-slate-50'}`}
            >
               <div className="flex items-center gap-3 relative z-10">
-                 <Layers size={18} className={activeTab === 'split' ? 'text-purple-600' : 'text-slate-400'} />
+                 <Hammer size={18} className={activeTab === 'build' ? 'text-purple-600' : 'text-slate-400'} />
                  <div>
-                    <span className={`font-bold text-sm block ${activeTab === 'split' ? 'text-purple-900' : 'text-slate-600'}`}>3. Code Build</span>
+                    <span className={`font-bold text-sm block ${activeTab === 'build' ? 'text-purple-900' : 'text-slate-600'}`}>3. Code Build</span>
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">The Frontend</span>
                  </div>
               </div>
@@ -118,7 +118,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
               <div className="md:hidden flex border-b border-slate-200 overflow-x-auto bg-white shrink-0">
                  <button onClick={() => setActiveTab('supabase')} className={`flex-1 p-4 font-bold text-xs uppercase tracking-wider whitespace-nowrap border-b-4 transition-all ${activeTab === 'supabase' ? 'text-green-600 border-green-600 bg-green-50' : 'text-slate-500 border-transparent'}`}>1. Cloud</button>
                  <button onClick={() => setActiveTab('local')} className={`flex-1 p-4 font-bold text-xs uppercase tracking-wider whitespace-nowrap border-b-4 transition-all ${activeTab === 'local' ? 'text-blue-600 border-blue-600 bg-blue-50' : 'text-slate-500 border-transparent'}`}>2. PC Hub</button>
-                 <button onClick={() => setActiveTab('split')} className={`flex-1 p-4 font-bold text-xs uppercase tracking-wider whitespace-nowrap border-b-4 transition-all ${activeTab === 'split' ? 'text-purple-600 border-purple-600 bg-purple-50' : 'text-slate-500 border-transparent'}`}>3. Build</button>
+                 <button onClick={() => setActiveTab('build')} className={`flex-1 p-4 font-bold text-xs uppercase tracking-wider whitespace-nowrap border-b-4 transition-all ${activeTab === 'build' ? 'text-purple-600 border-purple-600 bg-purple-50' : 'text-slate-500 border-transparent'}`}>3. Build</button>
                  <button onClick={() => setActiveTab('vercel')} className={`flex-1 p-4 font-bold text-xs uppercase tracking-wider whitespace-nowrap border-b-4 transition-all ${activeTab === 'vercel' ? 'text-black border-black bg-slate-100' : 'text-slate-500 border-transparent'}`}>4. Live</button>
               </div>
 
@@ -130,6 +130,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                        <h2 className="text-4xl font-black text-slate-900 mb-2">Supabase Cloud Setup</h2>
                        <p className="text-slate-600 text-lg">
                            The <strong>Backend</strong> of your Kiosk. It handles the Database (Products, Fleet) and Storage (Images, Videos).
+                           Follow these steps to create your free database.
                        </p>
                     </div>
 
@@ -141,16 +142,16 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                             <div className="flex-1">
                                 <h3 className="text-xl font-bold text-slate-900 mb-2">Create Account & Project</h3>
                                 <p className="text-slate-600 mb-4 text-sm">
-                                    Supabase is free for small projects. We need to create a "container" for your kiosk data.
+                                    Supabase provides the PostgreSQL database and file storage for free.
                                 </p>
                                 <ol className="list-decimal pl-5 space-y-2 text-sm text-slate-700 font-medium bg-slate-50 p-4 rounded-xl border border-slate-100">
                                     <li>Go to <a href="https://supabase.com" target="_blank" className="text-blue-600 hover:underline font-bold">supabase.com</a> and click <strong>"Start your project"</strong>.</li>
-                                    <li>Sign in with GitHub (easiest) or Email.</li>
-                                    <li>Click <strong>"New Project"</strong>.</li>
-                                    <li><strong>Name:</strong> <code className="bg-white px-1 border rounded">Kiosk Pro</code></li>
-                                    <li><strong>Database Password:</strong> Generate a strong one and <strong>SAVE IT</strong> somewhere safe.</li>
-                                    <li><strong>Region:</strong> Choose the one physically closest to you.</li>
-                                    <li>Click <strong>"Create new project"</strong> and wait ~2 minutes for it to build.</li>
+                                    <li>Sign in using GitHub (Recommended) or Email.</li>
+                                    <li>Click the <strong>"New Project"</strong> button.</li>
+                                    <li><strong>Name:</strong> Type <code className="bg-white px-1 border rounded">Kiosk Pro</code></li>
+                                    <li><strong>Database Password:</strong> Click "Generate" and <strong>COPY IT</strong> to a safe place. You cannot see it again.</li>
+                                    <li><strong>Region:</strong> Select the region closest to your physical store (e.g., US East, London, Singapore) for fastest speed.</li>
+                                    <li>Click <strong>"Create new project"</strong>. Setup takes about 2 minutes.</li>
                                 </ol>
                             </div>
                         </div>
@@ -159,9 +160,9 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                         <div className="flex gap-6">
                             <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-lg">2</div>
                             <div className="flex-1">
-                                <h3 className="text-xl font-bold text-slate-900 mb-2">Get API Keys (Detailed)</h3>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2">Get API Credentials</h3>
                                 <p className="text-slate-600 mb-4 text-sm">
-                                    This is the most critical step. Your kiosk needs these two keys to log in.
+                                    Your kiosk connects to the database using these keys. Treat them like passwords.
                                 </p>
                                 
                                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
@@ -173,19 +174,23 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                                         <div className="flex items-start gap-3">
                                             <div className="bg-slate-100 p-2 rounded text-slate-600"><Settings size={18} /></div>
                                             <div>
-                                                <div className="font-bold text-sm text-slate-800">1. Click Project Settings</div>
-                                                <div className="text-xs text-slate-500">Look at the <strong>Bottom Left</strong> of the screen. It is a Gear Icon.</div>
+                                                <div className="font-bold text-sm text-slate-800">1. Project Settings</div>
+                                                <div className="text-xs text-slate-500">Look for the <strong>Gear Icon</strong> at the bottom of the left sidebar.</div>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-3">
                                             <div className="bg-slate-100 p-2 rounded text-slate-600"><Key size={18} /></div>
                                             <div>
-                                                <div className="font-bold text-sm text-slate-800">2. Click API</div>
-                                                <div className="text-xs text-slate-500">In the list that appears, click "API" under the configuration section.</div>
+                                                <div className="font-bold text-sm text-slate-800">2. API Configuration</div>
+                                                <div className="text-xs text-slate-500">Click <strong>"API"</strong> in the list of settings sections.</div>
                                             </div>
                                         </div>
                                         <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-800">
-                                            <strong>Save These!</strong> You will see <code>Project URL</code> and <code>anon / public</code> key. Keep this tab open.
+                                            <strong>Save These Two Values:</strong>
+                                            <ul className="list-disc pl-4 mt-1 space-y-1">
+                                                <li><code>Project URL</code> (starts with https://...)</li>
+                                                <li><code>anon public</code> key (long string starting with eyJ...)</li>
+                                            </ul>
                                         </div>
                                     </div>
                                 </div>
@@ -198,16 +203,18 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                             <div className="flex-1">
                                 <h3 className="text-xl font-bold text-slate-900 mb-2">Run Database Script</h3>
                                 <p className="text-slate-600 mb-4 text-sm">
-                                    We need to build the tables. Copy this code, go to the <strong>SQL Editor</strong> (Icon on left sidebar), paste it, and click <strong>Run</strong>.
+                                    We need to create the tables for Products and Devices.
+                                    <br/>
+                                    Go to the <strong>SQL Editor</strong> (Paper icon on left bar), click <strong>"New Query"</strong>, paste the code below, and click <strong>Run</strong>.
                                 </p>
                                 
                                 <div className="p-4 bg-yellow-50 text-yellow-800 border-l-4 border-yellow-400 rounded-r-lg mb-4 text-xs font-medium">
-                                    <span className="font-bold uppercase">Note:</span> This script sets up open permissions for ease of use. It includes the new Fleet columns and Setup PIN configuration.
+                                    <span className="font-bold uppercase">Important:</span> This script enables "Row Level Security" but creates open policies for the kiosk to function without user login.
                                 </div>
 
                                 <CodeBlock 
                                     id="sql-script"
-                                    label="SQL Editor"
+                                    label="SQL Query"
                                     code={`-- 1. Create Storage Bucket for Media
 insert into storage.buckets (id, name, public)
 values ('kiosk-media', 'kiosk-media', true)
@@ -265,8 +272,6 @@ alter table public.store_config enable row level security;
 alter table public.kiosks enable row level security;
 
 -- 7. Create OPEN Policies (Allows Kiosk to Read/Write without Login)
--- Note: In production, you would restrict this, but for Kiosk setups this is standard.
-
 -- Config Policies
 create policy "Enable read access for all users"
 on public.store_config for select
@@ -305,101 +310,133 @@ with check (true);`}
                          <div className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-widest mb-4">Step 2: Local Server</div>
                          <h2 className="text-4xl font-black text-slate-900 mb-2">PC Hub Setup</h2>
                          <p className="text-slate-600 text-lg">
-                             Running the kiosk locally on a PC is great for <strong>testing</strong> or for a master control station.
+                             Running the kiosk locally on a PC is useful for <strong>testing</strong>, development, or acting as a robust offline master station.
                          </p>
                       </div>
 
                       <div className="space-y-8">
-                          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                              <h4 className="font-bold text-slate-900 mb-2">Prerequisites</h4>
-                              <ul className="list-disc pl-5 text-sm text-slate-600 space-y-1">
-                                  <li>Node.js installed (v18 or higher)</li>
-                                  <li>Git installed (optional, but recommended)</li>
+                          <div className="p-6 bg-slate-50 border border-slate-200 rounded-xl">
+                              <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2"><Box size={18}/> Prerequisites</h4>
+                              <ul className="list-none space-y-3 text-sm text-slate-600">
+                                  <li className="flex items-center gap-2">
+                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                      <span><strong>Node.js:</strong> You need version 18 or higher. <a href="https://nodejs.org" target="_blank" className="text-blue-600 underline">Download Here</a>.</span>
+                                  </li>
+                                  <li className="flex items-center gap-2">
+                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                      <span><strong>Terminal:</strong> PowerShell (Windows) or Terminal (Mac).</span>
+                                  </li>
                               </ul>
                           </div>
 
                           <div>
-                              <h3 className="font-bold text-slate-900 mb-2">1. Connect Code</h3>
-                              <p className="text-sm text-slate-600 mb-2">Open your terminal/command prompt in the project folder and run:</p>
+                              <h3 className="font-bold text-slate-900 mb-2 text-lg">1. Prepare the Code</h3>
+                              <p className="text-sm text-slate-600 mb-3">
+                                  Download the project files to a folder on your computer (e.g., <code>Documents/KioskPro</code>).
+                                  Open your terminal in that folder.
+                              </p>
+                              <div className="bg-slate-100 p-3 rounded text-xs font-mono text-slate-600 mb-2 border border-slate-200">
+                                  cd Documents/KioskPro
+                              </div>
+                              <p className="text-sm text-slate-600 mb-2">Install dependencies:</p>
                               <CodeBlock id="npm-install" code="npm install" />
                           </div>
 
                           <div>
-                              <h3 className="font-bold text-slate-900 mb-2">2. Configure Environment</h3>
+                              <h3 className="font-bold text-slate-900 mb-2 text-lg">2. Connect to Cloud</h3>
                               <p className="text-sm text-slate-600 mb-2">
-                                  Create a file named <code>.env</code> in the root folder. Paste your Supabase keys from Step 1:
+                                  Create a new file named <code>.env</code> in the root folder (next to package.json).
+                                  Paste your Supabase keys from Step 1 inside it:
                               </p>
+                              <div className="p-4 bg-yellow-50 text-yellow-800 border-l-4 border-yellow-400 rounded-r-lg mb-4 text-xs font-medium">
+                                  <strong>Windows Users:</strong> If you can't create a file starting with a dot, name it <code>.env.</code> (with a trailing dot) and Windows will fix it automatically.
+                              </div>
                               <CodeBlock 
                                 id="env-file"
-                                label=".env" 
+                                label=".env Content" 
                                 code={`VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here`} 
+VITE_SUPABASE_ANON_KEY=your-long-anon-key-string`} 
                               />
                           </div>
 
                           <div>
-                              <h3 className="font-bold text-slate-900 mb-2">3. Start Server</h3>
+                              <h3 className="font-bold text-slate-900 mb-2 text-lg">3. Launch System</h3>
+                              <p className="text-sm text-slate-600 mb-2">Start the development server:</p>
                               <CodeBlock id="npm-run-dev" code="npm run dev" />
-                              <p className="text-sm text-slate-600 mt-2">Open your browser to the localhost link shown (usually http://localhost:5173).</p>
+                              <p className="text-sm text-slate-600 mt-4 leading-relaxed">
+                                  You will see a link like <code>http://localhost:5173</code>. 
+                                  <br/>Open this in Chrome. You are now running the full Kiosk system locally!
+                              </p>
                           </div>
                       </div>
                   </div>
               )}
 
-              {/* === TAB 3: SPLIT / REPLIT === */}
-              {activeTab === 'split' && (
+              {/* === TAB 3: CODE BUILD / FRONTEND === */}
+              {activeTab === 'build' && (
                   <div className="p-8 animate-fade-in">
                       <div className="mb-8 border-b border-slate-100 pb-8">
-                         <div className="inline-block px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-[10px] font-black uppercase tracking-widest mb-4">Step 3: Cloud IDE</div>
-                         <h2 className="text-4xl font-black text-slate-900 mb-2">Web-Based Editing</h2>
+                         <div className="inline-block px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-[10px] font-black uppercase tracking-widest mb-4">Step 3: Code Build</div>
+                         <h2 className="text-4xl font-black text-slate-900 mb-2">The Frontend Architecture</h2>
                          <p className="text-slate-600 text-lg">
-                             If you don't have a powerful PC, you can edit and run this entire system in the browser using Replit or CodeSandbox.
+                             This section explains how to modify the code and build it for production if you are self-hosting.
                          </p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <a href="https://repl.it" target="_blank" className="block group">
-                              <div className="bg-slate-900 text-white p-6 rounded-2xl h-full transition-transform hover:-translate-y-1">
-                                  <div className="mb-4 bg-white/10 w-12 h-12 rounded-lg flex items-center justify-center">
-                                      <Terminal size={24} />
+                      <div className="space-y-12">
+                          
+                          <div className="flex gap-6">
+                              <div className="flex-1">
+                                  <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2"><Code size={20} className="text-purple-600"/> Development Environment</h3>
+                                  <p className="text-sm text-slate-600 mb-4">
+                                      We recommend using <strong>Visual Studio Code (VS Code)</strong>. It provides syntax highlighting for React and TypeScript.
+                                  </p>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                          <div className="font-bold text-slate-800 text-sm mb-2">Key Files</div>
+                                          <ul className="text-xs space-y-2 text-slate-600 font-mono">
+                                              <li>/components <span className="text-slate-400">// UI Elements (KioskApp, Admin)</span></li>
+                                              <li>/services <span className="text-slate-400">// Database logic</span></li>
+                                              <li>/types.ts <span className="text-slate-400">// Data models</span></li>
+                                              <li>App.tsx <span className="text-slate-400">// Main Router</span></li>
+                                          </ul>
+                                      </div>
+                                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                          <div className="font-bold text-slate-800 text-sm mb-2">Tech Stack</div>
+                                          <ul className="text-xs space-y-2 text-slate-600 font-mono">
+                                              <li>React 19</li>
+                                              <li>TypeScript</li>
+                                              <li>Tailwind CSS</li>
+                                              <li>Vite (Bundler)</li>
+                                          </ul>
+                                      </div>
                                   </div>
-                                  <h3 className="text-xl font-bold mb-2">Option A: Replit</h3>
-                                  <p className="text-sm text-slate-400 mb-4">Best for beginners. It gives you a full VS Code environment in the browser.</p>
-                                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-400 group-hover:text-white transition-colors">
-                                      Start Replit <ArrowRight size={14} />
-                                  </div>
-                              </div>
-                          </a>
-
-                          <a href="https://codesandbox.io" target="_blank" className="block group">
-                              <div className="bg-black text-white p-6 rounded-2xl h-full transition-transform hover:-translate-y-1 border border-slate-800">
-                                  <div className="mb-4 bg-white/10 w-12 h-12 rounded-lg flex items-center justify-center">
-                                      <Box size={24} />
-                                  </div>
-                                  <h3 className="text-xl font-bold mb-2">Option B: CodeSandbox</h3>
-                                  <p className="text-sm text-gray-400 mb-4">Instant preview. Great for quick edits and sharing with the team.</p>
-                                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-yellow-400 group-hover:text-white transition-colors">
-                                      Start Sandbox <ArrowRight size={14} />
-                                  </div>
-                              </div>
-                          </a>
-                      </div>
-
-                      <div className="mt-8 p-6 bg-purple-50 rounded-2xl border border-purple-100">
-                          <h4 className="font-bold text-purple-900 mb-2 flex items-center gap-2"><Key size={16}/> Secrets Management</h4>
-                          <p className="text-sm text-purple-800 mb-4">
-                              When using online IDEs, <strong>do not</strong> paste keys in code. Look for a "Secrets" or "Environment Variables" lock icon on the sidebar.
-                          </p>
-                          <div className="bg-white p-3 rounded-lg border border-purple-200">
-                              <div className="flex justify-between text-xs font-mono text-slate-600 mb-1">
-                                  <span>Key</span>
-                                  <span>Value</span>
-                              </div>
-                              <div className="border-t border-slate-100 pt-1 flex justify-between text-xs font-bold text-slate-800">
-                                  <span>VITE_SUPABASE_URL</span>
-                                  <span className="text-slate-400">...</span>
                               </div>
                           </div>
+
+                          <div className="flex gap-6">
+                              <div className="flex-1">
+                                  <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2"><Package size={20} className="text-purple-600"/> Building for Production</h3>
+                                  <p className="text-sm text-slate-600 mb-4">
+                                      If you want to host this on your own server (Apache, Nginx, IIS) instead of Vercel, you need to "Build" the static files.
+                                  </p>
+                                  
+                                  <div className="bg-slate-900 rounded-lg p-6 shadow-lg mb-4">
+                                      <div className="text-slate-400 text-xs font-bold uppercase mb-2">Terminal Command</div>
+                                      <code className="font-mono text-lg text-green-400">npm run build</code>
+                                  </div>
+
+                                  <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
+                                      <h4 className="font-bold text-purple-900 text-sm mb-1">Output Folder: <code>dist/</code></h4>
+                                      <p className="text-xs text-purple-800 leading-relaxed">
+                                          Running the command above creates a <code>dist</code> folder. This folder contains the optimized <code>index.html</code>, JavaScript, and CSS files.
+                                          <br/><br/>
+                                          <strong>Deployment:</strong> Simply upload the contents of <code>dist/</code> to any web server's public html folder.
+                                      </p>
+                                  </div>
+                              </div>
+                          </div>
+
                       </div>
                   </div>
               )}
@@ -408,57 +445,82 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here`}
               {activeTab === 'vercel' && (
                   <div className="p-8 animate-fade-in">
                       <div className="mb-8 border-b border-slate-100 pb-8">
-                         <div className="inline-block px-3 py-1 rounded-full bg-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-widest mb-4">Step 4: Deployment</div>
-                         <h2 className="text-4xl font-black text-slate-900 mb-2">Go Live with Vercel</h2>
+                         <div className="inline-block px-3 py-1 rounded-full bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest mb-4">Step 4: Go Live</div>
+                         <h2 className="text-4xl font-black text-slate-900 mb-2">Deploy with Vercel</h2>
                          <p className="text-slate-600 text-lg">
-                             Turn your code into a real URL (e.g., <code>my-kiosk.vercel.app</code>) that you can load on any tablet.
+                             Turn your code into a real URL (e.g., <code>my-kiosk.vercel.app</code>) accessible from any tablet worldwide.
                          </p>
                       </div>
 
-                      <div className="space-y-8">
+                      <div className="space-y-10">
                           <div className="flex gap-6 items-start">
-                              <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold shrink-0">1</div>
-                              <div>
-                                  <h4 className="font-bold text-slate-900 mb-1">Push to GitHub</h4>
-                                  <p className="text-sm text-slate-600">Ensure your code is saved in a GitHub repository.</p>
+                              <div className="w-10 h-10 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center font-bold shrink-0">1</div>
+                              <div className="flex-1">
+                                  <h4 className="font-bold text-slate-900 mb-1 text-lg">Push Code to GitHub</h4>
+                                  <p className="text-sm text-slate-600 mb-2">Vercel works best with GitHub. Create a repository and upload your code.</p>
+                                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs font-mono text-slate-600">
+                                      git init<br/>
+                                      git add .<br/>
+                                      git commit -m "Initial commit"<br/>
+                                      git branch -M main<br/>
+                                      git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git<br/>
+                                      git push -u origin main
+                                  </div>
                               </div>
                           </div>
 
                           <div className="flex gap-6 items-start">
-                              <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold shrink-0">2</div>
-                              <div>
-                                  <h4 className="font-bold text-slate-900 mb-1">Import to Vercel</h4>
-                                  <p className="text-sm text-slate-600 mb-3">Go to <a href="https://vercel.com" className="text-blue-600 hover:underline">vercel.com</a>, sign up, and click "Add New Project". Select your GitHub repo.</p>
-                              </div>
-                          </div>
-
-                          <div className="flex gap-6 items-start">
-                              <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold shrink-0">3</div>
-                              <div>
-                                  <h4 className="font-bold text-slate-900 mb-2">Add Environment Variables</h4>
+                              <div className="w-10 h-10 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center font-bold shrink-0">2</div>
+                              <div className="flex-1">
+                                  <h4 className="font-bold text-slate-900 mb-1 text-lg">Connect to Vercel</h4>
                                   <p className="text-sm text-slate-600 mb-3">
-                                      Before clicking Deploy, open the <strong>"Environment Variables"</strong> section. Add the keys from Supabase:
+                                      Go to <a href="https://vercel.com" target="_blank" className="text-blue-600 hover:underline font-bold">vercel.com</a> and sign up.
+                                      <br/>Click <strong>"Add New..."</strong> -> <strong>"Project"</strong>.
+                                      <br/>Select your GitHub repository from the list.
                                   </p>
-                                  <div className="bg-slate-100 p-3 rounded-lg border border-slate-200 text-xs font-mono">
-                                      <div className="flex justify-between mb-1">
-                                          <span className="font-bold text-slate-700">VITE_SUPABASE_URL</span>
-                                          <span className="text-slate-400">https://xyz...</span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                          <span className="font-bold text-slate-700">VITE_SUPABASE_ANON_KEY</span>
-                                          <span className="text-slate-400">eyJ...</span>
+                              </div>
+                          </div>
+
+                          <div className="flex gap-6 items-start">
+                              <div className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center font-bold shrink-0 shadow-lg ring-4 ring-slate-100">3</div>
+                              <div className="flex-1">
+                                  <h4 className="font-bold text-slate-900 mb-2 text-lg">Configure Environment Variables (CRITICAL)</h4>
+                                  <p className="text-sm text-slate-600 mb-4">
+                                      The cloud server needs to know your database keys. In the Vercel "Configure Project" screen, look for <strong>"Environment Variables"</strong>.
+                                  </p>
+                                  <div className="bg-red-50 border border-red-100 p-4 rounded-xl">
+                                      <p className="text-xs font-bold text-red-800 uppercase mb-2">Add these exactly as shown:</p>
+                                      <div className="space-y-2">
+                                          <div className="flex flex-col md:flex-row gap-2">
+                                              <span className="font-mono text-xs font-bold text-slate-700 bg-white px-2 py-1 rounded border">VITE_SUPABASE_URL</span>
+                                              <span className="font-mono text-xs text-slate-500 break-all">= https://your-project.supabase.co</span>
+                                          </div>
+                                          <div className="flex flex-col md:flex-row gap-2">
+                                              <span className="font-mono text-xs font-bold text-slate-700 bg-white px-2 py-1 rounded border">VITE_SUPABASE_ANON_KEY</span>
+                                              <span className="font-mono text-xs text-slate-500 break-all">= eyJxh... (your key)</span>
+                                          </div>
                                       </div>
                                   </div>
                               </div>
                           </div>
 
                           <div className="flex gap-6 items-start">
-                              <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold shrink-0"><Check size={16}/></div>
-                              <div>
-                                  <h4 className="font-bold text-slate-900 mb-1">Deploy & Install</h4>
-                                  <p className="text-sm text-slate-600">
-                                      Click Deploy. Once finished, visit the URL on your Tablet. Use Chrome -&gt; "Add to Home Screen" to install it as a fullscreen App.
+                              <div className="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center font-bold shrink-0 shadow-lg"><Check size={20}/></div>
+                              <div className="flex-1">
+                                  <h4 className="font-bold text-slate-900 mb-1 text-lg">Deploy & Install</h4>
+                                  <p className="text-sm text-slate-600 mb-4">
+                                      Click <strong>Deploy</strong>. Wait about 1 minute.
+                                      <br/>Once deployed, visit the URL on your Tablet.
                                   </p>
+                                  <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                      <h5 className="font-bold text-blue-900 text-sm mb-2 flex items-center gap-2"><Smartphone size={16}/> Install as App (Android/iOS)</h5>
+                                      <ol className="list-decimal pl-5 text-xs text-blue-800 space-y-1">
+                                          <li>Open the URL in Chrome (Android) or Safari (iOS).</li>
+                                          <li>Tap the Menu (Three dots) or Share button.</li>
+                                          <li>Select <strong>"Add to Home Screen"</strong>.</li>
+                                          <li>Launch from the new icon. It will open full-screen without browser bars.</li>
+                                      </ol>
+                                  </div>
                               </div>
                           </div>
                       </div>
