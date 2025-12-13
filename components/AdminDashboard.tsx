@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand } from '../types';
 import { resetStoreData } from '../services/geminiService';
@@ -35,11 +36,42 @@ const SystemDocumentation = () => {
 
     return (
         <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm animate-fade-in">
+            <style>{`
+                @keyframes dash {
+                  to { stroke-dashoffset: -20; }
+                }
+                .animate-dash {
+                  animation: dash 1s linear infinite;
+                }
+                @keyframes flow {
+                    0% { transform: translateX(0); opacity: 0; }
+                    50% { opacity: 1; }
+                    100% { transform: translateX(100px); opacity: 0; }
+                }
+                .packet {
+                    animation: flow 2s infinite ease-in-out;
+                }
+                @keyframes pulse-ring {
+                    0% { transform: scale(0.8); opacity: 0.5; }
+                    100% { transform: scale(2); opacity: 0; }
+                }
+                .radar-ring {
+                    animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+                }
+                @keyframes scroll-film {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .film-strip {
+                    animation: scroll-film 10s linear infinite;
+                }
+            `}</style>
+
             {/* Sidebar */}
             <div className="w-full md:w-64 bg-slate-50 border-r border-slate-200 p-4 shrink-0 overflow-y-auto hidden md:block">
                 <div className="mb-6 px-2">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">System Manual</h3>
-                    <p className="text-[10px] text-slate-500 font-medium">v2.4 Technical Reference</p>
+                    <p className="text-[10px] text-slate-500 font-medium">v2.5 Technical Reference</p>
                 </div>
                 <div className="space-y-1">
                     {sections.map(section => (
@@ -80,203 +112,391 @@ const SystemDocumentation = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-8 bg-white">
+            <div className="flex-1 overflow-y-auto p-6 md:p-12 bg-white scroll-smooth">
                 {activeSection === 'architecture' && (
-                    <div className="space-y-8 max-w-3xl">
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900 mb-4 flex items-center gap-3">
+                    <div className="space-y-8 max-w-4xl mx-auto">
+                        <div className="border-b border-slate-100 pb-6">
+                            <h2 className="text-3xl font-black text-slate-900 mb-2 flex items-center gap-3">
                                 <Network className="text-blue-600" size={32} /> Hybrid Cloud Architecture
                             </h2>
-                            <p className="text-slate-600 leading-relaxed text-sm">
-                                Kiosk Pro utilizes a <strong>"Local-First, Cloud-Sync"</strong> architecture designed for retail environments where internet stability cannot be guaranteed.
-                            </p>
+                            <p className="text-slate-500 font-medium">Local-First performance with Cloud synchronization.</p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                <h3 className="font-bold text-slate-900 mb-2 flex items-center gap-2"><HardDrive size={18} /> Local Storage</h3>
-                                <p className="text-xs text-slate-500 leading-relaxed">
-                                    Every device maintains a complete copy of the database (Products, Settings, Fleet) in its browser's IndexedDB/LocalStorage. This ensures the kiosk works <strong>instantly</strong> and <strong>offline</strong> without loading spinners.
-                                </p>
-                            </div>
-                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                <h3 className="font-bold text-slate-900 mb-2 flex items-center gap-2"><Cloud size={18} /> Cloud Sync</h3>
-                                <p className="text-xs text-slate-500 leading-relaxed">
-                                    The system connects to Supabase (PostgreSQL). It performs a "Heartbeat" every 60 seconds to push local telemetry and pull global configuration changes. Changes made in the Admin Hub broadcast immediately via WebSockets.
-                                </p>
+                        {/* Animated Architecture Diagram */}
+                        <div className="bg-slate-900 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                            <div className="relative z-10 flex items-center justify-between px-4 md:px-12 py-8">
+                                {/* Local Node */}
+                                <div className="flex flex-col items-center gap-4 z-20">
+                                    <div className="w-24 h-24 bg-slate-800 rounded-2xl border-2 border-blue-500 flex items-center justify-center shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+                                        <HardDrive size={40} className="text-blue-400" />
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-white font-bold uppercase tracking-widest text-sm">Local Device</div>
+                                        <div className="text-blue-400 text-[10px] font-mono">IndexedDB / Cache</div>
+                                    </div>
+                                </div>
+
+                                {/* Connection Lines */}
+                                <div className="flex-1 h-24 relative mx-4 flex items-center">
+                                    <svg className="w-full h-12 overflow-visible">
+                                        {/* Dashed Base Line */}
+                                        <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#334155" strokeWidth="2" strokeDasharray="6 6" />
+                                        
+                                        {/* Data Packets */}
+                                        <circle r="4" fill="#60a5fa" className="packet" style={{ animationDelay: '0s' }}>
+                                            <animateMotion dur="2s" repeatCount="indefinite" path="M0,6 L300,6" />
+                                        </circle>
+                                        <circle r="4" fill="#4ade80" className="packet" style={{ animationDelay: '1s' }}>
+                                            <animateMotion dur="2s" repeatCount="indefinite" path="M300,6 L0,6" />
+                                        </circle>
+                                    </svg>
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 px-3 py-1 rounded-full border border-slate-700 text-[10px] font-mono text-slate-400">
+                                        Sync (60s)
+                                    </div>
+                                </div>
+
+                                {/* Cloud Node */}
+                                <div className="flex flex-col items-center gap-4 z-20">
+                                    <div className="w-24 h-24 bg-slate-800 rounded-2xl border-2 border-green-500 flex items-center justify-center shadow-[0_0_30px_rgba(74,222,128,0.3)]">
+                                        <Database size={40} className="text-green-400" />
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-white font-bold uppercase tracking-widest text-sm">Supabase Cloud</div>
+                                        <div className="text-green-400 text-[10px] font-mono">PostgreSQL DB</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                            <h4 className="text-blue-800 font-bold text-xs uppercase mb-2">Technical Specs</h4>
-                            <ul className="space-y-1 text-[11px] text-blue-700 font-mono">
-                                <li>• Framework: React 19 + TypeScript + Vite</li>
-                                <li>• State: React State + LocalStorage Persistence</li>
-                                <li>• Database: Supabase (Postgres) with Row Level Security</li>
-                                <li>• Asset Storage: Public Buckets (Images/Videos)</li>
-                                <li>• Deployment: Vercel Edge Network (Global CDN)</li>
-                            </ul>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2"><HardDrive size={18} className="text-blue-600"/> The "Local-First" Strategy</h3>
+                                <p className="text-sm text-slate-600 leading-relaxed">
+                                    To ensure instant performance in retail environments with unstable WiFi, the kiosk <strong>never</strong> loads data directly from the cloud during customer interaction.
+                                </p>
+                                <ul className="space-y-2">
+                                    <li className="flex gap-3 text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 shrink-0"></div>
+                                        <span><strong>Instant Boot:</strong> Uses `localStorage` to load the full inventory in milliseconds.</span>
+                                    </li>
+                                    <li className="flex gap-3 text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 shrink-0"></div>
+                                        <span><strong>Zero Latency:</strong> Product images and videos are cached by the Service Worker.</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2"><RefreshCw size={18} className="text-green-600"/> Synchronization Logic</h3>
+                                <p className="text-sm text-slate-600 leading-relaxed">
+                                    The system maintains a background connection to Supabase to keep data fresh without interrupting the user.
+                                </p>
+                                <div className="border-l-2 border-green-200 pl-4 py-1 space-y-2">
+                                    <div className="text-xs font-mono text-slate-500">1. Startup</div>
+                                    <div className="text-sm font-bold text-slate-800">Fetch latest JSON config & Telemetry</div>
+                                    
+                                    <div className="text-xs font-mono text-slate-500 mt-2">2. Runtime (Loop)</div>
+                                    <div className="text-sm font-bold text-slate-800">Every 60s: Push Heartbeat & Pull Config Changes</div>
+                                    
+                                    <div className="text-xs font-mono text-slate-500 mt-2">3. Admin Event</div>
+                                    <div className="text-sm font-bold text-slate-800">Realtime WebSocket triggers immediate refresh</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'inventory' && (
-                    <div className="space-y-8 max-w-3xl">
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900 mb-4 flex items-center gap-3">
-                                <Box className="text-orange-600" size={32} /> Inventory Data Structure
+                    <div className="space-y-8 max-w-4xl mx-auto">
+                        <div className="border-b border-slate-100 pb-6">
+                            <h2 className="text-3xl font-black text-slate-900 mb-2 flex items-center gap-3">
+                                <Box className="text-orange-600" size={32} /> Data Hierarchy
                             </h2>
-                            <p className="text-slate-600 leading-relaxed text-sm">
-                                Products are organized in a strict 3-level hierarchy: <strong>Brand &gt; Category &gt; Product</strong>.
-                            </p>
+                            <p className="text-slate-500 font-medium">Strict 3-Level Parent-Child Relationship Model.</p>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="border-l-4 border-slate-300 pl-4 py-2">
-                                <h4 className="font-bold text-slate-800 text-sm">Level 1: Brands</h4>
-                                <p className="text-xs text-slate-500">
-                                    The top-level container. Contains global assets like Logo URL and Theme Color. Deleting a brand archives all child categories and products.
-                                </p>
+                        {/* Hierarchical Visualization */}
+                        <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 flex flex-col items-center relative overflow-hidden">
+                            {/* Level 1: Brand */}
+                            <div className="relative z-10 w-64 bg-white shadow-lg rounded-xl border-l-4 border-blue-600 p-4 mb-8 animate-fade-in">
+                                <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Level 1 (Parent)</div>
+                                <div className="font-black text-xl text-slate-900 flex items-center gap-2"><FolderOpen size={20} className="text-blue-600"/> Brand</div>
+                                <div className="text-xs text-slate-500 mt-2 bg-slate-100 p-2 rounded">
+                                    Contains: Logo, Theme Color
+                                </div>
                             </div>
-                            <div className="border-l-4 border-slate-300 pl-4 py-2">
-                                <h4 className="font-bold text-slate-800 text-sm">Level 2: Categories</h4>
-                                <p className="text-xs text-slate-500">
-                                    Groupings like "Smartphones", "Laptops". Icons are mapped dynamically based on the category name (e.g. 'Watch' maps to a Watch icon).
-                                </p>
+
+                            {/* Connector Line */}
+                            <div className="absolute top-24 bottom-20 w-0.5 bg-slate-300"></div>
+
+                            {/* Level 2: Categories */}
+                            <div className="relative z-10 flex gap-4 mb-8">
+                                <div className="w-40 bg-white shadow-md rounded-xl border-l-4 border-purple-500 p-3 animate-fade-in" style={{animationDelay: '0.1s'}}>
+                                    <div className="text-[9px] font-black uppercase text-slate-400">Level 2</div>
+                                    <div className="font-bold text-sm text-slate-900">Category A</div>
+                                </div>
+                                <div className="w-40 bg-white shadow-md rounded-xl border-l-4 border-purple-500 p-3 animate-fade-in" style={{animationDelay: '0.2s'}}>
+                                    <div className="text-[9px] font-black uppercase text-slate-400">Level 2</div>
+                                    <div className="font-bold text-sm text-slate-900">Category B</div>
+                                </div>
                             </div>
-                            <div className="border-l-4 border-slate-300 pl-4 py-2">
-                                <h4 className="font-bold text-slate-800 text-sm">Level 3: Products</h4>
-                                <p className="text-xs text-slate-500">
-                                    The leaf node. A product <strong>must</strong> belong to a category. It contains:
+
+                            {/* Level 3: Products */}
+                            <div className="relative z-10 flex gap-2">
+                                <div className="w-28 bg-white shadow-sm rounded-lg border border-slate-200 p-2 text-center animate-fade-in" style={{animationDelay: '0.3s'}}>
+                                    <Box size={16} className="mx-auto text-orange-500 mb-1"/>
+                                    <div className="text-[10px] font-bold">Product 1</div>
+                                </div>
+                                <div className="w-28 bg-white shadow-sm rounded-lg border border-slate-200 p-2 text-center animate-fade-in" style={{animationDelay: '0.4s'}}>
+                                    <Box size={16} className="mx-auto text-orange-500 mb-1"/>
+                                    <div className="text-[10px] font-bold">Product 2</div>
+                                </div>
+                                <div className="w-28 bg-white shadow-sm rounded-lg border border-slate-200 p-2 text-center animate-fade-in" style={{animationDelay: '0.5s'}}>
+                                    <Box size={16} className="mx-auto text-orange-500 mb-1"/>
+                                    <div className="text-[10px] font-bold">Product 3</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="prose prose-sm prose-slate">
+                                <h3 className="text-slate-900 font-bold">Why this structure?</h3>
+                                <p>
+                                    This rigid hierarchy ensures consistent navigation on the kiosk. A product <strong>cannot</strong> exist without a Category, and a Category <strong>cannot</strong> exist without a Brand.
                                 </p>
-                                <ul className="list-disc pl-5 mt-1 text-[10px] text-slate-500 font-mono">
-                                    <li>SKU (Unique Identifier)</li>
-                                    <li>Specs (Key-Value Map)</li>
-                                    <li>Dimensions (Array of objects for multiple boxes)</li>
-                                    <li>Media (Images converted to Base64 or CDN URLs)</li>
-                                    <li>DateAdded (Used for 'New' flags and screensaver weighting)</li>
+                                <ul>
+                                    <li><strong>Brands:</strong> Act as the main filter on the Home Screen.</li>
+                                    <li><strong>Categories:</strong> Auto-generate icons based on name (e.g., "Watch" gets a watch icon).</li>
+                                    <li><strong>Products:</strong> The actual leaf nodes containing SKU, Specs, and Media.</li>
                                 </ul>
+                            </div>
+                            <div className="bg-slate-900 text-slate-300 rounded-xl p-4 font-mono text-xs overflow-x-auto">
+                                <div className="text-green-400 font-bold mb-2">// Data Model (JSON)</div>
+                                {`{
+  "brands": [
+    {
+      "id": "b-123",
+      "name": "Samsung",
+      "categories": [
+        {
+          "name": "Smartphones",
+          "products": [
+             { "sku": "S24-ULTRA", ... }
+          ]
+        }
+      ]
+    }
+  ]
+}`}
                             </div>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'screensaver' && (
-                    <div className="space-y-8 max-w-3xl">
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900 mb-4 flex items-center gap-3">
+                    <div className="space-y-8 max-w-4xl mx-auto">
+                        <div className="border-b border-slate-100 pb-6">
+                            <h2 className="text-3xl font-black text-slate-900 mb-2 flex items-center gap-3">
                                 <Zap className="text-yellow-500" size={32} /> Screensaver Automation
                             </h2>
-                            <p className="text-slate-600 leading-relaxed text-sm">
-                                The screensaver is an autonomous marketing loop that activates after <strong>60 seconds</strong> of idle time (configurable). It is not just a slideshow; it uses a weighted algorithm to determine what to show.
-                            </p>
+                            <p className="text-slate-500 font-medium">Autonomous marketing engine with probabilistic scheduling.</p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                <h3 className="font-bold text-slate-900 mb-2 text-sm">Playlist Algorithm</h3>
-                                <ul className="space-y-2 text-xs text-slate-600">
-                                    <li><strong className="text-purple-600">Custom Ads:</strong> Weighted 3x (appear 3 times more often than products).</li>
-                                    <li><strong className="text-blue-600">Products:</strong> Filtered by 'Age'. Items older than 6 months have a 75% chance of being skipped to keep the display fresh.</li>
-                                    <li><strong className="text-green-600">Pamphlets:</strong> Covers are included if the 'End Date' has not passed.</li>
-                                </ul>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Visual Logic Flow */}
+                            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                                <h3 className="font-bold text-slate-900 mb-4 text-xs uppercase tracking-widest">Decision Engine</h3>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-white rounded-full border-2 border-slate-200 flex items-center justify-center font-bold text-slate-400">1</div>
+                                        <div className="flex-1 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                            <div className="font-bold text-sm text-slate-800">Idle Timer</div>
+                                            <div className="text-xs text-slate-500">Wait 60s without touch input.</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-center"><div className="h-4 w-0.5 bg-slate-300"></div></div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-white rounded-full border-2 border-blue-200 flex items-center justify-center font-bold text-blue-500">2</div>
+                                        <div className="flex-1 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                            <div className="font-bold text-sm text-slate-800">Content Gathering</div>
+                                            <div className="text-xs text-slate-500">Collect Ads, Products, Pamphlets.</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-center"><div className="h-4 w-0.5 bg-slate-300"></div></div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-white rounded-full border-2 border-green-200 flex items-center justify-center font-bold text-green-500">3</div>
+                                        <div className="flex-1 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                            <div className="font-bold text-sm text-slate-800">Playlist Generation</div>
+                                            <div className="text-xs text-slate-500">Apply weights & shuffle.</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                <h3 className="font-bold text-slate-900 mb-2 text-sm">Sleep Mode</h3>
-                                <p className="text-xs text-slate-600 mb-2">
-                                    Configure <strong>Active Hours</strong> (e.g., 08:00 - 20:00). Outside these hours:
-                                </p>
-                                <ul className="list-disc pl-4 text-xs text-slate-500">
-                                    <li>Screen turns black (saves panel life).</li>
-                                    <li>Media playback stops (saves bandwidth/cpu).</li>
-                                    <li>Tap to wake is still active.</li>
-                                </ul>
+
+                            {/* Weighting Explanation */}
+                            <div>
+                                <h3 className="font-bold text-slate-900 mb-4 text-xs uppercase tracking-widest">Weighting Algorithm</h3>
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="font-bold text-purple-900 text-sm">Custom Ads</span>
+                                            <span className="bg-purple-200 text-purple-800 px-2 py-0.5 rounded text-[10px] font-black">3x Frequency</span>
+                                        </div>
+                                        <p className="text-xs text-purple-700 leading-relaxed">
+                                            Any image/video uploaded to "Screensaver Ads" in Marketing is added <strong>3 times</strong> to the playlist to ensure high visibility.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="font-bold text-blue-900 text-sm">Products</span>
+                                            <span className="bg-blue-200 text-blue-800 px-2 py-0.5 rounded text-[10px] font-black">Age Filtered</span>
+                                        </div>
+                                        <p className="text-xs text-blue-700 leading-relaxed">
+                                            Products older than 6 months have a <strong>75% chance</strong> of being skipped. This keeps the screensaver focused on fresh inventory.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="font-bold text-slate-900 text-sm">Sleep Mode</span>
+                                            <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded text-[10px] font-black">Schedule</span>
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                            Outside of Active Hours (e.g. 8am-8pm), the screen turns <strong>black</strong> to save panel life and electricity. Touch still wakes it.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'fleet' && (
-                    <div className="space-y-8 max-w-3xl">
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900 mb-4 flex items-center gap-3">
-                                <Activity className="text-green-600" size={32} /> Fleet & Telemetry
+                    <div className="space-y-8 max-w-4xl mx-auto">
+                        <div className="border-b border-slate-100 pb-6">
+                            <h2 className="text-3xl font-black text-slate-900 mb-2 flex items-center gap-3">
+                                <Activity className="text-green-600" size={32} /> Fleet Telemetry
                             </h2>
-                            <p className="text-slate-600 leading-relaxed text-sm">
-                                The fleet system uses a "heartbeat" mechanism. Every device calls home every <strong>60 seconds</strong>.
-                            </p>
+                            <p className="text-slate-500 font-medium">Real-time device monitoring and remote command execution.</p>
                         </div>
 
-                        <div className="space-y-6">
-                            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-                                <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2"><Database size={14}/> Source of Truth</h4>
-                                <p className="text-xs text-slate-600 leading-relaxed">
-                                    The <strong>Database</strong> is the master. If you change a device's name or type in the Admin Hub, the device will pull this new config on its next heartbeat and update itself.
-                                    <br/><br/>
-                                    <em>Example:</em> Admin renames "Kiosk 1" to "Lobby Kiosk". Within 60s, the physical device will update its local storage and header display.
-                                </p>
+                        {/* Radar Animation */}
+                        <div className="bg-slate-900 rounded-3xl p-8 relative overflow-hidden min-h-[300px] flex items-center justify-center">
+                            {/* Radar Rings */}
+                            <div className="absolute w-64 h-64 border border-green-500/20 rounded-full radar-ring"></div>
+                            <div className="absolute w-64 h-64 border border-green-500/20 rounded-full radar-ring" style={{animationDelay: '0.5s'}}></div>
+                            
+                            {/* Central Hub */}
+                            <div className="relative z-10 w-20 h-20 bg-green-500 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(34,197,94,0.5)]">
+                                <Database size={32} className="text-white" />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-4 bg-slate-50 rounded-lg">
-                                    <div className="text-xs font-black uppercase text-slate-400 mb-1">Online Status</div>
-                                    <div className="text-sm text-slate-700">
-                                        Calculated based on <code>last_seen</code> timestamp.
-                                        <br/>
-                                        &lt; 5 min = <span className="text-green-600 font-bold">Online</span>
-                                        <br/>
-                                        &gt; 5 min = <span className="text-red-600 font-bold">Offline</span>
-                                    </div>
+                            {/* Devices */}
+                            <div className="absolute top-10 left-10 flex flex-col items-center">
+                                <Tablet size={24} className="text-blue-400 mb-1" />
+                                <div className="text-[10px] text-blue-400 font-mono">Kiosk 1</div>
+                            </div>
+                            <div className="absolute bottom-16 right-20 flex flex-col items-center">
+                                <Smartphone size={24} className="text-purple-400 mb-1" />
+                                <div className="text-[10px] text-purple-400 font-mono">Mobile 1</div>
+                            </div>
+                            <div className="absolute top-20 right-10 flex flex-col items-center">
+                                <Tv size={24} className="text-indigo-400 mb-1" />
+                                <div className="text-[10px] text-indigo-400 font-mono">TV Wall</div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <h3 className="font-bold text-slate-900 text-lg">Heartbeat Protocol</h3>
+                                <p className="text-sm text-slate-600">
+                                    Every device calls the `sendHeartbeat()` function every 60 seconds.
+                                </p>
+                                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                                    <h4 className="text-xs font-black uppercase text-slate-400 mb-2">Payload Sent</h4>
+                                    <pre className="text-[10px] font-mono text-blue-600 bg-blue-50 p-2 rounded">
+{`{
+  "id": "LOC-84921",
+  "status": "online",
+  "last_seen": "2023-10-27T10:00:00Z",
+  "wifi_strength": 80,
+  "version": "1.0.5"
+}`}
+                                    </pre>
                                 </div>
-                                <div className="p-4 bg-slate-50 rounded-lg">
-                                    <div className="text-xs font-black uppercase text-slate-400 mb-1">Commands</div>
-                                    <div className="text-sm text-slate-700">
-                                        <strong>Remote Restart:</strong> Sets a flag <code>restart_requested=true</code> in DB. Device sees this, reloads page, and clears flag.
-                                    </div>
-                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="font-bold text-slate-900 text-lg">Command & Control</h3>
+                                <p className="text-sm text-slate-600">
+                                    The heartbeat isn't just one-way. The server responds with configuration overrides.
+                                </p>
+                                <ul className="space-y-2">
+                                    <li className="flex gap-3 text-sm text-slate-700">
+                                        <Check size={16} className="text-green-500 mt-0.5" />
+                                        <span><strong>Remote Restart:</strong> Setting `restart_requested=true` in DB forces the page to reload on next heartbeat.</span>
+                                    </li>
+                                    <li className="flex gap-3 text-sm text-slate-700">
+                                        <Check size={16} className="text-green-500 mt-0.5" />
+                                        <span><strong>Config Sync:</strong> Changing a device name in Admin Hub automatically updates the physical device within 60s.</span>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'tv' && (
-                    <div className="space-y-8 max-w-3xl">
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900 mb-4 flex items-center gap-3">
+                    <div className="space-y-8 max-w-4xl mx-auto">
+                        <div className="border-b border-slate-100 pb-6">
+                            <h2 className="text-3xl font-black text-slate-900 mb-2 flex items-center gap-3">
                                 <Tv className="text-indigo-600" size={32} /> TV Mode Logic
                             </h2>
-                            <p className="text-slate-600 leading-relaxed text-sm">
-                                TV Mode is a dedicated routing state designed for non-interactive displays. It hides navigation UI and forces landscape orientation.
-                            </p>
+                            <p className="text-slate-500 font-medium">Specialized routing for non-interactive displays.</p>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="flex items-start gap-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                                <PlayCircle className="text-indigo-500 shrink-0 mt-1" />
-                                <div>
-                                    <h4 className="font-bold text-indigo-900 text-sm">Global Loop</h4>
-                                    <p className="text-xs text-indigo-800 mt-1">
-                                        Collects <strong>ALL</strong> videos from every TV Model configured in the system. Shuffles them randomly. Plays indefinitely.
-                                        <br/>
-                                        <em>Use case: Main store display screen.</em>
-                                    </p>
-                                </div>
+                        {/* Film Strip Animation */}
+                        <div className="bg-black rounded-3xl p-8 relative overflow-hidden h-40 flex items-center">
+                            <div className="film-strip flex gap-4 absolute left-0">
+                                {[1,2,3,4,5,6].map(i => (
+                                    <div key={i} className="w-48 h-28 bg-slate-800 border-y-4 border-dashed border-slate-600 shrink-0 flex items-center justify-center">
+                                        <PlayCircle size={32} className="text-white opacity-50" />
+                                    </div>
+                                ))}
+                                {/* Repeat for smooth loop */}
+                                {[1,2,3,4,5,6].map(i => (
+                                    <div key={`dup-${i}`} className="w-48 h-28 bg-slate-800 border-y-4 border-dashed border-slate-600 shrink-0 flex items-center justify-center">
+                                        <PlayCircle size={32} className="text-white opacity-50" />
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black pointer-events-none"></div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                                <h3 className="font-bold text-indigo-900 mb-2 flex items-center gap-2">
+                                    <PlayCircle size={18}/> Autoplay Policy
+                                </h3>
+                                <p className="text-xs text-indigo-800 leading-relaxed">
+                                    Modern browsers block video autoplay with sound.
+                                    <br/><br/>
+                                    <strong>Solution:</strong> TV Mode videos are muted by default. A staff member must tap the screen <em>once</em> after launch to unlock the audio context if sound is required.
+                                </p>
                             </div>
 
-                            <div className="flex items-start gap-4 p-4 bg-white rounded-xl border border-slate-200">
-                                <Monitor className="text-slate-500 shrink-0 mt-1" />
-                                <div>
-                                    <h4 className="font-bold text-slate-900 text-sm">Brand/Model Loop</h4>
-                                    <p className="text-xs text-slate-600 mt-1">
-                                        Plays videos only for a specific brand or specific model.
-                                        <br/>
-                                        <em>Use case: A TV mounted directly above a specific product shelf (e.g. Samsung TV wall).</em>
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="p-4 rounded-xl border-l-4 border-yellow-400 bg-yellow-50 text-xs text-yellow-900">
-                                <strong>Note:</strong> Browsers block autoplay with sound. TV Mode videos are <strong>Muted</strong> by default if user interaction hasn't occurred. To enable sound, a staff member must click/tap the screen once after load.
+                            <div className="space-y-4">
+                                <h3 className="font-bold text-slate-900 text-lg">Routing & UI</h3>
+                                <p className="text-sm text-slate-600">
+                                    When a device is set to "TV Mode":
+                                </p>
+                                <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600">
+                                    <li><strong>Hidden Navigation:</strong> The standard Kiosk header, footer, and back buttons are removed or minimized.</li>
+                                    <li><strong>Landscape Lock:</strong> CSS rules force visual rotation prompts if the device is held in portrait.</li>
+                                    <li><strong>Interaction:</strong> Touches bring up overlay controls (Play/Pause/Next) which fade out after 4 seconds of inactivity.</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -817,7 +1037,6 @@ const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalog
     );
 };
 
-// ... [Truncated: MoveProductModal, PricelistManager, ProductEditor, KioskEditorModal, TVModelEditor, AdminManager components remain unchanged] ...
 const MoveProductModal = ({ 
   product, 
   allBrands, 
@@ -2014,7 +2233,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
             {/* Inventory Tab */}
             {activeTab === 'inventory' && (
-                // ... Inventory UI Logic (same as before) ...
                 !selectedBrand ? (
                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 animate-fade-in">
                        <button onClick={() => { const name = prompt("Brand Name:"); if(name) handleLocalUpdate({ ...localData, brands: [...brands, { id: generateId('b'), name, categories: [] }] }) }} className="bg-white border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-4 md:p-8 text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-all group min-h-[120px] md:min-h-[200px]">
