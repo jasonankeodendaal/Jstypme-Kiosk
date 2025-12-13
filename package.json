@@ -16,7 +16,9 @@
     "jszip": "3.10.1",
     "pdfjs-dist": "3.11.174",
     "jspdf": "^2.5.1",
-    "peerjs": "1.5.2"
+    "peerjs": "1.5.2",
+    "vite": "^7.2.7",
+    "@vitejs/plugin-react": "^5.1.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
