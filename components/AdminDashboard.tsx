@@ -641,7 +641,12 @@ const downloadZip = async (storeData: StoreData) => {
 
 const importZip = async (file: File): Promise<Brand[]> => {
     const zip = new JSZip();
-    const loadedZip = await zip.loadAsync(file);
+    let loadedZip;
+    try {
+        loadedZip = await zip.loadAsync(file);
+    } catch (e) {
+        throw new Error("Invalid ZIP file");
+    }
     
     const newBrands: Record<string, Brand> = {};
     
@@ -658,19 +663,43 @@ const importZip = async (file: File): Promise<Brand[]> => {
     // Helper: Normalize path to avoid Windows/Mac slash issues
     const getCleanPath = (filename: string) => filename.replace(/\\/g, '/');
 
+    // 1. Detect Root Wrapper (e.g. user zipped a folder "Backup" containing Brands)
+    const validFiles = Object.keys(loadedZip.files).filter(path => {
+        return !loadedZip.files[path].dir && !path.includes('__MACOSX') && !path.includes('.DS_Store');
+    });
+
+    let rootPrefix = "";
+    if (validFiles.length > 0) {
+        const firstFileParts = getCleanPath(validFiles[0]).split('/').filter(p => p);
+        // If the first file has depth > 1, checking if the first folder is common to ALL files
+        if (firstFileParts.length > 1) {
+            const possibleRoot = firstFileParts[0];
+            const allHaveRoot = validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'));
+            if (allHaveRoot) {
+                rootPrefix = possibleRoot + '/';
+                console.log("Import: Stripping root folder:", rootPrefix);
+            }
+        }
+    }
+
     // Iterate files
     const filePaths = Object.keys(loadedZip.files);
     
     for (const rawPath of filePaths) {
-        const path = getCleanPath(rawPath);
+        let path = getCleanPath(rawPath);
         const fileObj = loadedZip.files[rawPath];
         if (fileObj.dir) continue;
         if (path.includes('__MACOSX') || path.includes('.DS_Store')) continue;
 
+        // Remove Root Prefix if detected
+        if (rootPrefix && path.startsWith(rootPrefix)) {
+            path = path.substring(rootPrefix.length);
+        }
+
         // Path: Brand/Category/Product/File.ext OR Brand/BrandFile.ext
         const parts = path.split('/').filter(p => p.trim() !== '');
         
-        // Skip root files if any
+        // Skip root files if any (files not inside a Brand folder)
         if (parts.length < 2) continue;
 
         const brandName = parts[0];
@@ -698,6 +727,8 @@ const importZip = async (file: File): Promise<Brand[]> => {
                      const text = await fileObj.async("text");
                      const meta = JSON.parse(text);
                      if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor;
+                     // Allow ID overwrite if restoring backup
+                     if (meta.id) newBrands[brandName].id = meta.id; 
                  } catch(e) {}
              }
              continue;
@@ -748,21 +779,22 @@ const importZip = async (file: File): Promise<Brand[]> => {
              try {
                  const text = await fileObj.async("text");
                  const meta = JSON.parse(text);
+                 if (meta.id) product.id = meta.id; // Restore ID
                  if (meta.name) product.name = meta.name;
                  if (meta.description) product.description = meta.description;
                  if (meta.sku) product.sku = meta.sku;
                  if (meta.specs) product.specs = { ...product.specs, ...meta.specs };
-                 if (meta.features) product.features = [...product.features, ...meta.features];
+                 if (meta.features) product.features = [...(product.features || []), ...(meta.features || [])];
                  if (meta.dimensions) product.dimensions = meta.dimensions;
                  if (meta.boxContents) product.boxContents = meta.boxContents;
                  if (meta.terms) product.terms = meta.terms;
-                 // Don't overwrite image URLs from JSON if we are importing files locally
+                 if (meta.dateAdded) product.dateAdded = meta.dateAdded;
              } catch(e) { console.warn("Failed to parse JSON for " + productName); }
         }
         // Handle Images
         else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
              const b64 = await getBase64(fileObj);
-             if (lowerFile.includes('cover') || lowerFile.includes('main') || !product.imageUrl) {
+             if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
                  product.imageUrl = b64;
              } else {
                  product.galleryUrls = [...(product.galleryUrls || []), b64];
@@ -2148,6 +2180,189 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       return date.toLocaleDateString();
   };
 
+  const importZip = async (file: File): Promise<Brand[]> => {
+    const zip = new JSZip();
+    let loadedZip;
+    try {
+        loadedZip = await zip.loadAsync(file);
+    } catch (e) {
+        throw new Error("Invalid ZIP file");
+    }
+    
+    const newBrands: Record<string, Brand> = {};
+    
+    // Helper to get Base64 from ZipObj
+    const getBase64 = async (zipObj: any): Promise<string> => {
+        const blob = await zipObj.async("blob");
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+        });
+    };
+
+    // Helper: Normalize path to avoid Windows/Mac slash issues
+    const getCleanPath = (filename: string) => filename.replace(/\\/g, '/');
+
+    // 1. Detect Root Wrapper (e.g. user zipped a folder "Backup" containing Brands)
+    // Filter valid files (ignore Mac junk)
+    const validFiles = Object.keys(loadedZip.files).filter(path => {
+        return !loadedZip.files[path].dir && !path.includes('__MACOSX') && !path.includes('.DS_Store');
+    });
+
+    let rootPrefix = "";
+    if (validFiles.length > 0) {
+        const firstFileParts = getCleanPath(validFiles[0]).split('/').filter(p => p);
+        // If the first file has depth > 1, checking if the first folder is common to ALL files
+        if (firstFileParts.length > 1) {
+            const possibleRoot = firstFileParts[0];
+            const allHaveRoot = validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'));
+            if (allHaveRoot) {
+                rootPrefix = possibleRoot + '/';
+                console.log("Import: Stripping root folder:", rootPrefix);
+            }
+        }
+    }
+
+    // Iterate files
+    const filePaths = Object.keys(loadedZip.files);
+    
+    for (const rawPath of filePaths) {
+        let path = getCleanPath(rawPath);
+        const fileObj = loadedZip.files[rawPath];
+        if (fileObj.dir) continue;
+        if (path.includes('__MACOSX') || path.includes('.DS_Store')) continue;
+
+        // Remove Root Prefix if detected
+        if (rootPrefix && path.startsWith(rootPrefix)) {
+            path = path.substring(rootPrefix.length);
+        }
+
+        // Path: Brand/Category/Product/File.ext OR Brand/BrandFile.ext
+        const parts = path.split('/').filter(p => p.trim() !== '');
+        
+        // Skip root files if any (files not inside a Brand folder)
+        if (parts.length < 2) continue;
+
+        const brandName = parts[0];
+
+        // Init Brand
+        if (!newBrands[brandName]) {
+            newBrands[brandName] = {
+                id: generateId('brand'),
+                name: brandName,
+                categories: []
+            };
+        }
+
+        // Handle Brand Assets (Level 2: Brand/brand_logo.png)
+        if (parts.length === 2) {
+             const fileName = parts[1].toLowerCase();
+             // Parse brand logo
+             if (fileName.includes('brand_logo') || fileName.includes('logo')) {
+                  const b64 = await getBase64(fileObj);
+                  newBrands[brandName].logoUrl = b64;
+             }
+             // Parse Brand JSON metadata if exists
+             if (fileName.endsWith('.json') && fileName.includes('brand')) {
+                 try {
+                     const text = await fileObj.async("text");
+                     const meta = JSON.parse(text);
+                     if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor;
+                     // Allow ID overwrite if restoring backup
+                     if (meta.id) newBrands[brandName].id = meta.id; 
+                 } catch(e) {}
+             }
+             continue;
+        }
+
+        // Require Product Depth for rest (Brand/Category/Product/File)
+        if (parts.length < 4) continue;
+
+        const categoryName = parts[1];
+        const productName = parts[2];
+        const fileName = parts.slice(3).join('/'); // In case of subfolders inside product (e.g. gallery)
+
+        // Init Category
+        let category = newBrands[brandName].categories.find(c => c.name === categoryName);
+        if (!category) {
+            category = {
+                id: generateId('cat'),
+                name: categoryName,
+                icon: 'Box',
+                products: []
+            };
+            newBrands[brandName].categories.push(category);
+        }
+
+        // Init Product
+        let product = category.products.find(p => p.name === productName);
+        if (!product) {
+            product = {
+                id: generateId('prod'),
+                name: productName, 
+                description: '',
+                specs: {},
+                features: [],
+                dimensions: [],
+                imageUrl: '',
+                galleryUrls: [],
+                videoUrls: [],
+                manuals: [],
+                dateAdded: new Date().toISOString()
+            };
+            category.products.push(product);
+        }
+
+        const lowerFile = fileName.toLowerCase();
+        
+        // Handle Details JSON - Deep Merge
+        if (fileName.endsWith('.json') && (fileName.includes('details') || fileName.includes('product'))) {
+             try {
+                 const text = await fileObj.async("text");
+                 const meta = JSON.parse(text);
+                 if (meta.id) product.id = meta.id; // Restore ID
+                 if (meta.name) product.name = meta.name;
+                 if (meta.description) product.description = meta.description;
+                 if (meta.sku) product.sku = meta.sku;
+                 if (meta.specs) product.specs = { ...product.specs, ...meta.specs };
+                 if (meta.features) product.features = [...(product.features || []), ...(meta.features || [])];
+                 if (meta.dimensions) product.dimensions = meta.dimensions;
+                 if (meta.boxContents) product.boxContents = meta.boxContents;
+                 if (meta.terms) product.terms = meta.terms;
+                 if (meta.dateAdded) product.dateAdded = meta.dateAdded;
+             } catch(e) { console.warn("Failed to parse JSON for " + productName); }
+        }
+        // Handle Images
+        else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
+             const b64 = await getBase64(fileObj);
+             if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
+                 product.imageUrl = b64;
+             } else {
+                 product.galleryUrls = [...(product.galleryUrls || []), b64];
+             }
+        }
+        // Handle Videos
+        else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
+            const b64 = await getBase64(fileObj);
+            product.videoUrls = [...(product.videoUrls || []), b64];
+        }
+        // Handle Manuals
+        else if (lowerFile.endsWith('.pdf')) {
+             const b64 = await getBase64(fileObj);
+             product.manuals?.push({
+                 id: generateId('man'),
+                 title: fileName.replace('.pdf', '').replace(/_/g, ' '),
+                 images: [],
+                 pdfUrl: b64,
+                 thumbnailUrl: '' 
+             });
+        }
+    }
+
+    return Object.values(newBrands);
+};
+
   if (!localData) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /> Loading...</div>;
   if (!currentUser) return <Auth admins={localData.admins || []} onLogin={setCurrentUser} />;
 
@@ -2889,7 +3104,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                                      });
                                                      
                                                      handleLocalUpdate({ ...localData, brands: mergedBrands });
-                                                     alert("Import Successful!");
+                                                     alert(`Import Successful! Processed ${newBrands.length} brands.`);
                                                  } catch(err) {
                                                      console.error(err);
                                                      alert("Failed to read ZIP file. Ensure structure is correct.");
