@@ -1,8 +1,3 @@
-
-
-
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -31,7 +26,7 @@ const SystemDocumentation = () => {
     const [activeSection, setActiveSection] = useState('architecture');
 
     const sections = [
-        { id: 'architecture', label: 'Core Architecture', icon: <CpuIcon /> },
+        { id: 'architecture', label: 'Core Architecture', icon: <Network size={16} /> },
         { id: 'inventory', label: 'Inventory Logic', icon: <Box size={16}/> },
         { id: 'screensaver', label: 'Screensaver Automation', icon: <Zap size={16}/> },
         { id: 'fleet', label: 'Fleet & Telemetry', icon: <Activity size={16}/> },
@@ -125,11 +120,167 @@ const SystemDocumentation = () => {
                     </div>
                 )}
 
-                {/* ... other sections remain similar ... */}
-                {activeSection === 'inventory' && <div className="p-4 text-center text-slate-400">Inventory Documentation Content</div>}
-                {activeSection === 'screensaver' && <div className="p-4 text-center text-slate-400">Screensaver Documentation Content</div>}
-                {activeSection === 'fleet' && <div className="p-4 text-center text-slate-400">Fleet Documentation Content</div>}
-                {activeSection === 'tv' && <div className="p-4 text-center text-slate-400">TV Mode Documentation Content</div>}
+                {activeSection === 'inventory' && (
+                    <div className="space-y-8 max-w-3xl">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-900 mb-4 flex items-center gap-3">
+                                <Box className="text-orange-600" size={32} /> Inventory Data Structure
+                            </h2>
+                            <p className="text-slate-600 leading-relaxed text-sm">
+                                Products are organized in a strict 3-level hierarchy: <strong>Brand &gt; Category &gt; Product</strong>.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="border-l-4 border-slate-300 pl-4 py-2">
+                                <h4 className="font-bold text-slate-800 text-sm">Level 1: Brands</h4>
+                                <p className="text-xs text-slate-500">
+                                    The top-level container. Contains global assets like Logo URL and Theme Color. Deleting a brand archives all child categories and products.
+                                </p>
+                            </div>
+                            <div className="border-l-4 border-slate-300 pl-4 py-2">
+                                <h4 className="font-bold text-slate-800 text-sm">Level 2: Categories</h4>
+                                <p className="text-xs text-slate-500">
+                                    Groupings like "Smartphones", "Laptops". Icons are mapped dynamically based on the category name (e.g. 'Watch' maps to a Watch icon).
+                                </p>
+                            </div>
+                            <div className="border-l-4 border-slate-300 pl-4 py-2">
+                                <h4 className="font-bold text-slate-800 text-sm">Level 3: Products</h4>
+                                <p className="text-xs text-slate-500">
+                                    The leaf node. A product <strong>must</strong> belong to a category. It contains:
+                                </p>
+                                <ul className="list-disc pl-5 mt-1 text-[10px] text-slate-500 font-mono">
+                                    <li>SKU (Unique Identifier)</li>
+                                    <li>Specs (Key-Value Map)</li>
+                                    <li>Dimensions (Array of objects for multiple boxes)</li>
+                                    <li>Media (Images converted to Base64 or CDN URLs)</li>
+                                    <li>DateAdded (Used for 'New' flags and screensaver weighting)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'screensaver' && (
+                    <div className="space-y-8 max-w-3xl">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-900 mb-4 flex items-center gap-3">
+                                <Zap className="text-yellow-500" size={32} /> Screensaver Automation
+                            </h2>
+                            <p className="text-slate-600 leading-relaxed text-sm">
+                                The screensaver is an autonomous marketing loop that activates after <strong>60 seconds</strong> of idle time (configurable). It is not just a slideshow; it uses a weighted algorithm to determine what to show.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                <h3 className="font-bold text-slate-900 mb-2 text-sm">Playlist Algorithm</h3>
+                                <ul className="space-y-2 text-xs text-slate-600">
+                                    <li><strong className="text-purple-600">Custom Ads:</strong> Weighted 3x (appear 3 times more often than products).</li>
+                                    <li><strong className="text-blue-600">Products:</strong> Filtered by 'Age'. Items older than 6 months have a 75% chance of being skipped to keep the display fresh.</li>
+                                    <li><strong className="text-green-600">Pamphlets:</strong> Covers are included if the 'End Date' has not passed.</li>
+                                </ul>
+                            </div>
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                <h3 className="font-bold text-slate-900 mb-2 text-sm">Sleep Mode</h3>
+                                <p className="text-xs text-slate-600 mb-2">
+                                    Configure <strong>Active Hours</strong> (e.g., 08:00 - 20:00). Outside these hours:
+                                </p>
+                                <ul className="list-disc pl-4 text-xs text-slate-500">
+                                    <li>Screen turns black (saves panel life).</li>
+                                    <li>Media playback stops (saves bandwidth/cpu).</li>
+                                    <li>Tap to wake is still active.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fleet' && (
+                    <div className="space-y-8 max-w-3xl">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-900 mb-4 flex items-center gap-3">
+                                <Activity className="text-green-600" size={32} /> Fleet & Telemetry
+                            </h2>
+                            <p className="text-slate-600 leading-relaxed text-sm">
+                                The fleet system uses a "heartbeat" mechanism. Every device calls home every <strong>60 seconds</strong>.
+                            </p>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                                <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2"><Database size={14}/> Source of Truth</h4>
+                                <p className="text-xs text-slate-600 leading-relaxed">
+                                    The <strong>Database</strong> is the master. If you change a device's name or type in the Admin Hub, the device will pull this new config on its next heartbeat and update itself.
+                                    <br/><br/>
+                                    <em>Example:</em> Admin renames "Kiosk 1" to "Lobby Kiosk". Within 60s, the physical device will update its local storage and header display.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 bg-slate-50 rounded-lg">
+                                    <div className="text-xs font-black uppercase text-slate-400 mb-1">Online Status</div>
+                                    <div className="text-sm text-slate-700">
+                                        Calculated based on <code>last_seen</code> timestamp.
+                                        <br/>
+                                        &lt; 5 min = <span className="text-green-600 font-bold">Online</span>
+                                        <br/>
+                                        &gt; 5 min = <span className="text-red-600 font-bold">Offline</span>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-slate-50 rounded-lg">
+                                    <div className="text-xs font-black uppercase text-slate-400 mb-1">Commands</div>
+                                    <div className="text-sm text-slate-700">
+                                        <strong>Remote Restart:</strong> Sets a flag <code>restart_requested=true</code> in DB. Device sees this, reloads page, and clears flag.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'tv' && (
+                    <div className="space-y-8 max-w-3xl">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-900 mb-4 flex items-center gap-3">
+                                <Tv className="text-indigo-600" size={32} /> TV Mode Logic
+                            </h2>
+                            <p className="text-slate-600 leading-relaxed text-sm">
+                                TV Mode is a dedicated routing state designed for non-interactive displays. It hides navigation UI and forces landscape orientation.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                                <PlayCircle className="text-indigo-500 shrink-0 mt-1" />
+                                <div>
+                                    <h4 className="font-bold text-indigo-900 text-sm">Global Loop</h4>
+                                    <p className="text-xs text-indigo-800 mt-1">
+                                        Collects <strong>ALL</strong> videos from every TV Model configured in the system. Shuffles them randomly. Plays indefinitely.
+                                        <br/>
+                                        <em>Use case: Main store display screen.</em>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-4 p-4 bg-white rounded-xl border border-slate-200">
+                                <Monitor className="text-slate-500 shrink-0 mt-1" />
+                                <div>
+                                    <h4 className="font-bold text-slate-900 text-sm">Brand/Model Loop</h4>
+                                    <p className="text-xs text-slate-600 mt-1">
+                                        Plays videos only for a specific brand or specific model.
+                                        <br/>
+                                        <em>Use case: A TV mounted directly above a specific product shelf (e.g. Samsung TV wall).</em>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="p-4 rounded-xl border-l-4 border-yellow-400 bg-yellow-50 text-xs text-yellow-900">
+                                <strong>Note:</strong> Browsers block autoplay with sound. TV Mode videos are <strong>Muted</strong> by default if user interaction hasn't occurred. To enable sound, a staff member must click/tap the screen once after load.
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
