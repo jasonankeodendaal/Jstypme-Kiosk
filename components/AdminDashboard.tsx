@@ -431,7 +431,7 @@ const SystemDocumentation = () => {
                             <div className="space-y-4">
                                 <h3 className="font-bold text-slate-900 text-lg">Command & Control</h3>
                                 <p className="text-sm text-slate-600">
-                                    The heartbeat isn't just one-way. The server responds with configuration overrides.
+                                    The server responds with configuration overrides.
                                 </p>
                                 <ul className="space-y-2">
                                     <li className="flex gap-3 text-sm text-slate-700">
@@ -544,30 +544,51 @@ const fetchAssetAndAddToZip = async (zipFolder: JSZip | null, url: string, filen
         }
 
         const ext = getExtension(blob, url);
-        zipFolder.file(`${filenameBase}.${ext}`, blob);
+        // Replace potential invalid chars
+        const safeFilename = filenameBase.replace(/[^a-z0-9_\-]/gi, '_');
+        zipFolder.file(`${safeFilename}.${ext}`, blob);
     } catch (e) {
         console.warn(`Failed to pack asset: ${url}`, e);
-        // Create a placeholder error file so user knows it failed
         zipFolder.file(`${filenameBase}_FAILED.txt`, `Could not download: ${url}`);
     }
 };
 
 const downloadZip = async (storeData: StoreData) => {
     const zip = new JSZip();
-    console.log("Starting Backup Process...");
+    console.log("Starting Full System Backup...");
 
-    // 1. Structure: Brand -> Category -> Product
+    // --- 1. SYSTEM DATA ---
+    // Root Config
+    zip.file("store_config_full.json", JSON.stringify(storeData, null, 2));
+    
+    // Fleet CSV
+    if (storeData.fleet && storeData.fleet.length > 0) {
+        const csvHeader = "ID,Name,Type,Status,LastSeen,IP,Zone,Version\n";
+        const csvRows = storeData.fleet.map(k => 
+            `"${k.id}","${k.name}","${k.deviceType}","${k.status}","${k.last_seen}","${k.ipAddress}","${k.assignedZone || ''}","${k.version}"`
+        ).join("\n");
+        zip.file("_System_Backup/Fleet/fleet_registry.csv", csvHeader + csvRows);
+    }
+
+    // Settings & History
+    if (storeData.archive) {
+        zip.file("_System_Backup/History/archive_data.json", JSON.stringify(storeData.archive, null, 2));
+    }
+    if (storeData.systemSettings) {
+        zip.file("_System_Backup/Settings/system_settings.json", JSON.stringify(storeData.systemSettings, null, 2));
+    }
+    // Backup Admins but redact PINs for safety in the easy-read JSON
+    const safeAdmins = storeData.admins.map(a => ({ ...a, pin: "****" }));
+    zip.file("_System_Backup/Settings/admin_users.json", JSON.stringify(safeAdmins, null, 2));
+
+
+    // --- 2. INVENTORY (Root Folders for backward compat with Importer) ---
     for (const brand of storeData.brands) {
         const brandFolder = zip.folder(brand.name.replace(/[^a-z0-9 ]/gi, '').trim() || 'Untitled Brand');
         
         if (brandFolder) {
-            // Save Brand Metadata
             brandFolder.file("brand.json", JSON.stringify(brand, null, 2));
-            
-            // 2. Fetch & Pack Brand Logo
-            if (brand.logoUrl) {
-                await fetchAssetAndAddToZip(brandFolder, brand.logoUrl, "brand_logo");
-            }
+            if (brand.logoUrl) await fetchAssetAndAddToZip(brandFolder, brand.logoUrl, "brand_logo");
         }
         
         for (const category of brand.categories) {
@@ -577,50 +598,105 @@ const downloadZip = async (storeData: StoreData) => {
                 const prodFolder = catFolder?.folder(product.name.replace(/[^a-z0-9 ]/gi, '').trim() || 'Untitled Product');
                 
                 if (prodFolder) {
-                    // 3. Create Metadata JSON
                     const metadata = {
-                        name: product.name,
-                        sku: product.sku,
-                        description: product.description,
-                        specs: product.specs,
-                        features: product.features,
-                        dimensions: product.dimensions,
-                        terms: product.terms,
-                        boxContents: product.boxContents,
+                        ...product, // Backup full product object
                         originalImageUrl: product.imageUrl, 
-                        originalVideoUrl: product.videoUrl
                     };
                     prodFolder.file("details.json", JSON.stringify(metadata, null, 2));
 
-                    // 4. Fetch & Pack Main Image
-                    if (product.imageUrl) {
-                        await fetchAssetAndAddToZip(prodFolder, product.imageUrl, "cover");
-                    }
+                    if (product.imageUrl) await fetchAssetAndAddToZip(prodFolder, product.imageUrl, "cover");
 
-                    // 5. Fetch & Pack Gallery Images
                     if (product.galleryUrls) {
                         for (let i = 0; i < product.galleryUrls.length; i++) {
                             await fetchAssetAndAddToZip(prodFolder, product.galleryUrls[i], `gallery_${i}`);
                         }
                     }
 
-                    // 6. Fetch & Pack Videos
                     const videos = [...(product.videoUrls || [])];
                     if (product.videoUrl && !videos.includes(product.videoUrl)) videos.push(product.videoUrl);
-                    
                     for (let i = 0; i < videos.length; i++) {
                         await fetchAssetAndAddToZip(prodFolder, videos[i], `video_${i}`);
                     }
 
-                    // 7. Fetch & Pack Manuals
                     if (product.manuals) {
                          for (let i = 0; i < product.manuals.length; i++) {
                              const m = product.manuals[i];
                              if (m.pdfUrl) {
-                                 const safeTitle = m.title.replace(/[^a-z0-9]/gi, '_');
-                                 await fetchAssetAndAddToZip(prodFolder, m.pdfUrl, safeTitle || `manual_${i}`);
+                                 await fetchAssetAndAddToZip(prodFolder, m.pdfUrl, m.title || `manual_${i}`);
+                             }
+                             if (m.thumbnailUrl) {
+                                 await fetchAssetAndAddToZip(prodFolder, m.thumbnailUrl, `manual_thumb_${i}`);
                              }
                          }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- 3. MARKETING ---
+    const mktFolder = zip.folder("_System_Backup/Marketing");
+    if (mktFolder) {
+        // Hero
+        if (storeData.hero.backgroundImageUrl) await fetchAssetAndAddToZip(mktFolder, storeData.hero.backgroundImageUrl, "hero_background");
+        if (storeData.hero.logoUrl) await fetchAssetAndAddToZip(mktFolder, storeData.hero.logoUrl, "hero_logo");
+        
+        // Ads
+        const adsFolder = mktFolder.folder("Ads");
+        if (adsFolder && storeData.ads) {
+            for (const zone of ['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'screensaver']) {
+                const zoneFolder = adsFolder.folder(zone);
+                const ads = (storeData.ads as any)[zone] || [];
+                for(let i=0; i<ads.length; i++) {
+                    await fetchAssetAndAddToZip(zoneFolder, ads[i].url, `ad_${i}`);
+                }
+            }
+        }
+
+        // Pamphlets
+        const pamFolder = mktFolder.folder("Pamphlets");
+        if (pamFolder && storeData.catalogues) {
+            const globalCats = storeData.catalogues.filter(c => !c.brandId);
+            for(let i=0; i<globalCats.length; i++) {
+                const c = globalCats[i];
+                if (c.pdfUrl) await fetchAssetAndAddToZip(pamFolder, c.pdfUrl, c.title);
+                if (c.thumbnailUrl) await fetchAssetAndAddToZip(pamFolder, c.thumbnailUrl, `${c.title}_thumb`);
+            }
+        }
+    }
+
+    // --- 4. PRICELISTS ---
+    const plFolder = zip.folder("_System_Backup/Pricelists");
+    if (plFolder && storeData.pricelists) {
+        for(const pl of storeData.pricelists) {
+            const brand = storeData.pricelistBrands?.find(b => b.id === pl.brandId);
+            const brandName = brand ? brand.name.replace(/[^a-z0-9 ]/gi, '') : 'Unknown_Brand';
+            const brandFolder = plFolder.folder(brandName);
+            if (brandFolder) {
+                if (pl.url) await fetchAssetAndAddToZip(brandFolder, pl.url, `${pl.title}_${pl.year}`);
+                if (pl.thumbnailUrl) await fetchAssetAndAddToZip(brandFolder, pl.thumbnailUrl, `${pl.title}_thumb`);
+            }
+        }
+    }
+
+    // --- 5. TV ---
+    const tvFolder = zip.folder("_System_Backup/TV");
+    if (tvFolder && storeData.tv?.brands) {
+        for (const tvb of storeData.tv.brands) {
+            const brandFolder = tvFolder.folder(tvb.name.replace(/[^a-z0-9 ]/gi, ''));
+            if (brandFolder) {
+                if (tvb.logoUrl) await fetchAssetAndAddToZip(brandFolder, tvb.logoUrl, "logo");
+                
+                for(const model of (tvb.models || [])) {
+                    const modelFolder = brandFolder.folder(model.name.replace(/[^a-z0-9 ]/gi, ''));
+                    if (modelFolder) {
+                        if (model.imageUrl) await fetchAssetAndAddToZip(modelFolder, model.imageUrl, "cover");
+                        // Videos might be heavy, but requested "Backup Everything"
+                        if (model.videoUrls) {
+                            for(let i=0; i<model.videoUrls.length; i++) {
+                                await fetchAssetAndAddToZip(modelFolder, model.videoUrls[i], `video_${i}`);
+                            }
+                        }
                     }
                 }
             }
@@ -632,7 +708,7 @@ const downloadZip = async (storeData: StoreData) => {
     const url = URL.createObjectURL(content);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `kiosk-full-backup-${new Date().toISOString().split('T')[0]}.zip`;
+    a.download = `kiosk-full-system-backup-${new Date().toISOString().split('T')[0]}.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -671,7 +747,6 @@ const importZip = async (file: File): Promise<Brand[]> => {
     let rootPrefix = "";
     if (validFiles.length > 0) {
         const firstFileParts = getCleanPath(validFiles[0]).split('/').filter(p => p);
-        // If the first file has depth > 1, checking if the first folder is common to ALL files
         if (firstFileParts.length > 1) {
             const possibleRoot = firstFileParts[0];
             const allHaveRoot = validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'));
@@ -695,6 +770,10 @@ const importZip = async (file: File): Promise<Brand[]> => {
         if (rootPrefix && path.startsWith(rootPrefix)) {
             path = path.substring(rootPrefix.length);
         }
+
+        // SKIP SYSTEM BACKUP FOLDERS in Inventory Import
+        if (path.startsWith('_System_Backup/')) continue;
+        if (path.includes('store_config')) continue;
 
         // Path: Brand/Category/Product/File.ext OR Brand/BrandFile.ext
         const parts = path.split('/').filter(p => p.trim() !== '');
@@ -2238,6 +2317,10 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             path = path.substring(rootPrefix.length);
         }
 
+        // SKIP SYSTEM BACKUP FOLDERS in Inventory Import
+        if (path.startsWith('_System_Backup/')) continue;
+        if (path.includes('store_config')) continue;
+
         // Path: Brand/Category/Product/File.ext OR Brand/BrandFile.ext
         const parts = path.split('/').filter(p => p.trim() !== '');
         
@@ -3025,7 +3108,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                            <div className="space-y-4">
                                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-xs">
-                                   <strong>Export Full Backup:</strong> Download your entire inventory structure including Brands, Categories, and Products. This downloads a ZIP file organized by folders containing metadata JSONs.
+                                   <strong>Export System Backup:</strong> Downloads a full archive including Inventory, Marketing, TV Config, Fleet logs, and History.
                                    <div className="mt-2 text-blue-600 font-bold">Use this to edit offline or migrate data.</div>
                                </div>
                                <button 
@@ -3044,7 +3127,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                    className={`w-full py-4 ${exportProcessing ? 'bg-blue-800 cursor-wait' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25`}
                                >
                                    {exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
-                                   {exportProcessing ? 'Packaging Assets...' : 'Download Full Backup (.zip)'}
+                                   {exportProcessing ? 'Packaging All Assets...' : 'Download Full System Backup (.zip)'}
                                </button>
                            </div>
 
