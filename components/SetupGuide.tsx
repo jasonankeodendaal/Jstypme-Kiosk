@@ -475,7 +475,7 @@ VITE_SUPABASE_ANON_KEY=your-long-anon-key-string`}
                                   <h4 className="font-bold text-slate-900 mb-1 text-lg">Connect to Vercel</h4>
                                   <p className="text-sm text-slate-600 mb-3">
                                       Go to <a href="https://vercel.com" target="_blank" className="text-blue-600 hover:underline font-bold">vercel.com</a> and sign up.
-                                      <br/>Click <strong>"Add New..."</strong> -> <strong>"Project"</strong>.
+                                      <br/>Click <strong>"Add New..."</strong> &rarr; <strong>"Project"</strong>.
                                       <br/>Select your GitHub repository from the list.
                                   </p>
                               </div>
