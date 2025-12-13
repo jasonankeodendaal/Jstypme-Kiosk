@@ -457,7 +457,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here`}
                               <div>
                                   <h4 className="font-bold text-slate-900 mb-1">Deploy & Install</h4>
                                   <p className="text-sm text-slate-600">
-                                      Click Deploy. Once finished, visit the URL on your Tablet. Use Chrome -> "Add to Home Screen" to install it as a fullscreen App.
+                                      Click Deploy. Once finished, visit the URL on your Tablet. Use Chrome -&gt; "Add to Home Screen" to install it as a fullscreen App.
                                   </p>
                               </div>
                           </div>
