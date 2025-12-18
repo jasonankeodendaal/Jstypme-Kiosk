@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers } from 'lucide-react';
 
@@ -26,7 +25,6 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
     </div>
   );
 
-  // Use any type for props to resolve children missing error in nested component definition
   const WhyBox = ({ children }: any) => (
     <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-xl">
         <div className="flex items-center gap-2 text-blue-800 font-black uppercase text-[10px] tracking-widest mb-1">
@@ -57,7 +55,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
     <div className="my-4 relative group">
       {label && <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Terminal size={12}/> {label}</div>}
       <div className="bg-slate-900 rounded-xl p-5 overflow-x-auto relative shadow-2xl border border-slate-800">
-        <code className="font-mono text-xs md:text-sm text-blue-300 whitespace-pre block leading-relaxed">{code}</code>
+        <code className="font-mono text-xs md:text-sm text-blue-300 whitespace-pre-wrap break-all block leading-relaxed">{code}</code>
         <button 
           onClick={() => copyToClipboard(code, id)}
           className="absolute top-3 right-3 p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white transition-all border border-white/5 group-active:scale-95"
@@ -71,7 +69,6 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-100 flex flex-col animate-fade-in overflow-hidden">
-      {/* HEADER */}
       <div className="bg-slate-900 text-white p-6 shadow-xl shrink-0 flex items-center justify-between border-b border-slate-800">
         <div className="flex items-center gap-4">
            <div className="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-900/40"><ShieldCheck size={28} className="text-white" /></div>
@@ -84,10 +81,8 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
       </div>
 
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
-        {/* SIDEBAR NAVIGATION */}
         <div className="w-full md:w-80 bg-white border-r border-slate-200 p-6 flex flex-col shrink-0 overflow-y-auto">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 px-2">Installation Phases</h3>
-            
             <nav className="space-y-3">
                 {[
                     { id: 'supabase', label: '1. Supabase Cloud', sub: 'Backend & Data', icon: Database, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-600' },
@@ -110,42 +105,27 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                     </button>
                 ))}
             </nav>
-
             <div className="mt-auto p-4 bg-slate-900 rounded-2xl text-white">
-                <div className="flex items-center gap-2 mb-2">
-                    <Info size={14} className="text-blue-400" />
-                    <span className="text-[10px] font-black uppercase tracking-wider">Support</span>
-                </div>
-                <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-                    Technical issues? Contact the JSTYP Systems team via the Admin Hub dashboard.
-                </p>
+                <div className="flex items-center gap-2 mb-2"><Info size={14} className="text-blue-400" /><span className="text-[10px] font-black uppercase tracking-wider">Support</span></div>
+                <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Technical issues? Contact the JSTYP Systems team via the Admin Hub dashboard.</p>
             </div>
         </div>
 
-        {/* MAIN CONTENT AREA */}
         <div className="flex-1 overflow-y-auto bg-slate-50/50 p-6 md:p-12 scroll-smooth">
            <div className="max-w-4xl mx-auto bg-white rounded-[2.5rem] shadow-xl border border-slate-200 overflow-hidden min-h-full pb-20">
-              
-              {/* TAB 1: SUPABASE */}
               {activeTab === 'supabase' && (
                 <div className="p-8 md:p-12 animate-fade-in">
                     <SectionHeading icon={Database} subtitle="Provisioning the Global Content Delivery Network & Database.">Supabase Cloud Setup</SectionHeading>
-                    
-                    <WhyBox>
-                        Supabase serves as the "Brain" of your kiosk network. By using a cloud database instead of just local storage, you enable <strong>Fleet Telemetry</strong> (monitoring kiosks remotely) and <strong>Realtime Content Pushing</strong> (updating every tablet in the store instantly when you click Save).
-                    </WhyBox>
-
+                    <WhyBox>Supabase serves as the "Brain" of your kiosk network. By using a cloud database instead of just local storage, you enable <strong>Fleet Telemetry</strong> and <strong>Realtime Content Pushing</strong>.</WhyBox>
                     <div className="space-y-4">
                         <Step number="1" title="Account & Project Creation">
                             <p>Visit <a href="https://supabase.com" target="_blank" className="text-blue-600 font-bold underline inline-flex items-center gap-1">supabase.com <ExternalLink size={12}/></a> and create a free account.</p>
                             <ul className="list-disc pl-5 space-y-2 text-sm">
                                 <li>Click <strong>New Project</strong>.</li>
                                 <li>Choose a name (e.g., "Kiosk-Pro-Retail").</li>
-                                <li>Set a strong Database Password (store this safely).</li>
-                                <li>Select a Region close to your physical store for lowest latency.</li>
+                                <li>Set a strong Database Password and select a Region close to your store.</li>
                             </ul>
                         </Step>
-
                         <Step number="2" title="Database Schema Injection">
                             <p>Once your project is ready, navigate to the <strong>SQL Editor</strong> in the left sidebar. Click <strong>New Query</strong>, paste the following block, and click <strong>Run</strong>.</p>
                             <CodeBlock 
@@ -184,173 +164,55 @@ alter table public.store_config replica identity full;
 alter table public.kiosks replica identity full;
 alter publication supabase_realtime add table public.store_config, public.kiosks;`}
                             />
-                            <p className="text-xs font-bold text-orange-600 flex items-center gap-2 mt-2">
-                                <AlertTriangle size={14}/> Important: Ensure you see "Success" in the Supabase console after running.
-                            </p>
-                        </Step>
-
-                        <Step number="3" title="API Security Credentials">
-                            <p>Go to <strong>Project Settings &gt; API</strong>. You need two strings to link your frontend code to this backend:</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">String 01</div>
-                                    <div className="font-bold text-slate-800 text-sm">Project URL</div>
-                                    <div className="text-[10px] text-slate-500">e.g. https://xyz.supabase.co</div>
-                                </div>
-                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">String 02</div>
-                                    <div className="font-bold text-slate-800 text-sm">Anon Public Key</div>
-                                    <div className="text-[10px] text-slate-500">Starts with "eyJ..."</div>
-                                </div>
-                            </div>
+                            <p className="text-xs font-bold text-orange-600 flex items-center gap-2 mt-2"><AlertTriangle size={14}/> Important: Ensure you see "Success" in the Supabase console after running.</p>
                         </Step>
                     </div>
                 </div>
               )}
-
-              {/* TAB 2: PC HUB */}
               {activeTab === 'local' && (
                   <div className="p-8 md:p-12 animate-fade-in">
                       <SectionHeading icon={Server} subtitle="Setting up the development cockpit on your administrator PC.">PC Station Hub</SectionHeading>
-                      
-                      <WhyBox>
-                          Developing locally allows you to test content and UI changes instantly without waiting for builds. Your PC becomes the "Master Kiosk" where you manage inventory before it goes live to customers.
-                      </WhyBox>
-
+                      <WhyBox>Developing locally allows you to test content and UI changes instantly. Your PC becomes the "Master Kiosk" for inventory management.</WhyBox>
                       <div className="space-y-6">
                           <Step number="1" title="Environment Runtimes">
                               <p>The app requires <strong>Node.js</strong> to run the local build server (Vite).</p>
                               <ul className="list-disc pl-5 space-y-2 text-sm">
-                                  <li>Download Node.js from <a href="https://nodejs.org" className="text-blue-600 underline">nodejs.org</a> (Use the <strong>LTS</strong> version).</li>
-                                  <li>Verify installation by typing <code>node -v</code> in your Terminal/Command Prompt.</li>
+                                  <li>Download from <a href="https://nodejs.org" className="text-blue-600 underline">nodejs.org</a> (LTS version).</li>
                               </ul>
                           </Step>
-
                           <Step number="2" title="Project Initialization">
-                              <p>Extract the source code into a folder, then open your Terminal inside that folder and execute the installation command.</p>
-                              <CodeBlock 
-                                  id="npm-install"
-                                  label="1. Install Dependencies"
-                                  code={`npm install`}
-                              />
-                              <p className="text-sm">This downloads the React, Supabase, and Tailwind libraries required for the app to function.</p>
+                              <CodeBlock id="npm-install" label="1. Install Dependencies" code={`npm install`} />
                           </Step>
-
                           <Step number="3" title="Linking the Cloud (ENV)">
-                              <p>Create a file named <code>.env</code> in the root of your project folder. This file tells the local code where your Supabase database is.</p>
-                              <CodeBlock 
-                                  id="env-example"
-                                  label=".env Configuration"
-                                  code={`VITE_SUPABASE_URL=https://your-project-id.supabase.co\nVITE_SUPABASE_ANON_KEY=your-anon-public-key-here`}
-                              />
-                              <WhyBox>
-                                  Security Note: Never share your <code>.env</code> file. It contains the keys that allow anyone to modify your store's data.
-                              </WhyBox>
-                          </Step>
-
-                          <Step number="4" title="Launching Development Mode">
-                              <p>Run the dev server to start the app on your PC.</p>
-                              <CodeBlock 
-                                  id="npm-dev"
-                                  label="2. Start Local Server"
-                                  code={`npm run dev`}
-                              />
-                              <p className="text-sm">The terminal will provide a URL (usually <code>http://localhost:5173</code>). Open this in Chrome to view your Kiosk.</p>
+                              <CodeBlock id="env-example" label=".env Configuration" code={`VITE_SUPABASE_URL=https://your-project-id.supabase.co\nVITE_SUPABASE_ANON_KEY=your-anon-public-key-here`} />
                           </Step>
                       </div>
                   </div>
               )}
-              
-              {/* TAB 3: CODE BUILD */}
               {activeTab === 'build' && (
                   <div className="p-8 md:p-12 animate-fade-in">
                       <SectionHeading icon={Hammer} subtitle="Compiling modern code into high-performance web assets.">Production Building</SectionHeading>
-                      
-                      <WhyBox>
-                          Modern code (TypeScript/React) isn't understood by browsers directly. The "Build" phase translates this into plain HTML/JS/CSS. More importantly, it <strong>minifies</strong> the files, making them 10x smaller so the kiosk loads instantly on store tablet hardware.
-                      </WhyBox>
-
+                      <WhyBox>Modern code is translated into minified HTML/JS/CSS during the "Build" phase, making the kiosk load 10x faster on tablet hardware.</WhyBox>
                       <div className="space-y-8">
-                          <Step number="1" title="Optimization Logic">
-                              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 grid grid-cols-2 gap-4">
-                                  <div className="flex items-start gap-3">
-                                      <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Layers size={16}/></div>
-                                      <div>
-                                          <div className="font-bold text-xs">Asset Chunking</div>
-                                          <div className="text-[10px] text-slate-500">Splits heavy PDF libraries to speed up initial launch.</div>
-                                      </div>
-                                  </div>
-                                  <div className="flex items-start gap-3">
-                                      <div className="p-2 bg-green-100 rounded-lg text-green-600"><Cpu size={16}/></div>
-                                      <div>
-                                          <div className="font-bold text-xs">Tree Shaking</div>
-                                          <div className="text-[10px] text-slate-500">Removes unused code from the final bundle automatically.</div>
-                                      </div>
-                                  </div>
-                              </div>
-                          </Step>
-
-                          <Step number="2" title="The Build Command">
-                              <p>When you are ready to deploy to the physical tablets, run the production compiler:</p>
+                          <Step number="1" title="The Build Command">
                               <CodeBlock id="npm-build" label="Finalize Build" code={`npm run build`} />
-                              <p className="text-sm">A new folder named <code>dist/</code> will appear. This folder contains the actual website files. Everything else is just "construction equipment".</p>
-                          </Step>
-
-                          <Step number="3" title="Testing the Artifact">
-                              <p>Before deploying to the cloud, you can test the production build locally to ensure it is stable.</p>
-                              <CodeBlock id="npm-preview" label="Preview Build" code={`npm run preview`} />
+                              <p className="text-sm">A new <code>dist/</code> folder will appear containing the actual website files.</p>
                           </Step>
                       </div>
                   </div>
               )}
-
-              {/* TAB 4: VERCEL */}
               {activeTab === 'vercel' && (
                   <div className="p-8 md:p-12 animate-fade-in">
                       <SectionHeading icon={Globe} subtitle="Launching your Kiosk to a global URL for tablet deployment.">Vercel Deployment</SectionHeading>
-                      
-                      <WhyBox>
-                          Vercel is the gold standard for hosting high-performance React apps. It provides a permanent HTTPS URL (e.g., <code>https://your-store.vercel.app</code>) that you will enter into the tablets in your shop. It also handles automatic updates whenever you push code.
-                      </WhyBox>
-
+                      <WhyBox>Vercel provides a permanent HTTPS URL. It also handles automatic updates whenever you push content or code changes.</WhyBox>
                       <div className="space-y-6">
-                          <Step number="1" title="Connect Source Control">
-                              <p>Vercel works best when linked to a <strong>GitHub</strong> repository.</p>
-                              <ul className="list-decimal pl-5 space-y-2 text-sm">
-                                  <li>Upload your code folder to a new private repository on GitHub.</li>
-                                  <li>Log in to <a href="https://vercel.com" className="text-blue-600 font-bold underline">Vercel.com</a>.</li>
-                                  <li>Click <strong>Add New &gt; Project</strong> and import your GitHub repo.</li>
-                              </ul>
-                          </Step>
-
-                          <Step number="2" title="Critical: Cloud Variables">
-                              <p>During setup, Vercel will ask for <strong>Environment Variables</strong>. This is where you paste your Supabase keys from Step 1. If you forget this, the kiosk will show an error.</p>
+                          <Step number="1" title="Critical: Cloud Variables">
+                              <p>During setup, Vercel will ask for <strong>Environment Variables</strong>. Paste your Supabase keys from Step 1 here.</p>
                               <div className="bg-slate-900 rounded-2xl p-6 shadow-2xl border border-slate-800 my-4">
-                                  <div className="flex items-center gap-2 mb-4">
-                                      <Key size={14} className="text-blue-400" />
-                                      <span className="text-blue-400 font-black uppercase text-[10px] tracking-widest">Required Vercel Keys</span>
-                                  </div>
                                   <div className="space-y-4">
-                                      <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 group">
-                                          <code className="text-white text-sm font-mono">VITE_SUPABASE_URL</code>
-                                          <span className="text-[10px] text-slate-500 font-bold uppercase group-hover:text-blue-400 cursor-help" title="Copy from Supabase Settings">API URL</span>
-                                      </div>
-                                      <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 group">
-                                          <code className="text-white text-sm font-mono">VITE_SUPABASE_ANON_KEY</code>
-                                          <span className="text-[10px] text-slate-500 font-bold uppercase group-hover:text-blue-400 cursor-help" title="Copy from Supabase Settings">Public Anon</span>
-                                      </div>
+                                      <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 group"><code className="text-white text-sm font-mono">VITE_SUPABASE_URL</code><span className="text-[10px] text-slate-500 font-bold uppercase">API URL</span></div>
+                                      <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 group"><code className="text-white text-sm font-mono">VITE_SUPABASE_ANON_KEY</code><span className="text-[10px] text-slate-500 font-bold uppercase">Public Anon</span></div>
                                   </div>
-                              </div>
-                          </Step>
-
-                          <Step number="3" title="The Launch">
-                              <p>Click <strong>Deploy</strong>. Within 60 seconds, Vercel will provide a Live URL.</p>
-                              <div className="bg-green-50 p-6 rounded-3xl border-2 border-dashed border-green-200 flex flex-col items-center text-center mt-6">
-                                   <div className="bg-white p-4 rounded-full shadow-lg mb-4 text-green-600"><CheckCircle2 size={40} /></div>
-                                   <h4 className="text-green-900 font-black uppercase tracking-tight text-lg mb-2">Systems Active</h4>
-                                   <p className="text-green-800 text-sm max-w-sm leading-relaxed">
-                                       Your Kiosk is now global. Enter your Vercel URL on all tablets in your shop. Follow the on-screen "Provisioning" steps on each device.
-                                   </p>
                               </div>
                           </Step>
                       </div>
