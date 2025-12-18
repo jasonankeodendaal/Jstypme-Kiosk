@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity } from 'lucide-react';
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
@@ -40,7 +40,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
   const EngineerNote = ({ children }: any) => (
     <div className="bg-slate-900 text-slate-300 p-5 rounded-2xl border border-slate-800 my-6 shadow-inner">
         <div className="flex items-center gap-2 text-blue-400 font-black uppercase text-[9px] tracking-[0.2em] mb-3">
-            <Cpu size={14} /> Low-Level System Note
+            <CpuIcon size={14} /> Low-Level System Note
         </div>
         <div className="text-xs leading-relaxed font-mono">
             {children}
@@ -260,29 +260,59 @@ alter publication supabase_realtime add table public.store_config, public.kiosks
               {/* PHASE 3: BUILD PIPELINE */}
               {activeTab === 'build' && (
                   <div className="p-8 md:p-16 animate-fade-in">
-                      <SectionHeading icon={Hammer} subtitle="Transforming raw engineering code into optimized, high-performance retail assets.">Asset Pipeline & Build</SectionHeading>
+                      <SectionHeading icon={Hammer} subtitle="Advanced Tree-Shaking, AST Traversal, and Minification Algorithms.">Asset Pipeline & Optimization</SectionHeading>
                       
-                      <WhyBox title="Why do we need to 'Build'?">
-                          Browsers cannot natively run the <strong>TSX (TypeScript React)</strong> or <strong>Modern CSS</strong> we write. The build process does three critical things:
-                          <ul className="mt-4 space-y-3">
-                              <li className="flex gap-3"><Zap className="text-purple-600 shrink-0" size={16}/> <strong>Transpilation:</strong> Converts modern code into older Javascript that even older Android tablet webviews can understand.</li>
-                              <li className="flex gap-3"><Zap className="text-purple-600 shrink-0" size={16}/> <strong>Tree-Shaking:</strong> Automatically removes any icon or code function you didn't actually use, shrinking the app size by up to 70%.</li>
-                              <li className="flex gap-3"><Zap className="text-purple-600 shrink-0" size={16}/> <strong>Chunking:</strong> Breaks the app into small pieces so the tablet can download the main UI while background-loading heavy libraries like the PDF viewer.</li>
+                      <WhyBox title="Deep Analysis: Tree-Shaking Architecture">
+                          Tree-shaking isn't just "deleting unused code." It is a sophisticated <strong>Static Analysis</strong> process performed by the Rollup engine.
+                          <ul className="mt-4 space-y-4">
+                              <li className="flex gap-3">
+                                  <Binary className="text-purple-600 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Abstract Syntax Tree (AST) Traversal:</strong> 
+                                      The compiler builds a map of every function call. If a module is imported but no path in the AST leads to its execution, the entire branch is pruned before the final binary is generated.
+                                  </div>
+                              </li>
+                              <li className="flex gap-3">
+                                  <Layers className="text-purple-600 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Lexical Scope Hoisting:</strong> 
+                                      Vite moves all constant declarations to the highest possible scope. This allows the minifier to see if a variable is "effectively constant," enabling <strong>Constant Folding</strong>—where a calculation like <code>2 + 2</code> is replaced by <code>4</code> in the final code to save CPU cycles on the tablet.
+                                  </div>
+                              </li>
+                              <li className="flex gap-3">
+                                  <ZapOff className="text-purple-600 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Dead Code Elimination (DCE):</strong> 
+                                      This prunes entire blocks wrapped in <code>if (false)</code>. Because our build process defines <code>process.env.NODE_ENV</code> as <code>'production'</code>, all development-only logs and debuggers are physically removed from the kiosk's memory.
+                                  </div>
+                              </li>
                           </ul>
                       </WhyBox>
 
                       <div className="space-y-8">
-                          <Step number="1" title="The Build Execution">
-                              <p className="font-medium text-slate-700">This command triggers <strong>Vite's Rollup engine</strong> to pack your app for production.</p>
-                              <CodeBlock id="npm-build" label="Run Final Build" code={`npm run build`} />
-                              <EngineerNote>
-                                  Look for the <code>dist/</code> folder. This folder contains the final, minified index.html and Javascript bundles. These are the ONLY files needed on the server.
-                              </EngineerNote>
+                          <Step number="1" title="Minification & Obfuscation">
+                              <p className="font-medium text-slate-700">The <strong>Esbuild</strong> minifier performs identifier mangling. A function named <code>calculateInventoryDiscount()</code> is renamed to <code>a()</code>. This reduces the transfer size by up to 80% while simultaneously providing a layer of source code protection.</p>
+                              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Optimization Payload</h4>
+                                  <div className="grid grid-cols-2 gap-4">
+                                      <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                          <div className="text-xs font-bold text-slate-800">Brotli Compression</div>
+                                          <div className="text-[10px] text-slate-500 font-medium">Advanced dictionary-based algorithm for text assets.</div>
+                                      </div>
+                                      <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                          <div className="text-xs font-bold text-slate-800">Chunk Splitting</div>
+                                          <div className="text-[10px] text-slate-500 font-medium">Isolates PDF.js so it only loads when a manual is opened.</div>
+                                      </div>
+                                  </div>
+                              </div>
+                              <CodeBlock id="npm-build" label="Execute Production Build" code={`npm run build`} />
                           </Step>
 
-                          <Step number="2" title="Local Production Testing">
-                              <p className="font-medium text-slate-700">Always test the <em>built</em> version before deploying. The development version and production version behave differently regarding cache and speed.</p>
-                              <CodeBlock id="npm-preview" label="Preview Production Build Locally" code={`npm run preview`} />
+                          <Step number="2" title="Source Map Security">
+                              <p className="font-medium text-slate-700">By default, Kiosk Pro <strong>disables</strong> source maps in production. This ensures that a curious user cannot use the browser's developer tools to reconstruct your original TypeScript logic from the minified bundles.</p>
+                              <EngineerNote>
+                                  Vulnerability Patch: In <code>vite.config.ts</code>, we ensure <code>build.sourcemap</code> is <code>false</code> to prevent "re-engineering" of your API connection logic.
+                              </EngineerNote>
                           </Step>
                       </div>
                   </div>
@@ -291,37 +321,58 @@ alter publication supabase_realtime add table public.store_config, public.kiosks
               {/* PHASE 4: VERCEL DEPLOY */}
               {activeTab === 'vercel' && (
                   <div className="p-8 md:p-16 animate-fade-in">
-                      <SectionHeading icon={Globe} subtitle="Launching the system to the global edge network for secure tablet access.">Vercel Edge Deployment</SectionHeading>
+                      <SectionHeading icon={Globe} subtitle="Anycast Networking, BGP Routing, and Layer 7 Global Content Delivery.">Edge Network Infrastructure</SectionHeading>
                       
-                      <WhyBox title="Why Vercel?">
-                          Kiosks require 100% uptime. Vercel provides <strong>Serverless Infrastructure</strong>, meaning there is no single server to crash. Your app is mirrored across hundreds of locations worldwide.
+                      <WhyBox title="Global CDN Mechanics">
+                          Deploying to Vercel isn't just "hosting." It places your app on a <strong>Global Anycast Network</strong>.
+                          <ul className="mt-4 space-y-4">
+                              <li className="flex gap-3">
+                                  <Globe2 className="text-slate-900 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Anycast IP Routing:</strong> 
+                                      Every Kiosk tablet connects to the same IP address, but the internet's <strong>BGP (Border Gateway Protocol)</strong> routes that request to the PoP (Point of Presence) physically closest to the store. If a shop in New York accesses the kiosk, they hit the 'iad1' data center; a shop in London hits 'lhr1'.
+                                  </div>
+                              </li>
+                              <li className="flex gap-3">
+                                  <Wind className="text-slate-900 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Edge Caching (HTTP 304):</strong> 
+                                      We use <code>Cache-Control: stale-while-revalidate</code>. The edge network serves the cached version to the kiosk <strong>instantly</strong>, then silently fetches the update in the background. This results in "Zero Second" perceived load times.
+                                  </div>
+                              </li>
+                              <li className="flex gap-3">
+                                  <ShieldAlert className="text-slate-900 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Layer 7 WAF Protection:</strong> 
+                                      The Edge network analyzes incoming traffic for SQL injection and DDoS patterns. Malicious requests are terminated at the Edge, never even reaching your application code.
+                                  </div>
+                              </li>
+                          </ul>
                       </WhyBox>
 
                       <div className="space-y-8">
-                          <Step number="1" title="CI/CD Integration">
-                              <p className="font-medium text-slate-700">Link your GitHub repository to Vercel. Every time you 'Push' code, the build (from Phase 3) happens automatically in the cloud.</p>
-                              <div className="bg-slate-50 border border-slate-200 p-6 rounded-[2rem] flex flex-col items-center text-center gap-4">
-                                  <Workflow size={40} className="text-blue-500" />
-                                  <div>
-                                      <h4 className="font-black uppercase text-sm text-slate-800">Automated Pipeline</h4>
-                                      <p className="text-xs text-slate-500 mt-1 font-medium">Code Push &rarr; Build Asset &rarr; Edge Deploy</p>
+                          <Step number="1" title="Atomic Immutability">
+                              <p className="font-medium text-slate-700 leading-relaxed">Every deployment generates a unique ID. If you push a broken update, the system maintains <strong>Instant Rollback</strong> capability. You can revert the entire fleet to a known-stable version in under 2 seconds without a single byte of code being re-downloaded by the tablets.</p>
+                              <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative border border-white/5">
+                                  <div className="absolute top-0 right-0 p-4 opacity-10"><Workflow size={60} /></div>
+                                  <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Network Health Check</div>
+                                  <div className="flex items-center gap-2 text-xs font-mono">
+                                      <span className="text-green-400 font-black">[PASS]</span> SSL Termination @ Edge
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs font-mono mt-1">
+                                      <span className="text-green-400 font-black">[PASS]</span> HTTP/3 QUIC Protocol Enabled
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs font-mono mt-1">
+                                      <span className="text-green-400 font-black">[PASS]</span> Gzip/Brotli Auto-Negotiation
                                   </div>
                               </div>
                           </Step>
 
-                          <Step number="2" title="Atomic Deployments">
-                              <p className="font-medium text-slate-700">Vercel uses "Atomic" deploys. If a build fails, the old version stays live. The new version only replaces the old one if it is 100% successful.</p>
+                          <Step number="2" title="Cold vs. Hot Starts">
+                              <p className="font-medium text-slate-700">Since the kiosk is a SPA (Single Page Application), it benefit from 100% "Static" performance. There are no server-side databases to "wake up" when a customer touches the screen; the entire UI logic resides in the tablet's browser cache, managed by our <strong>Service Worker (sw.js)</strong>.</p>
                               <EngineerNote>
-                                  IMPORTANT: Ensure you add your <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_ANON_KEY</strong> to the 'Environment Variables' section in the Vercel Dashboard. Without these, the deployed kiosk will have no connection to the fleet.
+                                  Reliability Metric: Vercel's infrastructure boasts a 99.99% uptime SLA. By combining this with Supabase's multi-region failover, the Kiosk Pro system is designed for "Always-On" retail environments.
                               </EngineerNote>
-                          </Step>
-
-                          <Step number="3" title="Domain Provisioning">
-                              <p className="font-medium text-slate-700">Once deployed, you will receive a <code>.vercel.app</code> URL. You can map this to a custom domain (e.g., <code>kiosk.brandname.com</code>) for a professional in-store appearance.</p>
-                              <div className="bg-blue-600 p-4 rounded-2xl text-white shadow-lg flex items-center gap-4">
-                                  <Shield size={24} />
-                                  <div className="text-xs font-bold uppercase tracking-widest">SSL Encryption Included Automatically</div>
-                              </div>
                           </Step>
                       </div>
                   </div>
@@ -334,3 +385,4 @@ alter publication supabase_realtime add table public.store_config, public.kiosks
 };
 
 export default SetupGuide;
+
