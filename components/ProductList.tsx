@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Category, Product, Brand, Catalogue } from '../types';
-import { ChevronLeft, ArrowRight, MonitorPlay, MonitorStop, Search, X, Tag, Package } from 'lucide-react';
+import { ChevronLeft, ArrowRight, MonitorPlay, MonitorStop, Search, X, Tag, Package, Zap } from 'lucide-react';
 
 interface ProductListProps {
   category: Category;
@@ -17,6 +17,16 @@ interface ProductListProps {
 
 const ProductList: React.FC<ProductListProps> = ({ category, onSelectProduct, onBack, screensaverEnabled, onToggleScreensaver, showScreensaverButton = true }) => {
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Helper to determine if product is recently added/updated
+  const isNew = (dateString?: string) => {
+      if (!dateString) return false;
+      const addedDate = new Date(dateString);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - addedDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      return diffDays <= 7;
+  };
 
   // Search & Sort Logic
   const filteredProducts = useMemo(() => {
@@ -66,7 +76,7 @@ const ProductList: React.FC<ProductListProps> = ({ category, onSelectProduct, on
             </div>
         </div>
 
-        {/* Search Bar - New Request */}
+        {/* Search Bar */}
         <div className="relative w-full">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                 <Search size={20} />
@@ -90,14 +100,21 @@ const ProductList: React.FC<ProductListProps> = ({ category, onSelectProduct, on
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 md:p-8 bg-slate-50 pb-40 md:pb-8">
-        {/* Responsive Grid - Mobile: grid-cols-3 */}
+        {/* Responsive Grid */}
         <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-6 pb-12">
           {filteredProducts.map((product) => (
             <button
               key={product.id}
               onClick={() => onSelectProduct(product)}
-              className="group bg-white rounded-lg md:rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden border border-slate-200 hover:border-blue-400 flex flex-col text-left h-full"
+              className="group bg-white rounded-lg md:rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden border border-slate-200 hover:border-blue-400 flex flex-col text-left h-full relative"
             >
+              {/* NEW Badge */}
+              {isNew(product.dateAdded) && (
+                  <div className="absolute top-2 left-2 z-10 bg-red-600 text-white text-[6px] md:text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-lg flex items-center gap-0.5 animate-pulse">
+                      <Zap size={8} fill="currentColor" /> NEW
+                  </div>
+              )}
+
               {/* Image Container */}
               <div className="aspect-square bg-white border-b border-slate-50 p-2 md:p-4 flex items-center justify-center relative overflow-hidden">
                 {product.imageUrl ? (
