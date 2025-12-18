@@ -1,5 +1,3 @@
-
-
 export interface DimensionSet {
   label?: string; // e.g. "Device", "Stand", "Box 1"
   width: string;
@@ -102,11 +100,20 @@ export interface PricelistBrand {
   logoUrl?: string;
 }
 
+export interface PricelistItem {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+}
+
 export interface Pricelist {
   id: string;
   brandId: string;
   title: string;
-  url: string; // PDF URL
+  type?: 'pdf' | 'manual'; // New: distinction between modes
+  url?: string; // PDF URL
+  items?: PricelistItem[]; // New: Manual items
   thumbnailUrl?: string; // New: Cover Image
   month: string;
   year: string;
