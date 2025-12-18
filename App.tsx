@@ -31,19 +31,14 @@ const AppIconUpdater = ({ storeData }: { storeData: StoreData }) => {
              if (appleLink && appleLink.href !== targetIconUrl) appleLink.href = targetIconUrl;
 
              // 2. Update Manifest (For Install Prompt & PWA Launches)
-             // Optimization: If the icon is the default FOR THIS MODE, we use the static manifest
-             // This ensures we get all the nice multi-size icons (48, 72, ... 512).
              const defaultForMode = isAdmin ? DEFAULT_ADMIN_ICON : DEFAULT_KIOSK_ICON;
              const isDefault = (targetIconUrl === defaultForMode);
              
-             // Use absolute paths for the base manifests to avoid relative path confusion in sub-routes
              const baseManifest = isAdmin ? '/manifest-admin.json' : '/manifest-kiosk.json';
              const manifestLink = document.getElementById('pwa-manifest') as HTMLLinkElement;
 
              if (isDefault) {
-                 // Ensure we are pointing to the static file and not a stale blob
                  if (manifestLink) {
-                     // Check if current href ends with the base manifest filename to avoid unnecessary updates
                      const currentHref = manifestLink.getAttribute('href') || '';
                      if (!currentHref.endsWith(baseManifest.substring(1)) && currentHref !== baseManifest) {
                          if (manifestLink.href.startsWith('blob:')) {
@@ -55,24 +50,18 @@ const AppIconUpdater = ({ storeData }: { storeData: StoreData }) => {
                  return;
              }
 
-             // If Custom Icon (or swapped default): We must dynamically generate the manifest to show the user's custom choice.
-             // Note: This results in a "Single Source" manifest (one image for all sizes) because we can't resize on the fly easily.
              try {
                 if (manifestLink) {
                     const response = await fetch(baseManifest);
                     if (!response.ok) throw new Error("Manifest fetch failed");
                     const manifest = await response.json();
                     
-                    // Determine Type (SVG vs PNG) for robustness
                     const isSvg = targetIconUrl.endsWith('.svg');
                     const iconType = isSvg ? "image/svg+xml" : "image/png";
                     const sizes = "192x192"; 
                     const largeSizes = "512x512";
 
-                    // Allow 'any' orientation so TV setup can be landscape
                     manifest.orientation = "any";
-
-                    // Force update icons array with comprehensive definitions based on the single source
                     manifest.icons = [
                         { src: targetIconUrl, sizes: sizes, type: iconType, purpose: "any" },
                         { src: targetIconUrl, sizes: sizes, type: iconType, purpose: "maskable" },
@@ -80,7 +69,6 @@ const AppIconUpdater = ({ storeData }: { storeData: StoreData }) => {
                         { src: targetIconUrl, sizes: largeSizes, type: iconType, purpose: "maskable" }
                     ];
 
-                    // Ensure crucial PWA fields are present
                     if (!manifest.lang) manifest.lang = "en";
                     if (typeof manifest.prefer_related_applications === 'undefined') manifest.prefer_related_applications = false;
                     
@@ -88,7 +76,6 @@ const AppIconUpdater = ({ storeData }: { storeData: StoreData }) => {
                     const blobUrl = URL.createObjectURL(blob);
                     
                     manifestLink.href = blobUrl;
-                    console.log("App Identity Updated (Custom):", targetIconUrl);
                 }
              } catch (e) {
                  console.error("Manifest update failed:", e);
@@ -121,11 +108,9 @@ export default function App() {
     return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
 
-  // Defined outside useEffect to be reusable
   const fetchData = useCallback(async () => {
       try {
         const data = await generateStoreData();
-        // Only update if we actually got data back to prevent wiping state on error
         if (data) {
            setStoreData(data);
            setLastSyncTime(new Date().toLocaleTimeString());
@@ -139,44 +124,40 @@ export default function App() {
 
   // 2. Data Synchronization & Realtime
   useEffect(() => {
-    // Initial Load
     initSupabase();
     fetchData();
 
-    // Polling Fallback (Updated to 5 Minutes per request)
+    // Polling Logic: Check every 60s for changes if Realtime fails
     const interval = setInterval(() => {
-        console.log("Auto-fetching latest data (5min cycle)...");
+        console.log("Background Refresh (60s cycle)...");
         fetchData();
-    }, 300000); // 5 minutes
+    }, 60000); 
 
     // Setup Realtime Subscription
     if (supabase) {
+        // Subscribe to ANY change in the store_config table
         const channel = supabase
-          .channel('public:store_data')
+          .channel('system_sync')
           .on(
             'postgres_changes',
-            { event: 'UPDATE', schema: 'public', table: 'store_config', filter: 'id=eq.1' },
+            { event: '*', schema: 'public', table: 'store_config' },
             (payload: any) => {
-              console.log("Store Config Update received!", payload);
-              // We only auto-refresh if WE didn't trigger the save (basic loop protection handled by UI state in Admin)
-              // But generally, we want fresh data if someone else edits it.
-              // NOTE: In Admin Dashboard, we will handle "incoming changes vs local edits" conflict visually.
-              if (payload.new && payload.new.data) {
-                 fetchData();
-              }
+              console.log("Remote Config Update detected via Realtime!", payload);
+              // Trigger a fresh fetch
+              fetchData();
             }
           )
           .on(
              'postgres_changes',
              { event: '*', schema: 'public', table: 'kiosks' },
              (payload: any) => {
-                 console.log("Fleet Update received!", payload);
-                 // When fleet changes (new kiosk or heartbeat), refresh data silently
+                 console.log("Fleet status changed remotely.");
+                 // Refreshing data ensures fleet view in Admin is live
                  fetchData();
              }
           )
           .subscribe((status: string) => {
-             console.log("Supabase Subscription Status:", status);
+             console.log("Sync Channel Status:", status);
           });
 
         return () => {
@@ -189,16 +170,14 @@ export default function App() {
   }, [fetchData]);
 
   const handleUpdateData = async (newData: StoreData) => {
-    // UI Feedback
     setIsSyncing(true);
-    setStoreData(newData); // Optimistic update
+    setStoreData(newData); 
     
     try {
-        // Strict Cloud Save
         await saveStoreData(newData);
         setLastSyncTime(new Date().toLocaleTimeString());
     } catch (e: any) {
-        console.error("Sync failed", e);
+        console.error("Cloud Sync failed", e);
         alert(`SYNC ERROR: ${e.message || "Failed to connect to server."}`);
     } finally {
         setTimeout(() => setIsSyncing(false), 1000);
@@ -220,12 +199,10 @@ export default function App() {
     );
   }
 
-  // Normalize route to remove trailing slash for comparison
   const normalizedRoute = currentRoute.endsWith('/') && currentRoute.length > 1 
     ? currentRoute.slice(0, -1) 
     : currentRoute;
 
-  // --- ROUTE: ADMIN HUB ---
   if (normalizedRoute === '/admin') {
     return (
       <>
@@ -244,7 +221,6 @@ export default function App() {
     );
   }
 
-  // --- ROUTE: ABOUT PAGE ---
   if (normalizedRoute === '/about') {
     return (
         <AboutPage 
@@ -257,7 +233,6 @@ export default function App() {
     );
   }
 
-  // --- ROUTE: KIOSK FRONT PAGE ---
   return (
     <>
       {storeData && <AppIconUpdater storeData={storeData} />}
@@ -273,6 +248,7 @@ export default function App() {
       <KioskApp 
         storeData={storeData}
         lastSyncTime={lastSyncTime}
+        onSyncRequest={fetchData}
       />
     </>
   );

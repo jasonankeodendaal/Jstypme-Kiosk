@@ -203,13 +203,13 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                             <div className="flex-1">
                                 <h3 className="text-xl font-bold text-slate-900 mb-2">Run Database Script</h3>
                                 <p className="text-slate-600 mb-4 text-sm">
-                                    We need to create the tables for Products and Devices.
+                                    We need to create the tables and <strong>ENABLE REALTIME</strong>.
                                     <br/>
                                     Go to the <strong>SQL Editor</strong> (Paper icon on left bar), click <strong>"New Query"</strong>, paste the code below, and click <strong>Run</strong>.
                                 </p>
                                 
                                 <div className="p-4 bg-yellow-50 text-yellow-800 border-l-4 border-yellow-400 rounded-r-lg mb-4 text-xs font-medium">
-                                    <span className="font-bold uppercase">Important:</span> This script enables "Row Level Security" but creates open policies for the kiosk to function without user login.
+                                    <span className="font-bold uppercase tracking-tighter">Crucial Step:</span> The last block of this code enables WebSockets for instant syncing.
                                 </div>
 
                                 <CodeBlock 
@@ -236,7 +236,7 @@ create table if not exists public.store_config (
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- 4. Insert Default Config if empty (Includes Default PIN)
+-- 4. Insert Default Config if empty
 insert into public.store_config (id, data)
 values (1, '{
   "hero": {
@@ -251,7 +251,7 @@ values (1, '{
 }'::jsonb)
 on conflict (id) do nothing;
 
--- 5. Create Fleet Telemetry Table (Updated Schema)
+-- 5. Create Fleet Telemetry Table
 create table if not exists public.kiosks (
   id text primary key,
   name text,
@@ -271,30 +271,17 @@ create table if not exists public.kiosks (
 alter table public.store_config enable row level security;
 alter table public.kiosks enable row level security;
 
--- 7. Create OPEN Policies (Allows Kiosk to Read/Write without Login)
--- Config Policies
-create policy "Enable read access for all users"
-on public.store_config for select
-using (true);
+-- 7. Create OPEN Policies
+create policy "Enable read access for all users" on public.store_config for select using (true);
+create policy "Enable update access for all users" on public.store_config for update using (true) with check (true);
+create policy "Enable insert access for all users" on public.store_config for insert with check (true);
+create policy "Enable read access for fleet" on public.kiosks for select using (true);
+create policy "Enable insert/update for fleet" on public.kiosks for all using (true) with check (true);
 
-create policy "Enable update access for all users"
-on public.store_config for update
-using (true)
-with check (true);
-
-create policy "Enable insert access for all users"
-on public.store_config for insert
-with check (true);
-
--- Fleet Policies
-create policy "Enable read access for fleet"
-on public.kiosks for select
-using (true);
-
-create policy "Enable insert/update for fleet"
-on public.kiosks for all
-using (true)
-with check (true);`}
+-- 8. CRITICAL: ENABLE REALTIME SYNC
+-- This allows the app to refresh automatically when you save in Admin.
+alter publication supabase_realtime add table public.store_config;
+alter publication supabase_realtime add table public.kiosks;`}
                                 />
                             </div>
                         </div>
