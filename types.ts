@@ -169,7 +169,7 @@ export interface KioskRegistry {
 
 export interface ArchivedItem {
     id: string;
-    type: 'product' | 'pricelist' | 'tv_model' | 'other';
+    type: 'product' | 'pricelist' | 'tv_model' | 'device' | 'other';
     name: string;
     data: any;
     deletedAt: string;

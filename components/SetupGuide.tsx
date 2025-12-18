@@ -103,7 +103,7 @@ alter publication supabase_realtime add table public.store_config, public.kiosks
                             <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold shrink-0">2</div>
                             <div className="flex-1">
                                 <h3 className="text-xl font-bold mb-2">Connect Keys</h3>
-                                <p className="text-sm text-slate-600 mb-4">Go to <strong>Project Settings > API</strong> and get your <code>Project URL</code> and <code>anon public</code> key.</p>
+                                <p className="text-sm text-slate-600 mb-4">Go to <strong>Project Settings &gt; API</strong> and get your <code>Project URL</code> and <code>anon public</code> key.</p>
                                 <div className="bg-yellow-50 p-4 border border-yellow-200 rounded-xl text-xs font-bold text-yellow-800">
                                    Note: Without these keys, the app uses Local Storage which does not auto-sync between devices.
                                 </div>

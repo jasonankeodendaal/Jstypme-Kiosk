@@ -2165,14 +2165,28 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   };
 
   const removeFleetMember = async (id: string) => {
-      if(confirm("Remove device from fleet? This cannot be undone.") && supabase) {
+      const kiosk = localData?.fleet?.find(f => f.id === id);
+      if(!kiosk) return;
+
+      if(confirm(`Archive and remove device "${kiosk.name}" from live monitoring?`) && supabase) {
+          // 1. Archive the device data
+          const newArchive = addToArchive('device', kiosk.name, kiosk);
+          
+          // 2. Update local data state
+          const updatedData = { ...localData!, archive: newArchive };
+          
+          // 3. Delete from live table
           await supabase.from('kiosks').delete().eq('id', id);
+          
+          // 4. Force cloud sync of config (archive)
+          onUpdateData(updatedData);
+          
           onRefresh();
       }
   };
 
   // ARCHIVE HANDLERS
-  const addToArchive = (type: 'product' | 'pricelist' | 'tv_model' | 'other', name: string, data: any) => {
+  const addToArchive = (type: 'product' | 'pricelist' | 'tv_model' | 'device' | 'other', name: string, data: any) => {
       if (!localData) return;
       const now = new Date().toISOString();
       const newItem = {
@@ -2964,6 +2978,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
                                                            item.type === 'product' ? 'bg-blue-50 text-blue-700' :
                                                            item.type === 'pricelist' ? 'bg-green-50 text-green-700' :
+                                                           item.type === 'device' ? 'bg-purple-50 text-purple-700' :
                                                            'bg-slate-100 text-slate-600'
                                                        }`}>
                                                            {item.type}
