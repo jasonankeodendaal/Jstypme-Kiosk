@@ -24,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid } from 'lucide-react';
 
 const isRecent = (dateString?: string) => {
     if (!dateString) return false;
@@ -41,6 +41,147 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
     <path d="M11.5 14L17 19" />
   </svg>
 );
+
+// --- NEW COMPONENT: SETUP SCREEN ---
+const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComplete: () => void }) => {
+    const [step, setStep] = useState(1);
+    const [shopName, setShopName] = useState('');
+    const [deviceType, setDeviceType] = useState<'kiosk' | 'mobile' | 'tv'>('kiosk');
+    const [pin, setPin] = useState('');
+    const [error, setError] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handleNext = async () => {
+        setError('');
+        if (step === 1) {
+            if (!shopName.trim()) return setError('Please enter a name for this location.');
+            setStep(2);
+        } else if (step === 2) {
+            setStep(3);
+        } else if (step === 3) {
+            const systemPin = storeData.systemSettings?.setupPin || '0000';
+            if (pin !== systemPin) return setError('Invalid Setup PIN. Consult Admin.');
+            
+            setIsProcessing(true);
+            try {
+                await provisionKioskId();
+                const success = await completeKioskSetup(shopName.trim(), deviceType);
+                if (success) onComplete();
+                else setError('Setup failed. Local storage error.');
+            } catch (e) {
+                setError('Cloud registration failed.');
+            } finally {
+                setIsProcessing(false);
+            }
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[300] bg-slate-900 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-xl overflow-hidden shadow-2xl animate-fade-in border border-white/20">
+                <div className="bg-slate-900 text-white p-8 md:p-12 text-center relative">
+                    <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                    <div className="relative z-10 flex flex-col items-center">
+                        <div className="bg-blue-600 p-4 rounded-3xl shadow-xl mb-6">
+                            <Store size={40} />
+                        </div>
+                        <h1 className="text-3xl font-black uppercase tracking-tight mb-2">Device Provisioning</h1>
+                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Kiosk Pro v2.8 • System Initialization</p>
+                    </div>
+                </div>
+
+                <div className="p-8 md:p-12">
+                    {/* Stepper */}
+                    <div className="flex justify-center gap-2 mb-10">
+                        {[1, 2, 3].map(s => (
+                            <div key={s} className={`h-1.5 rounded-full transition-all duration-500 ${step >= s ? 'w-12 bg-blue-600' : 'w-4 bg-slate-200'}`}></div>
+                        ))}
+                    </div>
+
+                    <div className="min-h-[220px]">
+                        {step === 1 && (
+                            <div className="animate-fade-in">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Step 01: Location Identity</label>
+                                <h2 className="text-2xl font-black text-slate-900 mb-6">What is the name of this shop or zone?</h2>
+                                <input 
+                                    autoFocus
+                                    className="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-2xl outline-none focus:border-blue-500 font-bold text-lg text-slate-900 transition-all uppercase placeholder:normal-case"
+                                    placeholder="e.g. Waterfront Mall - Tech Hub"
+                                    value={shopName}
+                                    onChange={(e) => setShopName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+                                />
+                            </div>
+                        )}
+
+                        {step === 2 && (
+                            <div className="animate-fade-in">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Step 02: Hardware Profile</label>
+                                <h2 className="text-2xl font-black text-slate-900 mb-6">Select the primary display type for this hardware.</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {[
+                                        { id: 'kiosk', icon: <Tablet size={24}/>, label: 'Kiosk', desc: 'Interactive Stand' },
+                                        { id: 'mobile', icon: <Smartphone size={24}/>, label: 'Mobile', desc: 'Handheld Unit' },
+                                        { id: 'tv', icon: <Tv size={24}/>, label: 'TV Wall', desc: 'Non-Interactive' }
+                                    ].map(type => (
+                                        <button 
+                                            key={type.id}
+                                            onClick={() => setDeviceType(type.id as any)}
+                                            className={`p-5 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 group ${deviceType === type.id ? 'bg-blue-50 border-blue-600 shadow-lg shadow-blue-600/10' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                                        >
+                                            <div className={`${deviceType === type.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`}>{type.icon}</div>
+                                            <div className={`font-black uppercase text-xs ${deviceType === type.id ? 'text-blue-600' : 'text-slate-900'}`}>{type.label}</div>
+                                            <div className="text-[9px] font-bold text-slate-400 uppercase">{type.desc}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 3 && (
+                            <div className="animate-fade-in text-center">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Step 03: Security Authorization</label>
+                                <h2 className="text-2xl font-black text-slate-900 mb-6">Enter System Setup PIN</h2>
+                                <div className="max-w-[240px] mx-auto">
+                                    <input 
+                                        autoFocus
+                                        type="password"
+                                        maxLength={8}
+                                        className="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-2xl outline-none focus:border-blue-500 font-mono font-bold text-3xl text-center tracking-[0.5em] text-slate-900 transition-all"
+                                        placeholder="****"
+                                        value={pin}
+                                        onChange={(e) => setPin(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+                                    />
+                                </div>
+                                <p className="text-slate-400 text-xs font-medium mt-4">Required to register device with Cloud Fleet</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {error && <div className="mt-6 p-4 bg-red-50 text-red-600 rounded-xl text-xs font-bold uppercase flex items-center gap-3 border border-red-100"><X size={16}/> {error}</div>}
+
+                    <div className="mt-10 flex gap-4">
+                        {step > 1 && (
+                            <button onClick={() => setStep(step - 1)} className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">Back</button>
+                        )}
+                        <button 
+                            onClick={handleNext}
+                            disabled={isProcessing}
+                            className="flex-1 bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-xl hover:bg-blue-600 transition-all active:scale-95 disabled:opacity-50"
+                        >
+                            {isProcessing ? (
+                                <><Loader2 className="animate-spin" size={18} /> Syncing Data...</>
+                            ) : (
+                                <>{step === 3 ? 'Complete Provisioning' : 'Continue'} <ChevronRight size={18} /></>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const ManualPricelistViewer = ({ pricelist, onClose }: { pricelist: Pricelist, onClose: () => void }) => {
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
@@ -183,6 +324,12 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   }, [storeData?.pricelistBrands]);
 
   if (!storeData) return null;
+
+  // Handle Setup Prompt
+  if (!isSetup) {
+      return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
+  }
+
   if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} />;
 
   return (
