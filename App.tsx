@@ -4,7 +4,7 @@ import { KioskApp } from './components/KioskApp';
 import { AdminDashboard } from './components/AdminDashboard';
 import AboutPage from './components/AboutPage';
 import { generateStoreData, saveStoreData } from './services/geminiService';
-import { initSupabase, supabase } from './services/kioskService';
+import { initSupabase, supabase, getKioskId } from './services/kioskService';
 import { StoreData } from './types';
 import { Loader2, Cloud, Download, CheckCircle2 } from 'lucide-react';
 
@@ -82,6 +82,7 @@ export default function App() {
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
   
   const syncTimeoutRef = useRef<number | null>(null);
+  const kioskId = getKioskId();
 
   useEffect(() => {
     const handleLocationChange = () => setCurrentRoute(window.location.pathname);
@@ -109,9 +110,9 @@ export default function App() {
     initSupabase();
     fetchData();
 
-    // Background Polling (Fallback for unstable WebSockets)
+    // Background Polling (Authority Fallback)
     const interval = setInterval(() => {
-        console.log("Heartbeat Sync...");
+        console.log("Routine System Sync...");
         fetchData(true);
     }, 60000); 
 
@@ -119,22 +120,30 @@ export default function App() {
     if (supabase) {
         const channel = supabase
           .channel('system_sync')
+          // Listen to GLOBAL config changes
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'store_config' },
             (payload: any) => {
-              console.log("Remote Update Signal:", payload.eventType);
-              // Debounce refresh to avoid hammering the API if multiple changes arrive
+              console.log("Global Remote Update Signal:", payload.eventType);
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
               syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 500);
             }
           )
+          // Listen to FLEET changes (specific to this kiosk or all fleet if admin)
           .on(
              'postgres_changes',
              { event: '*', schema: 'public', table: 'kiosks' },
-             () => {
-                 if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-                 syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 500);
+             (payload: any) => {
+                 // Trigger refresh if my specific row changed or if any row changed (for admin views)
+                 const isAdminView = window.location.pathname.startsWith('/admin');
+                 const isMyUpdate = payload.new && payload.new.id === kioskId;
+                 
+                 if (isAdminView || isMyUpdate) {
+                    console.log("Fleet Update Signal detected.");
+                    if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
+                    syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 500);
+                 }
              }
           )
           .subscribe();
@@ -146,7 +155,7 @@ export default function App() {
     }
     
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, kioskId]);
 
   const handleUpdateData = async (newData: StoreData) => {
     setIsSyncing(true);

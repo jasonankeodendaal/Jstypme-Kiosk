@@ -87,6 +87,32 @@ export const provisionKioskId = async (): Promise<string> => {
   return nextId;
 };
 
+/**
+ * Attempts to find this device in the Supabase database.
+ * If found, restores name and type to localStorage.
+ */
+export const tryRecoverIdentity = async (id: string): Promise<boolean> => {
+    if (!supabase) initSupabase();
+    if (!supabase) return false;
+
+    try {
+        const { data, error } = await supabase
+            .from('kiosks')
+            .select('name, device_type')
+            .eq('id', id)
+            .maybeSingle();
+        
+        if (!error && data) {
+            if (data.name) localStorage.setItem(STORAGE_KEY_NAME, data.name);
+            if (data.device_type) localStorage.setItem(STORAGE_KEY_TYPE, data.device_type);
+            return true;
+        }
+    } catch (e) {
+        console.warn("Identity recovery failed", e);
+    }
+    return false;
+};
+
 export const getShopName = (): string | null => {
   return localStorage.getItem(STORAGE_KEY_NAME);
 };
@@ -178,7 +204,7 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               ipAddress = `${connection.effectiveType?.toUpperCase() || 'NET'} | ${connection.downlink}Mbps`;
           }
 
-          const payload = {
+          const payload: any = {
               id,
               name: currentName,
               device_type: currentDeviceType,
@@ -186,10 +212,13 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               last_seen: new Date().toISOString(),
               status: 'online',
               wifi_strength: wifiStrength,
-              ip_address: ipAddress,
-              // If restart was requested and we are handling it now, we clear the flag in DB
-              restart_requested: false 
+              ip_address: ipAddress
           };
+          
+          // Only clear the restart flag in the payload if it was actually true and we are acknowledging it
+          if (restartFlag) {
+              payload.restart_requested = false;
+          }
 
           await supabase.from('kiosks').upsert(payload);
       }

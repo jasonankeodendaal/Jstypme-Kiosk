@@ -13,7 +13,8 @@ import {
   supabase,
   checkCloudConnection,
   initSupabase,
-  getCloudProjectName
+  getCloudProjectName,
+  tryRecoverIdentity
 } from '../services/kioskService';
 import BrandGrid from './BrandGrid';
 import CategoryGrid from './CategoryGrid';
@@ -149,6 +150,7 @@ export const SetupScreen = ({ kioskId, onComplete, onRestoreId }: any) => {
   const [deviceType, setDeviceType] = useState<'kiosk' | 'mobile' | 'tv'>('kiosk');
   const [inputPin, setInputPin] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(true);
   const [isRestoreMode, setIsRestoreMode] = useState(false);
   const [customId, setCustomId] = useState('');
   const [globalPin, setGlobalPin] = useState<string>('0000');
@@ -161,7 +163,16 @@ export const SetupScreen = ({ kioskId, onComplete, onRestoreId }: any) => {
   }, []);
 
   useEffect(() => {
-      const fetchGlobalPin = async () => {
+      const initCheck = async () => {
+          setIsRecovering(true);
+          // 1. Try to find this device in DB first
+          const recovered = await tryRecoverIdentity(kioskId);
+          if (recovered) {
+              onComplete(getShopName()!, getDeviceType());
+              return;
+          }
+          
+          // 2. If not found, fetch Pin for manual setup
           initSupabase();
           if (supabase) {
               const { data, error } = await supabase.from('store_config').select('data').eq('id', 1).single();
@@ -169,9 +180,10 @@ export const SetupScreen = ({ kioskId, onComplete, onRestoreId }: any) => {
                   setGlobalPin(data.data.systemSettings.setupPin);
               }
           }
+          setIsRecovering(false);
       };
-      fetchGlobalPin();
-  }, []);
+      initCheck();
+  }, [kioskId, onComplete]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +198,15 @@ export const SetupScreen = ({ kioskId, onComplete, onRestoreId }: any) => {
     onComplete(shopName, deviceType);
     setIsSubmitting(false);
   };
+
+  if (isRecovering) {
+      return (
+          <div className="h-screen w-screen bg-slate-900 flex flex-col items-center justify-center p-4">
+              <Loader2 className="animate-spin text-blue-500 mb-4" size={48} />
+              <div className="text-white font-black uppercase tracking-[0.2em] text-sm animate-pulse">Syncing Profile...</div>
+          </div>
+      );
+  }
 
   return (
     <div className="h-screen w-screen bg-slate-900 flex items-center justify-center p-4">
@@ -261,14 +282,30 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     }
   }, [screensaverEnabled, idleTimeout, deviceType, isSetup]);
 
+  // Sync state with global storeData changes (Single Source of Truth)
+  useEffect(() => {
+      if (storeData?.fleet && kioskId) {
+          const myEntry = storeData.fleet.find(f => f.id === kioskId);
+          if (myEntry) {
+              if (myEntry.name && myEntry.name !== currentShopName) setCurrentShopName(myEntry.name);
+              if (myEntry.deviceType && myEntry.deviceType !== deviceType) setDeviceTypeState(myEntry.deviceType);
+          }
+      }
+  }, [storeData?.fleet, kioskId]);
+
   useEffect(() => {
     if (!isSetup || !kioskId) return;
     initSupabase();
     if (!supabase) return;
+    
+    // Command listener for immediate actions (Restart/Type)
     const channel = supabase.channel(`kiosk_commands_${kioskId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kiosks', filter: `id=eq.${kioskId}` },
           async (payload: any) => {
-              if (payload.new.restart_requested) window.location.reload();
+              if (payload.new.restart_requested) {
+                  // Acknowledge by clearing flag in DB during heartbeat then reload
+                  window.location.reload();
+              }
               if (payload.new.device_type && payload.new.device_type !== deviceType) {
                   localStorage.setItem('kiosk_pro_device_type', payload.new.device_type);
                   setDeviceTypeState(payload.new.device_type);
@@ -359,6 +396,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[8px] md:text-[10px]">
           <div className="flex items-center gap-1"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase">{isOnline ? 'Online' : 'Offline'}</span></div>
           <div className="flex items-center gap-4">
+              <span className="text-[7px] font-black text-slate-300 uppercase tracking-tighter hidden md:inline">{currentShopName}</span>
               {pricelistBrands.length > 0 && <button onClick={() => { setSelectedBrandForPricelist(null); setShowPricelistModal(true); }} className="text-blue-600 hover:text-blue-800"><RIcon size={12} /></button>}
               {lastSyncTime && <div className="flex items-center gap-1 font-bold"><RefreshCw size={8} /><span>Sync: {lastSyncTime}</span></div>}
               <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span><img src="https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png" className="w-2 h-2 object-contain opacity-50" alt="" /></button>
