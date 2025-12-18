@@ -43,7 +43,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
              </div>
              <h1 className="text-2xl font-black tracking-tight">System Setup Manual</h1>
            </div>
-           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest pl-12">Zero-to-Hero Guide v2.5</p>
+           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest pl-12">Zero-to-Hero Guide v2.6 (Patch)</p>
         </div>
         <button onClick={onClose} className="p-3 hover:bg-white/10 rounded-full transition-colors">
           <X size={28} />
@@ -208,13 +208,13 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                                     Go to the <strong>SQL Editor</strong> (Paper icon on left bar), click <strong>"New Query"</strong>, paste the code below, and click <strong>Run</strong>.
                                 </p>
                                 
-                                <div className="p-4 bg-yellow-50 text-yellow-800 border-l-4 border-yellow-400 rounded-r-lg mb-4 text-xs font-medium">
-                                    <span className="font-bold uppercase tracking-tighter">Crucial Step:</span> The last block of this code enables WebSockets for instant syncing.
+                                <div className="p-4 bg-blue-50 text-blue-800 border-l-4 border-blue-400 rounded-r-lg mb-4 text-xs font-medium">
+                                    <strong>Idempotent Version:</strong> This script now handles existing tables and publications gracefully to avoid "Already Member" errors.
                                 </div>
 
                                 <CodeBlock 
                                     id="sql-script"
-                                    label="SQL Query"
+                                    label="SQL Query (v2.6 Safe)"
                                     code={`-- 1. Create Storage Bucket for Media
 insert into storage.buckets (id, name, public)
 values ('kiosk-media', 'kiosk-media', true)
@@ -272,14 +272,27 @@ alter table public.store_config enable row level security;
 alter table public.kiosks enable row level security;
 
 -- 7. Create OPEN Policies
+-- We use 'do nothing' or 'if not exists' where possible, but policy replacement is easiest via drop/create
+drop policy if exists "Enable read access for all users" on public.store_config;
 create policy "Enable read access for all users" on public.store_config for select using (true);
+
+drop policy if exists "Enable update access for all users" on public.store_config;
 create policy "Enable update access for all users" on public.store_config for update using (true) with check (true);
+
+drop policy if exists "Enable insert access for all users" on public.store_config;
 create policy "Enable insert access for all users" on public.store_config for insert with check (true);
+
+drop policy if exists "Enable read access for fleet" on public.kiosks;
 create policy "Enable read access for fleet" on public.kiosks for select using (true);
+
+drop policy if exists "Enable insert/update for fleet" on public.kiosks;
 create policy "Enable insert/update for fleet" on public.kiosks for all using (true) with check (true);
 
--- 8. CRITICAL: ENABLE REALTIME SYNC
--- This allows the app to refresh automatically when you save in Admin.
+-- 8. CRITICAL: ENABLE REALTIME SYNC (Fixed Version)
+-- To avoid "already member" errors, we drop before adding.
+alter publication supabase_realtime drop table if exists public.store_config;
+alter publication supabase_realtime drop table if exists public.kiosks;
+
 alter publication supabase_realtime add table public.store_config;
 alter publication supabase_realtime add table public.kiosks;`}
                                 />
@@ -499,7 +512,7 @@ VITE_SUPABASE_ANON_KEY=your-long-anon-key-string`}
                                       Click <strong>Deploy</strong>. Wait about 1 minute.
                                       <br/>Once deployed, visit the URL on your Tablet.
                                   </p>
-                                  <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                  <div className="blue-50 p-4 rounded-xl border border-blue-100">
                                       <h5 className="font-bold text-blue-900 text-sm mb-2 flex items-center gap-2"><Smartphone size={16}/> Install as App (Android/iOS)</h5>
                                       <ol className="list-decimal pl-5 text-xs text-blue-800 space-y-1">
                                           <li>Open the URL in Chrome (Android) or Safari (iOS).</li>
