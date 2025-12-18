@@ -43,7 +43,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
              </div>
              <h1 className="text-2xl font-black tracking-tight">System Setup Manual</h1>
            </div>
-           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest pl-12">Zero-to-Hero Guide v2.6 (Patch)</p>
+           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest pl-12">Zero-to-Hero Guide v2.7 (Safe Sync)</p>
         </div>
         <button onClick={onClose} className="p-3 hover:bg-white/10 rounded-full transition-colors">
           <X size={28} />
@@ -209,12 +209,12 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                                 </p>
                                 
                                 <div className="p-4 bg-blue-50 text-blue-800 border-l-4 border-blue-400 rounded-r-lg mb-4 text-xs font-medium">
-                                    <strong>Idempotent Version:</strong> This script now handles existing tables and publications gracefully to avoid "Already Member" errors.
+                                    <strong>Idempotent Version:</strong> This script uses <code>SET TABLE</code> to ensure Realtime is configured correctly regardless of existing state.
                                 </div>
 
                                 <CodeBlock 
                                     id="sql-script"
-                                    label="SQL Query (v2.6 Safe)"
+                                    label="SQL Query (v2.7 Compatible)"
                                     code={`-- 1. Create Storage Bucket for Media
 insert into storage.buckets (id, name, public)
 values ('kiosk-media', 'kiosk-media', true)
@@ -272,7 +272,6 @@ alter table public.store_config enable row level security;
 alter table public.kiosks enable row level security;
 
 -- 7. Create OPEN Policies
--- We use 'do nothing' or 'if not exists' where possible, but policy replacement is easiest via drop/create
 drop policy if exists "Enable read access for all users" on public.store_config;
 create policy "Enable read access for all users" on public.store_config for select using (true);
 
@@ -288,13 +287,10 @@ create policy "Enable read access for fleet" on public.kiosks for select using (
 drop policy if exists "Enable insert/update for fleet" on public.kiosks;
 create policy "Enable insert/update for fleet" on public.kiosks for all using (true) with check (true);
 
--- 8. CRITICAL: ENABLE REALTIME SYNC (Fixed Version)
--- To avoid "already member" errors, we drop before adding.
-alter publication supabase_realtime drop table if exists public.store_config;
-alter publication supabase_realtime drop table if exists public.kiosks;
-
-alter publication supabase_realtime add table public.store_config;
-alter publication supabase_realtime add table public.kiosks;`}
+-- 8. CRITICAL: ENABLE REALTIME SYNC (Cross-Version Safe)
+-- Overwrites publication list to include these tables. 
+-- No "IF EXISTS" needed on the DROP since we use SET.
+alter publication supabase_realtime set table public.store_config, public.kiosks;`}
                                 />
                             </div>
                         </div>
