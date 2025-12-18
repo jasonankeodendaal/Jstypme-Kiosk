@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Sparkles
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
@@ -964,6 +965,7 @@ const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalog
 
 const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pricelist, onSave: (pl: Pricelist) => void, onClose: () => void }) => {
   const [items, setItems] = useState<PricelistItem[]>(pricelist.items || []);
+  const [isImporting, setIsImporting] = useState(false);
   
   const addItem = () => {
     setItems([...items, { id: generateId('item'), sku: '', description: '', normalPrice: '', promoPrice: '' }]);
@@ -977,23 +979,88 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
     setItems(items.filter(item => item.id !== id));
   };
 
+  const handleSpreadsheetImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+        const text = event.target?.result as string;
+        try {
+            // Simple CSV/TSV Parser (Handles Excel CSV exports)
+            const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+            const newItems: PricelistItem[] = [];
+            
+            // Skip header if it looks like one (contains sku/desc/price)
+            const firstLine = lines[0].toLowerCase();
+            const startIdx = (firstLine.includes('sku') || firstLine.includes('desc') || firstLine.includes('price')) ? 1 : 0;
+
+            for (let i = startIdx; i < lines.length; i++) {
+                // Split by comma or tab
+                const parts = lines[i].split(/[,	]/).map(p => p.trim().replace(/^["']|["']$/g, ''));
+                if (parts.length >= 2) {
+                    newItems.push({
+                        id: generateId('imp'),
+                        sku: parts[0] || '',
+                        description: parts[1] || '',
+                        normalPrice: parts[2] || '',
+                        promoPrice: parts[3] || ''
+                    });
+                }
+            }
+
+            if (newItems.length > 0) {
+                if (confirm(`Detected ${newItems.length} items. Overwrite current list?`)) {
+                    setItems(newItems);
+                } else if (confirm(`Append ${newItems.length} items to existing list?`)) {
+                    setItems([...items, ...newItems]);
+                }
+            } else {
+                alert("Could not parse any valid items from the file. Ensure columns are: SKU, Description, Normal Price, Promo Price.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error parsing file. Please use a standard CSV or Excel-compatible text file.");
+        } finally {
+            setIsImporting(false);
+            e.target.value = ''; // Reset input
+        }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-        <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+      <div className="bg-white rounded-3xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+        <div className="p-6 border-b border-slate-100 bg-slate-50 flex flex-col md:flex-row justify-between gap-4 shrink-0">
           <div>
-            <h3 className="font-black text-slate-900 uppercase text-lg">Pricelist Builder</h3>
+            <h3 className="font-black text-slate-900 uppercase text-lg flex items-center gap-2">
+                <Table className="text-blue-600" size={24} /> Pricelist Builder
+            </h3>
             <p className="text-xs text-slate-500 font-bold uppercase">{pricelist.title} ({pricelist.month} {pricelist.year})</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <label className="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg cursor-pointer">
+              {isImporting ? <Loader2 size={16} className="animate-spin" /> : <FileInput size={16} />}
+              Import Excel/CSV
+              <input type="file" className="hidden" accept=".csv,.tsv,.txt,.xlsx" onChange={handleSpreadsheetImport} disabled={isImporting} />
+            </label>
             <button onClick={addItem} className="bg-green-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-green-700 transition-colors shadow-lg shadow-green-900/10">
               <Plus size={16} /> Add Row
             </button>
-            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600"><X size={24}/></button>
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 ml-2"><X size={24}/></button>
           </div>
         </div>
         
         <div className="flex-1 overflow-auto p-6">
+          <div className="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center gap-3">
+              <Info size={18} className="text-blue-500 shrink-0" />
+              <p className="text-[10px] text-blue-800 font-bold uppercase leading-tight">
+                  Import Tip: Use a spreadsheet with 4 columns: SKU, Description, Normal Price, Promo Price. Save as CSV for best results.
+              </p>
+          </div>
+
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 sticky top-0 z-10">
               <tr>
@@ -1018,7 +1085,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center text-slate-400 text-sm font-bold uppercase italic">No items yet. Click "Add Row" to start.</td>
+                  <td colSpan={5} className="py-20 text-center text-slate-400 text-sm font-bold uppercase italic">No items yet. Click "Add Row" or "Import" to start.</td>
                 </tr>
               )}
             </tbody>
@@ -1027,7 +1094,9 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
 
         <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
           <button onClick={onClose} className="px-6 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
-          <button onClick={() => { onSave({ ...pricelist, items, type: 'manual' }); onClose(); }} className="px-8 py-3 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-all">Save Pricelist Table</button>
+          <button onClick={() => { onSave({ ...pricelist, items, type: 'manual', dateAdded: new Date().toISOString() }); onClose(); }} className="px-8 py-3 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2">
+              <Save size={16} /> Save Pricelist Table
+          </button>
         </div>
       </div>
     </div>
@@ -1124,6 +1193,14 @@ const PricelistManager = ({
         }
     };
 
+    const isNewlyUpdated = (dateStr?: string) => {
+        if (!dateStr) return false;
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = Math.abs(now.getTime() - date.getTime());
+        return Math.ceil(diff / (1000 * 60 * 60 * 24)) <= 30;
+    };
+
     return (
         <div className="max-w-7xl mx-auto animate-fade-in flex flex-col md:flex-row gap-4 md:gap-6 h-[calc(100dvh-130px)] md:h-[calc(100vh-140px)]">
              {/* Left Sidebar: Brands List */}
@@ -1203,14 +1280,21 @@ const PricelistManager = ({
                     </button>
                  </div>
                  <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 content-start pb-10">
-                     {sortedLists.map((item) => (
-                         <div key={item.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col p-3 md:p-4 gap-2 md:gap-3 h-fit relative group">
+                     {sortedLists.map((item) => {
+                         const recent = isNewlyUpdated(item.dateAdded);
+                         return (
+                         <div key={item.id} className={`rounded-xl border shadow-sm overflow-hidden flex flex-col p-3 md:p-4 gap-2 md:gap-3 h-fit relative group transition-all ${recent ? 'bg-yellow-50 border-yellow-300 ring-1 ring-yellow-200' : 'bg-white border-slate-200'}`}>
+                             {recent && (
+                                 <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-[8px] font-black uppercase px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm animate-pulse z-10">
+                                     <Sparkles size={10} /> Recently Edited
+                                 </div>
+                             )}
                              <div>
                                  <label className="block text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1">Title</label>
                                  <input 
                                      value={item.title} 
-                                     onChange={(e) => updatePricelist(item.id, { title: e.target.value })}
-                                     className="w-full font-bold text-slate-900 border-b border-slate-100 focus:border-blue-500 outline-none pb-1 text-xs md:text-sm" 
+                                     onChange={(e) => updatePricelist(item.id, { title: e.target.value, dateAdded: new Date().toISOString() })}
+                                     className="w-full font-bold text-slate-900 border-b border-slate-100 focus:border-blue-500 outline-none pb-1 text-xs md:text-sm bg-transparent" 
                                      placeholder="e.g. Retail Price List"
                                  />
                              </div>
@@ -1220,8 +1304,8 @@ const PricelistManager = ({
                                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1">Month</label>
                                      <select 
                                          value={item.month} 
-                                         onChange={(e) => updatePricelist(item.id, { month: e.target.value })}
-                                         className="w-full text-[10px] md:text-xs font-bold p-1 bg-slate-50 rounded border border-slate-200"
+                                         onChange={(e) => updatePricelist(item.id, { month: e.target.value, dateAdded: new Date().toISOString() })}
+                                         className="w-full text-[10px] md:text-xs font-bold p-1 bg-white/50 rounded border border-slate-200"
                                      >
                                          {months.map(m => <option key={m} value={m}>{m}</option>)}
                                      </select>
@@ -1231,17 +1315,17 @@ const PricelistManager = ({
                                      <input 
                                          type="number"
                                          value={item.year} 
-                                         onChange={(e) => updatePricelist(item.id, { year: e.target.value })}
-                                         className="w-full text-[10px] md:text-xs font-bold p-1 bg-slate-50 rounded border border-slate-200"
+                                         onChange={(e) => updatePricelist(item.id, { year: e.target.value, dateAdded: new Date().toISOString() })}
+                                         className="w-full text-[10px] md:text-xs font-bold p-1 bg-white/50 rounded border border-slate-200"
                                      />
                                  </div>
                              </div>
 
-                             <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                             <div className="bg-white/40 p-2 rounded-lg border border-slate-100">
                                 <label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Pricelist Mode</label>
                                 <div className="grid grid-cols-2 gap-1 bg-white p-1 rounded-md border border-slate-200">
-                                    <button onClick={() => updatePricelist(item.id, { type: 'pdf' })} className={`py-1 text-[9px] font-black uppercase rounded flex items-center justify-center gap-1 transition-all ${item.type !== 'manual' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><FileText size={10}/> PDF</button>
-                                    <button onClick={() => updatePricelist(item.id, { type: 'manual' })} className={`py-1 text-[9px] font-black uppercase rounded flex items-center justify-center gap-1 transition-all ${item.type === 'manual' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={10}/> Manual</button>
+                                    <button onClick={() => updatePricelist(item.id, { type: 'pdf', dateAdded: new Date().toISOString() })} className={`py-1 text-[9px] font-black uppercase rounded flex items-center justify-center gap-1 transition-all ${item.type !== 'manual' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><FileText size={10}/> PDF</button>
+                                    <button onClick={() => updatePricelist(item.id, { type: 'manual', dateAdded: new Date().toISOString() })} className={`py-1 text-[9px] font-black uppercase rounded flex items-center justify-center gap-1 transition-all ${item.type === 'manual' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={10}/> Manual</button>
                                 </div>
                              </div>
 
@@ -1257,7 +1341,7 @@ const PricelistManager = ({
                                         label="Thumbnail Image" 
                                         accept="image/*"
                                         currentUrl={item.thumbnailUrl}
-                                        onUpload={(url: any) => updatePricelist(item.id, { thumbnailUrl: url })} 
+                                        onUpload={(url: any) => updatePricelist(item.id, { thumbnailUrl: url, dateAdded: new Date().toISOString() })} 
                                     />
                                 </div>
                              ) : (
@@ -1266,14 +1350,14 @@ const PricelistManager = ({
                                         label="Thumbnail" 
                                         accept="image/*"
                                         currentUrl={item.thumbnailUrl}
-                                        onUpload={(url: any) => updatePricelist(item.id, { thumbnailUrl: url })} 
+                                        onUpload={(url: any) => updatePricelist(item.id, { thumbnailUrl: url, dateAdded: new Date().toISOString() })} 
                                     />
                                     <FileUpload 
                                         label="Upload PDF" 
                                         accept="application/pdf" 
                                         icon={<FileText />}
                                         currentUrl={item.url}
-                                        onUpload={(url: any) => updatePricelist(item.id, { url: url })} 
+                                        onUpload={(url: any) => updatePricelist(item.id, { url: url, dateAdded: new Date().toISOString() })} 
                                     />
                                 </div>
                              )}
@@ -1285,7 +1369,7 @@ const PricelistManager = ({
                                  <Trash2 size={12} /> Delete
                              </button>
                          </div>
-                     ))}
+                     )})}
                      {sortedLists.length === 0 && selectedBrand && (
                          <div className="col-span-full py-8 md:py-12 text-center text-slate-400 text-xs italic border-2 border-dashed border-slate-200 rounded-xl">
                              No pricelists found for this brand.
@@ -2516,7 +2600,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                                    <h3 className="font-black text-slate-900 uppercase text-[10px] md:text-sm text-center md:text-left truncate w-full">{cat.name}</h3>
                                    <p className="text-[9px] md:text-xs text-slate-500 font-bold text-center md:text-left">{cat.products.length} Products</p>
                                    <div onClick={(e)=>{e.stopPropagation(); const newName = prompt("Rename Category:", cat.name); if(newName && newName.trim() !== "") { const updated = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === cat.id ? {...c, name: newName.trim()} : c)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-8 md:top-2 md:right-8 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-500 rounded transition-all"><Edit2 size={12}/></div>
-                                   <div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ const updated={...selectedBrand, categories: selectedBrand.categories.filter(c=>c.id!==cat.id)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-1 md:top-2 md:right-2 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded"><Trash2 size={12}/></div>
+                                   <div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ const updated={...selectedBrand, categories: selectedBrand.categories.filter(c=>c.id!==cat.id)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-1 md:top-2 md:right-2 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded"><Trash2 size={12}/></div>
                                 </button>
                             ))}
                        </div>
@@ -2559,7 +2643,6 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                )
             )}
 
-            {/* Other Tabs... (Pricelists, TV, Screensaver, Fleet, History) remain same ... */}
             {activeTab === 'pricelists' && (
                 <PricelistManager 
                     pricelists={localData.pricelists || []} 
@@ -2638,7 +2721,6 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                 )
             )}
 
-            {/* MARKETING TAB LOGIC */}
             {activeTab === 'marketing' && (
                 <div className="max-w-5xl mx-auto">
                     {activeSubTab === 'catalogues' && (
@@ -2681,7 +2763,6 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                 </div>
             )}
             
-            {/* ... Fleet & Screensaver & History logic same as before ... */}
             {activeTab === 'fleet' && (
                 <div className="animate-fade-in max-w-6xl mx-auto pb-24">
                    <div className="flex items-center justify-between mb-8">
@@ -2809,7 +2890,6 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
             )}
             
             {activeTab === 'screensaver' && (
-                // ... Screensaver UI ...
                 <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-20">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -2826,7 +2906,6 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
             )}
             
             {activeTab === 'history' && (
-                // ... History UI ...
                <div className="max-w-6xl mx-auto space-y-6">
                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                        <h2 className="text-2xl font-black text-slate-900 uppercase">Archive Management</h2>
@@ -2924,7 +3003,6 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                                    </table>
                                )
                            ) : historyTab === 'brands' ? (
-                               // ... brand history logic ...
                                archivedBrands.length === 0 ? (
                                    <div className="flex flex-col items-center justify-center h-64 text-slate-400">
                                        <Archive size={48} className="mb-4 opacity-20" />
@@ -2971,7 +3049,6 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                                    </table>
                                )
                            ) : (
-                               // ... catalogue history logic ...
                                archivedCatalogues.length === 0 ? (
                                    <div className="flex flex-col items-center justify-center h-64 text-slate-400">
                                        <Archive size={48} className="mb-4 opacity-20" />

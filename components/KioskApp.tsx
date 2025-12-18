@@ -23,17 +23,17 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, WifiOff, Clock, MapPin, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Check, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, WifiOff, Clock, MapPin, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Check, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles } from 'lucide-react';
 
 const DEFAULT_IDLE_TIMEOUT = 60000;
 
-const isNew = (dateString?: string) => {
+const isRecent = (dateString?: string) => {
     if (!dateString) return false;
     const addedDate = new Date(dateString);
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - addedDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    return diffDays <= 7;
+    return diffDays <= 30; // 30 day window for highlights
 };
 
 const RIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
@@ -45,13 +45,22 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
 );
 
 const ManualPricelistViewer = ({ pricelist, onClose }: { pricelist: Pricelist, onClose: () => void }) => {
+  const isNewlyUpdated = isRecent(pricelist.dateAdded);
+  
   return (
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 md:p-12 animate-fade-in" onClick={onClose}>
-      <div className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="p-6 bg-slate-900 text-white flex justify-between items-center shrink-0 border-b border-white/5">
+      <div className={`relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col ${isNewlyUpdated ? 'ring-4 ring-yellow-400' : ''}`} onClick={e => e.stopPropagation()}>
+        <div className={`p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600' : 'bg-slate-900'}`}>
           <div>
-            <h2 className="text-xl md:text-3xl font-black uppercase tracking-tight">{pricelist.title}</h2>
-            <p className="text-blue-400 font-bold uppercase tracking-widest text-xs md:text-sm">{pricelist.month} {pricelist.year}</p>
+            <div className="flex items-center gap-3">
+                <h2 className="text-xl md:text-3xl font-black uppercase tracking-tight">{pricelist.title}</h2>
+                {isNewlyUpdated && (
+                    <span className="bg-white text-yellow-700 px-2 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 shadow-lg">
+                        <Sparkles size={12} /> Recently Updated
+                    </span>
+                )}
+            </div>
+            <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-blue-400'} font-bold uppercase tracking-widest text-xs md:text-sm`}>{pricelist.month} {pricelist.year}</p>
           </div>
           <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><X size={24}/></button>
         </div>
@@ -68,7 +77,7 @@ const ManualPricelistViewer = ({ pricelist, onClose }: { pricelist: Pricelist, o
             </thead>
             <tbody className="divide-y divide-slate-100">
               {(pricelist.items || []).map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${isNewlyUpdated ? 'bg-yellow-50/30' : ''}`}>
                   <td className="p-4 font-mono font-bold text-sm text-slate-500 uppercase">{item.sku || '-'}</td>
                   <td className="p-4 font-bold text-slate-900">{item.description}</td>
                   <td className="p-4 font-black text-lg text-slate-400 line-through decoration-red-500/30">{item.normalPrice}</td>
@@ -372,9 +381,28 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                        <div className="flex-1 overflow-y-auto p-4 bg-slate-100/50">
                            {selectedBrandForPricelist ? (
                                <div className="grid grid-cols-3 gap-2 md:gap-4">
-                                   {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).sort((a,b) => parseInt(b.year) - parseInt(a.year)).map(pl => (
-                                       <button key={pl.id} onClick={() => handleOpenPricelist(pl)} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border border-slate-200 flex flex-col h-full"><div className="aspect-[3/4] bg-white relative p-2">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">{pl.type === 'manual' ? <List size={24}/> : <FileText size={24} />}</div>}<div className={`absolute top-1 right-1 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div></div><div className="p-2 md:p-4 flex-1 flex flex-col"><h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3><div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div></div></button>
-                                   ))}
+                                   {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).sort((a,b) => parseInt(b.year) - parseInt(a.year)).map(pl => {
+                                       const isNewlyUpdated = isRecent(pl.dateAdded);
+                                       return (
+                                       <button key={pl.id} onClick={() => handleOpenPricelist(pl)} className={`bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border flex flex-col h-full relative transition-all ${isNewlyUpdated ? 'border-yellow-400 ring-2 ring-yellow-400/20 bg-yellow-50/10 scale-[1.02]' : 'border-slate-200'}`}>
+                                            {isNewlyUpdated && (
+                                                <div className="absolute top-0 left-0 right-0 h-1 bg-yellow-400 z-20"></div>
+                                            )}
+                                            <div className="aspect-[3/4] bg-white relative p-2">
+                                                {pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">{pl.type === 'manual' ? <List size={24}/> : <FileText size={24} />}</div>}
+                                                <div className={`absolute top-1 right-1 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div>
+                                                {isNewlyUpdated && (
+                                                    <div className="absolute bottom-1 left-1 bg-yellow-400 text-yellow-900 text-[7px] font-black uppercase px-1 rounded flex items-center gap-0.5 shadow-sm">
+                                                        <Sparkles size={8} /> New
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="p-2 md:p-4 flex-1 flex flex-col">
+                                                <h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3>
+                                                <div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div>
+                                            </div>
+                                       </button>
+                                   )})}
                                </div>
                            ) : <div className="h-full flex flex-col items-center justify-center text-slate-400"><RIcon size={48} className="opacity-20" /><p className="uppercase font-bold text-xs tracking-widest">Select a brand</p></div>}
                        </div>
