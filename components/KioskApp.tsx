@@ -13,8 +13,7 @@ import {
   supabase,
   checkCloudConnection,
   initSupabase,
-  getCloudProjectName,
-  verifyKioskIdentity
+  getCloudProjectName
 } from '../services/kioskService';
 import BrandGrid from './BrandGrid';
 import CategoryGrid from './CategoryGrid';
@@ -24,7 +23,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, WifiOff, Clock, MapPin, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Check, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Zap } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, WifiOff, Clock, MapPin, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Check, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List } from 'lucide-react';
 
 const DEFAULT_IDLE_TIMEOUT = 60000;
 
@@ -34,7 +33,7 @@ const isNew = (dateString?: string) => {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - addedDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    return diffDays <= 7; // Highlight if changed in last 7 days
+    return diffDays <= 7;
 };
 
 const RIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
@@ -51,14 +50,7 @@ const ManualPricelistViewer = ({ pricelist, onClose }: { pricelist: Pricelist, o
       <div className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="p-6 bg-slate-900 text-white flex justify-between items-center shrink-0 border-b border-white/5">
           <div>
-            <div className="flex items-center gap-3">
-               <h2 className="text-xl md:text-3xl font-black uppercase tracking-tight">{pricelist.title}</h2>
-               {isNew(pricelist.dateAdded) && (
-                   <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1">
-                       <Zap size={10} fill="currentColor" /> NEWLY UPDATED
-                   </span>
-               )}
-            </div>
+            <h2 className="text-xl md:text-3xl font-black uppercase tracking-tight">{pricelist.title}</h2>
             <p className="text-blue-400 font-bold uppercase tracking-widest text-xs md:text-sm">{pricelist.month} {pricelist.year}</p>
           </div>
           <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><X size={24}/></button>
@@ -218,7 +210,6 @@ export const SetupScreen = ({ kioskId, onComplete, onRestoreId }: any) => {
 
 export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData: StoreData | null, lastSyncTime?: string, onSyncRequest?: () => void }) => {
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
-  const [isVerifying, setIsVerifying] = useState(true);
   const [kioskId, setKioskId] = useState(getKioskId());
   const [deviceType, setDeviceTypeState] = useState(getDeviceType());
   const [currentShopName, setCurrentShopName] = useState(getShopName());
@@ -261,26 +252,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     }
   }, [screensaverEnabled, idleTimeout, deviceType, isSetup]);
 
-  // STRICT IDENTITY VERIFICATION ON BOOT
-  useEffect(() => {
-      const verify = async () => {
-          if (isSetup && kioskId) {
-              const exists = await verifyKioskIdentity(kioskId);
-              if (!exists) {
-                  console.warn("Unrecognized Device ID. Reverting to setup.");
-                  localStorage.removeItem('kiosk_pro_device_id');
-                  localStorage.removeItem('kiosk_pro_shop_name');
-                  setIsSetup(false);
-              } else {
-                  setCurrentShopName(getShopName());
-                  setDeviceTypeState(getDeviceType());
-              }
-          }
-          setIsVerifying(false);
-      };
-      verify();
-  }, [isSetup, kioskId]);
-
   useEffect(() => {
     if (!isSetup || !kioskId) return;
     initSupabase();
@@ -320,7 +291,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       const interval = setInterval(syncCycle, 60000);
       return () => { clearInterval(interval); clearInterval(clockInterval); clearInterval(cloudInterval); };
     }
-    return () => { clearInterval(clockInterval); clearInterval(clockInterval); };
+    return () => { clearInterval(clockInterval); clearInterval(cloudInterval); };
   }, [resetIdleTimer, isSetup, onSyncRequest]);
 
   const filteredCatalogs = useMemo(() => {
@@ -339,7 +310,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       return [...storeData.pricelistBrands].sort((a, b) => a.name.localeCompare(b.name));
   }, [storeData]);
 
-  if (isVerifying) return <div className="h-screen w-screen bg-slate-900 flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" size={48} /></div>;
   if (!isSetup && kioskId) return <SetupScreen kioskId={kioskId} onComplete={(n:string, t:any) => completeKioskSetup(n, t).then(() => { setDeviceTypeState(t); setCurrentShopName(n); setIsSetup(true); })} onRestoreId={(id:string) => { setCustomKioskId(id); setKioskId(id); setDeviceTypeState(getDeviceType()); setCurrentShopName(getShopName()); setIsSetup(true); }} />;
   if (!storeData) return null;
   if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} />;
@@ -380,7 +350,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[8px] md:text-[10px]">
           <div className="flex items-center gap-1"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase">{isOnline ? 'Online' : 'Offline'}</span></div>
           <div className="flex items-center gap-4">
-              {pricelistBrands.length > 0 && <button onClick={() => { setSelectedBrandForPricelist(null); setShowPricelistModal(true); }} className="text-blue-600 hover:text-blue-800 relative"><RIcon size={12} />{storeData.pricelists?.some(pl => isNew(pl.dateAdded)) && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>}</button>}
+              {pricelistBrands.length > 0 && <button onClick={() => { setSelectedBrandForPricelist(null); setShowPricelistModal(true); }} className="text-blue-600 hover:text-blue-800"><RIcon size={12} /></button>}
               {lastSyncTime && <div className="flex items-center gap-1 font-bold"><RefreshCw size={8} /><span>Sync: {lastSyncTime}</span></div>}
               <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span><img src="https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png" className="w-2 h-2 object-contain opacity-50" alt="" /></button>
           </div>
@@ -392,32 +362,18 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0"><h2 className="text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={28} className="text-green-600" /> Pricelists</h2><button onClick={() => setShowPricelistModal(false)} className="p-2 rounded-full transition-colors"><X size={24} className="text-slate-500" /></button></div>
                    <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
                        <div className="w-full md:w-1/3 bg-slate-50 overflow-y-auto grid grid-cols-3 md:flex md:flex-col border-r border-slate-200">
-                           {pricelistBrands.map(brand => {
-                               const hasNew = storeData.pricelists?.some(p => p.brandId === brand.id && isNew(p.dateAdded));
-                               return (
-                               <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex flex-col md:flex-row items-center gap-3 border-b border-slate-100 relative ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-l-green-500' : 'hover:bg-white'}`}>
+                           {pricelistBrands.map(brand => (
+                               <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex flex-col md:flex-row items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-l-green-500' : 'hover:bg-white'}`}>
                                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center p-1 relative">{brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300">{brand.name.charAt(0)}</span>}</div>
                                    <span className={`font-bold text-[8px] md:text-sm uppercase ${selectedBrandForPricelist === brand.id ? 'text-slate-900' : 'text-slate-500'}`}>{brand.name}</span>
-                                   {hasNew && <span className="absolute top-2 right-2 bg-red-500 text-white text-[6px] font-black px-1 rounded-full animate-pulse">NEW</span>}
                                </button>
-                               );
-                           })}
+                           ))}
                        </div>
                        <div className="flex-1 overflow-y-auto p-4 bg-slate-100/50">
                            {selectedBrandForPricelist ? (
                                <div className="grid grid-cols-3 gap-2 md:gap-4">
                                    {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).sort((a,b) => parseInt(b.year) - parseInt(a.year)).map(pl => (
-                                       <button key={pl.id} onClick={() => handleOpenPricelist(pl)} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border border-slate-200 flex flex-col h-full relative group">
-                                           <div className="aspect-[3/4] bg-white relative p-2">
-                                               {pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">{pl.type === 'manual' ? <List size={24}/> : <FileText size={24} />}</div>}
-                                               <div className={`absolute top-1 right-1 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div>
-                                               {isNew(pl.dateAdded) && <div className="absolute top-1 left-1 bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse">NEW</div>}
-                                           </div>
-                                           <div className="p-2 md:p-4 flex-1 flex flex-col">
-                                               <h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3>
-                                               <div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div>
-                                           </div>
-                                       </button>
+                                       <button key={pl.id} onClick={() => handleOpenPricelist(pl)} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border border-slate-200 flex flex-col h-full"><div className="aspect-[3/4] bg-white relative p-2">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">{pl.type === 'manual' ? <List size={24}/> : <FileText size={24} />}</div>}<div className={`absolute top-1 right-1 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div></div><div className="p-2 md:p-4 flex-1 flex flex-col"><h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3><div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div></div></button>
                                    ))}
                                </div>
                            ) : <div className="h-full flex flex-col items-center justify-center text-slate-400"><RIcon size={48} className="opacity-20" /><p className="uppercase font-bold text-xs tracking-widest">Select a brand</p></div>}

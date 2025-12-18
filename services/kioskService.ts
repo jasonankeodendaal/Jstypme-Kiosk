@@ -99,35 +99,6 @@ export const isKioskConfigured = (): boolean => {
   return !!getKioskId() && !!getShopName();
 };
 
-/**
- * Verifies if the kiosk ID exists in the database.
- * Essential for strict hardware-to-software identity detection.
- */
-export const verifyKioskIdentity = async (id: string): Promise<boolean> => {
-  if (!supabase) initSupabase();
-  if (!supabase) return true; // Fallback if offline
-  
-  try {
-      const { data, error } = await supabase
-        .from('kiosks')
-        .select('id, name, device_type')
-        .eq('id', id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      if (data) {
-          // Sync local storage with DB truths
-          localStorage.setItem(STORAGE_KEY_NAME, data.name);
-          localStorage.setItem(STORAGE_KEY_TYPE, data.device_type);
-          return true;
-      }
-      return false;
-  } catch (e) {
-      console.warn("Identity verification error", e);
-      return true; // Allow operation in unstable cloud scenarios
-  }
-};
-
 export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' | 'mobile' | 'tv'): Promise<boolean> => {
   const id = getKioskId();
   if (!id) return false;
@@ -147,7 +118,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
           wifi_strength: 100,
           ip_address: 'Unknown',
           version: '1.0.5',
-          location_description: 'Registered',
+          location_description: 'Newly Registered',
           assigned_zone: 'Unassigned',
           restart_requested: false
         };
@@ -178,12 +149,6 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               .select('name, device_type, assigned_zone, restart_requested')
               .eq('id', id)
               .maybeSingle();
-
-          // CRITICAL: If kiosk was deleted from DB, return special code to force setup
-          if (!fetchError && !remoteData) {
-              console.warn("IDENTITY LOST: Kiosk removed from database.");
-              return { restart: true }; 
-          }
 
           if (!fetchError && remoteData) {
               if (remoteData.name && remoteData.name !== currentName) {
@@ -222,6 +187,7 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               status: 'online',
               wifi_strength: wifiStrength,
               ip_address: ipAddress,
+              // If restart was requested and we are handling it now, we clear the flag in DB
               restart_requested: false 
           };
 
