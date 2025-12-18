@@ -9,7 +9,6 @@ import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, C
 import { resetStoreData } from '../services/geminiService';
 import { uploadFileToStorage, supabase, checkCloudConnection } from '../services/kioskService';
 import SetupGuide from './SetupGuide';
-import JSZip from 'jszip';
 
 const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -20,6 +19,50 @@ const RIcon = (props: any) => (
     <path d="M11.5 14L17 19" />
   </svg>
 );
+
+const FileUpload = ({ label, currentUrl, onUpload, accept = "image/*", icon }: { label: string, currentUrl?: string, onUpload: (url: string) => void, accept?: string, icon?: React.ReactNode }) => {
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            const url = await uploadFileToStorage(file);
+            onUpload(url);
+        } catch (err) {
+            alert("Upload failed. Check cloud connection.");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col gap-1.5 w-full">
+            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{label}</label>
+            <div className="flex items-center gap-2">
+                <div className="flex-1 relative">
+                    <input 
+                        type="text" 
+                        value={currentUrl || ''} 
+                        onChange={(e) => onUpload(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full pl-3 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono outline-none focus:border-blue-500"
+                    />
+                    <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="absolute right-1 top-1 bottom-1 px-2 bg-white border border-slate-200 rounded text-slate-500 hover:text-blue-600 transition-colors disabled:opacity-50"
+                    >
+                        {uploading ? <Loader2 size={14} className="animate-spin" /> : icon || <Upload size={14} />}
+                    </button>
+                    <input ref={fileInputRef} type="file" accept={accept} className="hidden" onChange={handleFileChange} />
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const PricelistManager = ({ 
     pricelists, 
@@ -229,4 +272,236 @@ const PricelistManager = ({
     );
 };
 
-// ... Rest of component same as before ...
+export const AdminDashboard = ({ 
+    storeData, 
+    onUpdateData, 
+    onRefresh 
+}: { 
+    storeData: StoreData | null, 
+    onUpdateData: (d: StoreData) => void,
+    onRefresh: () => void
+}) => {
+    const [activeTab, setActiveTab] = useState('inventory');
+    const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
+    const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+    const [editingProductId, setEditingProductId] = useState<string | null>(null);
+    const [showSetupGuide, setShowSetupGuide] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    if (!storeData) return null;
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await onUpdateData(storeData);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const addBrand = () => {
+        const name = prompt("Enter Brand Name:");
+        if (!name) return;
+        const newBrand: Brand = { id: generateId('br'), name, categories: [] };
+        onUpdateData({ ...storeData, brands: [...(storeData.brands || []), newBrand] });
+    };
+
+    const deleteBrand = (id: string) => {
+        if (!confirm("Are you sure? This deletes ALL categories and products for this brand.")) return;
+        onUpdateData({ ...storeData, brands: storeData.brands.filter(b => b.id !== id) });
+    };
+
+    const updateBrand = (id: string, updates: Partial<Brand>) => {
+        const updatedBrands = storeData.brands.map(b => b.id === id ? { ...b, ...updates } : b);
+        onUpdateData({ ...storeData, brands: updatedBrands });
+    };
+
+    // Sub-renderers for Inventory
+    const renderInventory = () => (
+        <div className="space-y-6 animate-fade-in">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-black uppercase tracking-tight text-slate-800 flex items-center gap-2"><Box className="text-blue-500" /> Catalog Inventory</h2>
+                <button onClick={addBrand} className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black uppercase text-xs flex items-center gap-2 hover:bg-blue-500 shadow-lg shadow-blue-900/20"><Plus size={16} /> Add Brand</button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {storeData.brands.map(brand => (
+                    <div key={brand.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:border-blue-300 transition-all">
+                        <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-2 shrink-0">
+                                {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-xl">{brand.name.charAt(0)}</span>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-black text-slate-900 uppercase truncate text-sm">{brand.name}</h3>
+                                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{brand.categories.length} Categories</div>
+                            </div>
+                            <div className="flex gap-1">
+                                <button onClick={() => setEditingBrandId(editingBrandId === brand.id ? null : brand.id)} className="p-2 text-slate-400 hover:text-blue-600"><Edit2 size={16} /></button>
+                                <button onClick={() => deleteBrand(brand.id)} className="p-2 text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>
+                            </div>
+                        </div>
+
+                        {editingBrandId === brand.id && (
+                            <div className="p-4 bg-blue-50/50 border-b border-blue-100 space-y-4 animate-fade-in">
+                                <input value={brand.name} onChange={e => updateBrand(brand.id, { name: e.target.value })} className="w-full p-2 bg-white border border-blue-200 rounded-lg text-xs font-bold uppercase outline-none focus:ring-2 ring-blue-500/20" placeholder="Brand Name" />
+                                <FileUpload label="Logo URL" currentUrl={brand.logoUrl} onUpload={url => updateBrand(brand.id, { logoUrl: url })} />
+                            </div>
+                        )}
+
+                        <div className="p-2 space-y-1">
+                            {brand.categories.map(cat => (
+                                <div key={cat.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg group/cat transition-colors">
+                                    <div className="flex items-center gap-2">
+                                        <ChevronRight size={14} className="text-slate-300" />
+                                        <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">{cat.name} ({cat.products.length})</span>
+                                    </div>
+                                    <div className="flex opacity-0 group-hover/cat:opacity-100 transition-opacity">
+                                        <button className="p-1.5 text-slate-400 hover:text-blue-600"><Plus size={14} /></button>
+                                        <button className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                            <button className="w-full py-2 border-2 border-dashed border-slate-100 rounded-lg text-[10px] font-black uppercase text-slate-300 hover:border-blue-200 hover:text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 mt-2"><Plus size={14} /> New Category</button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    const renderScreensaver = () => (
+        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+             <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-8">
+                 <h2 className="text-xl font-black uppercase tracking-tight text-slate-800 flex items-center gap-2"><MonitorPlay className="text-blue-500" /> Screensaver Engine</h2>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <label className="block text-xs font-black uppercase text-slate-400 tracking-widest">Idle Timeout (Seconds)</label>
+                        <input 
+                            type="number" 
+                            value={storeData.screensaverSettings?.idleTimeout} 
+                            onChange={e => onUpdateData({ ...storeData, screensaverSettings: { ...storeData.screensaverSettings!, idleTimeout: parseInt(e.target.value) } })}
+                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-black text-xl outline-none focus:border-blue-500"
+                        />
+                    </div>
+                    <div className="space-y-4">
+                        <label className="block text-xs font-black uppercase text-slate-400 tracking-widest">Image Duration (Seconds)</label>
+                        <input 
+                            type="number" 
+                            value={storeData.screensaverSettings?.imageDuration} 
+                            onChange={e => onUpdateData({ ...storeData, screensaverSettings: { ...storeData.screensaverSettings!, imageDuration: parseInt(e.target.value) } })}
+                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-black text-xl outline-none focus:border-blue-500"
+                        />
+                    </div>
+                 </div>
+
+                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-6 border-t border-slate-100">
+                    {[
+                        { label: 'Show Products', key: 'showProductImages' },
+                        { label: 'Show Videos', key: 'showProductVideos' },
+                        { label: 'Show Catalogues', key: 'showPamphlets' },
+                        { label: 'Show Ads', key: 'showCustomAds' },
+                        { label: 'Mute Videos', key: 'muteVideos' },
+                        { label: 'Info Overlay', key: 'showInfoOverlay' }
+                    ].map(opt => (
+                        <button 
+                            key={opt.key}
+                            onClick={() => onUpdateData({ ...storeData, screensaverSettings: { ...storeData.screensaverSettings!, [opt.key]: !(storeData.screensaverSettings as any)[opt.key] } })}
+                            className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${(storeData.screensaverSettings as any)[opt.key] ? 'bg-blue-600 border-blue-400 text-white shadow-lg' : 'bg-slate-50 border-slate-200 text-slate-400'}`}
+                        >
+                            <span className="text-[10px] font-black uppercase tracking-widest">{opt.label}</span>
+                            {(storeData.screensaverSettings as any)[opt.key] ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
+                        </button>
+                    ))}
+                 </div>
+             </div>
+        </div>
+    );
+
+    return (
+        <div className="h-screen w-screen bg-slate-100 flex flex-col overflow-hidden">
+            {/* Admin Bar */}
+            <header className="bg-slate-900 text-white h-16 md:h-20 flex items-center justify-between px-6 md:px-10 shrink-0 shadow-2xl z-50">
+                <div className="flex items-center gap-6">
+                    <div className="flex flex-col">
+                        <h1 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-none flex items-center gap-3">
+                            <ShieldCheck className="text-blue-500" size={24} /> Admin Hub
+                        </h1>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-1 hidden md:block">System Management Console</span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <button onClick={onRefresh} className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 transition-colors" title="Reload Cloud Data"><RefreshCw size={20} /></button>
+                    <button onClick={() => setShowSetupGuide(true)} className="flex items-center gap-2 bg-blue-900/40 text-blue-400 px-4 py-2 rounded-xl font-black uppercase text-[10px] border border-blue-800/30 hover:bg-blue-800/50 transition-all"><HelpCircle size={14} /> Setup Guide</button>
+                    <button 
+                        onClick={handleSave} 
+                        disabled={saving}
+                        className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 md:py-3 rounded-xl font-black uppercase text-xs shadow-lg shadow-green-900/30 flex items-center gap-2 transition-all disabled:opacity-50"
+                    >
+                        {saving ? <Loader2 className="animate-spin" size={16} /> : <SaveAll size={16} />}
+                        <span>Save Changes</span>
+                    </button>
+                    <button onClick={() => window.location.href = "/"} className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-red-400 transition-colors" title="Exit to Kiosk"><Power size={20} /></button>
+                </div>
+            </header>
+
+            <div className="flex-1 flex overflow-hidden">
+                {/* Navigation Sidebar */}
+                <nav className="w-64 bg-white border-r border-slate-200 overflow-y-auto hidden lg:flex flex-col p-4 shrink-0">
+                    <div className="space-y-1">
+                        {[
+                            { id: 'inventory', icon: Package, label: 'Inventory' },
+                            { id: 'marketing', icon: Megaphone, label: 'Marketing' },
+                            { id: 'pricelists', icon: Table, label: 'Pricelists' },
+                            { id: 'tv', icon: Tv, label: 'TV Mode' },
+                            { id: 'screensaver', icon: MonitorPlay, label: 'Screensaver' },
+                            { id: 'fleet', icon: Tablet, label: 'Fleet' },
+                            { id: 'settings', icon: Settings, label: 'Settings' },
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`w-full flex items-center gap-4 p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${activeTab === tab.id ? 'bg-slate-900 text-white shadow-xl translate-x-1' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
+                            >
+                                <tab.icon size={18} /> {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="mt-auto pt-6 border-t border-slate-100">
+                        <button onClick={() => { if(confirm("RESET ALL DATA TO DEFAULTS?")) resetStoreData(); }} className="w-full flex items-center gap-3 p-4 rounded-xl text-red-500 hover:bg-red-50 font-black uppercase text-[10px] transition-all">
+                            <RotateCcw size={18} /> Reset System
+                        </button>
+                    </div>
+                </nav>
+
+                {/* Main View Area */}
+                <main className="flex-1 overflow-y-auto p-6 md:p-10 relative">
+                    {activeTab === 'inventory' && renderInventory()}
+                    {activeTab === 'screensaver' && renderScreensaver()}
+                    {activeTab === 'pricelists' && (
+                        <PricelistManager 
+                            pricelists={storeData.pricelists || []} 
+                            pricelistBrands={storeData.pricelistBrands || []} 
+                            onSavePricelists={p => onUpdateData({ ...storeData, pricelists: p })} 
+                            onSaveBrands={b => onUpdateData({ ...storeData, pricelistBrands: b })} 
+                            onDeletePricelist={id => onUpdateData({ ...storeData, pricelists: storeData.pricelists?.filter(p => p.id !== id) })} 
+                        />
+                    )}
+                    
+                    {/* Placeholder for other tabs to keep UI responsive */}
+                    {['marketing', 'tv', 'fleet', 'settings'].includes(activeTab) && (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4 opacity-50">
+                            <LayoutGrid size={80} />
+                            <h2 className="font-black uppercase text-xl tracking-widest">{activeTab} Manager</h2>
+                            <p className="font-medium text-sm">Full management logic for this tab is coming in next release.</p>
+                        </div>
+                    )}
+                </main>
+            </div>
+
+            {showSetupGuide && <SetupGuide onClose={() => setShowSetupGuide(false)} />}
+        </div>
+    );
+};
