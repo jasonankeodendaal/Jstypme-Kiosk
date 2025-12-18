@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
+import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand } from '../types';
 import { 
   getKioskId, 
   provisionKioskId, 
@@ -22,9 +23,18 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, WifiOff, Clock, MapPin, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Check, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, Info, List, Tag } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, WifiOff, Clock, MapPin, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Check, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock } from 'lucide-react';
 
 const DEFAULT_IDLE_TIMEOUT = 60000;
+
+const isNew = (dateString?: string) => {
+    if (!dateString) return false;
+    const addedDate = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - addedDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    return diffDays <= 7;
+};
 
 const RIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -33,76 +43,6 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
     <path d="M11.5 14L17 19" />
   </svg>
 );
-
-// --- MANUAL PRICELIST VIEWER COMPONENT ---
-const ManualPricelistViewer = ({ pricelist, brand, onClose }: { pricelist: Pricelist, brand?: PricelistBrand, onClose: () => void }) => {
-    return (
-        <div className="fixed inset-0 z-[100] bg-slate-900/98 backdrop-blur-xl flex flex-col animate-fade-in" onClick={onClose}>
-            <header className="shrink-0 bg-white p-4 md:p-6 flex items-center justify-between shadow-2xl z-20">
-                <div className="flex items-center gap-4">
-                    <button onClick={onClose} className="p-3 hover:bg-slate-100 rounded-full transition-colors text-slate-500"><X size={28} /></button>
-                    <div>
-                        <h2 className="text-xl md:text-3xl font-black uppercase text-slate-900 leading-none">{pricelist.title}</h2>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] md:text-xs font-bold text-blue-600 uppercase tracking-widest">{brand?.name || 'Retail'} Edition</span>
-                            <span className="text-slate-300">•</span>
-                            <span className="text-[10px] md:text-xs font-mono font-bold text-slate-400 uppercase">{pricelist.month} {pricelist.year}</span>
-                        </div>
-                    </div>
-                </div>
-                {brand?.logoUrl && (
-                    <div className="h-12 md:h-16 w-32 md:w-48 flex items-center justify-end">
-                        <img src={brand.logoUrl} className="max-h-full max-w-full object-contain" alt={brand.name} />
-                    </div>
-                )}
-            </header>
-
-            <main className="flex-1 overflow-y-auto p-4 md:p-8" onClick={e => e.stopPropagation()}>
-                <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="bg-slate-900 text-white sticky top-0 z-10">
-                            <tr>
-                                <th className="px-6 py-5 text-xs font-black uppercase tracking-widest border-r border-slate-800">Product Name</th>
-                                <th className="px-6 py-5 text-xs font-black uppercase tracking-widest border-r border-slate-800 hidden md:table-cell">Specifications & Details</th>
-                                <th className="px-6 py-5 text-xs font-black uppercase tracking-widest text-right">Price</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {pricelist.items?.map((item, idx) => (
-                                <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                                    <td className="px-6 py-6 border-r border-slate-100">
-                                        <div className="font-black text-slate-900 text-sm md:text-lg uppercase tracking-tight">{item.name}</div>
-                                        <div className="md:hidden mt-2 text-xs text-slate-500 font-medium leading-relaxed">{item.description}</div>
-                                    </td>
-                                    <td className="px-6 py-6 border-r border-slate-100 hidden md:table-cell">
-                                        <div className="text-slate-600 font-medium leading-relaxed text-sm">{item.description}</div>
-                                    </td>
-                                    <td className="px-6 py-6 text-right">
-                                        <div className="inline-flex flex-col items-end">
-                                            <span className="text-xl md:text-2xl font-black text-green-700 font-mono">{item.price}</span>
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Incl. VAT</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {(!pricelist.items || pricelist.items.length === 0) && (
-                                <tr>
-                                    <td colSpan={3} className="px-6 py-20 text-center text-slate-400 font-bold uppercase tracking-widest bg-slate-50">
-                                        <Tag size={48} className="mx-auto mb-4 opacity-10" />
-                                        Pricing currently being updated
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-                <div className="max-w-6xl mx-auto mt-8 text-center">
-                    <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest opacity-60">Prices are subject to change without notice • E&OE • Official Document Generated for {brand?.name}</p>
-                </div>
-            </main>
-        </div>
-    );
-};
 
 export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => (
   <div 
@@ -117,32 +57,36 @@ export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
         backgroundPosition: 'center' 
       }}
       onClick={e => e.stopPropagation()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="creator-popup-title"
     >
       <div className="absolute inset-0 bg-black/60"></div>
       <div className="relative z-10 flex flex-col items-center w-full h-full justify-center">
         <div className="w-32 h-32 mb-2 hover:scale-105 transition-transform duration-500">
            <img src="https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png" alt="Logo" className="w-full h-full object-contain drop-shadow-2xl" />
         </div>
-        <h2 className="text-white font-black text-3xl mb-1 drop-shadow-lg tracking-tight">JSTYP.me</h2>
+        <h2 id="creator-popup-title" className="text-white font-black text-3xl mb-1 drop-shadow-lg tracking-tight">JSTYP.me</h2>
         <p className="text-white/90 text-sm font-bold mb-4 drop-shadow-md italic max-w-[90%]">"Jason's Solution To Your Problems, Yes me!"</p>
         <p className="text-white text-xs font-bold mb-8 drop-shadow-md text-center px-4 leading-relaxed uppercase tracking-wide bg-black/40 rounded-lg py-2 border border-white/10">
             Need a website/ APP or a special tool, get in touch today!
         </p>
         <div className="flex items-center justify-center gap-8">
-           <a href="https://wa.me/27695989427" target="_blank" rel="noreferrer" className="transition-transform hover:scale-125 duration-300">
+           <a href="https://wa.me/27695989427" target="_blank" rel="noreferrer" className="transition-transform hover:scale-125 duration-300" title="WhatsApp">
               <img src="https://i.ibb.co/Z1YHvjgT/image-removebg-preview-1.png" className="w-12 h-12 object-contain drop-shadow-lg" alt="WhatsApp" />
            </a>
-           <a href="mailto:jstypme@gmail.com" className="transition-transform hover:scale-125 duration-300">
+           <a href="mailto:jstypme@gmail.com" className="transition-transform hover:scale-125 duration-300" title="Email">
               <img src="https://i.ibb.co/r2HkbjLj/image-removebg-preview-2.png" className="w-12 h-12 object-contain drop-shadow-lg" alt="Email" />
            </a>
         </div>
       </div>
-      <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white z-20 bg-black/40 p-1 rounded-full"><X size={20} /></button>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white z-20 bg-black/40 p-1 rounded-full transition-colors" aria-label="Close creator information">
+         <X size={20} />
+      </button>
     </div>
   </div>
 );
 
-// ... (SetupScreen omitted same as existing) ...
 export const SetupScreen = ({ kioskId, onComplete, onRestoreId }: any) => {
   const [shopName, setShopName] = useState('');
   const [deviceType, setDeviceType] = useState<'kiosk' | 'mobile' | 'tv'>('kiosk');
@@ -232,7 +176,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [flipbookPages, setFlipbookPages] = useState<string[]>([]);
   const [flipbookTitle, setFlipbookTitle] = useState<string | undefined>(undefined); 
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
-  const [viewingManualPricelist, setViewingManualPricelist] = useState<Pricelist | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
@@ -253,7 +196,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
         setActiveBrand(null);
         setShowFlipbook(false);
         setViewingPdf(null);
-        setViewingManualPricelist(null);
         setShowCreator(false);
         setShowPricelistModal(false);
       }, idleTimeout);
@@ -373,7 +315,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                            {selectedBrandForPricelist ? (
                                <div className="grid grid-cols-3 gap-2 md:gap-4">
                                    {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).sort((a,b) => parseInt(b.year) - parseInt(a.year)).map(pl => (
-                                       <button key={pl.id} onClick={() => { if (pl.type === 'manual') setViewingManualPricelist(pl); else setViewingPdf({ url: pl.url!, title: pl.title }); }} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border border-slate-200 flex flex-col h-full"><div className="aspect-[3/4] bg-white relative p-2">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">{pl.type === 'manual' ? <List size={24}/> : <FileText size={24} />}</div>}<div className={`absolute top-1 right-1 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm ${pl.type === 'manual' ? 'bg-green-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div></div><div className="p-2 md:p-4 flex-1 flex flex-col"><h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3><div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div></div></button>
+                                       <button key={pl.id} onClick={() => setViewingPdf({ url: pl.url, title: pl.title })} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border border-slate-200 flex flex-col h-full"><div className="aspect-[3/4] bg-white relative p-2">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400"><FileText size={24} /></div>}<div className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">PDF</div></div><div className="p-2 md:p-4 flex-1 flex flex-col"><h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3><div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div></div></button>
                                    ))}
                                </div>
                            ) : <div className="h-full flex flex-col items-center justify-center text-slate-400"><RIcon size={48} className="opacity-20" /><p className="uppercase font-bold text-xs tracking-widest">Select a brand</p></div>}
@@ -384,13 +326,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        )}
        {showFlipbook && <Flipbook pages={flipbookPages} onClose={() => setShowFlipbook(false)} catalogueTitle={flipbookTitle} />}
        {viewingPdf && <PdfViewer url={viewingPdf.url} title={viewingPdf.title} onClose={() => setViewingPdf(null)} />}
-       {viewingManualPricelist && (
-           <ManualPricelistViewer 
-               pricelist={viewingManualPricelist} 
-               brand={pricelistBrands.find(b => b.id === viewingManualPricelist.brandId)} 
-               onClose={() => setViewingManualPricelist(null)} 
-           />
-       )}
     </div>
   );
 };

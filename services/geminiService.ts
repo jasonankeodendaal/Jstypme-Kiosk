@@ -170,6 +170,8 @@ const migrateData = (data: any): StoreData => {
     }
 
     // --- MIGRATION: SEPARATE PRICELIST BRANDS FROM INVENTORY BRANDS ---
+    // If pricelistBrands is empty but we have pricelists, copy the inventory brands they belong to
+    // so the data is preserved in the new "Split" structure.
     if (data.pricelistBrands.length === 0 && data.pricelists.length > 0 && data.brands.length > 0) {
         console.log("Migrating Pricelist Brands...");
         const usedBrandIds = new Set(data.pricelists.map((p: any) => p.brandId));
@@ -182,14 +184,6 @@ const migrateData = (data: any): StoreData => {
                 });
             }
         });
-    }
-
-    // Ensure pricelists have a type
-    if (data.pricelists) {
-      data.pricelists.forEach((pl: any) => {
-        if (!pl.type) pl.type = 'pdf';
-        if (pl.type === 'manual' && !pl.items) pl.items = [];
-      });
     }
 
     // Ensure Ads have dateAdded
