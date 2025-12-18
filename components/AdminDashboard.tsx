@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List
 } from 'lucide-react';
-import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand } from '../types';
+import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
 import { uploadFileToStorage, supabase, checkCloudConnection } from '../services/kioskService';
 import SetupGuide from './SetupGuide';
@@ -715,227 +714,6 @@ const downloadZip = async (storeData: StoreData) => {
     URL.revokeObjectURL(url);
 };
 
-// Updated importZip to use uploadFileToStorage for assets sequentially
-const importZip = async (file: File, onProgress?: (msg: string) => void): Promise<Brand[]> => {
-    const zip = new JSZip();
-    let loadedZip;
-    try {
-        loadedZip = await zip.loadAsync(file);
-    } catch (e) {
-        throw new Error("Invalid ZIP file");
-    }
-    
-    const newBrands: Record<string, Brand> = {};
-    
-    // Helper: Normalize path to avoid Windows/Mac slash issues
-    const getCleanPath = (filename: string) => filename.replace(/\\/g, '/');
-
-    // 1. Detect Root Wrapper (e.g. user zipped a folder "Backup" containing Brands)
-    const validFiles = Object.keys(loadedZip.files).filter(path => {
-        return !loadedZip.files[path].dir && !path.includes('__MACOSX') && !path.includes('.DS_Store');
-    });
-
-    let rootPrefix = "";
-    if (validFiles.length > 0) {
-        const firstFileParts = getCleanPath(validFiles[0]).split('/').filter(p => p);
-        if (firstFileParts.length > 1) {
-            const possibleRoot = firstFileParts[0];
-            const allHaveRoot = validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'));
-            if (allHaveRoot) {
-                rootPrefix = possibleRoot + '/';
-                console.log("Import: Stripping root folder:", rootPrefix);
-            }
-        }
-    }
-
-    // Helper: Determine MIME type
-    const getMimeType = (filename: string) => {
-        const ext = filename.split('.').pop()?.toLowerCase();
-        if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
-        if (ext === 'png') return 'image/png';
-        if (ext === 'webp') return 'image/webp';
-        if (ext === 'gif') return 'image/gif';
-        if (ext === 'mp4') return 'video/mp4';
-        if (ext === 'webm') return 'video/webm';
-        if (ext === 'pdf') return 'application/pdf';
-        return 'application/octet-stream';
-    };
-
-    // Helper: Process Asset (Upload to Cloud if available to save JSON size)
-    const processAsset = async (zipObj: any, filename: string): Promise<string> => {
-        const blob = await zipObj.async("blob");
-        
-        // Try Cloud Upload First (To keep JSON small)
-        if (supabase) {
-             try {
-                 const mimeType = getMimeType(filename);
-                 // Sanitize filename
-                 const safeName = filename.replace(/[^a-z0-9._-]/gi, '_');
-                 // Create File object
-                 const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType });
-                 // Upload sequentially (this function is called inside sequential loop)
-                 const url = await uploadFileToStorage(fileToUpload);
-                 return url;
-             } catch (e) {
-                 console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e);
-             }
-        }
-
-        // Fallback Base64 (Only if offline or upload failed)
-        return new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-        });
-    };
-
-    // Iterate files
-    const filePaths = Object.keys(loadedZip.files);
-    let processedCount = 0;
-    
-    for (const rawPath of filePaths) {
-        let path = getCleanPath(rawPath);
-        const fileObj = loadedZip.files[rawPath];
-        if (fileObj.dir) continue;
-        if (path.includes('__MACOSX') || path.includes('.DS_Store')) continue;
-
-        // Remove Root Prefix if detected
-        if (rootPrefix && path.startsWith(rootPrefix)) {
-            path = path.substring(rootPrefix.length);
-        }
-
-        // SKIP SYSTEM BACKUP FOLDERS in Inventory Import
-        if (path.startsWith('_System_Backup/')) continue;
-        if (path.includes('store_config')) continue;
-
-        // Path: Brand/Category/Product/File.ext OR Brand/BrandFile.ext
-        const parts = path.split('/').filter(p => p.trim() !== '');
-        
-        // Skip root files if any (files not inside a Brand folder)
-        if (parts.length < 2) continue;
-
-        processedCount++;
-        if (onProgress && processedCount % 5 === 0) onProgress(`Processing item ${processedCount}/${validFiles.length}...`);
-
-        const brandName = parts[0];
-
-        // Init Brand
-        if (!newBrands[brandName]) {
-            newBrands[brandName] = {
-                id: generateId('brand'),
-                name: brandName,
-                categories: []
-            };
-        }
-
-        // Handle Brand Assets (Level 2: Brand/brand_logo.png)
-        if (parts.length === 2) {
-             const fileName = parts[1].toLowerCase();
-             // Parse brand logo
-             if (fileName.includes('brand_logo') || fileName.includes('logo')) {
-                  const url = await processAsset(fileObj, parts[1]);
-                  newBrands[brandName].logoUrl = url;
-             }
-             // Parse Brand JSON metadata if exists
-             if (fileName.endsWith('.json') && fileName.includes('brand')) {
-                 try {
-                     const text = await fileObj.async("text");
-                     const meta = JSON.parse(text);
-                     if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor;
-                     // Allow ID overwrite if restoring backup
-                     if (meta.id) newBrands[brandName].id = meta.id; 
-                 } catch(e) {}
-             }
-             continue;
-        }
-
-        // Require Product Depth for rest (Brand/Category/Product/File)
-        if (parts.length < 4) continue;
-
-        const categoryName = parts[1];
-        const productName = parts[2];
-        const fileName = parts.slice(3).join('/'); // In case of subfolders inside product (e.g. gallery)
-
-        // Init Category
-        let category = newBrands[brandName].categories.find(c => c.name === categoryName);
-        if (!category) {
-            category = {
-                id: generateId('cat'),
-                name: categoryName,
-                icon: 'Box',
-                products: []
-            };
-            newBrands[brandName].categories.push(category);
-        }
-
-        // Init Product
-        let product = category.products.find(p => p.name === productName);
-        if (!product) {
-            product = {
-                id: generateId('prod'),
-                name: productName, 
-                description: '',
-                specs: {},
-                features: [],
-                dimensions: [],
-                imageUrl: '',
-                galleryUrls: [],
-                videoUrls: [],
-                manuals: [],
-                dateAdded: new Date().toISOString()
-            };
-            category.products.push(product);
-        }
-
-        const lowerFile = fileName.toLowerCase();
-        
-        // Handle Details JSON - Deep Merge
-        if (fileName.endsWith('.json') && (fileName.includes('details') || fileName.includes('product'))) {
-             try {
-                 const text = await fileObj.async("text");
-                 const meta = JSON.parse(text);
-                 if (meta.id) product.id = meta.id; // Restore ID
-                 if (meta.name) product.name = meta.name;
-                 if (meta.description) product.description = meta.description;
-                 if (meta.sku) product.sku = meta.sku;
-                 if (meta.specs) product.specs = { ...product.specs, ...meta.specs };
-                 if (meta.features) product.features = [...(product.features || []), ...(meta.features || [])];
-                 if (meta.dimensions) product.dimensions = meta.dimensions;
-                 if (meta.boxContents) product.boxContents = meta.boxContents;
-                 if (meta.terms) product.terms = meta.terms;
-                 if (meta.dateAdded) product.dateAdded = meta.dateAdded;
-             } catch(e) { console.warn("Failed to parse JSON for " + productName); }
-        }
-        // Handle Images
-        else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
-             const url = await processAsset(fileObj, parts.slice(3).join('_'));
-             if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
-                 product.imageUrl = url;
-             } else {
-                 product.galleryUrls = [...(product.galleryUrls || []), url];
-             }
-        }
-        // Handle Videos
-        else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
-            const url = await processAsset(fileObj, parts.slice(3).join('_'));
-            product.videoUrls = [...(product.videoUrls || []), url];
-        }
-        // Handle Manuals
-        else if (lowerFile.endsWith('.pdf')) {
-             const url = await processAsset(fileObj, parts.slice(3).join('_'));
-             product.manuals?.push({
-                 id: generateId('man'),
-                 title: fileName.replace('.pdf', '').replace(/_/g, ' '),
-                 images: [],
-                 pdfUrl: url,
-                 thumbnailUrl: '' 
-             });
-        }
-    }
-
-    return Object.values(newBrands);
-};
-
 
 // Updated Auth Component with Name/PIN and Admin validation
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
@@ -1184,82 +962,74 @@ const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalog
     );
 };
 
-const MoveProductModal = ({ 
-  product, 
-  allBrands, 
-  currentBrandId,
-  currentCategoryId,
-  onMove, 
-  onClose 
-}: { 
-  product: Product, 
-  allBrands: Brand[], 
-  currentBrandId: string,
-  currentCategoryId: string,
-  onMove: (product: Product, targetBrandId: string, targetCategoryId: string) => void, 
-  onClose: () => void 
-}) => {
-  const [targetBrandId, setTargetBrandId] = useState(currentBrandId);
-  const [targetCategoryId, setTargetCategoryId] = useState(currentCategoryId);
+const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pricelist, onSave: (pl: Pricelist) => void, onClose: () => void }) => {
+  const [items, setItems] = useState<PricelistItem[]>(pricelist.items || []);
+  
+  const addItem = () => {
+    setItems([...items, { id: generateId('item'), sku: '', description: '', normalPrice: '', promoPrice: '' }]);
+  };
 
-  const selectedTargetBrand = allBrands.find(b => b.id === targetBrandId);
-  const targetCategories = selectedTargetBrand ? selectedTargetBrand.categories : [];
+  const updateItem = (id: string, field: keyof PricelistItem, val: string) => {
+    setItems(items.map(item => item.id === id ? { ...item, [field]: val } : item));
+  };
+
+  const removeItem = (id: string) => {
+    setItems(items.filter(item => item.id !== id));
+  };
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center backdrop-blur-sm p-4">
-       <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col">
-           <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-               <h3 className="font-black text-slate-900 uppercase text-sm">Move Product</h3>
-               <button onClick={onClose}><X size={20} className="text-slate-400" /></button>
-           </div>
-           <div className="p-6 space-y-4">
-               <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Select Brand</label>
-                  <select 
-                     value={targetBrandId} 
-                     onChange={(e) => {
-                         setTargetBrandId(e.target.value);
-                         const newBrand = allBrands.find(b => b.id === e.target.value);
-                         if (newBrand && newBrand.categories.length > 0) {
-                             setTargetCategoryId(newBrand.categories[0].id);
-                         } else {
-                             setTargetCategoryId('');
-                         }
-                     }}
-                     className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-bold outline-none focus:border-blue-500"
-                  >
-                     {allBrands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-               </div>
-               
-               <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Select Category</label>
-                  <select 
-                     value={targetCategoryId} 
-                     onChange={(e) => setTargetCategoryId(e.target.value)}
-                     className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-bold outline-none focus:border-blue-500"
-                     disabled={targetCategories.length === 0}
-                  >
-                     {targetCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                  {targetCategories.length === 0 && <p className="text-xs text-red-500 mt-1">No categories in this brand.</p>}
-               </div>
-           </div>
-           <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-               <button onClick={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
-               <button 
-                  onClick={() => {
-                      if (targetBrandId && targetCategoryId) {
-                          onMove(product, targetBrandId, targetCategoryId);
-                      }
-                  }}
-                  disabled={!targetBrandId || !targetCategoryId} 
-                  className="px-4 py-2 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg disabled:opacity-50"
-               >
-                  Confirm Move
-               </button>
-           </div>
-       </div>
+    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+        <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+          <div>
+            <h3 className="font-black text-slate-900 uppercase text-lg">Pricelist Builder</h3>
+            <p className="text-xs text-slate-500 font-bold uppercase">{pricelist.title} ({pricelist.month} {pricelist.year})</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={addItem} className="bg-green-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-green-700 transition-colors shadow-lg shadow-green-900/10">
+              <Plus size={16} /> Add Row
+            </button>
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600"><X size={24}/></button>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-auto p-6">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50 sticky top-0 z-10">
+              <tr>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">SKU</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Description</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Normal Price</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Promo Price</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 w-10 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="p-2"><input value={item.sku} onChange={(e) => updateItem(item.id, 'sku', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="SKU-123" /></td>
+                  <td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none text-sm" placeholder="Product details..." /></td>
+                  <td className="p-2"><input value={item.normalPrice} onChange={(e) => updateItem(item.id, 'normalPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-black text-sm" placeholder="R 999" /></td>
+                  <td className="p-2"><input value={item.promoPrice} onChange={(e) => updateItem(item.id, 'promoPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-red-500 outline-none font-black text-sm text-red-600" placeholder="R 799" /></td>
+                  <td className="p-2 text-center">
+                    <button onClick={() => removeItem(item.id)} className="p-2 text-red-400 hover:text-red-600 transition-colors"><Trash2 size={16}/></button>
+                  </td>
+                </tr>
+              ))}
+              {items.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-20 text-center text-slate-400 text-sm font-bold uppercase italic">No items yet. Click "Add Row" to start.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
+          <button onClick={onClose} className="px-6 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
+          <button onClick={() => { onSave({ ...pricelist, items, type: 'manual' }); onClose(); }} className="px-8 py-3 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-all">Save Pricelist Table</button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -1283,6 +1053,7 @@ const PricelistManager = ({
     }, [pricelistBrands]);
 
     const [selectedBrand, setSelectedBrand] = useState<PricelistBrand | null>(sortedBrands.length > 0 ? sortedBrands[0] : null);
+    const [editingManualList, setEditingManualList] = useState<Pricelist | null>(null);
     
     useEffect(() => {
         if (selectedBrand && !sortedBrands.find(b => b.id === selectedBrand.id)) {
@@ -1335,6 +1106,7 @@ const PricelistManager = ({
             brandId: selectedBrand.id,
             title: 'New Pricelist',
             url: '',
+            type: 'pdf', // Default to PDF
             month: 'January',
             year: new Date().getFullYear().toString(),
             dateAdded: new Date().toISOString() // Set dateAdded to now for "New" flag
@@ -1432,7 +1204,7 @@ const PricelistManager = ({
                  </div>
                  <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 content-start pb-10">
                      {sortedLists.map((item) => (
-                         <div key={item.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col p-3 md:p-4 gap-2 md:gap-3 h-fit">
+                         <div key={item.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col p-3 md:p-4 gap-2 md:gap-3 h-fit relative group">
                              <div>
                                  <label className="block text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1">Title</label>
                                  <input 
@@ -1442,6 +1214,7 @@ const PricelistManager = ({
                                      placeholder="e.g. Retail Price List"
                                  />
                              </div>
+                             
                              <div className="grid grid-cols-2 gap-2">
                                  <div>
                                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1">Month</label>
@@ -1463,21 +1236,48 @@ const PricelistManager = ({
                                      />
                                  </div>
                              </div>
-                             <div className="mt-1 md:mt-2 grid grid-cols-2 gap-2">
-                                <FileUpload 
-                                    label="Thumbnail" 
-                                    accept="image/*"
-                                    currentUrl={item.thumbnailUrl}
-                                    onUpload={(url: any) => updatePricelist(item.id, { thumbnailUrl: url })} 
-                                />
-                                <FileUpload 
-                                    label="Upload PDF" 
-                                    accept="application/pdf" 
-                                    icon={<FileText />}
-                                    currentUrl={item.url}
-                                    onUpload={(url: any) => updatePricelist(item.id, { url: url })} 
-                                />
+
+                             <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Pricelist Mode</label>
+                                <div className="grid grid-cols-2 gap-1 bg-white p-1 rounded-md border border-slate-200">
+                                    <button onClick={() => updatePricelist(item.id, { type: 'pdf' })} className={`py-1 text-[9px] font-black uppercase rounded flex items-center justify-center gap-1 transition-all ${item.type !== 'manual' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><FileText size={10}/> PDF</button>
+                                    <button onClick={() => updatePricelist(item.id, { type: 'manual' })} className={`py-1 text-[9px] font-black uppercase rounded flex items-center justify-center gap-1 transition-all ${item.type === 'manual' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={10}/> Manual</button>
+                                </div>
                              </div>
+
+                             {item.type === 'manual' ? (
+                                <div className="mt-1 space-y-2">
+                                    <button 
+                                        onClick={() => setEditingManualList(item)}
+                                        className="w-full py-3 bg-blue-50 border border-blue-200 text-blue-600 rounded-lg font-black text-[10px] uppercase flex items-center justify-center gap-2 hover:bg-blue-100 transition-all"
+                                    >
+                                        <Edit2 size={12}/> {item.items?.length || 0} Items - Open Builder
+                                    </button>
+                                    <FileUpload 
+                                        label="Thumbnail Image" 
+                                        accept="image/*"
+                                        currentUrl={item.thumbnailUrl}
+                                        onUpload={(url: any) => updatePricelist(item.id, { thumbnailUrl: url })} 
+                                    />
+                                </div>
+                             ) : (
+                                <div className="mt-1 md:mt-2 grid grid-cols-2 gap-2">
+                                    <FileUpload 
+                                        label="Thumbnail" 
+                                        accept="image/*"
+                                        currentUrl={item.thumbnailUrl}
+                                        onUpload={(url: any) => updatePricelist(item.id, { thumbnailUrl: url })} 
+                                    />
+                                    <FileUpload 
+                                        label="Upload PDF" 
+                                        accept="application/pdf" 
+                                        icon={<FileText />}
+                                        currentUrl={item.url}
+                                        onUpload={(url: any) => updatePricelist(item.id, { url: url })} 
+                                    />
+                                </div>
+                             )}
+
                              <button 
                                 onClick={() => handleDeletePricelist(item.id)}
                                 className="mt-auto pt-2 md:pt-3 border-t border-slate-100 text-red-500 hover:text-red-600 text-[10px] font-bold uppercase flex items-center justify-center gap-1"
@@ -1493,6 +1293,14 @@ const PricelistManager = ({
                      )}
                  </div>
              </div>
+
+             {editingManualList && (
+               <ManualPricelistEditor 
+                  pricelist={editingManualList} 
+                  onSave={(pl) => updatePricelist(pl.id, { ...pl })} 
+                  onClose={() => setEditingManualList(null)} 
+               />
+             )}
         </div>
     );
 };
@@ -1773,6 +1581,83 @@ const KioskEditorModal = ({ kiosk, onSave, onClose }: { kiosk: KioskRegistry, on
                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3">
                     <button onClick={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
                     <button onClick={() => onSave(draft)} className="px-4 py-2 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- MOVE PRODUCT MODAL COMPONENT ---
+const MoveProductModal = ({ product, allBrands, currentBrandId, currentCategoryId, onClose, onMove }: { product: Product, allBrands: Brand[], currentBrandId: string, currentCategoryId: string, onClose: () => void, onMove: (p: Product, b: string, c: string) => void }) => {
+    const [targetBrandId, setTargetBrandId] = useState(currentBrandId);
+    const [targetCategoryId, setTargetCategoryId] = useState(currentCategoryId);
+
+    const targetBrand = allBrands.find(b => b.id === targetBrandId);
+    const targetCategories = targetBrand?.categories || [];
+
+    // Reset target category if brand changes and current cat not in new brand
+    useEffect(() => {
+        if (targetBrand && !targetBrand.categories.find(c => c.id === targetCategoryId)) {
+            if (targetBrand.categories.length > 0) {
+                setTargetCategoryId(targetBrand.categories[0].id);
+            }
+        }
+    }, [targetBrandId]);
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 className="font-black text-slate-900 uppercase">Move Product</h3>
+                    <button onClick={onClose}><X size={20} className="text-slate-400" /></button>
+                </div>
+                <div className="p-6 space-y-6">
+                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                        <div className="text-[10px] font-black text-blue-400 uppercase mb-1">Moving Product</div>
+                        <div className="font-bold text-slate-900">{product.name}</div>
+                        {product.sku && <div className="text-[10px] font-mono text-slate-400 uppercase">{product.sku}</div>}
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 ml-1">Destination Brand</label>
+                            <select 
+                                value={targetBrandId} 
+                                onChange={(e) => setTargetBrandId(e.target.value)}
+                                className="w-full p-3 bg-white border border-slate-300 rounded-xl font-bold text-sm outline-none focus:border-blue-500 transition-all shadow-sm"
+                            >
+                                {allBrands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 ml-1">Destination Category</label>
+                            <select 
+                                value={targetCategoryId} 
+                                onChange={(e) => setTargetCategoryId(e.target.value)}
+                                className="w-full p-3 bg-white border border-slate-300 rounded-xl font-bold text-sm outline-none focus:border-blue-500 transition-all shadow-sm"
+                            >
+                                {targetCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex items-start gap-3">
+                         <Info size={16} className="text-orange-500 shrink-0 mt-0.5" />
+                         <p className="text-[10px] text-orange-700 leading-relaxed font-bold uppercase">
+                             Moving this product will transfer all specifications and media to the selected category.
+                         </p>
+                    </div>
+                </div>
+                <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+                    <button onClick={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs hover:text-slate-700">Cancel</button>
+                    <button 
+                        onClick={() => onMove(product, targetBrandId, targetCategoryId)}
+                        disabled={targetBrandId === currentBrandId && targetCategoryId === currentCategoryId}
+                        className="px-6 py-3 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
+                    >
+                        <Move size={14} /> Confirm Move
+                    </button>
                 </div>
             </div>
         </div>
@@ -3312,7 +3197,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
         )}
         
         {editingTVModel && (
-            <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === updatedTVBrand.id ? updatedTVBrand : b) } as TVConfig }); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />
+            <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updatedTVBrand : b) } as TVConfig }); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />
         )}
         
         {showGuide && <SetupGuide onClose={() => setShowGuide(false)} />}

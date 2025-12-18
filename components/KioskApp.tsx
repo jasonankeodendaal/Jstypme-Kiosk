@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand } from '../types';
+import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
   getKioskId, 
   provisionKioskId, 
@@ -23,7 +23,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, WifiOff, Clock, MapPin, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Check, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, WifiOff, Clock, MapPin, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Check, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List } from 'lucide-react';
 
 const DEFAULT_IDLE_TIMEOUT = 60000;
 
@@ -43,6 +43,54 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
     <path d="M11.5 14L17 19" />
   </svg>
 );
+
+const ManualPricelistViewer = ({ pricelist, onClose }: { pricelist: Pricelist, onClose: () => void }) => {
+  return (
+    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 md:p-12 animate-fade-in" onClick={onClose}>
+      <div className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-6 bg-slate-900 text-white flex justify-between items-center shrink-0 border-b border-white/5">
+          <div>
+            <h2 className="text-xl md:text-3xl font-black uppercase tracking-tight">{pricelist.title}</h2>
+            <p className="text-blue-400 font-bold uppercase tracking-widest text-xs md:text-sm">{pricelist.month} {pricelist.year}</p>
+          </div>
+          <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><X size={24}/></button>
+        </div>
+        
+        <div className="flex-1 overflow-auto p-4 md:p-8 bg-white">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50 sticky top-0 z-10">
+              <tr>
+                <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">SKU</th>
+                <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Description</th>
+                <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Normal Price</th>
+                <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 text-red-500">Promo Price</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {(pricelist.items || []).map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-4 font-mono font-bold text-sm text-slate-500 uppercase">{item.sku || '-'}</td>
+                  <td className="p-4 font-bold text-slate-900">{item.description}</td>
+                  <td className="p-4 font-black text-lg text-slate-400 line-through decoration-red-500/30">{item.normalPrice}</td>
+                  <td className="p-4 font-black text-2xl text-red-600">{item.promoPrice || '-'}</td>
+                </tr>
+              ))}
+              {(!pricelist.items || pricelist.items.length === 0) && (
+                <tr>
+                  <td colSpan={4} className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest italic">No items found in this pricelist.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        <div className="p-4 bg-slate-50 border-t border-slate-100 text-center shrink-0">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valid for {pricelist.month} {pricelist.year} • Prices subject to change without notice</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => (
   <div 
@@ -176,6 +224,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [flipbookPages, setFlipbookPages] = useState<string[]>([]);
   const [flipbookTitle, setFlipbookTitle] = useState<string | undefined>(undefined); 
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
+  const [viewingManualList, setViewingManualList] = useState<Pricelist | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
@@ -196,6 +245,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
         setActiveBrand(null);
         setShowFlipbook(false);
         setViewingPdf(null);
+        setViewingManualList(null);
         setShowCreator(false);
         setShowPricelistModal(false);
       }, idleTimeout);
@@ -264,6 +314,14 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   if (!storeData) return null;
   if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} />;
 
+  const handleOpenPricelist = (pl: Pricelist) => {
+    if (pl.type === 'manual') {
+      setViewingManualList(pl);
+    } else {
+      setViewingPdf({ url: pl.url, title: pl.title });
+    }
+  };
+
   return (
     <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full">
        {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProducts} ads={storeData.ads?.screensaver || []} pamphlets={filteredCatalogs} onWake={resetIdleTimer} settings={storeData.screensaverSettings} />}
@@ -315,7 +373,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                            {selectedBrandForPricelist ? (
                                <div className="grid grid-cols-3 gap-2 md:gap-4">
                                    {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).sort((a,b) => parseInt(b.year) - parseInt(a.year)).map(pl => (
-                                       <button key={pl.id} onClick={() => setViewingPdf({ url: pl.url, title: pl.title })} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border border-slate-200 flex flex-col h-full"><div className="aspect-[3/4] bg-white relative p-2">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400"><FileText size={24} /></div>}<div className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">PDF</div></div><div className="p-2 md:p-4 flex-1 flex flex-col"><h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3><div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div></div></button>
+                                       <button key={pl.id} onClick={() => handleOpenPricelist(pl)} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border border-slate-200 flex flex-col h-full"><div className="aspect-[3/4] bg-white relative p-2">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">{pl.type === 'manual' ? <List size={24}/> : <FileText size={24} />}</div>}<div className={`absolute top-1 right-1 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div></div><div className="p-2 md:p-4 flex-1 flex flex-col"><h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3><div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div></div></button>
                                    ))}
                                </div>
                            ) : <div className="h-full flex flex-col items-center justify-center text-slate-400"><RIcon size={48} className="opacity-20" /><p className="uppercase font-bold text-xs tracking-widest">Select a brand</p></div>}
@@ -326,6 +384,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        )}
        {showFlipbook && <Flipbook pages={flipbookPages} onClose={() => setShowFlipbook(false)} catalogueTitle={flipbookTitle} />}
        {viewingPdf && <PdfViewer url={viewingPdf.url} title={viewingPdf.title} onClose={() => setViewingPdf(null)} />}
+       {viewingManualList && <ManualPricelistViewer pricelist={viewingManualList} onClose={() => setViewingManualList(null)} />}
     </div>
   );
 };
