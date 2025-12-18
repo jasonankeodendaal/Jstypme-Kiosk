@@ -78,34 +78,34 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
     return (
         <div className="fixed inset-0 z-[300] bg-slate-900 flex items-center justify-center p-4">
-            <div className="bg-white rounded-[2.5rem] w-full max-w-xl overflow-hidden shadow-2xl animate-fade-in border border-white/20">
-                <div className="bg-slate-900 text-white p-8 md:p-12 text-center relative">
+            <div className="bg-white rounded-[2rem] w-full max-w-lg overflow-hidden shadow-2xl animate-fade-in border border-white/20">
+                <div className="bg-slate-900 text-white p-6 md:p-8 text-center relative">
                     <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                     <div className="relative z-10 flex flex-col items-center">
-                        <div className="bg-blue-600 p-4 rounded-3xl shadow-xl mb-6">
-                            <Store size={40} />
+                        <div className="bg-blue-600 p-3 rounded-2xl shadow-xl mb-4">
+                            <Store size={32} />
                         </div>
-                        <h1 className="text-3xl font-black uppercase tracking-tight mb-2">Device Provisioning</h1>
-                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Kiosk Pro v2.8 • System Initialization</p>
+                        <h1 className="text-2xl font-black uppercase tracking-tight mb-1">Device Provisioning</h1>
+                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Kiosk Pro v2.8 • System Initialization</p>
                     </div>
                 </div>
 
-                <div className="p-8 md:p-12">
+                <div className="p-6 md:p-8">
                     {/* Stepper */}
-                    <div className="flex justify-center gap-2 mb-10">
+                    <div className="flex justify-center gap-2 mb-8">
                         {[1, 2, 3].map(s => (
-                            <div key={s} className={`h-1.5 rounded-full transition-all duration-500 ${step >= s ? 'w-12 bg-blue-600' : 'w-4 bg-slate-200'}`}></div>
+                            <div key={s} className={`h-1 rounded-full transition-all duration-500 ${step >= s ? 'w-10 bg-blue-600' : 'w-3 bg-slate-200'}`}></div>
                         ))}
                     </div>
 
-                    <div className="min-h-[220px]">
+                    <div className="min-h-[180px]">
                         {step === 1 && (
                             <div className="animate-fade-in">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Step 01: Location Identity</label>
-                                <h2 className="text-2xl font-black text-slate-900 mb-6">What is the name of this shop or zone?</h2>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Step 01: Location Identity</label>
+                                <h2 className="text-xl font-black text-slate-900 mb-4 leading-tight">What is the name of this shop or zone?</h2>
                                 <input 
                                     autoFocus
-                                    className="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-2xl outline-none focus:border-blue-500 font-bold text-lg text-slate-900 transition-all uppercase placeholder:normal-case"
+                                    className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold text-base text-slate-900 transition-all uppercase placeholder:normal-case shadow-sm"
                                     placeholder="e.g. Waterfront Mall - Tech Hub"
                                     value={shopName}
                                     onChange={(e) => setShopName(e.target.value)}
@@ -116,22 +116,22 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
                         {step === 2 && (
                             <div className="animate-fade-in">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Step 02: Hardware Profile</label>
-                                <h2 className="text-2xl font-black text-slate-900 mb-6">Select the primary display type for this hardware.</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Step 02: Hardware Profile</label>
+                                <h2 className="text-xl font-black text-slate-900 mb-4 leading-tight">Select the primary display type.</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     {[
-                                        { id: 'kiosk', icon: <Tablet size={24}/>, label: 'Kiosk', desc: 'Interactive Stand' },
-                                        { id: 'mobile', icon: <Smartphone size={24}/>, label: 'Mobile', desc: 'Handheld Unit' },
-                                        { id: 'tv', icon: <Tv size={24}/>, label: 'TV Wall', desc: 'Non-Interactive' }
+                                        { id: 'kiosk', icon: <Tablet size={20}/>, label: 'Kiosk', desc: 'Interactive Stand' },
+                                        { id: 'mobile', icon: <Smartphone size={20}/>, label: 'Mobile', desc: 'Handheld Unit' },
+                                        { id: 'tv', icon: <Tv size={20}/>, label: 'TV Wall', desc: 'Non-Interactive' }
                                     ].map(type => (
                                         <button 
                                             key={type.id}
                                             onClick={() => setDeviceType(type.id as any)}
-                                            className={`p-5 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 group ${deviceType === type.id ? 'bg-blue-50 border-blue-600 shadow-lg shadow-blue-600/10' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                                            className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-1 group ${deviceType === type.id ? 'bg-blue-50 border-blue-600 shadow-md' : 'bg-white border-slate-200 hover:border-slate-300'}`}
                                         >
                                             <div className={`${deviceType === type.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`}>{type.icon}</div>
-                                            <div className={`font-black uppercase text-xs ${deviceType === type.id ? 'text-blue-600' : 'text-slate-900'}`}>{type.label}</div>
-                                            <div className="text-[9px] font-bold text-slate-400 uppercase">{type.desc}</div>
+                                            <div className={`font-black uppercase text-[10px] ${deviceType === type.id ? 'text-blue-600' : 'text-slate-900'}`}>{type.label}</div>
+                                            <div className="text-[8px] font-bold text-slate-400 uppercase">{type.desc}</div>
                                         </button>
                                     ))}
                                 </div>
@@ -140,40 +140,40 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
                         {step === 3 && (
                             <div className="animate-fade-in text-center">
-                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Step 03: Security Authorization</label>
-                                <h2 className="text-2xl font-black text-slate-900 mb-6">Enter System Setup PIN</h2>
-                                <div className="max-w-[240px] mx-auto">
+                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Step 03: Security Authorization</label>
+                                <h2 className="text-xl font-black text-slate-900 mb-4 leading-tight">Enter System Setup PIN</h2>
+                                <div className="max-w-[200px] mx-auto">
                                     <input 
                                         autoFocus
                                         type="password"
                                         maxLength={8}
-                                        className="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-2xl outline-none focus:border-blue-500 font-mono font-bold text-3xl text-center tracking-[0.5em] text-slate-900 transition-all"
+                                        className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-mono font-bold text-2xl text-center tracking-[0.5em] text-slate-900 transition-all shadow-sm"
                                         placeholder="****"
                                         value={pin}
                                         onChange={(e) => setPin(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                                     />
                                 </div>
-                                <p className="text-slate-400 text-xs font-medium mt-4">Required to register device with Cloud Fleet</p>
+                                <p className="text-slate-400 text-[10px] font-medium mt-3">Required to register device with Cloud Fleet</p>
                             </div>
                         )}
                     </div>
 
-                    {error && <div className="mt-6 p-4 bg-red-50 text-red-600 rounded-xl text-xs font-bold uppercase flex items-center gap-3 border border-red-100"><X size={16}/> {error}</div>}
+                    {error && <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold uppercase flex items-center gap-2 border border-red-100"><X size={14}/> {error}</div>}
 
-                    <div className="mt-10 flex gap-4">
+                    <div className="mt-8 flex gap-3">
                         {step > 1 && (
-                            <button onClick={() => setStep(step - 1)} className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">Back</button>
+                            <button onClick={() => setStep(step - 1)} className="px-6 py-4 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">Back</button>
                         )}
                         <button 
                             onClick={handleNext}
                             disabled={isProcessing}
-                            className="flex-1 bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-xl hover:bg-blue-600 transition-all active:scale-95 disabled:opacity-50"
+                            className="flex-1 bg-slate-900 text-white p-4 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-lg hover:bg-blue-600 transition-all active:scale-95 disabled:opacity-50"
                         >
                             {isProcessing ? (
-                                <><Loader2 className="animate-spin" size={18} /> Syncing Data...</>
+                                <><Loader2 className="animate-spin" size={14} /> Syncing...</>
                             ) : (
-                                <>{step === 3 ? 'Complete Provisioning' : 'Continue'} <ChevronRight size={18} /></>
+                                <>{step === 3 ? 'Complete Setup' : 'Continue'} <ChevronRight size={14} /></>
                             )}
                         </button>
                     </div>
