@@ -1,4 +1,3 @@
-
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser } from "../types";
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
@@ -100,6 +99,7 @@ const migrateData = (data: any): StoreData => {
              }
 
              // CRITICAL FIX: Force the main "Admin" (1723) to always have full permissions
+             // Using case-insensitive check for robustness
              if (admin.name.toLowerCase() === 'admin' && admin.pin === '1723') {
                  admin.isSuperAdmin = true;
                  admin.permissions = {
@@ -120,6 +120,7 @@ const migrateData = (data: any): StoreData => {
     if (!data.appConfig) {
         data.appConfig = { ...DEFAULT_DATA.appConfig };
     } else {
+        // Fix for old local data pointing to missing SVGs or old defaults
         if (data.appConfig.kioskIconUrl === "/icon-kiosk.svg") data.appConfig.kioskIconUrl = DEFAULT_DATA.appConfig!.kioskIconUrl;
         if (data.appConfig.adminIconUrl === "/icon-admin.svg" || data.appConfig.adminIconUrl === "https://i.ibb.co/RG6qW4Nw/maskable-icon.png") data.appConfig.adminIconUrl = DEFAULT_DATA.appConfig!.adminIconUrl;
     }
@@ -140,12 +141,15 @@ const migrateData = (data: any): StoreData => {
             b.categories.forEach((c: any) => {
                 if (!c.products) c.products = [];
                 c.products.forEach((p: any) => {
+                    // Check if dimensions is an object (legacy) instead of array
                     if (p.dimensions && !Array.isArray(p.dimensions)) {
                         p.dimensions = [{
                             label: "Dimensions",
                             ...p.dimensions
                         }];
                     }
+
+                    // Migrate Legacy Single Manual to Array
                     if (!p.manuals) p.manuals = [];
                     if ((p.manualUrl || (p.manualImages && p.manualImages.length > 0)) && p.manuals.length === 0) {
                         p.manuals.push({
@@ -155,6 +159,8 @@ const migrateData = (data: any): StoreData => {
                             pdfUrl: p.manualUrl
                         });
                     }
+
+                    // Ensure dateAdded exists for aging logic (Default to now if missing so it shows up)
                     if (!p.dateAdded) {
                         p.dateAdded = new Date().toISOString();
                     }
@@ -163,24 +169,20 @@ const migrateData = (data: any): StoreData => {
         });
     }
 
-    // --- MIGRATION: SEPARATE PRICELIST BRANDS & TYPES ---
+    // --- MIGRATION: SEPARATE PRICELIST BRANDS FROM INVENTORY BRANDS ---
+    // If pricelistBrands is empty but we have pricelists, copy the inventory brands they belong to
+    // so the data is preserved in the new "Split" structure.
     if (data.pricelistBrands.length === 0 && data.pricelists.length > 0 && data.brands.length > 0) {
+        console.log("Migrating Pricelist Brands...");
         const usedBrandIds = new Set(data.pricelists.map((p: any) => p.brandId));
         data.brands.forEach((b: any) => {
             if (usedBrandIds.has(b.id)) {
                 data.pricelistBrands.push({
-                    id: b.id,
+                    id: b.id, // Keep ID consistent for link
                     name: b.name,
                     logoUrl: b.logoUrl
                 });
             }
-        });
-    }
-
-    if (data.pricelists) {
-        data.pricelists.forEach((pl: any) => {
-            if (!pl.type) pl.type = 'pdf';
-            if (!pl.manualItems) pl.manualItems = [];
         });
     }
 
@@ -195,19 +197,23 @@ const migrateData = (data: any): StoreData => {
         });
     }
 
-    // TV Migration
+    // 4. Migrate TV Brands (Videos directly on Brand -> Videos in Models)
     if (data.tv && data.tv.brands) {
         data.tv.brands.forEach((tvb: any) => {
             if (!tvb.models) tvb.models = [];
+            
+            // If legacy videoUrls exist on the brand, move them to a generic model
             if (tvb.videoUrls && Array.isArray(tvb.videoUrls) && tvb.videoUrls.length > 0) {
+                // Only create if empty to avoid duplication on re-run
                 if (tvb.models.length === 0) {
                     tvb.models.push({
                         id: `migrated-model-${tvb.id}`,
                         name: "General Showcase",
-                        imageUrl: tvb.logoUrl,
+                        imageUrl: tvb.logoUrl, // Fallback to logo
                         videoUrls: [...tvb.videoUrls]
                     });
                 }
+                // Clear legacy
                 tvb.videoUrls = undefined;
             }
         });
@@ -234,7 +240,9 @@ const handleExpiration = async (data: StoreData): Promise<StoreData> => {
     const expiredCatalogues: Catalogue[] = [];
 
     data.catalogues.forEach(c => {
+        // Only expire items with an Explicit End Date
         if (c.endDate && new Date(c.endDate) < now) {
+            console.log(`Auto-Archiving Expired Item: ${c.title}`);
             expiredCatalogues.push(c);
         } else {
             activeCatalogues.push(c);
@@ -255,29 +263,42 @@ const handleExpiration = async (data: StoreData): Promise<StoreData> => {
         };
 
         const updatedData = { ...data, catalogues: activeCatalogues, archive: newArchive };
+        
+        // If we are online, save this cleanup immediately
         if (supabase) {
              await supabase.from('store_config').update({ data: updatedData }).eq('id', 1);
         }
+        
         return updatedData;
     }
+
     return data;
 };
 
+// 1. Fetch Data - STRATEGY: AGGRESSIVE CLOUD FETCH + FLEET MERGE
 const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
+
+  // A. Try Supabase FIRST (Primary Source)
   if (supabase) {
       try {
+          console.log("Fetching data from Cloud...");
+          
+          // Parallel Fetch: Config JSON + Kiosks Table
           const [configResponse, fleetResponse] = await Promise.all([
               supabase.from('store_config').select('data').eq('id', 1).single(),
               supabase.from('kiosks').select('*')
           ]);
+          
           const rawConfig = configResponse.data?.data || {};
           let processedData = migrateData(rawConfig);
+          
+          // CRITICAL FIX: Override JSON fleet with SQL Table fleet
           if (fleetResponse.data) {
               const mappedFleet: KioskRegistry[] = fleetResponse.data.map((k: any) => ({
                   id: k.id,
                   name: k.name,
-                  deviceType: k.device_type,
+                  deviceType: k.device_type, // Fixed Mapping: snake_case to camelCase
                   status: k.status,
                   last_seen: k.last_seen,
                   wifiStrength: k.wifi_strength,
@@ -290,38 +311,74 @@ const generateStoreData = async (): Promise<StoreData> => {
               }));
               processedData.fleet = mappedFleet;
           }
+              
+          // Run expiration check
           processedData = await handleExpiration(processedData);
+
+          // Update Local Cache
           try {
               localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(processedData));
-          } catch (e) {}
+          } catch (e) {
+              console.warn("LocalStorage quota exceeded.");
+          }
+          
           return processedData;
-      } catch (e) {}
+      } catch (e) {
+          console.warn("Supabase fetch failed", e);
+      }
   }
+
+  // B. Fallback to Local Storage
+  console.log("Loading from Local Storage...");
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DATA);
     if (stored) {
       const parsed = JSON.parse(stored);
       return migrateData(parsed);
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("Failed to load local data", e);
+  }
+
   return migrateData(DEFAULT_DATA);
 };
 
+// 2. Save Data
 const saveStoreData = async (data: StoreData): Promise<void> => {
+    let savedRemote = false;
+
+    // 1. Local Save
     try {
         localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
-    } catch (e) {}
+    } catch (e) {
+        console.warn("CRITICAL: LocalStorage Quota Exceeded.");
+    }
+
     if (!supabase) initSupabase();
+
+    // 2. Remote Save
     if (supabase) {
         try {
+            // We do NOT save fleet back to the JSON blob to avoid race conditions.
+            // Fleet is managed via the 'kiosks' table exclusively.
             const { fleet, ...dataToSave } = data;
+            
             const { error } = await supabase
                 .from('store_config')
                 .upsert({ id: 1, data: dataToSave });
+            
             if (error) throw error;
+            savedRemote = true;
         } catch (e) {
-            throw new Error("Connection Failed: Remote sync failed. Changes saved locally only.");
+            console.warn("Supabase save failed", e);
         }
+    }
+
+    if (savedRemote) {
+        console.log("Data synced to Remote successfully");
+    } else {
+        console.error("Connection Failed: Could not sync to Database. Changes saved LOCALLY only.");
+        throw new Error("Connection Failed: Remote sync failed. Changes saved locally only.");
     }
 };
 

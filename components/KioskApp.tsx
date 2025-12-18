@@ -23,7 +23,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, WifiOff, Clock, MapPin, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Check, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, ListOrdered, DollarSign, Settings } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, WifiOff, Clock, MapPin, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Check, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock } from 'lucide-react';
 
 const DEFAULT_IDLE_TIMEOUT = 60000;
 
@@ -43,74 +43,6 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
     <path d="M11.5 14L17 19" />
   </svg>
 );
-
-const ManualPricelistView = ({ pricelist, onClose }: { pricelist: Pricelist, onClose: () => void }) => {
-    return (
-        <div className="fixed inset-0 z-[110] bg-slate-950 flex flex-col animate-fade-in">
-            <header className="bg-slate-900 text-white p-6 md:p-8 flex justify-between items-center shrink-0 border-b border-white/5 shadow-2xl">
-                 <div className="flex items-center gap-6">
-                     <div className="p-3 bg-green-600 rounded-2xl shadow-[0_0_20px_rgba(22,163,74,0.4)]">
-                         <RIcon size={32} className="text-white" />
-                     </div>
-                     <div>
-                         <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight leading-none">{pricelist.title}</h2>
-                         <p className="text-blue-500 font-black uppercase tracking-widest text-xs md:text-sm mt-2">{pricelist.month} {pricelist.year}</p>
-                     </div>
-                 </div>
-                 <button onClick={onClose} className="p-4 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors border border-white/10">
-                     <X size={32} />
-                 </button>
-            </header>
-            
-            <main className="flex-1 overflow-y-auto p-6 md:p-12">
-                <div className="max-w-6xl mx-auto space-y-12">
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                         {(pricelist.manualItems || []).map((item) => (
-                             <div key={item.id} className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 hover:-translate-y-1 transition-all group">
-                                 <div className="flex justify-between items-start mb-4">
-                                     <div className="flex-1">
-                                         {item.category && (
-                                             <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-1">{item.category}</span>
-                                         )}
-                                         <h3 className="text-xl font-black text-slate-900 uppercase leading-tight group-hover:text-blue-600 transition-colors">{item.name}</h3>
-                                     </div>
-                                     <div className="bg-green-50 px-4 py-2 rounded-xl border border-green-100 flex items-center gap-1.5 shrink-0">
-                                         <DollarSign size={14} className="text-green-600" />
-                                         <span className="text-xl font-black text-green-700 font-mono tracking-tight">{item.price}</span>
-                                     </div>
-                                 </div>
-                                 <div className="h-1 w-12 bg-slate-100 rounded-full group-hover:bg-blue-200 transition-colors"></div>
-                             </div>
-                         ))}
-                     </div>
-
-                     {(!pricelist.manualItems || pricelist.manualItems.length === 0) && (
-                         <div className="py-24 text-center text-slate-500 font-bold uppercase tracking-widest border-4 border-dashed border-slate-800 rounded-3xl">
-                             No items found in this pricelist.
-                         </div>
-                     )}
-
-                     <div className="bg-slate-900 p-8 rounded-3xl border border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
-                         <div className="flex items-center gap-4">
-                             <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white"><Clock size={24} /></div>
-                             <div>
-                                 <div className="text-white font-black uppercase text-lg">Daily Updates</div>
-                                 <div className="text-slate-400 text-sm font-medium">Prices are subject to change without prior notice.</div>
-                             </div>
-                         </div>
-                         <div className="px-6 py-3 bg-white/5 rounded-xl border border-white/10 text-white font-mono font-bold">
-                             REF: {pricelist.id.substring(0, 8).toUpperCase()}
-                         </div>
-                     </div>
-                </div>
-            </main>
-            
-            <footer className="bg-slate-900 p-6 text-center border-t border-white/5 shrink-0">
-                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">Consult Staff for Store Specific Discounts</p>
-            </footer>
-        </div>
-    );
-};
 
 export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => (
   <div 
@@ -155,64 +87,75 @@ export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
   </div>
 );
 
-// SetupScreen component added to fix 'Cannot find name SetupScreen' error
-const SetupScreen = ({ kioskId, onComplete, onRestoreId }: { kioskId: string, onComplete: (name: string, type: any) => void, onRestoreId: (id: string) => void }) => {
-  const [name, setName] = useState('');
-  const [type, setType] = useState<'kiosk' | 'mobile' | 'tv'>('kiosk');
-  const [restoreId, setRestoreId] = useState('');
+export const SetupScreen = ({ kioskId, onComplete, onRestoreId }: any) => {
+  const [shopName, setShopName] = useState('');
+  const [deviceType, setDeviceType] = useState<'kiosk' | 'mobile' | 'tv'>('kiosk');
+  const [inputPin, setInputPin] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRestoreMode, setIsRestoreMode] = useState(false);
+  const [customId, setCustomId] = useState('');
+  const [globalPin, setGlobalPin] = useState<string>('0000');
+  const [pinError, setPinError] = useState(false);
+  const [showCreator, setShowCreator] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.add('allow-landscape');
+    return () => document.body.classList.remove('allow-landscape');
+  }, []);
+
+  useEffect(() => {
+      const fetchGlobalPin = async () => {
+          initSupabase();
+          if (supabase) {
+              const { data, error } = await supabase.from('store_config').select('data').eq('id', 1).single();
+              if (!error && data?.data?.systemSettings?.setupPin) {
+                  setGlobalPin(data.data.systemSettings.setupPin);
+              }
+          }
+      };
+      fetchGlobalPin();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!shopName.trim()) return;
+    if (inputPin !== globalPin) {
+        setPinError(true);
+        return;
+    }
+    setIsSubmitting(true);
+    if(isRestoreMode && customId.trim()) onRestoreId(customId.trim());
+    await new Promise(r => setTimeout(r, 800));
+    onComplete(shopName, deviceType);
+    setIsSubmitting(false);
+  };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
-        <h2 className="text-2xl font-black text-slate-900 uppercase mb-6 flex items-center gap-2">
-          <Settings className="text-blue-600" /> Device Setup
-        </h2>
-        <div className="space-y-6">
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Device Name (Shop/Location)</label>
-            <input 
-              value={name} 
-              onChange={e => setName(e.target.value)} 
-              className="w-full p-3 bg-slate-100 rounded-xl outline-none focus:ring-2 ring-blue-500 font-bold"
-              placeholder="e.g. Flagship Store Main"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Device Type</label>
-            <div className="grid grid-cols-3 gap-2">
-              {['kiosk', 'mobile', 'tv'].map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setType(t as any)}
-                  className={`p-3 rounded-xl border-2 font-bold uppercase text-[10px] transition-all ${type === t ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-slate-100 text-slate-400'}`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button 
-            disabled={!name}
-            onClick={() => onComplete(name, type)}
-            className="w-full bg-blue-600 text-white p-4 rounded-xl font-black uppercase tracking-widest disabled:opacity-50 shadow-lg shadow-blue-900/20"
-          >
-            Register Device
-          </button>
-          
-          <div className="pt-6 border-t border-slate-100">
-            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Restore Existing ID</label>
-            <div className="flex gap-2">
-              <input 
-                value={restoreId} 
-                onChange={e => setRestoreId(e.target.value)} 
-                className="flex-1 p-2 bg-slate-50 rounded-lg outline-none font-mono text-xs"
-                placeholder="LOC-XXXXX"
-              />
-              <button onClick={() => onRestoreId(restoreId)} className="bg-slate-900 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase">Restore</button>
-            </div>
-          </div>
+    <div className="h-screen w-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="max-w-xl w-full bg-white rounded-3xl p-10 shadow-2xl animate-fade-in relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-yellow-400"></div>
+        <div className="mb-8 text-center">
+           <div className="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-blue-600"><Store size={32} /></div>
+           <h1 className="text-3xl font-black text-slate-900 mb-2">Device Setup</h1>
+           <p className="text-slate-500">Initialize this device for your location.</p>
         </div>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-6 grid grid-cols-3 gap-2">
+             <button type="button" onClick={() => setDeviceType('kiosk')} className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${deviceType === 'kiosk' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 hover:border-slate-300 text-slate-500'}`}><Tablet size={24} /><span className="text-[10px] font-black uppercase tracking-wider">Kiosk</span></button>
+             <button type="button" onClick={() => setDeviceType('mobile')} className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${deviceType === 'mobile' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 hover:border-slate-300 text-slate-500'}`}><Smartphone size={24} /><span className="text-[10px] font-black uppercase tracking-wider">Mobile</span></button>
+             <button type="button" onClick={() => setDeviceType('tv')} className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${deviceType === 'tv' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:border-slate-300 text-slate-500'}`}><Tv size={24} /><span className="text-[10px] font-black uppercase tracking-wider">TV Mode</span></button>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-4 mb-6 border border-slate-100">
+             <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assigned ID</span><button type="button" onClick={() => setIsRestoreMode(!isRestoreMode)} className="text-[10px] text-blue-600 font-bold uppercase hover:underline flex items-center gap-1"><RotateCcw size={10} /> {isRestoreMode ? 'Cancel Restore' : 'Restore Device'}</button></div>
+             {isRestoreMode ? <input type="text" value={customId} onChange={(e) => setCustomId(e.target.value)} placeholder="Enter ID" className="w-full font-mono font-bold text-slate-700 bg-white px-3 py-2 rounded border border-blue-300 outline-none text-lg text-center" /> : <span className="font-mono font-bold text-slate-700 bg-white px-3 py-1 rounded border border-slate-200 text-lg block text-center">{kioskId}</span>}
+          </div>
+          <div className="mb-4"><label className="block text-sm font-bold text-slate-700 mb-2 ml-1">Shop / Location Name</label><input type="text" value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="e.g. Downtown Mall" className="w-full p-4 bg-white border-2 border-slate-200 rounded-xl focus:border-blue-500 outline-none font-bold text-lg text-slate-900" /></div>
+          <div className="mb-6 relative"><label className="block text-sm font-bold text-slate-700 mb-2 ml-1 flex items-center gap-1">Setup Security PIN <Lock size={12} className="text-slate-400"/></label><input type="password" value={inputPin} onChange={(e) => { setInputPin(e.target.value); setPinError(false); }} placeholder="####" maxLength={8} className={`w-full p-4 bg-white border-2 rounded-xl outline-none font-bold text-lg tracking-widest text-center ${pinError ? 'border-red-500 text-red-600' : 'border-slate-200 focus:border-blue-500'}`} />{pinError && <p className="text-red-500 text-xs font-bold mt-1 text-center">Incorrect PIN.</p>}</div>
+          <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 text-white p-4 rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl flex items-center justify-center gap-2">{isSubmitting ? <Loader2 className="animate-spin" /> : 'Complete Setup'}</button>
+        </form>
+        <button onClick={() => setShowCreator(true)} className="absolute bottom-4 left-4 p-2 opacity-50 hover:opacity-100 transition-opacity"><img src="https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png" className="w-4 h-4 object-contain grayscale" alt="" /></button>
       </div>
+      <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
     </div>
   );
 };
@@ -233,7 +176,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [flipbookPages, setFlipbookPages] = useState<string[]>([]);
   const [flipbookTitle, setFlipbookTitle] = useState<string | undefined>(undefined); 
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
-  const [viewingManualList, setViewingManualList] = useState<Pricelist | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
@@ -254,7 +196,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
         setActiveBrand(null);
         setShowFlipbook(false);
         setViewingPdf(null);
-        setViewingManualList(null);
         setShowCreator(false);
         setShowPricelistModal(false);
       }, idleTimeout);
@@ -374,7 +315,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                            {selectedBrandForPricelist ? (
                                <div className="grid grid-cols-3 gap-2 md:gap-4">
                                    {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).sort((a,b) => parseInt(b.year) - parseInt(a.year)).map(pl => (
-                                       <button key={pl.id} onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({ url: pl.url!, title: pl.title }); }} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border border-slate-200 flex flex-col h-full"><div className="aspect-[3/4] bg-white relative p-2">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">{pl.type === 'manual' ? <ListOrdered size={32} /> : <FileText size={32} />}</div>}<div className={`absolute top-1 right-1 ${pl.type === 'manual' ? 'bg-blue-500' : 'bg-red-500'} text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div></div><div className="p-2 md:p-4 flex-1 flex flex-col"><h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3><div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div></div></button>
+                                       <button key={pl.id} onClick={() => setViewingPdf({ url: pl.url, title: pl.title })} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border border-slate-200 flex flex-col h-full"><div className="aspect-[3/4] bg-white relative p-2">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400"><FileText size={24} /></div>}<div className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">PDF</div></div><div className="p-2 md:p-4 flex-1 flex flex-col"><h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3><div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div></div></button>
                                    ))}
                                </div>
                            ) : <div className="h-full flex flex-col items-center justify-center text-slate-400"><RIcon size={48} className="opacity-20" /><p className="uppercase font-bold text-xs tracking-widest">Select a brand</p></div>}
@@ -385,7 +326,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        )}
        {showFlipbook && <Flipbook pages={flipbookPages} onClose={() => setShowFlipbook(false)} catalogueTitle={flipbookTitle} />}
        {viewingPdf && <PdfViewer url={viewingPdf.url} title={viewingPdf.title} onClose={() => setViewingPdf(null)} />}
-       {viewingManualList && <ManualPricelistView pricelist={viewingManualList} onClose={() => setViewingManualList(null)} />}
     </div>
   );
 };
