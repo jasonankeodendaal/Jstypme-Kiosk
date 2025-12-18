@@ -293,26 +293,39 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       }
   }, [storeData?.fleet, kioskId]);
 
+  // Helper to trigger identity clear and reload
+  const resetDeviceIdentity = useCallback(() => {
+      localStorage.removeItem('kiosk_pro_device_id');
+      localStorage.removeItem('kiosk_pro_shop_name');
+      localStorage.removeItem('kiosk_pro_device_type');
+      window.location.reload();
+  }, []);
+
   useEffect(() => {
     if (!isSetup || !kioskId) return;
     initSupabase();
     if (!supabase) return;
     
-    // Command listener for immediate actions (Restart/Type)
+    // Command listener for immediate actions (Restart/Type/DELETE)
     const channel = supabase.channel(`kiosk_commands_${kioskId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kiosks', filter: `id=eq.${kioskId}` },
           async (payload: any) => {
               if (payload.new.restart_requested) {
-                  // Acknowledge by clearing flag in DB during heartbeat then reload
                   window.location.reload();
               }
               if (payload.new.device_type && payload.new.device_type !== deviceType) {
                   localStorage.setItem('kiosk_pro_device_type', payload.new.device_type);
                   setDeviceTypeState(payload.new.device_type);
               }
-          }).subscribe();
+          })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'kiosks', filter: `id=eq.${kioskId}` },
+          () => {
+              console.log("Device de-registered from fleet. Resetting...");
+              resetDeviceIdentity();
+          })
+      .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [isSetup, kioskId, deviceType]);
+  }, [isSetup, kioskId, deviceType, resetDeviceIdentity]);
 
   useEffect(() => {
     window.addEventListener('touchstart', resetIdleTimer);
@@ -327,6 +340,11 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       const syncCycle = async () => {
          const syncResult = await sendHeartbeat();
          if (syncResult) {
+             // Handle remote deletion detected during heartbeat
+             if (syncResult.deleted) {
+                 resetDeviceIdentity();
+                 return;
+             }
              if (syncResult.restart) window.location.reload();
              if (syncResult.deviceType) setDeviceTypeState(syncResult.deviceType as any);
              if (syncResult.name) setCurrentShopName(syncResult.name);
@@ -338,7 +356,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       return () => { clearInterval(interval); clearInterval(clockInterval); clearInterval(cloudInterval); };
     }
     return () => { clearInterval(clockInterval); clearInterval(cloudInterval); };
-  }, [resetIdleTimer, isSetup, onSyncRequest]);
+  }, [resetIdleTimer, isSetup, onSyncRequest, resetDeviceIdentity]);
 
   const filteredCatalogs = useMemo(() => {
       if(!storeData?.catalogues) return [];

@@ -156,7 +156,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   return true;
 };
 
-export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean } | null> => {
+export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean } | null> => {
   const id = getKioskId();
   if (!id) return null;
   if (!supabase) initSupabase();
@@ -175,6 +175,11 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               .select('name, device_type, assigned_zone, restart_requested')
               .eq('id', id)
               .maybeSingle();
+
+          // CRITICAL FIX: If device not found in DB, it has been deleted from fleet
+          if (!fetchError && !remoteData) {
+              return { deleted: true };
+          }
 
           if (!fetchError && remoteData) {
               if (remoteData.name && remoteData.name !== currentName) {
