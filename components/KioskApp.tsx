@@ -24,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Search, BookOpen, ArrowRight } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid } from 'lucide-react';
 
 const isRecent = (dateString?: string) => {
     if (!dateString) return false;
@@ -186,56 +186,28 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 const ManualPricelistViewer = ({ pricelist, onClose }: { pricelist: Pricelist, onClose: () => void }) => {
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
   return (
-    <div className="fixed inset-0 z-[120] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 md:p-12 animate-fade-in" onClick={onClose}>
-      <div className={`relative w-full max-w-6xl h-full max-h-[85vh] bg-white rounded-[2.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col border-2 ${isNewlyUpdated ? 'border-yellow-400' : 'border-slate-200'}`} onClick={e => e.stopPropagation()}>
-        
-        {/* Header - Compact */}
-        <div className={`px-6 py-5 text-white flex justify-between items-center shrink-0 ${isNewlyUpdated ? 'bg-gradient-to-r from-yellow-600 to-yellow-700' : 'bg-slate-900'}`}>
-          <div className="flex items-center gap-4">
-              <div className="bg-white/10 p-2 rounded-xl">
-                  <List size={20} />
-              </div>
-              <div>
-                  <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight leading-none">{pricelist.title}</h2>
-                  <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-blue-400'} font-bold uppercase tracking-widest text-[9px] mt-1`}>{pricelist.month} {pricelist.year}</p>
-              </div>
+    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 md:p-12 animate-fade-in" onClick={onClose}>
+      <div className={`relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col ${isNewlyUpdated ? 'ring-4 ring-yellow-400' : ''}`} onClick={e => e.stopPropagation()}>
+        <div className={`p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600' : 'bg-slate-900'}`}>
+          <div>
+            <div className="flex items-center gap-3"><h2 className="text-xl md:text-3xl font-black uppercase tracking-tight">{pricelist.title}</h2>{isNewlyUpdated && <span className="bg-white text-yellow-700 px-2 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 shadow-lg"><Sparkles size={12} /> Recent</span>}</div>
+            <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-blue-400'} font-bold uppercase tracking-widest text-xs md:text-sm`}>{pricelist.month} {pricelist.year}</p>
           </div>
-          <button onClick={onClose} className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-all">
-              <X size={24}/>
-          </button>
+          <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><X size={24}/></button>
         </div>
-
-        {/* Content Area - Denser Grid */}
-        <div className="flex-1 overflow-auto p-4 md:p-8 bg-slate-50">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex-1 overflow-auto p-4 md:p-8 bg-white">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50 sticky top-0 z-10">
+              <tr><th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">SKU</th><th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Description</th><th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Normal</th><th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 text-red-500">Promo</th></tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
               {(pricelist.items || []).map((item) => (
-                  <div key={item.id} className={`bg-white rounded-2xl p-5 shadow-sm border border-slate-200 transition-all flex flex-col justify-between group ${isNewlyUpdated ? 'ring-1 ring-yellow-100' : ''}`}>
-                      <div>
-                          <div className="flex justify-between items-start mb-3">
-                              <span className="text-[8px] font-mono font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{item.sku || 'N/A'}</span>
-                          </div>
-                          <h4 className="text-sm md:text-base font-black text-slate-800 uppercase leading-tight line-clamp-2 mb-4">{item.description}</h4>
-                      </div>
-                      
-                      <div className="flex items-end justify-between border-t border-slate-50 pt-4">
-                          <div>
-                              <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">Normal</p>
-                              <p className="text-base font-bold text-slate-400 line-through">{item.normalPrice}</p>
-                          </div>
-                          <div className="text-right">
-                              <p className="text-[9px] font-black text-red-500 uppercase flex items-center gap-1 justify-end">Promo</p>
-                              <p className="text-2xl font-black text-red-600 tracking-tighter">{item.promoPrice || item.normalPrice}</p>
-                          </div>
-                      </div>
-                  </div>
+                <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${isNewlyUpdated ? 'bg-yellow-50/30' : ''}`}><td className="p-4 font-mono font-bold text-sm text-slate-500 uppercase">{item.sku || '-'}</td><td className="p-4 font-bold text-slate-900">{item.description}</td><td className="p-4 font-black text-lg text-slate-400 line-through decoration-red-500/30">{item.normalPrice}</td><td className="p-4 font-black text-2xl text-red-600">{item.promoPrice || '-'}</td></tr>
               ))}
-          </div>
+            </tbody>
+          </table>
         </div>
-
-        <div className="p-4 bg-white border-t border-slate-100 flex justify-between items-center shrink-0">
-          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Prices valid for {pricelist.month} {pricelist.year} • E&OE</p>
-          <button onClick={onClose} className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold uppercase text-[10px] hover:bg-blue-600 transition-all">Close</button>
-        </div>
+        <div className="p-4 bg-slate-50 border-t border-slate-100 text-center shrink-0"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valid for {pricelist.month} {pricelist.year} • Prices subject to change</p></div>
       </div>
     </div>
   );
@@ -263,7 +235,9 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
   const [kioskId, setKioskId] = useState(getKioskId());
   
+  // Derived state from storeData (Fleet Telemetry)
   const myFleetEntry = useMemo(() => storeData?.fleet?.find(f => f.id === kioskId), [storeData?.fleet, kioskId]);
+  
   const currentShopName = myFleetEntry?.name || getShopName() || "New Device";
   const deviceType = myFleetEntry?.deviceType || getDeviceType() || 'kiosk';
 
@@ -284,7 +258,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [isCloudConnected, setIsCloudConnected] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedBrandForPricelist, setSelectedBrandForPricelist] = useState<string | null>(null);
-  const [pricelistSearch, setPricelistSearch] = useState('');
 
   const timerRef = useRef<number | null>(null);
   const idleTimeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
@@ -329,7 +302,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
          }
       };
       syncCycle();
-      const interval = setInterval(syncCycle, 30000); 
+      const interval = setInterval(syncCycle, 30000); // Heartbeat pulse
       return () => { clearInterval(interval); clearInterval(clockInterval); };
     }
     return () => { clearInterval(clockInterval); };
@@ -350,18 +323,9 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       return (storeData?.pricelistBrands || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   }, [storeData?.pricelistBrands]);
 
-  const filteredPricelists = useMemo(() => {
-      if (!selectedBrandForPricelist) return [];
-      let lists = storeData?.pricelists?.filter(p => p.brandId === selectedBrandForPricelist) || [];
-      if (pricelistSearch.trim()) {
-          const s = pricelistSearch.toLowerCase();
-          lists = lists.filter(l => l.title.toLowerCase().includes(s) || l.month.toLowerCase().includes(s) || l.year.includes(s));
-      }
-      return lists;
-  }, [selectedBrandForPricelist, storeData?.pricelists, pricelistSearch]);
-
   if (!storeData) return null;
 
+  // Handle Setup Prompt
   if (!isSetup) {
       return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
   }
@@ -397,116 +361,47 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
           <div className="flex items-center gap-1"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase">{isOnline ? 'Connected' : 'Offline'}</span></div>
           <div className="flex items-center gap-4">
               <span className="text-[7px] font-black text-slate-300 uppercase tracking-tighter hidden md:inline">{currentShopName}</span>
-              {pricelistBrands.length > 0 && <button onClick={() => { setSelectedBrandForPricelist(pricelistBrands[0].id); setShowPricelistModal(true); }} className="text-blue-600 hover:text-blue-800 transition-transform active:scale-90"><RIcon size={12} /></button>}
+              {pricelistBrands.length > 0 && <button onClick={() => { setSelectedBrandForPricelist(null); setShowPricelistModal(true); }} className="text-blue-600 hover:text-blue-800"><RIcon size={12} /></button>}
               {lastSyncTime && <div className="flex items-center gap-1 font-bold"><RefreshCw size={8} /><span>{lastSyncTime}</span></div>}
               <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span></button>
           </div>
        </footer>
-
-       {/* REDESIGNED COMPACT PRICELIST CENTER */}
+       <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
        {showPricelistModal && (
-           <div className="fixed inset-0 z-[110] bg-slate-900/80 backdrop-blur-xl flex items-center justify-center p-4 md:p-12 animate-fade-in" onClick={() => setShowPricelistModal(false)}>
-               <div className="relative w-full max-w-6xl h-full max-h-[85vh] bg-white rounded-[2.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col border border-white/20" onClick={e => e.stopPropagation()}>
-                   {/* Modal Header - Compact */}
-                   <div className="p-5 md:p-8 flex items-center justify-between bg-slate-900 shrink-0">
-                       <div className="flex items-center gap-4">
-                           <div className="bg-blue-600 p-3 rounded-2xl shadow-lg">
-                               <RIcon size={20} className="text-white" />
-                           </div>
-                           <div>
-                               <h2 className="text-xl md:text-3xl font-black uppercase text-white tracking-tight leading-none">Document Center</h2>
-                               <p className="text-blue-400 font-bold uppercase tracking-widest text-[8px] mt-1">Retail Asset Repository</p>
-                           </div>
-                       </div>
-                       <button onClick={() => setShowPricelistModal(false)} className="p-2 bg-white/10 rounded-xl text-white hover:bg-white/20 transition-all">
-                           <X size={24} />
-                       </button>
-                   </div>
-
-                   <div className="flex-1 flex overflow-hidden flex-col md:flex-row">
-                       {/* Compact Sidebar */}
-                       <div className="w-full md:w-56 bg-slate-50 border-r border-slate-100 overflow-y-auto shrink-0 flex md:flex-col gap-1 p-3 no-scrollbar">
+           <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-fade-in" onClick={() => setShowPricelistModal(false)}>
+               <div className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                   <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0"><h2 className="text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={28} className="text-green-600" /> Pricelists</h2><button onClick={() => setShowPricelistModal(false)} className="p-2 rounded-full transition-colors"><X size={24} className="text-slate-500" /></button></div>
+                   <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                       <div className="w-full md:w-1/3 bg-slate-50 overflow-y-auto grid grid-cols-3 md:flex md:flex-col border-r border-slate-200">
                            {pricelistBrands.map(brand => (
-                               <button 
-                                   key={brand.id} 
-                                   onClick={() => setSelectedBrandForPricelist(brand.id)} 
-                                   className={`flex-none md:flex-initial w-fit md:w-full text-left p-3 rounded-2xl transition-all flex items-center gap-3 group ${selectedBrandForPricelist === brand.id ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-slate-200 text-slate-500'}`}
-                               >
-                                   <div className={`w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm ${selectedBrandForPricelist === brand.id ? 'scale-105' : ''}`}>
-                                       {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain p-1.5" /> : <span className="font-black text-slate-800 text-xs">{brand.name.charAt(0)}</span>}
-                                   </div>
-                                   <span className={`font-black text-[10px] uppercase tracking-wide hidden md:block ${selectedBrandForPricelist === brand.id ? 'text-white' : 'text-slate-600'}`}>{brand.name}</span>
+                               <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex flex-col md:flex-row items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-l-green-500' : 'hover:bg-white'}`}>
+                                   <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0">{brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300">{brand.name.charAt(0)}</span>}</div>
+                                   <span className={`font-bold text-[8px] md:text-sm uppercase ${selectedBrandForPricelist === brand.id ? 'text-slate-900' : 'text-slate-500'}`}>{brand.name}</span>
                                </button>
                            ))}
                        </div>
-
-                       {/* Compact List View */}
-                       <div className="flex-1 bg-white flex flex-col min-w-0">
-                           <div className="p-4 md:p-6 flex items-center justify-between gap-4 shrink-0 border-b border-slate-50">
-                               <div className="relative flex-1 group">
-                                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                   <input 
-                                       type="text" 
-                                       placeholder="Filter catalogs..." 
-                                       className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2 pl-9 pr-4 text-slate-900 text-[10px] font-bold outline-none focus:border-blue-500/50 transition-all"
-                                       value={pricelistSearch}
-                                       onChange={(e) => setPricelistSearch(e.target.value)}
-                                   />
+                       <div className="flex-1 overflow-y-auto p-4 bg-slate-100/50">
+                           {selectedBrandForPricelist ? (
+                               <div className="grid grid-cols-3 gap-2 md:gap-4">
+                                   {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).map(pl => (
+                                       <button key={pl.id} onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} className={`bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border flex flex-col h-full relative transition-all ${isRecent(pl.dateAdded) ? 'border-yellow-400' : 'border-slate-200'}`}>
+                                            <div className="aspect-[3/4] bg-white relative p-2">
+                                                {pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">{pl.type === 'manual' ? <List size={24}/> : <FileText size={24} />}</div>}
+                                                <div className={`absolute top-1 right-1 text-white text-[8px] font-bold px-1.5 py-0.5 rounded ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div>
+                                            </div>
+                                            <div className="p-2 md:p-4 flex-1 flex flex-col">
+                                                <h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3>
+                                                <div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div>
+                                            </div>
+                                       </button>
+                                   ))}
                                </div>
-                           </div>
-
-                           <div className="flex-1 overflow-y-auto p-4 md:p-6">
-                               {selectedBrandForPricelist ? (
-                                   filteredPricelists.length > 0 ? (
-                                       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                                           {filteredPricelists.map(pl => {
-                                               const recent = isRecent(pl.dateAdded);
-                                               return (
-                                               <button 
-                                                    key={pl.id} 
-                                                    onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} 
-                                                    className={`group relative bg-white rounded-3xl overflow-hidden border transition-all flex flex-col hover:shadow-xl hover:-translate-y-1 ${recent ? 'border-yellow-200' : 'border-slate-100'}`}
-                                               >
-                                                    <div className="aspect-[4/3] bg-slate-50 relative overflow-hidden flex items-center justify-center">
-                                                        {pl.thumbnailUrl ? (
-                                                            <img src={pl.thumbnailUrl} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                                                        ) : (
-                                                            <div className="text-slate-200">
-                                                                {pl.type === 'manual' ? <List size={32} /> : <FileText size={32} />}
-                                                            </div>
-                                                        )}
-                                                        <div className={`absolute top-2 right-2 text-white text-[7px] font-black uppercase px-2 py-1 rounded-lg backdrop-blur-md ${pl.type === 'manual' ? 'bg-blue-600/80' : 'bg-red-600/80'}`}>
-                                                            {pl.type === 'manual' ? 'Table' : 'PDF'}
-                                                        </div>
-                                                        {recent && <div className="absolute bottom-2 left-2 bg-yellow-400 text-yellow-900 text-[7px] font-black uppercase px-2 py-0.5 rounded-lg">New</div>}
-                                                    </div>
-                                                    <div className="p-4 text-left">
-                                                        <h3 className="font-black text-slate-800 text-[10px] uppercase leading-tight line-clamp-1 mb-1 group-hover:text-blue-600">{pl.title}</h3>
-                                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{pl.month} {pl.year}</span>
-                                                    </div>
-                                               </button>
-                                           )})}
-                                       </div>
-                                   ) : (
-                                       <div className="h-full flex flex-col items-center justify-center text-slate-300">
-                                           <Search size={32} className="opacity-20 mb-2" />
-                                           <p className="uppercase font-bold text-[10px] tracking-widest">No results</p>
-                                       </div>
-                                   )
-                               ) : (
-                                   <div className="h-full flex flex-col items-center justify-center text-slate-300 text-center p-8">
-                                       <RIcon size={48} className="opacity-10 mb-4" />
-                                       <p className="uppercase font-black text-[10px] tracking-widest leading-relaxed">Select brand to browse technical catalogs</p>
-                                   </div>
-                               )}
-                           </div>
+                           ) : <div className="h-full flex flex-col items-center justify-center text-slate-400"><RIcon size={48} className="opacity-20" /><p className="uppercase font-bold text-xs tracking-widest">Select a brand</p></div>}
                        </div>
                    </div>
                </div>
            </div>
        )}
-
-       <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
        {showFlipbook && <Flipbook pages={flipbookPages} onClose={() => setShowFlipbook(false)} catalogueTitle={flipbookTitle} />}
        {viewingPdf && <PdfViewer url={viewingPdf.url} title={viewingPdf.title} onClose={() => setViewingPdf(null)} />}
        {viewingManualList && <ManualPricelistViewer pricelist={viewingManualList} onClose={() => setViewingManualList(null)} />}
