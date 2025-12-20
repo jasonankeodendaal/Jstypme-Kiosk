@@ -194,7 +194,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block" onClick={onClose}>
       <style>{`
         @media print {
-          @page { size: A4; margin: 10mm; }
+          @page { size: auto; margin: 5mm; }
           body { 
             background: white !important; 
             -webkit-print-color-adjust: exact !important; 
@@ -216,30 +216,28 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
             overflow: visible !important;
             background: white !important;
             top: 0 !important;
-            display: block !important;
           }
           .table-scroll { overflow: visible !important; height: auto !important; padding: 0 !important; }
           .spreadsheet-table { 
             width: 100% !important; 
             border-collapse: collapse !important; 
             border: 2px solid #1e293b !important; 
-            table-layout: auto !important;
           }
           .spreadsheet-table th { 
             background: #a1a1aa !important; 
             color: #000 !important; 
-            border: 1px solid #334155 !important; 
+            border: 2px solid #1e293b !important; 
             font-weight: 900 !important;
             text-transform: uppercase !important;
-            padding: 8px 6px !important;
-            font-size: 11px !important;
+            padding: 12px 10px !important;
+            font-size: 14px !important;
           }
           .spreadsheet-table td { 
-            border: 1px solid #cbd5e1 !important; 
+            border: 2px solid #1e293b !important; 
             color: #000 !important; 
-            padding: 6px !important;
+            padding: 10px !important;
             font-weight: 700 !important;
-            font-size: 10px !important;
+            font-size: 14px !important;
           }
         }
         
@@ -264,7 +262,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
       `}</style>
 
-      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:w-[210mm] print:mx-auto ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
+      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
         
         {/* Screen-Only Header */}
         <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
@@ -295,37 +293,52 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           </div>
         </div>
 
-        {/* Print-Only Professional Branding Header */}
-        <div className="hidden print-only w-full p-6">
-            <div className="flex items-center justify-between pb-6 border-b-2 border-slate-900">
+        {/* Print-Only Layout based on reference image */}
+        <div className="hidden print-only w-full px-6 py-4">
+            {/* Top Box Header */}
+            <div className="border-[3px] border-slate-900 p-4 mb-4 text-center">
+                <h2 className="text-5xl font-black uppercase tracking-[0.15em] text-slate-800">start from here</h2>
+            </div>
+
+            {/* Large Arrows Row */}
+            <div className="flex justify-between items-center px-4 mb-2">
+                <MoveUp size={180} strokeWidth={3} className="text-slate-900" />
+                <MoveUp size={180} strokeWidth={3} className="text-slate-900" />
+            </div>
+
+            {/* Logos and Main Title Row */}
+            <div className="flex items-center justify-between mb-8">
                 {/* Left Logo Slot */}
-                <div className="w-1/4 flex justify-start">
+                <div className="w-1/3 flex justify-start">
                     {companyLogo ? (
-                        <img src={companyLogo} alt="Logo 1" className="h-16 object-contain" />
+                        <img src={companyLogo} alt="Logo 1" className="h-24 object-contain" />
                     ) : (
-                        <div className="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center font-black text-[8px] uppercase">Main Logo</div>
+                        <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center font-bold text-[8px]">LOGO 1</div>
                     )}
                 </div>
 
-                {/* Center Title Content */}
-                <div className="flex-1 text-center px-4">
-                    <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 leading-none mb-1">{pricelist.title}</h1>
-                    <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.2em]">{pricelist.month} {pricelist.year}</p>
+                {/* Center Text Slot */}
+                <div className="w-1/3 text-center">
+                    <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 mb-1">New Pricelist</h1>
+                    <p className="text-xl font-bold text-slate-500 uppercase tracking-[0.1em]">{pricelist.month} {pricelist.year}</p>
                 </div>
 
                 {/* Right Logo Slot */}
-                <div className="w-1/4 flex justify-end">
+                <div className="w-1/3 flex justify-end">
                     {brandLogo ? (
-                        <img src={brandLogo} alt="Logo 2" className="h-16 object-contain" />
+                        <img src={brandLogo} alt="Logo 2" className="h-24 object-contain" />
                     ) : (
-                        <div className="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center font-black text-[8px] uppercase">Brand Logo</div>
+                        <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center font-bold text-[8px]">LOGO 2</div>
                     )}
                 </div>
             </div>
+
+            {/* Heavy Horizontal Divider */}
+            <div className="h-1.5 bg-slate-800 w-full mb-8"></div>
         </div>
 
         {/* Spreadsheet / Table Area */}
-        <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:px-6 print:pt-0">
+        <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:px-6">
           <table className="spreadsheet-table w-full text-left border-collapse">
             <thead>
               <tr className="print:bg-[#a1a1aa]">
@@ -383,15 +396,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         </div>
 
         {/* Footer Area */}
-        <div className="p-3 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 print:block print:bg-white print:p-4">
-          <div className="flex items-center gap-6 print:hidden">
+        <div className="p-3 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 print:hidden">
+          <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                   <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Items: {(pricelist.items || []).length}</span>
               </div>
           </div>
-          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right print:text-slate-500 print:text-[8px]">
-            System generated • Valid for {pricelist.month} {pricelist.year} • Prices include VAT where applicable • Generated by Kiosk Pro
+          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right">
+            System generated • Valid for {pricelist.month} {pricelist.year} • Prices include VAT where applicable.
           </p>
         </div>
       </div>
@@ -831,6 +844,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
               <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span></button>
           </div>
        </footer>
+       <footer className="hidden">No need to repeat content after footer</footer>
        <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
        
        {showGlobalSearch && <SearchModal storeData={storeData} onSelectProduct={(p) => { setActiveBrand(storeData.brands.find(b => b.id === (p as any).brandId)!); setActiveCategory(storeData.brands.find(b => b.id === (p as any).brandId)!.categories.find(c => c.id === (p as any).categoryId)!); setActiveProduct(p); }} onClose={() => setShowGlobalSearch(false)} />}
@@ -840,49 +854,126 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        {showPricelistModal && (
            <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-4 animate-fade-in print:hidden" onClick={() => setShowPricelistModal(false)}>
                <div className="relative w-full h-full md:h-auto md:max-w-5xl bg-white md:rounded-2xl shadow-2xl overflow-hidden md:max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                   {/* Modal Header */}
                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                       <h2 className="text-base md:text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={24} className="text-green-600" /> Pricelists</h2>
                       <button onClick={() => setShowPricelistModal(false)} className="p-2 rounded-full transition-colors hover:bg-slate-200"><X size={24} className="text-slate-500" /></button>
                    </div>
-                   <div className="flex-1 overflow-hidden flex flex-row">
-                       {/* Permanent Side-by-Side Brand Selector */}
-                       <div className="w-16 md:w-1/3 bg-slate-50 overflow-y-auto flex flex-col border-r border-slate-200 no-scrollbar">
-                           {pricelistBrands.map(brand => (
-                               <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-2 md:p-4 transition-colors flex flex-col md:flex-row items-center gap-2 md:gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-r-4 md:border-r-0 md:border-l-4 border-green-500' : 'hover:bg-white'}`}>
-                                   <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
-                                      {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-xs">{brand.name.charAt(0)}</span>}
+
+                   {/* Responsive Body */}
+                   <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                       {/* Brand Selector - DUAL ROW ON MOBILE TOP, SIDEBAR ON DESKTOP */}
+                       <div className="shrink-0 w-full md:w-1/3 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 overflow-hidden flex flex-col">
+                           {/* MOBILE BRAND RIBBON - 2 ROWS HORIZONTAL */}
+                           <div className="md:hidden">
+                               <div className="p-2 bg-slate-100/50 border-b border-slate-200 flex items-center justify-between">
+                                   <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest px-2">Select Brand Channel</span>
+                                   <div className="flex gap-1 pr-2">
+                                       <div className="w-1 h-1 rounded-full bg-slate-300"></div>
+                                       <div className="w-1 h-1 rounded-full bg-slate-300"></div>
+                                       <div className="w-1 h-1 rounded-full bg-slate-400"></div>
                                    </div>
-                                   <span className={`font-black text-[7px] md:text-sm uppercase text-center md:text-left leading-tight ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-400'}`}>{brand.name}</span>
-                               </button>
-                           ))}
+                               </div>
+                               <div className="overflow-x-auto no-scrollbar py-2">
+                                   <div className="grid grid-rows-2 grid-flow-col gap-2 px-2 min-w-max">
+                                       {pricelistBrands.map(brand => (
+                                           <button 
+                                               key={brand.id} 
+                                               onClick={() => setSelectedBrandForPricelist(brand.id)} 
+                                               className={`flex items-center gap-2 p-2 rounded-xl border transition-all min-w-[120px] ${selectedBrandForPricelist === brand.id ? 'bg-white border-green-500 shadow-sm ring-1 ring-green-500/20' : 'bg-slate-100 border-transparent hover:bg-white'}`}
+                                           >
+                                               <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                                                  {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-[10px]">{brand.name.charAt(0)}</span>}
+                                               </div>
+                                               <span className={`font-black text-[9px] uppercase leading-tight truncate flex-1 text-left ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-500'}`}>{brand.name}</span>
+                                           </button>
+                                       ))}
+                                   </div>
+                               </div>
+                           </div>
+
+                           {/* DESKTOP BRAND SIDEBAR */}
+                           <div className="hidden md:flex flex-1 flex-col overflow-y-auto no-scrollbar">
+                               {pricelistBrands.map(brand => (
+                                   <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-green-500' : 'hover:bg-white'}`}>
+                                       <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+                                          {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-sm">{brand.name.charAt(0)}</span>}
+                                       </div>
+                                       <span className={`font-black text-sm uppercase leading-tight ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-400'}`}>{brand.name}</span>
+                                   </button>
+                               ))}
+                           </div>
                        </div>
                        
-                       {/* Pricelists Grid - Updated for smaller mobile thumbnails */}
-                       <div className="flex-1 overflow-y-auto p-2 md:p-6 bg-slate-100/50">
+                       {/* Pricelists Display Area */}
+                       <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 relative">
                            {selectedBrandForPricelist ? (
-                               <div className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-4">
-                                   {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).map(pl => (
-                                       <button key={pl.id} onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} className={`bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-slate-200'}`}>
-                                            <div className="aspect-[3/4] bg-white relative p-1 md:p-3">
-                                                {pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded shadow-sm" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">{pl.type === 'manual' ? <List size={24}/> : <FileText size={24} />}</div>}
-                                                <div className={`absolute top-1 right-1 text-white text-[6px] md:text-[9px] font-black px-1 py-0.5 rounded shadow-sm ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div>
-                                            </div>
-                                            <div className="p-1 md:p-3 flex-1 flex flex-col bg-slate-50/30">
-                                                <h3 className="font-black text-slate-900 text-[7px] md:text-sm uppercase leading-tight mb-0.5 line-clamp-2">{pl.title}</h3>
-                                                <div className="mt-auto flex justify-between items-center">
-                                                   <div className="text-[6px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{pl.month} {pl.year}</div>
+                               <div className="animate-fade-in">
+                                   <div className="mb-4 flex items-center justify-between">
+                                       <div className="flex items-center gap-2">
+                                           <div className="w-1.5 h-6 bg-green-500 rounded-full"></div>
+                                           <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Available Pricelists</h3>
+                                       </div>
+                                       <span className="text-[8px] font-bold text-slate-400 uppercase bg-white px-2 py-1 rounded shadow-xs border border-slate-100">
+                                           {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).length} Documents
+                                       </span>
+                                   </div>
+                                   <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                                       {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).map(pl => (
+                                           <button 
+                                                key={pl.id} 
+                                                onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} 
+                                                className={`group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border-2 flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-white hover:border-green-400'}`}
+                                            >
+                                                <div className="aspect-[3/4] bg-slate-50 relative p-2 md:p-3 overflow-hidden">
+                                                    {pl.thumbnailUrl ? (
+                                                        <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded shadow-sm group-hover:scale-105 transition-transform" /> 
+                                                    ) : (
+                                                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-200">
+                                                            {pl.type === 'manual' ? <List size={32}/> : <FileText size={32} />}
+                                                        </div>
+                                                    )}
+                                                    <div className={`absolute top-2 right-2 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm z-10 ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>
+                                                        {pl.type === 'manual' ? 'TABLE' : 'PDF'}
+                                                    </div>
+                                                    {isRecent(pl.dateAdded) && (
+                                                        <div className="absolute bottom-2 left-2 bg-yellow-400 text-yellow-900 text-[6px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm uppercase animate-pulse">
+                                                            <Sparkles size={8} /> New
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </div>
-                                       </button>
-                                   ))}
+                                                <div className="p-3 flex-1 flex flex-col justify-between bg-white">
+                                                    <h3 className="font-black text-slate-900 text-[10px] md:text-sm uppercase leading-tight line-clamp-2 group-hover:text-green-600 transition-colors mb-2">{pl.title}</h3>
+                                                    <div className="flex justify-between items-center pt-2 border-t border-slate-50">
+                                                       <div className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter">{pl.month} {pl.year}</div>
+                                                       <div className="text-green-500 opacity-0 group-hover:opacity-100 transition-opacity"><ChevronRight size={14} /></div>
+                                                    </div>
+                                                </div>
+                                           </button>
+                                       ))}
+                                   </div>
                                    {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).length === 0 && (
-                                       <div className="col-span-full h-64 flex flex-col items-center justify-center text-slate-400 gap-2">
-                                           <FileText size={48} className="opacity-10" />
-                                           <p className="uppercase font-bold text-[10px] tracking-widest">No pricelists for this brand</p>
+                                       <div className="col-span-full h-64 flex flex-col items-center justify-center text-slate-300 gap-4 bg-white/50 rounded-2xl border-2 border-dashed border-slate-200">
+                                           <div className="p-4 bg-slate-100 rounded-full"><FileText size={40} className="opacity-20" /></div>
+                                           <div className="text-center">
+                                                <p className="uppercase font-black text-[10px] tracking-[0.2em]">Archive Empty</p>
+                                                <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">No documents found for this category</p>
+                                           </div>
                                        </div>
                                    )}
                                </div>
-                           ) : <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2"><RIcon size={48} className="opacity-10" /><p className="uppercase font-black text-[10px] tracking-widest">Choose a brand</p></div>}
+                           ) : (
+                               <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">
+                                   <div className="relative">
+                                       <RIcon size={64} className="opacity-10" />
+                                       <Search className="absolute -bottom-2 -right-2 text-slate-200" size={24} />
+                                   </div>
+                                   <div className="text-center">
+                                       <p className="uppercase font-black text-xs tracking-[0.3em] opacity-40">Awaiting Channel</p>
+                                       <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Select a brand from the {window.innerWidth < 768 ? 'top rows' : 'sidebar'} to view listings</p>
+                                   </div>
+                               </div>
+                           )}
                        </div>
                    </div>
                </div>

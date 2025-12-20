@@ -1,3 +1,4 @@
+
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser } from "../types";
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
@@ -74,11 +75,96 @@ const DEFAULT_DATA: StoreData = {
       month: 'August',
       year: '2024',
       dateAdded: new Date().toISOString()
+    },
+    {
+      id: 'pl-mock-3',
+      brandId: 'plb-mock-3',
+      title: 'Studio Audio Gear',
+      type: 'manual',
+      items: [
+        { id: 'item-9', sku: 'SNY-WH1000', description: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones', normalPrice: 'R 8,999', promoPrice: 'R 7,499' },
+        { id: 'item-10', sku: 'BSE-QC45', description: 'Bose QuietComfort 45 Bluetooth Headphones', normalPrice: 'R 6,500' },
+        { id: 'item-11', sku: 'SONO-ERA300', description: 'Sonos Era 300 Smart Speaker White', normalPrice: 'R 10,999', promoPrice: 'R 9,999' }
+      ],
+      url: '',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=400&fit=crop',
+      month: 'June',
+      year: '2024',
+      dateAdded: new Date().toISOString()
+    },
+    {
+      id: 'pl-mock-4',
+      brandId: 'plb-mock-4',
+      title: 'Next-Gen Gaming',
+      type: 'manual',
+      items: [
+        { id: 'item-12', sku: 'PS5-SLIM', description: 'PlayStation 5 Slim 1TB Digital Edition', normalPrice: 'R 11,999', promoPrice: 'R 10,499' },
+        { id: 'item-13', sku: 'XBOX-SX', description: 'Xbox Series X 1TB Console Black', normalPrice: 'R 13,500' },
+        { id: 'item-14', sku: 'RAZ-BLD16', description: 'Razer Blade 16 Gaming Laptop RTX 4080', normalPrice: 'R 65,999', promoPrice: 'R 59,999' }
+      ],
+      url: '',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=300&h=400&fit=crop',
+      month: 'July',
+      year: '2024',
+      dateAdded: new Date().toISOString()
+    },
+    {
+      id: 'pl-mock-5',
+      brandId: 'plb-mock-5',
+      title: 'Pro Vision Optics',
+      type: 'manual',
+      items: [
+        { id: 'item-15', sku: 'CAN-R6II', description: 'Canon EOS R6 Mark II Mirrorless Body', normalPrice: 'R 45,999', promoPrice: 'R 41,999' },
+        { id: 'item-16', sku: 'SONY-A7IV', description: 'Sony Alpha a7 IV Mirrorless Digital Camera', normalPrice: 'R 48,500' },
+        { id: 'item-17', sku: 'DJI-AVATA2', description: 'DJI Avata 2 FPV Drone Explorer Combo', normalPrice: 'R 22,999', promoPrice: 'R 19,999' }
+      ],
+      url: '',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=400&fit=crop',
+      month: 'September',
+      year: '2024',
+      dateAdded: new Date().toISOString()
+    },
+    {
+      id: 'pl-mock-6',
+      brandId: 'plb-mock-6',
+      title: 'Fitness Essentials',
+      type: 'manual',
+      items: [
+        { id: 'item-18', sku: 'AW-ULTRA2', description: 'Apple Watch Ultra 2 Titanium Orange Loop', normalPrice: 'R 18,999', promoPrice: 'R 17,499' },
+        { id: 'item-19', sku: 'GAR-EPIX2', description: 'Garmin Epix Gen 2 Sapphire Edition', normalPrice: 'R 15,500' },
+        { id: 'item-20', sku: 'Oura-G3', description: 'Oura Ring Gen3 Horizon Gold', normalPrice: 'R 8,500', promoPrice: 'R 7,999' }
+      ],
+      url: '',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=300&h=400&fit=crop',
+      month: 'August',
+      year: '2024',
+      dateAdded: new Date().toISOString()
+    },
+    {
+      id: 'pl-mock-7',
+      brandId: 'plb-mock-7',
+      title: 'Chef Series Appliances',
+      type: 'manual',
+      items: [
+        { id: 'item-21', sku: 'KTC-MIX', description: 'KitchenAid Artisan 4.8L Stand Mixer', normalPrice: 'R 12,999', promoPrice: 'R 11,499' },
+        { id: 'item-22', sku: 'BREW-BST', description: 'Sage Barista Express Coffee Machine', normalPrice: 'R 14,500' },
+        { id: 'item-23', sku: 'NIN-AF400', description: 'Ninja Foodi MAX Dual Zone Air Fryer', normalPrice: 'R 4,999', promoPrice: 'R 4,299' }
+      ],
+      url: '',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=300&h=400&fit=crop',
+      month: 'October',
+      year: '2024',
+      dateAdded: new Date().toISOString()
     }
   ],
   pricelistBrands: [
     { id: 'plb-mock-1', name: 'Mobile Tech', logoUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=100&h=100&fit=crop' },
-    { id: 'plb-mock-2', name: 'Smart Home', logoUrl: 'https://images.unsplash.com/photo-1558002038-1055907df827?w=100&h=100&fit=crop' }
+    { id: 'plb-mock-2', name: 'Smart Home', logoUrl: 'https://images.unsplash.com/photo-1558002038-1055907df827?w=100&h=100&fit=crop' },
+    { id: 'plb-mock-3', name: 'Audio Elite', logoUrl: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=100&h=100&fit=crop' },
+    { id: 'plb-mock-4', name: 'Gaming Pro', logoUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=100&h=100&fit=crop' },
+    { id: 'plb-mock-5', name: 'Photography', logoUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=100&h=100&fit=crop' },
+    { id: 'plb-mock-6', name: 'Wearables', logoUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=100&fit=crop' },
+    { id: 'plb-mock-7', name: 'Kitchen Master', logoUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=100&h=100&fit=crop' }
   ],
   brands: [],
   tv: {
