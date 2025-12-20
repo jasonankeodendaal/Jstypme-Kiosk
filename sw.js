@@ -1,10 +1,7 @@
 
 // Service Worker for Kiosk Pro
-const CACHE_NAME = 'kiosk-pro-v3';
+const CACHE_NAME = 'kiosk-pro-v4';
 
-// Assets to precache immediately
-// Note: We do not precache external images (like from ibb.co) here to avoid CORS issues during install.
-// They will be cached at runtime by the fetch handler below.
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -13,7 +10,6 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
-  // Force this SW to become the active service worker for the page
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -23,9 +19,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  // Claim clients immediately so the page is controlled by the SW without reload
   event.waitUntil(clients.claim());
-  // Cleanup old caches
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -40,9 +34,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Navigation Fallback Strategy (SPA Routing)
-  // If the user navigates to a route (like /admin), and the network fails,
-  // serve index.html from cache so React Router can handle it.
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -53,24 +44,35 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Helper to identify PDF requests
   const url = new URL(event.request.url);
   const isPdf = url.pathname.toLowerCase().endsWith('.pdf');
+  const isImage = event.request.destination === 'image';
+  const isFont = event.request.destination === 'font';
+  const isMedia = isImage || isFont || isPdf;
 
-  // Strategy: Cache First for Images, Fonts, and PDFs
-  // This speeds up the heavy visual assets of the kiosk
-  if (event.request.destination === 'image' || event.request.destination === 'font' || isPdf) {
+  if (isMedia) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) {
+          // If we have a cached version, return it
           return cachedResponse;
         }
         return fetch(event.request).then((response) => {
-          // Check if we received a valid response.
-          // Note: External images (like from ibb.co) might return an opaque response (status 0).
-          // We must cache them to ensure icons work offline, even if we can't read their status.
-          if (!response || (response.status !== 200 && response.type !== 'opaque')) {
+          // Robust caching check:
+          // 1. Must exist
+          // 2. If it's a standard response, must be 200 OK
+          // 3. If it's an opaque response (cross-origin without CORS), 
+          //    only cache if it's not suspiciously small (usually error fragments)
+          const isOpaque = response.type === 'opaque';
+          const isOk = response.status === 200;
+          
+          if (!response || (!isOk && !isOpaque)) {
             return response;
+          }
+
+          // Don't cache very small opaque responses which are often error messages from Supabase
+          if (isOpaque && response.clone().blob().then(b => b.size < 500)) {
+             return response;
           }
           
           const responseToCache = response.clone();
@@ -78,23 +80,23 @@ self.addEventListener('fetch', (event) => {
             cache.put(event.request, responseToCache);
           });
           return response;
+        }).catch(() => {
+           // If network fails and not in cache, return null (browser shows broken image icon)
+           return null;
         });
       })
     );
     return;
   }
 
-  // Strategy: Network First for Documents and APIs (JS, HTML, JSON)
-  // Ensures admin always sees fresh data, but falls back to cache if offline
+  // Network First for Data
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Return valid response
-        if (!response || response.status !== 200 || response.type !== 'basic' && response.type !== 'cors') {
+        if (!response || response.status !== 200) {
           return response;
         }
         
-        // Cache valid response
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, responseToCache);
@@ -103,13 +105,7 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // Offline Fallback
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          return null;
-        });
+        return caches.match(event.request);
       })
   );
 });

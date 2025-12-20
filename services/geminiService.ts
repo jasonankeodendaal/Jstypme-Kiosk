@@ -3,7 +3,6 @@ import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, Admi
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
 const STORAGE_KEY_DATA = 'kiosk_pro_store_data';
-// Define missing constant for device ID storage key to resolve error on line 230
 const STORAGE_KEY_ID = 'kiosk_pro_device_id';
 
 const DEFAULT_ADMIN: AdminUser = {
@@ -94,20 +93,11 @@ const migrateData = (data: any): StoreData => {
              if (typeof admin.permissions.pricelists === 'undefined' || admin.isSuperAdmin) {
                  admin.permissions.pricelists = true;
              }
-             if (admin.name.toLowerCase() === 'admin' && admin.pin === '1723') {
-                 admin.isSuperAdmin = true;
-                 admin.permissions = {
-                    inventory: true, marketing: true, tv: true, screensaver: true, fleet: true, history: true, settings: true, pricelists: true
-                 };
-             }
         });
     }
 
     if (!data.appConfig) {
         data.appConfig = { ...DEFAULT_DATA.appConfig };
-    } else {
-        if (data.appConfig.kioskIconUrl === "/icon-kiosk.svg") data.appConfig.kioskIconUrl = DEFAULT_DATA.appConfig!.kioskIconUrl;
-        if (data.appConfig.adminIconUrl === "/icon-admin.svg" || data.appConfig.adminIconUrl === "https://i.ibb.co/RG6qW4Nw/maskable-icon.png") data.appConfig.adminIconUrl = DEFAULT_DATA.appConfig!.adminIconUrl;
     }
     
     if (!data.tv) data.tv = { brands: [] };
@@ -123,40 +113,8 @@ const migrateData = (data: any): StoreData => {
                         p.dimensions = [{ label: "Dimensions", ...p.dimensions }];
                     }
                     if (!p.manuals) p.manuals = [];
-                    if ((p.manualUrl || (p.manualImages && p.manualImages.length > 0)) && p.manuals.length === 0) {
-                        p.manuals.push({
-                            id: `legacy-manual-${p.id}`,
-                            title: 'User Manual',
-                            images: p.manualImages || [],
-                            pdfUrl: p.manualUrl
-                        });
-                    }
-                    if (!p.dateAdded) p.dateAdded = new Date().toISOString();
                 });
             });
-        });
-    }
-
-    if (data.tv && data.tv.brands) {
-        data.tv.brands.forEach((tvb: any) => {
-            if (!tvb.models) tvb.models = [];
-            if (tvb.videoUrls && Array.isArray(tvb.videoUrls) && tvb.videoUrls.length > 0) {
-                if (tvb.models.length === 0) {
-                    tvb.models.push({
-                        id: `migrated-model-${tvb.id}`,
-                        name: "General Showcase",
-                        imageUrl: tvb.logoUrl,
-                        videoUrls: [...tvb.videoUrls]
-                    });
-                }
-                tvb.videoUrls = undefined;
-            }
-        });
-    }
-    
-    if (data.catalogues) {
-        data.catalogues.forEach((c: any) => {
-             if(!c.type) c.type = c.brandId ? 'catalogue' : 'pamphlet';
         });
     }
 
@@ -193,23 +151,17 @@ const handleExpiration = async (data: StoreData): Promise<StoreData> => {
     return data;
 };
 
-/**
- * 1. Fetch Data
- * NEVER USE LOCAL STORAGE IF SUPABASE IS CONNECTED.
- */
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
 
   if (supabase) {
       try {
-          // Parallel Fetch: Config JSON + Kiosks Table
           const [configResponse, fleetResponse] = await Promise.all([
               supabase.from('store_config').select('data').eq('id', 1).single(),
               supabase.from('kiosks').select('*')
           ]);
           
           if (configResponse.data) {
-              console.log("Sync: Prioritizing Cloud Data");
               let processedData = migrateData(configResponse.data.data || {});
               
               if (fleetResponse.data) {
@@ -232,11 +184,11 @@ export const generateStoreData = async (): Promise<StoreData> => {
                   
               processedData = await handleExpiration(processedData);
 
-              // Still update local storage for "Emergency Offline" boot
               try {
-                  localStorage.setItem(STORAGE_KEY_ID + '_cloud_state', 'online');
                   localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(processedData));
-              } catch (e) {}
+              } catch (e) {
+                  console.error("CRITICAL: LocalStorage is full. Large images/Base64 data might be causing this. Images may disappear on next reload.", e);
+              }
               
               return processedData;
           }
@@ -245,7 +197,6 @@ export const generateStoreData = async (): Promise<StoreData> => {
       }
   }
 
-  // Fallback to Local Storage ONLY IF OFFLINE or CLOUD FAILED
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DATA);
     if (stored) return migrateData(JSON.parse(stored));
@@ -257,7 +208,16 @@ export const generateStoreData = async (): Promise<StoreData> => {
 export const saveStoreData = async (data: StoreData): Promise<void> => {
     try {
         localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
-    } catch (e) {}
+    } catch (e) {
+        console.warn("Storage Quota Exceeded. Removing archive data to save space.");
+        // Emergency cleanup: Try saving without the archive to stay under 5MB
+        const { archive, ...smallerData } = data;
+        try {
+            localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(smallerData));
+        } catch (innerE) {
+             console.error("Local Storage completely full. Kiosk data will not persist offline.");
+        }
+    }
 
     if (!supabase) initSupabase();
 
@@ -270,7 +230,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             
             if (error) throw error;
         } catch (e) {
-            console.error("Cloud sync failed. Changes saved LOCALLY only.");
+            console.error("Cloud sync failed.");
             throw new Error("Connection failed.");
         }
     }
