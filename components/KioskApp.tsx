@@ -191,15 +191,24 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block print:relative print:z-0 print:overflow-visible" onClick={onClose}>
       <style>{`
         @media print {
-          @page { size: auto; margin: 10mm; }
-          body { background: white !important; }
+          @page { 
+            size: auto; 
+            margin: 15mm 10mm 15mm 10mm; 
+          }
+          body { 
+            background: white !important; 
+            overflow: visible !important;
+            height: auto !important;
+          }
           .print-hidden { display: none !important; }
           .print-only { display: block !important; }
+          
+          /* Force container to start from top and flow naturally */
           .viewer-container { 
-            position: relative !important; 
+            position: static !important; 
             box-shadow: none !important; 
             border: none !important; 
             width: 100% !important; 
@@ -207,11 +216,41 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
             margin: 0 !important; 
             height: auto !important;
             overflow: visible !important;
+            display: block !important;
           }
-          .table-scroll { overflow: visible !important; height: auto !important; padding: 0 !important; }
-          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; border: 2px solid #000 !important; }
-          .spreadsheet-table th { background: #f1f5f9 !important; color: #000 !important; border: 1px solid #cbd5e1 !important; print-color-adjust: exact; }
-          .spreadsheet-table td { border: 1px solid #cbd5e1 !important; color: #000 !important; }
+          
+          .table-scroll { 
+            overflow: visible !important; 
+            height: auto !important; 
+            padding: 0 !important;
+          }
+          
+          .spreadsheet-table { 
+            width: 100% !important; 
+            border-collapse: collapse !important; 
+            border: 1px solid #000 !important;
+            margin-top: 10px;
+          }
+          
+          .spreadsheet-table th { 
+            background: #f8fafc !important; 
+            color: #000 !important; 
+            border: 1px solid #000 !important; 
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+            padding: 10px !important;
+          }
+          
+          .spreadsheet-table td { 
+            border: 1px solid #e2e8f0 !important; 
+            color: #000 !important;
+            padding: 8px !important;
+          }
+          
+          .spreadsheet-table tr {
+            page-break-inside: avoid;
+          }
+
           .promo-cell { font-weight: 900 !important; color: #dc2626 !important; }
         }
         
@@ -235,7 +274,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
       `}</style>
 
-      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
+      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:border-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
         
         {/* Screen-Only Header */}
         <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
@@ -267,75 +306,75 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         </div>
 
         {/* Print-Only Professional Header */}
-        <div className="hidden print-only p-8 border-b-4 border-slate-900 mb-6 w-full">
+        <div className="hidden print-only p-4 md:p-8 border-b-2 border-slate-900 mb-4 w-full">
             <div className="flex items-center justify-between">
                 <div className="w-1/4">
-                    {companyLogo ? <img src={companyLogo} alt="Company Logo" className="h-16 object-contain" /> : <div className="h-16 w-32 bg-slate-900 text-white flex items-center justify-center font-black rounded text-xs uppercase">Company Logo</div>}
+                    {companyLogo ? <img src={companyLogo} alt="Company Logo" className="h-12 md:h-16 object-contain" /> : <div className="h-12 w-24 bg-slate-900 text-white flex items-center justify-center font-black rounded text-[8px] uppercase">Company Logo</div>}
                 </div>
                 <div className="flex-1 text-center px-4">
-                    <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 mb-1">{pricelist.title}</h1>
-                    <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.2em]">{pricelist.month} {pricelist.year}</p>
+                    <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight text-slate-900 mb-1">{pricelist.title}</h1>
+                    <p className="text-xs md:text-sm font-bold text-slate-500 uppercase tracking-[0.2em]">{pricelist.month} {pricelist.year}</p>
                 </div>
                 <div className="w-1/4 flex justify-end">
-                    {brandLogo ? <img src={brandLogo} alt="Brand Logo" className="h-16 object-contain" /> : <div className="h-16 w-32 border border-slate-200 text-slate-400 flex items-center justify-center font-bold text-[8px] rounded uppercase">Brand Identity</div>}
+                    {brandLogo ? <img src={brandLogo} alt="Brand Logo" className="h-12 md:h-16 object-contain" /> : <div className="h-12 w-24 border border-slate-200 text-slate-400 flex items-center justify-center font-bold text-[8px] rounded uppercase">Brand Identity</div>}
                 </div>
             </div>
         </div>
 
         {/* Spreadsheet / Table Area */}
-        <div className="table-scroll flex-1 overflow-auto bg-white">
+        <div className="table-scroll flex-1 overflow-auto bg-white print:overflow-visible">
           <table className="spreadsheet-table w-full text-left">
-            <thead className="print-hidden">
+            <thead className="">
               <tr className="bg-slate-50">
                 <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 border-r border-slate-200/50 w-12 text-center">#</th>
                 <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 border-r border-slate-200/50 min-w-[120px]">
-                   <div className="flex items-center gap-2"><Tag size={12}/> SKU Code</div>
+                   <div className="flex items-center gap-2"><Tag size={12} className="print:hidden"/> SKU Code</div>
                 </th>
                 <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 border-r border-slate-200/50">
-                   <div className="flex items-center gap-2"><List size={12}/> Product Description</div>
+                   <div className="flex items-center gap-2"><List size={12} className="print:hidden"/> Product Description</div>
                 </th>
                 <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 border-r border-slate-200/50 text-right min-w-[120px]">Normal Price</th>
-                <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-red-600 uppercase tracking-widest border-b border-slate-200 text-right min-w-[140px]">
-                    <div className="flex items-center justify-end gap-2">Promo Price <ArrowUpRight size={12} className="animate-bounce" /></div>
+                <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-red-600 uppercase tracking-widest border-b border-slate-200 text-right min-w-[140px] print:text-black">
+                    <div className="flex items-center justify-end gap-2">Promo Price <ArrowUpRight size={12} className="animate-bounce print:hidden" /></div>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {(pricelist.items || []).map((item, index) => (
                 <tr key={item.id} className="excel-row transition-colors group">
-                  <td className="p-2 md:p-4 text-[9px] font-bold text-slate-300 text-center border-r border-slate-50">{index + 1}</td>
+                  <td className="p-2 md:p-4 text-[9px] font-bold text-slate-300 text-center border-r border-slate-50 print:text-black">{index + 1}</td>
                   <td className="p-3 md:p-4 border-r border-slate-50">
-                    <span className="sku-font font-bold text-[10px] md:text-sm text-slate-600 uppercase tracking-tight bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block truncate max-w-[100px] md:max-w-none">
+                    <span className="sku-font font-bold text-[10px] md:text-sm text-slate-600 uppercase tracking-tight bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block truncate max-w-[100px] md:max-w-none print:bg-transparent print:border-none print:text-black">
                       {item.sku || 'NO_SKU'}
                     </span>
                   </td>
                   <td className="p-3 md:p-4 border-r border-slate-50">
                     <div className="flex flex-col">
-                        <span className="font-black text-slate-900 text-xs md:text-lg uppercase tracking-tight leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors">
+                        <span className="font-black text-slate-900 text-xs md:text-lg uppercase tracking-tight leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors print:text-black">
                             {item.description}
                         </span>
                         {item.promoPrice && (
-                             <span className="text-[8px] md:text-[10px] font-black text-red-500 uppercase mt-1 inline-flex items-center gap-1">
-                                <Sparkles size={10} /> Promotional Offer Active
+                             <span className="text-[8px] md:text-[10px] font-black text-red-500 uppercase mt-1 inline-flex items-center gap-1 print:text-red-700">
+                                <Sparkles size={10} className="print:hidden" /> Promotional Offer Active
                              </span>
                         )}
                     </div>
                   </td>
                   <td className="p-3 md:p-4 text-right border-r border-slate-50">
-                    <span className={`font-bold text-sm md:text-lg tracking-tighter ${item.promoPrice ? 'text-slate-400 line-through decoration-red-500/40 opacity-70' : 'text-slate-900'}`}>
+                    <span className={`font-bold text-sm md:text-lg tracking-tighter ${item.promoPrice ? 'text-slate-400 line-through decoration-red-500/40 opacity-70 print:text-slate-500' : 'text-slate-900 print:text-black'}`}>
                       {item.normalPrice || 'POA'}
                     </span>
                   </td>
-                  <td className="p-3 md:p-4 text-right bg-red-50/10">
+                  <td className="p-3 md:p-4 text-right bg-red-50/10 print:bg-transparent">
                     {item.promoPrice ? (
                        <div className="flex flex-col items-end">
-                           <span className="font-black text-lg md:text-3xl text-red-600 tracking-tighter leading-none animate-fade-in">
+                           <span className="font-black text-lg md:text-3xl text-red-600 tracking-tighter leading-none animate-fade-in print:text-red-700">
                                {item.promoPrice}
                            </span>
-                           <span className="text-[7px] md:text-[9px] font-black text-red-400 uppercase tracking-widest mt-1">Special Deal</span>
+                           <span className="text-[7px] md:text-[9px] font-black text-red-400 uppercase tracking-widest mt-1 print:text-red-600">Special Deal</span>
                        </div>
                     ) : (
-                       <span className="font-black text-lg md:text-3xl text-slate-900 tracking-tighter leading-none">
+                       <span className="font-black text-lg md:text-3xl text-slate-900 tracking-tighter leading-none print:text-black">
                            {item.normalPrice || 'POA'}
                        </span>
                     )}
@@ -346,7 +385,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                 <tr>
                   <td colSpan={5} className="py-24 text-center">
                     <div className="flex flex-col items-center gap-4 text-slate-300">
-                        <FileText size={64} className="opacity-10" />
+                        <FileText size={64} className="opacity-10 print:hidden" />
                         <span className="font-black uppercase tracking-[0.3em] text-xs">Spreadsheet Empty</span>
                     </div>
                   </td>
@@ -357,8 +396,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         </div>
 
         {/* Footer Area */}
-        <div className="p-3 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0">
-          <div className="flex items-center gap-6">
+        <div className="p-3 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 print:bg-transparent print:border-none print:mt-10">
+          <div className="flex items-center gap-6 print:hidden">
               <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                   <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Items: {(pricelist.items || []).length}</span>
@@ -368,8 +407,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                   <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Promos: {(pricelist.items || []).filter(i => i.promoPrice).length}</span>
               </div>
           </div>
-          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right">
-            System generated • Data valid for {pricelist.month} {pricelist.year} • Prices include VAT where applicable.
+          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right print:text-black print:text-center print:w-full">
+            System generated • Data valid for {pricelist.month} {pricelist.year} • Prices include VAT where applicable. • Page {new Date().toLocaleDateString()}
           </p>
         </div>
       </div>
@@ -615,7 +654,7 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                                     className="group bg-white rounded-3xl overflow-hidden flex flex-col text-left transition-all hover:scale-105 active:scale-95 shadow-xl border-4 border-transparent hover:border-blue-500"
                                 >
                                     <div className="aspect-square bg-white relative flex items-center justify-center p-4">
-                                        {p.imageUrl ? <img src={p.imageUrl} className="max-w-full max-h-full object-contain" /> : <Package size={48} className="text-slate-100" />}
+                                        {p.imageUrl ? <img src={p.imageUrl} className="max-w-full max-h-full object-contain" /> : <Package size={48} className="text-slate-200" />}
                                         <div className="absolute top-3 left-3 flex flex-col gap-1">
                                             <span className="bg-slate-900 text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">{p.brandName}</span>
                                             <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">{p.categoryName}</span>
