@@ -176,21 +176,33 @@ insert into storage.buckets (id, name, public)
 values ('kiosk-media', 'kiosk-media', true) 
 on conflict (id) do nothing;
 
--- Set up permissive policies (adjust these for high-security environments)
-create policy "Allow Public Viewing" on storage.objects for select using ( bucket_id = 'kiosk-media' );
-create policy "Allow Auth Uploads" on storage.objects for insert with check ( bucket_id = 'kiosk-media' );
+-- Set up permissive policies safely
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow Public Viewing' AND tablename = 'objects' AND schemaname = 'storage') THEN
+        CREATE POLICY "Allow Public Viewing" ON storage.objects FOR SELECT USING ( bucket_id = 'kiosk-media' );
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow Auth Uploads' AND tablename = 'objects' AND schemaname = 'storage') THEN
+        CREATE POLICY "Allow Auth Uploads" ON storage.objects FOR INSERT WITH CHECK ( bucket_id = 'kiosk-media' );
+    END IF;
+END $$;
 
 -- PHASE 2: FLEET & CONFIGURATION TABLES
--- We use JSONB for the 'data' column to allow inventory flexibility without migrations.
-create table if not exists public.store_config ( 
-    id serial primary key, 
-    data jsonb not null default '{}'::jsonb, 
-    updated_at timestamp with time zone default now() 
+-- Use robust column checks to prevent errors on existing installations
+CREATE TABLE IF NOT EXISTS public.store_config ( 
+    id serial PRIMARY KEY,
+    updated_at timestamp with time zone DEFAULT now()
 );
 
--- The 'kiosks' table tracks device health and remote command flags.
-create table if not exists public.kiosks ( 
-    id text primary key, 
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='store_config' AND column_name='data') THEN
+        ALTER TABLE public.store_config ADD COLUMN data jsonb NOT NULL DEFAULT '{}'::jsonb;
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS public.kiosks ( 
+    id text PRIMARY KEY, 
     name text, 
     device_type text, 
     status text, 
@@ -199,14 +211,34 @@ create table if not exists public.kiosks (
     ip_address text, 
     version text, 
     assigned_zone text, 
-    restart_requested boolean default false 
+    restart_requested boolean DEFAULT false 
 );
 
 -- PHASE 3: REALTIME REPLICATION CONFIG
--- This tells Postgres to include these tables in the CDC (Change Data Capture) stream.
-alter table public.store_config replica identity full;
-alter table public.kiosks replica identity full;
-alter publication supabase_realtime add table public.store_config, public.kiosks;`}
+-- Safely add tables to publication without duplication errors
+ALTER TABLE public.store_config REPLICA IDENTITY FULL;
+ALTER TABLE public.kiosks REPLICA IDENTITY FULL;
+
+DO $$
+BEGIN
+    -- Ensure standard publication exists
+    IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        CREATE PUBLICATION supabase_realtime;
+    END IF;
+
+    -- Add tables to publication, catching 'already exists' errors
+    BEGIN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.store_config;
+    EXCEPTION WHEN duplicate_object THEN
+        RAISE NOTICE 'Table store_config already exists in publication';
+    END;
+
+    BEGIN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.kiosks;
+    EXCEPTION WHEN duplicate_object THEN
+        RAISE NOTICE 'Table kiosks already exists in publication';
+    END;
+END $$;`}
                             />
                             <WhyBox title="Why JSONB instead of standard columns?">
                                 Retail data changes fast. One year you need "Battery Life" for phones, the next you need "Sleeve Length" for fashion. <strong>JSONB (Binary JSON)</strong> allows us to store these varying specs without constantly rewriting the database structure, while still allowing the Admin Hub to filter and sort efficiently.
@@ -385,4 +417,3 @@ alter publication supabase_realtime add table public.store_config, public.kiosks
 };
 
 export default SetupGuide;
-

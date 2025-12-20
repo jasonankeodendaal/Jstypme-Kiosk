@@ -24,8 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-// Fix: Added 'Package' to lucide-react imports
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight } from 'lucide-react';
 
 const isRecent = (dateString?: string) => {
     if (!dateString) return false;
@@ -192,13 +191,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-12 animate-fade-in print:bg-white print:p-0" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0" onClick={onClose}>
       <style>{`
         @media print {
-          @page { size: auto; margin: 15mm; }
+          @page { size: auto; margin: 10mm; }
           body { background: white !important; }
           .print-hidden { display: none !important; }
-          .print-only { display: flex !important; }
+          .print-only { display: block !important; }
           .viewer-container { 
             position: relative !important; 
             box-shadow: none !important; 
@@ -210,112 +209,168 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
             overflow: visible !important;
           }
           .table-scroll { overflow: visible !important; height: auto !important; padding: 0 !important; }
-          .print-table { width: 100% !important; display: table !important; border-collapse: collapse !important; }
-          .print-table tr { display: table-row !important; border-bottom: 1px solid #e2e8f0 !important; }
-          .print-table td, .print-table th { display: table-cell !important; padding: 10px !important; }
-          .card-view { display: none !important; }
+          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; border: 2px solid #000 !important; }
+          .spreadsheet-table th { background: #f1f5f9 !important; color: #000 !important; border: 1px solid #cbd5e1 !important; print-color-adjust: exact; }
+          .spreadsheet-table td { border: 1px solid #cbd5e1 !important; color: #000 !important; }
+          .promo-cell { font-weight: 900 !important; color: #dc2626 !important; }
         }
-        .shrink-text { font-size: clamp(8px, 1.2vw, 14px); line-height: 1.1; }
-        .price-text { font-size: clamp(10px, 1.8vw, 24px); }
+        
+        .spreadsheet-table {
+          border-collapse: separate;
+          border-spacing: 0;
+        }
+        .spreadsheet-table th {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background-color: #f8fafc;
+          box-shadow: inset 0 -2px 0 #e2e8f0;
+        }
+        .excel-row:nth-child(even) {
+          background-color: #f8fafc;
+        }
+        .excel-row:hover {
+          background-color: #f1f5f9;
+        }
+        .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
       `}</style>
 
-      <div className={`viewer-container relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
+      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
         
         {/* Screen-Only Header */}
-        <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600' : 'bg-slate-900'}`}>
-          <div>
-            <div className="flex items-center gap-2 md:gap-3">
-              <h2 className="text-sm md:text-3xl font-black uppercase tracking-tight truncate max-w-[150px] md:max-w-none">{pricelist.title}</h2>
-              {isNewlyUpdated && <span className="bg-white text-yellow-700 px-1.5 py-0.5 md:px-2 md:py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0"><Sparkles size={10} /> NEW</span>}
-            </div>
-            <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-blue-400'} font-bold uppercase tracking-widest text-[10px] md:text-sm`}>{pricelist.month} {pricelist.year}</p>
+        <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
+          <div className="flex items-center gap-4">
+             <div className="hidden sm:flex bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10">
+                <RIcon size={28} className={isNewlyUpdated ? 'text-white' : 'text-green-400'} />
+             </div>
+             <div>
+                <div className="flex items-center gap-2 md:gap-3">
+                  <h2 className="text-sm md:text-2xl font-black uppercase tracking-tight truncate max-w-[150px] md:max-w-none">{pricelist.title}</h2>
+                  {isNewlyUpdated && <span className="bg-white text-yellow-700 px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0 animate-pulse"><Sparkles size={10} /> NEW RELEASE</span>}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                   <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[9px] md:text-xs`}>{pricelist.month} {pricelist.year}</p>
+                   <div className={`w-1 h-1 rounded-full ${isNewlyUpdated ? 'bg-yellow-200' : 'bg-slate-700'}`}></div>
+                   <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[9px] md:text-xs`}>Spreadsheet View</p>
+                </div>
+             </div>
           </div>
           <div className="flex items-center gap-2 md:gap-3">
              <button 
                 onClick={handlePrint}
-                className="flex items-center gap-2 bg-white text-slate-900 px-3 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95"
+                className="flex items-center gap-2 bg-white text-slate-900 px-4 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group"
              >
-                <Printer size={14} /> <span className="hidden sm:inline">Print / Save PDF</span>
+                <Printer size={16} className="group-hover:scale-110 transition-transform" /> <span className="hidden sm:inline">Export / Print List</span>
              </button>
-             <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><X size={20}/></button>
+             <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20}/></button>
           </div>
         </div>
 
         {/* Print-Only Professional Header */}
-        <div className="hidden print-only print:flex items-center justify-between p-8 border-b-4 border-slate-900 mb-8 w-full">
-            <div className="w-1/4 flex justify-start">
-                {companyLogo ? (
-                    <img src={companyLogo} alt="Company Logo" className="h-20 object-contain" />
-                ) : (
-                    <div className="h-20 w-20 bg-slate-900 text-white flex items-center justify-center font-black rounded-xl text-center">LOGO</div>
-                )}
-            </div>
-            
-            <div className="flex-1 text-center px-4">
-                <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 mb-1">{pricelist.title}</h1>
-                <div className="h-1 w-24 bg-blue-600 mx-auto mb-2"></div>
-                <p className="text-lg font-bold text-slate-600 uppercase tracking-[0.3em]">{pricelist.month} {pricelist.year}</p>
-            </div>
-
-            <div className="w-1/4 flex justify-end">
-                {brandLogo ? (
-                    <img src={brandLogo} alt="Brand Logo" className="h-20 object-contain" />
-                ) : (
-                    <div className="h-20 w-20 border-2 border-slate-200 text-slate-400 flex items-center justify-center font-bold text-xs rounded-xl uppercase text-center">Brand</div>
-                )}
+        <div className="hidden print-only p-8 border-b-4 border-slate-900 mb-6 w-full">
+            <div className="flex items-center justify-between">
+                <div className="w-1/4">
+                    {companyLogo ? <img src={companyLogo} alt="Company Logo" className="h-16 object-contain" /> : <div className="h-16 w-32 bg-slate-900 text-white flex items-center justify-center font-black rounded text-xs uppercase">Company Logo</div>}
+                </div>
+                <div className="flex-1 text-center px-4">
+                    <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 mb-1">{pricelist.title}</h1>
+                    <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.2em]">{pricelist.month} {pricelist.year}</p>
+                </div>
+                <div className="w-1/4 flex justify-end">
+                    {brandLogo ? <img src={brandLogo} alt="Brand Logo" className="h-16 object-contain" /> : <div className="h-16 w-32 border border-slate-200 text-slate-400 flex items-center justify-center font-bold text-[8px] rounded uppercase">Brand Identity</div>}
+                </div>
             </div>
         </div>
 
-        {/* Side-by-Side Content Area */}
-        <div className="table-scroll flex-1 overflow-auto bg-slate-50">
-          
-          {/* Card View (Mobile/Tablet Side-by-Side) */}
-          <div className="print:hidden grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4 p-2 md:p-6 card-view">
-             {(pricelist.items || []).map((item) => (
-                <div key={item.id} className="bg-white rounded-xl md:rounded-2xl p-3 md:p-5 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-                   <div className="mb-2">
-                       <span className="block text-[7px] md:text-[9px] font-black text-slate-300 uppercase tracking-widest truncate">{item.sku || 'NO SKU'}</span>
-                       <h4 className="font-bold text-slate-900 shrink-text uppercase tracking-tight mt-1 line-clamp-3">{item.description}</h4>
-                   </div>
-                   <div className="mt-3 pt-3 border-t border-slate-100">
-                       {item.normalPrice && (
-                           <span className="block text-[8px] md:text-[10px] font-bold text-slate-400 line-through decoration-red-500/30 mb-0.5">WAS: {item.normalPrice}</span>
-                       )}
-                       <span className="block font-black text-red-600 price-text uppercase tracking-tighter leading-none">{item.promoPrice || item.normalPrice || 'POA'}</span>
-                   </div>
-                </div>
-             ))}
-          </div>
-
-          {/* Hidden Table for Printing */}
-          <table className="hidden print-table w-full text-left border-collapse">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">SKU</th>
-                <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Description</th>
-                <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 text-right">Normal Price</th>
-                <th className="p-4 text-xs font-black text-red-500 uppercase tracking-widest border-b border-slate-200 text-right">Promo Price</th>
+        {/* Spreadsheet / Table Area */}
+        <div className="table-scroll flex-1 overflow-auto bg-white">
+          <table className="spreadsheet-table w-full text-left">
+            <thead className="print-hidden">
+              <tr className="bg-slate-50">
+                <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 border-r border-slate-200/50 w-12 text-center">#</th>
+                <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 border-r border-slate-200/50 min-w-[120px]">
+                   <div className="flex items-center gap-2"><Tag size={12}/> SKU Code</div>
+                </th>
+                <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 border-r border-slate-200/50">
+                   <div className="flex items-center gap-2"><List size={12}/> Product Description</div>
+                </th>
+                <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 border-r border-slate-200/50 text-right min-w-[120px]">Normal Price</th>
+                <th className="p-3 md:p-4 text-[9px] md:text-[11px] font-black text-red-600 uppercase tracking-widest border-b border-slate-200 text-right min-w-[140px]">
+                    <div className="flex items-center justify-end gap-2">Promo Price <ArrowUpRight size={12} className="animate-bounce" /></div>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(pricelist.items || []).map((item) => (
-                <tr key={item.id}>
-                  <td className="p-4 font-mono font-bold text-sm text-slate-500 uppercase">{item.sku || '-'}</td>
-                  <td className="p-4 font-bold text-slate-900 text-sm">{item.description}</td>
-                  <td className="p-4 font-bold text-slate-400 line-through text-right">{item.normalPrice}</td>
-                  <td className="p-4 font-black text-xl text-red-600 text-right">{item.promoPrice || '-'}</td>
+              {(pricelist.items || []).map((item, index) => (
+                <tr key={item.id} className="excel-row transition-colors group">
+                  <td className="p-2 md:p-4 text-[9px] font-bold text-slate-300 text-center border-r border-slate-50">{index + 1}</td>
+                  <td className="p-3 md:p-4 border-r border-slate-50">
+                    <span className="sku-font font-bold text-[10px] md:text-sm text-slate-600 uppercase tracking-tight bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block truncate max-w-[100px] md:max-w-none">
+                      {item.sku || 'NO_SKU'}
+                    </span>
+                  </td>
+                  <td className="p-3 md:p-4 border-r border-slate-50">
+                    <div className="flex flex-col">
+                        <span className="font-black text-slate-900 text-xs md:text-lg uppercase tracking-tight leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors">
+                            {item.description}
+                        </span>
+                        {item.promoPrice && (
+                             <span className="text-[8px] md:text-[10px] font-black text-red-500 uppercase mt-1 inline-flex items-center gap-1">
+                                <Sparkles size={10} /> Promotional Offer Active
+                             </span>
+                        )}
+                    </div>
+                  </td>
+                  <td className="p-3 md:p-4 text-right border-r border-slate-50">
+                    <span className={`font-bold text-sm md:text-lg tracking-tighter ${item.promoPrice ? 'text-slate-400 line-through decoration-red-500/40 opacity-70' : 'text-slate-900'}`}>
+                      {item.normalPrice || 'POA'}
+                    </span>
+                  </td>
+                  <td className="p-3 md:p-4 text-right bg-red-50/10">
+                    {item.promoPrice ? (
+                       <div className="flex flex-col items-end">
+                           <span className="font-black text-lg md:text-3xl text-red-600 tracking-tighter leading-none animate-fade-in">
+                               {item.promoPrice}
+                           </span>
+                           <span className="text-[7px] md:text-[9px] font-black text-red-400 uppercase tracking-widest mt-1">Special Deal</span>
+                       </div>
+                    ) : (
+                       <span className="font-black text-lg md:text-3xl text-slate-900 tracking-tighter leading-none">
+                           {item.normalPrice || 'POA'}
+                       </span>
+                    )}
+                  </td>
                 </tr>
               ))}
+              {(pricelist.items || []).length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-24 text-center">
+                    <div className="flex flex-col items-center gap-4 text-slate-300">
+                        <FileText size={64} className="opacity-10" />
+                        <span className="font-black uppercase tracking-[0.3em] text-xs">Spreadsheet Empty</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Footer */}
-        <div className="p-3 md:p-4 bg-white border-t border-slate-100 text-center shrink-0">
-          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            Valid for {pricelist.month} {pricelist.year} • Prices subject to change and stock availability.
+        {/* Footer Area */}
+        <div className="p-3 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0">
+          <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                  <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Items: {(pricelist.items || []).length}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Promos: {(pricelist.items || []).filter(i => i.promoPrice).length}</span>
+              </div>
+          </div>
+          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right">
+            System generated • Data valid for {pricelist.month} {pricelist.year} • Prices include VAT where applicable.
           </p>
-          <p className="hidden print:block text-[8px] text-slate-300 mt-2 font-bold uppercase tracking-widest">Generated by Kiosk Pro System • Digital Showcase Document</p>
         </div>
       </div>
     </div>
@@ -588,8 +643,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
         </div>
     );
 };
-
-// Fix: Removed duplicate CreatorPopup declaration
 
 export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData: StoreData | null, lastSyncTime?: string, onSyncRequest?: () => void }) => {
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
