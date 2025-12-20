@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
@@ -191,11 +190,17 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block" onClick={onClose}>
       <style>{`
         @media print {
           @page { size: auto; margin: 10mm; }
-          body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { 
+            background: white !important; 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+            margin: 0 !important; 
+            padding: 0 !important;
+          }
           .print-hidden { display: none !important; }
           .print-only { display: block !important; }
           .viewer-container { 
@@ -205,9 +210,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
             width: 100% !important; 
             max-width: none !important; 
             margin: 0 !important; 
+            padding-top: 0 !important;
             height: auto !important;
             overflow: visible !important;
             background: white !important;
+            top: 0 !important;
           }
           .table-scroll { overflow: visible !important; height: auto !important; padding: 0 !important; }
           .spreadsheet-table { 
@@ -252,7 +259,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
       `}</style>
 
-      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
+      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
         
         {/* Screen-Only Header */}
         <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
@@ -284,7 +291,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         </div>
 
         {/* Print-Only Professional Header */}
-        <div className="hidden print-only p-8 border-b-4 border-slate-900 mb-6 w-full">
+        <div className="hidden print-only p-4 md:p-8 border-b-4 border-slate-900 mb-6 w-full">
             <div className="flex items-center justify-between">
                 <div className="w-1/4">
                     {companyLogo ? <img src={companyLogo} alt="Company Logo" className="h-16 object-contain" /> : <div className="h-16 w-32 bg-slate-900 text-white flex items-center justify-center font-black rounded text-xs uppercase">Company Logo</div>}

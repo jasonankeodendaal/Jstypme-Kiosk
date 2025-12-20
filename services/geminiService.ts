@@ -1,4 +1,3 @@
-
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser } from "../types";
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
@@ -41,8 +40,46 @@ const DEFAULT_DATA: StoreData = {
     showCustomAds: true
   },
   catalogues: [],
-  pricelists: [],
-  pricelistBrands: [],
+  pricelists: [
+    {
+      id: 'pl-mock-1',
+      brandId: 'plb-mock-1',
+      title: 'Flagship Mobile Pricing',
+      type: 'manual',
+      items: [
+        { id: 'item-1', sku: 'SAM-S24U', description: 'Samsung Galaxy S24 Ultra 512GB Titanium Black', normalPrice: 'R 29,999', promoPrice: 'R 27,499' },
+        { id: 'item-2', sku: 'SAM-S24P', description: 'Samsung Galaxy S24+ 256GB Marble Gray', normalPrice: 'R 22,499', promoPrice: 'R 20,999' },
+        { id: 'item-3', sku: 'SAM-S24', description: 'Samsung Galaxy S24 128GB Cobalt Violet', normalPrice: 'R 17,999' },
+        { id: 'item-4', sku: 'APL-I15PM', description: 'Apple iPhone 15 Pro Max 256GB Natural Titanium', normalPrice: 'R 31,500', promoPrice: 'R 29,999' },
+        { id: 'item-5', sku: 'APL-I15P', description: 'Apple iPhone 15 Pro 128GB Blue Titanium', normalPrice: 'R 26,500' }
+      ],
+      url: '',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1592890288564-76628a30a657?w=300&h=400&fit=crop',
+      month: 'May',
+      year: '2024',
+      dateAdded: new Date().toISOString()
+    },
+    {
+      id: 'pl-mock-2',
+      brandId: 'plb-mock-2',
+      title: 'Spring Home Collection',
+      type: 'manual',
+      items: [
+        { id: 'item-6', sku: 'DYS-V15', description: 'Dyson V15 Detect Absolute Cordless Vacuum', normalPrice: 'R 15,999', promoPrice: 'R 13,499' },
+        { id: 'item-7', sku: 'NES-VRTO', description: 'Nespresso Vertuo Next Coffee Machine Black', normalPrice: 'R 3,499', promoPrice: 'R 2,899' },
+        { id: 'item-8', sku: 'LG-65C3', description: 'LG 65" C3 Series OLED 4K Smart TV', normalPrice: 'R 44,999', promoPrice: 'R 38,999' }
+      ],
+      url: '',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=300&h=400&fit=crop',
+      month: 'August',
+      year: '2024',
+      dateAdded: new Date().toISOString()
+    }
+  ],
+  pricelistBrands: [
+    { id: 'plb-mock-1', name: 'Mobile Tech', logoUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=100&h=100&fit=crop' },
+    { id: 'plb-mock-2', name: 'Smart Home', logoUrl: 'https://images.unsplash.com/photo-1558002038-1055907df827?w=100&h=100&fit=crop' }
+  ],
   brands: [],
   tv: {
     brands: []
@@ -57,7 +94,7 @@ const DEFAULT_DATA: StoreData = {
   fleet: [],
   about: {
       title: "About Our Vision",
-      text: "Welcome to the Kiosk Pro Showcase.",
+      text: "Welcome to the Kiosk Pro Showcase. Our mission is to bridge the gap between digital convenience and physical retail experience.",
       audioUrl: ""
   },
   admins: [DEFAULT_ADMIN],
