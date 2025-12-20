@@ -24,7 +24,8 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download } from 'lucide-react';
+// Fix: Added 'Package' to lucide-react imports
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package } from 'lucide-react';
 
 const isRecent = (dateString?: string) => {
     if (!dateString) return false;
@@ -339,6 +340,257 @@ export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
   </div>
 );
 
+// --- NEW COMPONENT: COMPARISON MODAL ---
+const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Product[], onClose: () => void, onShowDetail: (p: Product) => void }) => {
+    // Unique spec keys across all products
+    const specKeys = useMemo(() => {
+        const keys = new Set<string>();
+        products.forEach(p => Object.keys(p.specs).forEach(k => keys.add(k)));
+        return Array.from(keys).sort();
+    }, [products]);
+
+    return (
+        <div className="fixed inset-0 z-[120] bg-slate-900/95 backdrop-blur-xl flex flex-col animate-fade-in p-2 md:p-12" onClick={onClose}>
+            <div className="relative w-full h-full bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                    <div>
+                        <h2 className="text-2xl font-black uppercase text-slate-900 flex items-center gap-3">
+                            <Layers className="text-blue-600" /> Product Comparison
+                        </h2>
+                        <p className="text-xs text-slate-500 font-bold uppercase">Side-by-side Technical Analysis</p>
+                    </div>
+                    <button onClick={onClose} className="p-3 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-full transition-colors">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-x-auto overflow-y-auto">
+                    <table className="w-full border-collapse min-w-[800px]">
+                        <thead className="sticky top-0 z-20 bg-white shadow-sm">
+                            <tr>
+                                <th className="p-6 bg-slate-50 w-64 border-r border-slate-100 shrink-0"></th>
+                                {products.map(p => (
+                                    <th key={p.id} className="p-6 border-r border-slate-100 text-center min-w-[300px]">
+                                        <div className="flex flex-col items-center">
+                                            <div className="w-40 h-40 bg-white p-2 rounded-2xl mb-4 flex items-center justify-center shadow-sm border border-slate-100">
+                                                {p.imageUrl ? <img src={p.imageUrl} className="max-w-full max-h-full object-contain" /> : <Package size={48} className="text-slate-200" />}
+                                            </div>
+                                            <h3 className="font-black text-lg text-slate-900 uppercase leading-tight mb-1">{p.name}</h3>
+                                            <div className="text-[10px] font-mono font-bold text-slate-400 mb-4">{p.sku || 'NO SKU'}</div>
+                                            <button onClick={() => { onShowDetail(p); onClose(); }} className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors">View Details</button>
+                                        </div>
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {/* Description Row */}
+                            <tr className="hover:bg-slate-50/50">
+                                <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Description</td>
+                                {products.map(p => (
+                                    <td key={p.id} className="p-6 text-sm font-medium text-slate-600 leading-relaxed italic border-r border-slate-100">
+                                        {p.description ? p.description.substring(0, 150) + '...' : 'No description provided.'}
+                                    </td>
+                                ))}
+                            </tr>
+                            
+                            {/* Specs Rows */}
+                            {specKeys.map(key => (
+                                <tr key={key} className="hover:bg-slate-50/50">
+                                    <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">{key}</td>
+                                    {products.map(p => (
+                                        <td key={p.id} className="p-6 text-sm font-black text-slate-900 border-r border-slate-100">
+                                            {p.specs[key] || <span className="text-slate-200">—</span>}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+
+                            {/* Features Row */}
+                            <tr className="hover:bg-slate-50/50">
+                                <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Key Features</td>
+                                {products.map(p => (
+                                    <td key={p.id} className="p-6 border-r border-slate-100">
+                                        <ul className="space-y-2">
+                                            {p.features.slice(0, 5).map((f, i) => (
+                                                <li key={i} className="flex items-start gap-2 text-[11px] font-bold text-slate-700">
+                                                    <Check size={12} className="text-green-500 shrink-0 mt-0.5" /> {f}
+                                                </li>
+                                            ))}
+                                            {p.features.length > 5 && <li className="text-[10px] font-black text-blue-500 uppercase tracking-widest pl-5">+{p.features.length - 5} more</li>}
+                                        </ul>
+                                    </td>
+                                ))}
+                            </tr>
+
+                            {/* Media Checks */}
+                            <tr className="hover:bg-slate-50/50">
+                                <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Video Content</td>
+                                {products.map(p => (
+                                    <td key={p.id} className="p-6 border-r border-slate-100 text-center">
+                                        {(p.videoUrl || (p.videoUrls && p.videoUrls.length > 0)) ? (
+                                            <div className="inline-flex items-center gap-2 bg-green-50 text-green-600 px-3 py-1.5 rounded-full font-black text-[10px] uppercase">
+                                                <Video size={14} /> Available
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-300 font-bold uppercase text-[10px]">None</span>
+                                        )}
+                                    </td>
+                                ))}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div className="p-6 border-t border-slate-100 bg-slate-50 text-center shrink-0">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Technical specification data provided by brand manufacturer guidelines</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- NEW COMPONENT: GLOBAL SEARCH ---
+const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: StoreData, onClose: () => void, onSelectProduct: (p: Product) => void }) => {
+    const [query, setQuery] = useState('');
+    const [filterBrand, setFilterBrand] = useState('all');
+    const [filterCategory, setFilterCategory] = useState('all');
+    const [filterHasVideo, setFilterHasVideo] = useState(false);
+
+    const allFlattenedProducts = useMemo(() => {
+        return storeData.brands.flatMap(b => 
+            b.categories.flatMap(c => 
+                c.products.map(p => ({
+                    ...p,
+                    brandName: b.name,
+                    brandId: b.id,
+                    categoryName: c.name,
+                    categoryId: c.id
+                }))
+            )
+        );
+    }, [storeData]);
+
+    const results = useMemo(() => {
+        const lower = query.toLowerCase().trim();
+        return allFlattenedProducts.filter(p => {
+            const matchesQuery = !lower || 
+                p.name.toLowerCase().includes(lower) || 
+                (p.sku && p.sku.toLowerCase().includes(lower)) ||
+                p.description.toLowerCase().includes(lower);
+            
+            const matchesBrand = filterBrand === 'all' || p.brandId === filterBrand;
+            const matchesCat = filterCategory === 'all' || p.categoryName === filterCategory;
+            const matchesVideo = !filterHasVideo || (p.videoUrl || (p.videoUrls && p.videoUrls.length > 0));
+
+            return matchesQuery && matchesBrand && matchesCat && matchesVideo;
+        }).sort((a,b) => a.name.localeCompare(b.name));
+    }, [query, filterBrand, filterCategory, filterHasVideo, allFlattenedProducts]);
+
+    return (
+        <div className="fixed inset-0 z-[120] bg-slate-900/95 backdrop-blur-xl flex flex-col animate-fade-in" onClick={onClose}>
+            <div className="p-6 md:p-12 max-w-6xl mx-auto w-full flex flex-col h-full" onClick={e => e.stopPropagation()}>
+                {/* Search Bar Header */}
+                <div className="shrink-0 mb-8">
+                    <div className="relative group">
+                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-500 w-8 h-8 group-focus-within:scale-110 transition-transform" />
+                        <input 
+                            autoFocus
+                            type="text" 
+                            placeholder="Find any product, SKU, or feature..." 
+                            className="w-full bg-white/10 text-white placeholder:text-slate-500 text-3xl md:text-5xl font-black uppercase tracking-tight py-6 pl-20 pr-20 border-b-4 border-white/10 outline-none focus:border-blue-500 transition-all rounded-t-3xl"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                        />
+                        <button onClick={onClose} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-2">
+                            <X size={40} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Filters Row */}
+                <div className="shrink-0 flex flex-wrap gap-4 mb-8">
+                    <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10">
+                        <div className="p-2 bg-blue-600 rounded-lg text-white"><Filter size={16} /></div>
+                        <select 
+                            value={filterBrand} 
+                            onChange={e => setFilterBrand(e.target.value)}
+                            className="bg-transparent text-white font-black uppercase text-xs outline-none cursor-pointer pr-4"
+                        >
+                            <option value="all" className="bg-slate-900">All Brands</option>
+                            {storeData.brands.map(b => <option key={b.id} value={b.id} className="bg-slate-900">{b.name}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10">
+                        <div className="p-2 bg-purple-600 rounded-lg text-white"><LayoutGrid size={16} /></div>
+                        <select 
+                            value={filterCategory} 
+                            onChange={e => setFilterCategory(e.target.value)}
+                            className="bg-transparent text-white font-black uppercase text-xs outline-none cursor-pointer pr-4"
+                        >
+                            <option value="all" className="bg-slate-900">All Categories</option>
+                            {Array.from(new Set(allFlattenedProducts.map(p => p.categoryName))).sort().map(c => (
+                                <option key={c} value={c} className="bg-slate-900">{c}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <button 
+                        onClick={() => setFilterHasVideo(!filterHasVideo)}
+                        className={`flex items-center gap-3 p-2 rounded-2xl border transition-all ${filterHasVideo ? 'bg-green-600 border-green-400 text-white shadow-lg shadow-green-600/20' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                    >
+                        <div className={`p-2 rounded-lg ${filterHasVideo ? 'bg-white/20' : 'bg-slate-800'}`}><Video size={16} /></div>
+                        <span className="font-black uppercase text-xs pr-2">Has Video</span>
+                    </button>
+
+                    <div className="ml-auto flex items-center text-slate-500 font-black uppercase text-xs tracking-widest gap-2">
+                        <Sparkles size={16} className="text-yellow-500" /> {results.length} Matches
+                    </div>
+                </div>
+
+                {/* Results Grid */}
+                <div className="flex-1 overflow-y-auto no-scrollbar pb-20">
+                    {results.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {results.map(p => (
+                                <button
+                                    key={p.id}
+                                    onClick={() => { onSelectProduct(p); onClose(); }}
+                                    className="group bg-white rounded-3xl overflow-hidden flex flex-col text-left transition-all hover:scale-105 active:scale-95 shadow-xl border-4 border-transparent hover:border-blue-500"
+                                >
+                                    <div className="aspect-square bg-white relative flex items-center justify-center p-4">
+                                        {p.imageUrl ? <img src={p.imageUrl} className="max-w-full max-h-full object-contain" /> : <Package size={48} className="text-slate-100" />}
+                                        <div className="absolute top-3 left-3 flex flex-col gap-1">
+                                            <span className="bg-slate-900 text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">{p.brandName}</span>
+                                            <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">{p.categoryName}</span>
+                                        </div>
+                                        {(p.videoUrl || (p.videoUrls && p.videoUrls.length > 0)) && (
+                                            <div className="absolute bottom-3 right-3 text-blue-500"><Video size={16} strokeWidth={3} /></div>
+                                        )}
+                                    </div>
+                                    <div className="p-4 bg-slate-50/50 flex-1 flex flex-col">
+                                        <h4 className="font-black text-slate-900 uppercase text-xs leading-tight mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">{p.name}</h4>
+                                        <div className="mt-auto text-[9px] font-mono font-bold text-slate-400">{p.sku || 'N/A'}</div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-slate-500">
+                             <Search size={80} className="mb-6 opacity-10" />
+                             <p className="text-2xl font-black uppercase tracking-widest opacity-30">No matches found</p>
+                             <button onClick={() => { setQuery(''); setFilterBrand('all'); setFilterCategory('all'); setFilterHasVideo(false); }} className="mt-4 text-blue-500 font-black uppercase text-xs hover:underline">Clear all filters</button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Fix: Removed duplicate CreatorPopup declaration
+
 export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData: StoreData | null, lastSyncTime?: string, onSyncRequest?: () => void }) => {
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
   const [kioskId, setKioskId] = useState(getKioskId());
@@ -366,6 +618,11 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [isCloudConnected, setIsCloudConnected] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedBrandForPricelist, setSelectedBrandForPricelist] = useState<string | null>(null);
+  
+  // New: Advanced Search and Compare states
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [compareProductIds, setCompareProductIds] = useState<string[]>([]);
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
   const timerRef = useRef<number | null>(null);
   const idleTimeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
@@ -383,6 +640,9 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
         setViewingPdf(null);
         setViewingManualList(null);
         setShowPricelistModal(false);
+        setShowGlobalSearch(false);
+        setShowCompareModal(false);
+        setCompareProductIds([]);
       }, idleTimeout);
     }
   }, [screensaverEnabled, idleTimeout, deviceType, isSetup]);
@@ -422,7 +682,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       return storeData.catalogues.filter(c => !c.endDate || new Date(c.endDate) >= now);
   }, [storeData?.catalogues]);
 
-  const allProducts = useMemo(() => {
+  const allProductsFlat = useMemo(() => {
       if (!storeData?.brands) return [];
       return storeData.brands.flatMap(b => (b.categories || []).flatMap(c => (c.products || []).map(p => ({...p, brandName: b.name, categoryName: c.name} as FlatProduct))));
   }, [storeData?.brands]);
@@ -430,6 +690,16 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const pricelistBrands = useMemo(() => {
       return (storeData?.pricelistBrands || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   }, [storeData?.pricelistBrands]);
+
+  const toggleCompareProduct = (product: Product) => {
+    setCompareProductIds(prev => 
+        prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5) // Max 5 products
+    );
+  };
+
+  const productsToCompare = useMemo(() => {
+    return allProductsFlat.filter(p => compareProductIds.includes(p.id));
+  }, [allProductsFlat, compareProductIds]);
 
   if (!storeData) return null;
 
@@ -447,7 +717,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   return (
     <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full">
-       {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProducts} ads={storeData.ads?.screensaver || []} pamphlets={filteredCatalogs} onWake={resetIdleTimer} settings={storeData.screensaverSettings} />}
+       {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProductsFlat} ads={storeData.ads?.screensaver || []} pamphlets={filteredCatalogs} onWake={resetIdleTimer} settings={storeData.screensaverSettings} />}
        <header className="shrink-0 h-10 bg-slate-900 text-white flex items-center justify-between px-2 md:px-4 z-50 border-b border-slate-800 shadow-md print:hidden">
            <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
                {storeData.companyLogoUrl ? <img src={storeData.companyLogoUrl} className="h-4 md:h-6 object-contain" alt="" /> : <Store size={16} className="text-blue-500" />}
@@ -455,6 +725,13 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                   {deviceType === 'mobile' ? <Smartphone size={10} className="text-purple-500" /> : <ShieldCheck size={10} className="text-blue-500" />}
                   <span className="font-mono text-white tracking-wider truncate max-w-[60px]">{kioskId}</span>
                </div>
+               <button 
+                  onClick={() => setShowGlobalSearch(true)}
+                  className="bg-white/10 hover:bg-blue-600 transition-colors px-2 py-1 rounded-md flex items-center gap-1.5 md:ml-4 group"
+               >
+                   <Search size={12} className="text-blue-400 group-hover:text-white" />
+                   <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest hidden md:inline">Universal Search</span>
+               </button>
            </div>
            <div className="flex items-center gap-2 md:gap-4">
                 <div className={`flex items-center gap-1 px-1.5 md:px-2 py-0.5 rounded-full ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>
@@ -468,7 +745,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
            </div>
        </header>
        <div className="flex-1 relative flex flex-col min-h-0 print:overflow-visible" style={{ zoom: zoomLevel }}>
-         {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={filteredCatalogs} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={filteredCatalogs} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={filteredCatalogs} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} />}
+         {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={filteredCatalogs} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={filteredCatalogs} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={filteredCatalogs} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} selectedForCompare={compareProductIds} onToggleCompare={toggleCompareProduct} onStartCompare={() => setShowCompareModal(true)} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} />}
        </div>
        <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[8px] md:text-[10px] print:hidden">
           <div className="flex items-center gap-1"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase">{isOnline ? 'Connected' : 'Offline'}</span></div>
@@ -480,6 +757,11 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
           </div>
        </footer>
        <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
+       
+       {showGlobalSearch && <SearchModal storeData={storeData} onSelectProduct={(p) => { setActiveBrand(storeData.brands.find(b => b.id === (p as any).brandId)!); setActiveCategory(storeData.brands.find(b => b.id === (p as any).brandId)!.categories.find(c => c.id === (p as any).categoryId)!); setActiveProduct(p); }} onClose={() => setShowGlobalSearch(false)} />}
+       
+       {showCompareModal && <ComparisonModal products={productsToCompare} onClose={() => setShowCompareModal(false)} onShowDetail={setActiveProduct} />}
+
        {showPricelistModal && (
            <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-4 animate-fade-in print:hidden" onClick={() => setShowPricelistModal(false)}>
                <div className="relative w-full h-full md:h-auto md:max-w-5xl bg-white md:rounded-2xl shadow-2xl overflow-hidden md:max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
@@ -500,21 +782,20 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                            ))}
                        </div>
                        
-                       {/* Pricelists Grid */}
+                       {/* Pricelists Grid - Updated for smaller mobile thumbnails */}
                        <div className="flex-1 overflow-y-auto p-2 md:p-6 bg-slate-100/50">
                            {selectedBrandForPricelist ? (
-                               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4">
+                               <div className="grid grid-cols-3 md:grid-cols-3 gap-2 md:gap-4">
                                    {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).map(pl => (
-                                       <button key={pl.id} onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-slate-200'}`}>
-                                            <div className="aspect-[3/4] bg-white relative p-2 md:p-3">
-                                                {pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded-md" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">{pl.type === 'manual' ? <List size={32}/> : <FileText size={32} />}</div>}
-                                                <div className={`absolute top-1.5 right-1.5 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div>
+                                       <button key={pl.id} onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} className={`bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-slate-200'}`}>
+                                            <div className="aspect-[3/4] bg-white relative p-1 md:p-3">
+                                                {pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded shadow-sm" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">{pl.type === 'manual' ? <List size={24}/> : <FileText size={24} />}</div>}
+                                                <div className={`absolute top-1 right-1 text-white text-[6px] md:text-[9px] font-black px-1 py-0.5 rounded shadow-sm ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div>
                                             </div>
-                                            <div className="p-2 md:p-4 flex-1 flex flex-col bg-slate-50/50">
-                                                <h3 className="font-black text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1 line-clamp-2">{pl.title}</h3>
+                                            <div className="p-1 md:p-3 flex-1 flex flex-col bg-slate-50/30">
+                                                <h3 className="font-black text-slate-900 text-[7px] md:text-sm uppercase leading-tight mb-0.5 line-clamp-2">{pl.title}</h3>
                                                 <div className="mt-auto flex justify-between items-center">
-                                                   <div className="text-[7px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{pl.month} {pl.year}</div>
-                                                   {isRecent(pl.dateAdded) && <div className="text-[7px] font-black text-yellow-600 uppercase">RECENT</div>}
+                                                   <div className="text-[6px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{pl.month} {pl.year}</div>
                                                 </div>
                                             </div>
                                        </button>
