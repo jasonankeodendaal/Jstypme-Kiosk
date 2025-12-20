@@ -24,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download } from 'lucide-react';
 
 const isRecent = (dateString?: string) => {
     if (!dateString) return false;
@@ -183,31 +183,139 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
     );
 };
 
-const ManualPricelistViewer = ({ pricelist, onClose }: { pricelist: Pricelist, onClose: () => void }) => {
+const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: { pricelist: Pricelist, onClose: () => void, companyLogo?: string, brandLogo?: string }) => {
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
+  
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 md:p-12 animate-fade-in" onClick={onClose}>
-      <div className={`relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col ${isNewlyUpdated ? 'ring-4 ring-yellow-400' : ''}`} onClick={e => e.stopPropagation()}>
-        <div className={`p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600' : 'bg-slate-900'}`}>
+    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-12 animate-fade-in print:bg-white print:p-0" onClick={onClose}>
+      <style>{`
+        @media print {
+          @page { size: auto; margin: 15mm; }
+          body { background: white !important; }
+          .print-hidden { display: none !important; }
+          .print-only { display: flex !important; }
+          .viewer-container { 
+            position: relative !important; 
+            box-shadow: none !important; 
+            border: none !important; 
+            width: 100% !important; 
+            max-width: none !important; 
+            margin: 0 !important; 
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .table-scroll { overflow: visible !important; height: auto !important; padding: 0 !important; }
+          .print-table { width: 100% !important; display: table !important; border-collapse: collapse !important; }
+          .print-table tr { display: table-row !important; border-bottom: 1px solid #e2e8f0 !important; }
+          .print-table td, .print-table th { display: table-cell !important; padding: 10px !important; }
+          .card-view { display: none !important; }
+        }
+        .shrink-text { font-size: clamp(8px, 1.2vw, 14px); line-height: 1.1; }
+        .price-text { font-size: clamp(10px, 1.8vw, 24px); }
+      `}</style>
+
+      <div className={`viewer-container relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
+        
+        {/* Screen-Only Header */}
+        <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600' : 'bg-slate-900'}`}>
           <div>
-            <div className="flex items-center gap-3"><h2 className="text-xl md:text-3xl font-black uppercase tracking-tight">{pricelist.title}</h2>{isNewlyUpdated && <span className="bg-white text-yellow-700 px-2 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 shadow-lg"><Sparkles size={12} /> Recent</span>}</div>
-            <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-blue-400'} font-bold uppercase tracking-widest text-xs md:text-sm`}>{pricelist.month} {pricelist.year}</p>
+            <div className="flex items-center gap-2 md:gap-3">
+              <h2 className="text-sm md:text-3xl font-black uppercase tracking-tight truncate max-w-[150px] md:max-w-none">{pricelist.title}</h2>
+              {isNewlyUpdated && <span className="bg-white text-yellow-700 px-1.5 py-0.5 md:px-2 md:py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0"><Sparkles size={10} /> NEW</span>}
+            </div>
+            <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-blue-400'} font-bold uppercase tracking-widest text-[10px] md:text-sm`}>{pricelist.month} {pricelist.year}</p>
           </div>
-          <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><X size={24}/></button>
+          <div className="flex items-center gap-2 md:gap-3">
+             <button 
+                onClick={handlePrint}
+                className="flex items-center gap-2 bg-white text-slate-900 px-3 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95"
+             >
+                <Printer size={14} /> <span className="hidden sm:inline">Print / Save PDF</span>
+             </button>
+             <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><X size={20}/></button>
+          </div>
         </div>
-        <div className="flex-1 overflow-auto p-4 md:p-8 bg-white">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50 sticky top-0 z-10">
-              <tr><th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">SKU</th><th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Description</th><th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Normal</th><th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 text-red-500">Promo</th></tr>
+
+        {/* Print-Only Professional Header */}
+        <div className="hidden print-only print:flex items-center justify-between p-8 border-b-4 border-slate-900 mb-8 w-full">
+            <div className="w-1/4 flex justify-start">
+                {companyLogo ? (
+                    <img src={companyLogo} alt="Company Logo" className="h-20 object-contain" />
+                ) : (
+                    <div className="h-20 w-20 bg-slate-900 text-white flex items-center justify-center font-black rounded-xl text-center">LOGO</div>
+                )}
+            </div>
+            
+            <div className="flex-1 text-center px-4">
+                <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 mb-1">{pricelist.title}</h1>
+                <div className="h-1 w-24 bg-blue-600 mx-auto mb-2"></div>
+                <p className="text-lg font-bold text-slate-600 uppercase tracking-[0.3em]">{pricelist.month} {pricelist.year}</p>
+            </div>
+
+            <div className="w-1/4 flex justify-end">
+                {brandLogo ? (
+                    <img src={brandLogo} alt="Brand Logo" className="h-20 object-contain" />
+                ) : (
+                    <div className="h-20 w-20 border-2 border-slate-200 text-slate-400 flex items-center justify-center font-bold text-xs rounded-xl uppercase text-center">Brand</div>
+                )}
+            </div>
+        </div>
+
+        {/* Side-by-Side Content Area */}
+        <div className="table-scroll flex-1 overflow-auto bg-slate-50">
+          
+          {/* Card View (Mobile/Tablet Side-by-Side) */}
+          <div className="print:hidden grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4 p-2 md:p-6 card-view">
+             {(pricelist.items || []).map((item) => (
+                <div key={item.id} className="bg-white rounded-xl md:rounded-2xl p-3 md:p-5 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                   <div className="mb-2">
+                       <span className="block text-[7px] md:text-[9px] font-black text-slate-300 uppercase tracking-widest truncate">{item.sku || 'NO SKU'}</span>
+                       <h4 className="font-bold text-slate-900 shrink-text uppercase tracking-tight mt-1 line-clamp-3">{item.description}</h4>
+                   </div>
+                   <div className="mt-3 pt-3 border-t border-slate-100">
+                       {item.normalPrice && (
+                           <span className="block text-[8px] md:text-[10px] font-bold text-slate-400 line-through decoration-red-500/30 mb-0.5">WAS: {item.normalPrice}</span>
+                       )}
+                       <span className="block font-black text-red-600 price-text uppercase tracking-tighter leading-none">{item.promoPrice || item.normalPrice || 'POA'}</span>
+                   </div>
+                </div>
+             ))}
+          </div>
+
+          {/* Hidden Table for Printing */}
+          <table className="hidden print-table w-full text-left border-collapse">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">SKU</th>
+                <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Description</th>
+                <th className="p-4 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 text-right">Normal Price</th>
+                <th className="p-4 text-xs font-black text-red-500 uppercase tracking-widest border-b border-slate-200 text-right">Promo Price</th>
+              </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {(pricelist.items || []).map((item) => (
-                <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${isNewlyUpdated ? 'bg-yellow-50/30' : ''}`}><td className="p-4 font-mono font-bold text-sm text-slate-500 uppercase">{item.sku || '-'}</td><td className="p-4 font-bold text-slate-900">{item.description}</td><td className="p-4 font-black text-lg text-slate-400 line-through decoration-red-500/30">{item.normalPrice}</td><td className="p-4 font-black text-2xl text-red-600">{item.promoPrice || '-'}</td></tr>
+                <tr key={item.id}>
+                  <td className="p-4 font-mono font-bold text-sm text-slate-500 uppercase">{item.sku || '-'}</td>
+                  <td className="p-4 font-bold text-slate-900 text-sm">{item.description}</td>
+                  <td className="p-4 font-bold text-slate-400 line-through text-right">{item.normalPrice}</td>
+                  <td className="p-4 font-black text-xl text-red-600 text-right">{item.promoPrice || '-'}</td>
+                </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="p-4 bg-slate-50 border-t border-slate-100 text-center shrink-0"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valid for {pricelist.month} {pricelist.year} • Prices subject to change</p></div>
+
+        {/* Footer */}
+        <div className="p-3 md:p-4 bg-white border-t border-slate-100 text-center shrink-0">
+          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            Valid for {pricelist.month} {pricelist.year} • Prices subject to change and stock availability.
+          </p>
+          <p className="hidden print:block text-[8px] text-slate-300 mt-2 font-bold uppercase tracking-widest">Generated by Kiosk Pro System • Digital Showcase Document</p>
+        </div>
       </div>
     </div>
   );
@@ -332,10 +440,15 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} />;
 
+  const getActiveBrandLogo = () => {
+      if (!viewingManualList) return undefined;
+      return pricelistBrands.find(b => b.id === viewingManualList.brandId)?.logoUrl;
+  };
+
   return (
     <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full">
        {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProducts} ads={storeData.ads?.screensaver || []} pamphlets={filteredCatalogs} onWake={resetIdleTimer} settings={storeData.screensaverSettings} />}
-       <header className="shrink-0 h-10 bg-slate-900 text-white flex items-center justify-between px-2 md:px-4 z-50 border-b border-slate-800 shadow-md">
+       <header className="shrink-0 h-10 bg-slate-900 text-white flex items-center justify-between px-2 md:px-4 z-50 border-b border-slate-800 shadow-md print:hidden">
            <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
                {storeData.companyLogoUrl ? <img src={storeData.companyLogoUrl} className="h-4 md:h-6 object-contain" alt="" /> : <Store size={16} className="text-blue-500" />}
                <div className="flex items-center gap-1 md:gap-2 text-[8px] md:text-[10px] font-bold text-slate-300">
@@ -354,49 +467,66 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                 </div>
            </div>
        </header>
-       <div className="flex-1 relative flex flex-col min-h-0" style={{ zoom: zoomLevel }}>
+       <div className="flex-1 relative flex flex-col min-h-0 print:overflow-visible" style={{ zoom: zoomLevel }}>
          {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={filteredCatalogs} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={filteredCatalogs} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={filteredCatalogs} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} />}
        </div>
-       <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[8px] md:text-[10px]">
+       <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[8px] md:text-[10px] print:hidden">
           <div className="flex items-center gap-1"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase">{isOnline ? 'Connected' : 'Offline'}</span></div>
           <div className="flex items-center gap-4">
               <span className="text-[7px] font-black text-slate-300 uppercase tracking-tighter hidden md:inline">{currentShopName}</span>
-              {pricelistBrands.length > 0 && <button onClick={() => { setSelectedBrandForPricelist(null); setShowPricelistModal(true); }} className="text-blue-600 hover:text-blue-800"><RIcon size={12} /></button>}
+              {pricelistBrands.length > 0 && <button onClick={() => { setSelectedBrandForPricelist(pricelistBrands[0]?.id || null); setShowPricelistModal(true); }} className="text-blue-600 hover:text-blue-800"><RIcon size={12} /></button>}
               {lastSyncTime && <div className="flex items-center gap-1 font-bold"><RefreshCw size={8} /><span>{lastSyncTime}</span></div>}
               <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span></button>
           </div>
        </footer>
        <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
        {showPricelistModal && (
-           <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-fade-in" onClick={() => setShowPricelistModal(false)}>
-               <div className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                   <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0"><h2 className="text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={28} className="text-green-600" /> Pricelists</h2><button onClick={() => setShowPricelistModal(false)} className="p-2 rounded-full transition-colors"><X size={24} className="text-slate-500" /></button></div>
-                   <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                       <div className="w-full md:w-1/3 bg-slate-50 overflow-y-auto grid grid-cols-3 md:flex md:flex-col border-r border-slate-200">
+           <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-4 animate-fade-in print:hidden" onClick={() => setShowPricelistModal(false)}>
+               <div className="relative w-full h-full md:h-auto md:max-w-5xl bg-white md:rounded-2xl shadow-2xl overflow-hidden md:max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                   <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
+                      <h2 className="text-base md:text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={24} className="text-green-600" /> Pricelists</h2>
+                      <button onClick={() => setShowPricelistModal(false)} className="p-2 rounded-full transition-colors hover:bg-slate-200"><X size={24} className="text-slate-500" /></button>
+                   </div>
+                   <div className="flex-1 overflow-hidden flex flex-row">
+                       {/* Permanent Side-by-Side Brand Selector */}
+                       <div className="w-16 md:w-1/3 bg-slate-50 overflow-y-auto flex flex-col border-r border-slate-200 no-scrollbar">
                            {pricelistBrands.map(brand => (
-                               <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex flex-col md:flex-row items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-l-green-500' : 'hover:bg-white'}`}>
-                                   <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0">{brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300">{brand.name.charAt(0)}</span>}</div>
-                                   <span className={`font-bold text-[8px] md:text-sm uppercase ${selectedBrandForPricelist === brand.id ? 'text-slate-900' : 'text-slate-500'}`}>{brand.name}</span>
+                               <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-2 md:p-4 transition-colors flex flex-col md:flex-row items-center gap-2 md:gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-r-4 md:border-r-0 md:border-l-4 border-green-500' : 'hover:bg-white'}`}>
+                                   <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+                                      {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-xs">{brand.name.charAt(0)}</span>}
+                                   </div>
+                                   <span className={`font-black text-[7px] md:text-sm uppercase text-center md:text-left leading-tight ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-400'}`}>{brand.name}</span>
                                </button>
                            ))}
                        </div>
-                       <div className="flex-1 overflow-y-auto p-4 bg-slate-100/50">
+                       
+                       {/* Pricelists Grid */}
+                       <div className="flex-1 overflow-y-auto p-2 md:p-6 bg-slate-100/50">
                            {selectedBrandForPricelist ? (
-                               <div className="grid grid-cols-3 gap-2 md:gap-4">
+                               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4">
                                    {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).map(pl => (
-                                       <button key={pl.id} onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} className={`bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg border flex flex-col h-full relative transition-all ${isRecent(pl.dateAdded) ? 'border-yellow-400' : 'border-slate-200'}`}>
-                                            <div className="aspect-[3/4] bg-white relative p-2">
-                                                {pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">{pl.type === 'manual' ? <List size={24}/> : <FileText size={24} />}</div>}
-                                                <div className={`absolute top-1 right-1 text-white text-[8px] font-bold px-1.5 py-0.5 rounded ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div>
+                                       <button key={pl.id} onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-slate-200'}`}>
+                                            <div className="aspect-[3/4] bg-white relative p-2 md:p-3">
+                                                {pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded-md" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">{pl.type === 'manual' ? <List size={32}/> : <FileText size={32} />}</div>}
+                                                <div className={`absolute top-1.5 right-1.5 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>{pl.type === 'manual' ? 'LIST' : 'PDF'}</div>
                                             </div>
-                                            <div className="p-2 md:p-4 flex-1 flex flex-col">
-                                                <h3 className="font-bold text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1">{pl.title}</h3>
-                                                <div className="mt-auto text-[8px] md:text-[10px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</div>
+                                            <div className="p-2 md:p-4 flex-1 flex flex-col bg-slate-50/50">
+                                                <h3 className="font-black text-slate-900 text-[9px] md:text-sm uppercase leading-tight mb-1 line-clamp-2">{pl.title}</h3>
+                                                <div className="mt-auto flex justify-between items-center">
+                                                   <div className="text-[7px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{pl.month} {pl.year}</div>
+                                                   {isRecent(pl.dateAdded) && <div className="text-[7px] font-black text-yellow-600 uppercase">RECENT</div>}
+                                                </div>
                                             </div>
                                        </button>
                                    ))}
+                                   {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).length === 0 && (
+                                       <div className="col-span-full h-64 flex flex-col items-center justify-center text-slate-400 gap-2">
+                                           <FileText size={48} className="opacity-10" />
+                                           <p className="uppercase font-bold text-[10px] tracking-widest">No pricelists for this brand</p>
+                                       </div>
+                                   )}
                                </div>
-                           ) : <div className="h-full flex flex-col items-center justify-center text-slate-400"><RIcon size={48} className="opacity-20" /><p className="uppercase font-bold text-xs tracking-widest">Select a brand</p></div>}
+                           ) : <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2"><RIcon size={48} className="opacity-10" /><p className="uppercase font-black text-[10px] tracking-widest">Choose a brand</p></div>}
                        </div>
                    </div>
                </div>
@@ -404,7 +534,14 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        )}
        {showFlipbook && <Flipbook pages={flipbookPages} onClose={() => setShowFlipbook(false)} catalogueTitle={flipbookTitle} />}
        {viewingPdf && <PdfViewer url={viewingPdf.url} title={viewingPdf.title} onClose={() => setViewingPdf(null)} />}
-       {viewingManualList && <ManualPricelistViewer pricelist={viewingManualList} onClose={() => setViewingManualList(null)} />}
+       {viewingManualList && (
+          <ManualPricelistViewer 
+            pricelist={viewingManualList} 
+            onClose={() => setViewingManualList(null)} 
+            companyLogo={storeData.companyLogoUrl}
+            brandLogo={getActiveBrandLogo()}
+          />
+       )}
     </div>
   );
 };
