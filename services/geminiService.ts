@@ -51,24 +51,6 @@ const MOCK_BRANDS: any[] = [
             dateAdded: new Date().toISOString()
           }
         ]
-      },
-      {
-        id: 'c-tablets',
-        name: 'Tablet',
-        icon: 'Tablet',
-        products: [
-          {
-            id: 'p-s9u',
-            sku: 'SM-X910',
-            name: 'Galaxy Tab S9 Ultra',
-            description: 'Our largest, most powerful tablet ever. IP68 water resistance and Dynamic AMOLED 2X.',
-            features: ['14.6" Display', 'IP68 Rated', 'S Pen Included', 'Vapor Chamber Cooling'],
-            specs: { 'Display': '14.6" AMOLED', 'Processor': 'SD 8 Gen 2', 'RAM': '12GB/16GB' },
-            dimensions: [{ width: '326.4mm', height: '208.6mm', depth: '5.5mm', weight: '732g' }],
-            imageUrl: 'https://images.samsung.com/is/image/samsung/p6pim/za/sm-x910nzaaxfa/gallery/za-galaxy-tab-s9-ultra-sm-x910-471249-sm-x910nzaaxfa-537446702?$720_576_PNG$',
-            dateAdded: new Date().toISOString()
-          }
-        ]
       }
     ]
   },
@@ -95,77 +77,47 @@ const MOCK_BRANDS: any[] = [
         ]
       }
     ]
-  },
-  {
-      id: 'b-sony',
-      name: 'Sony',
-      logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Sony_logo.svg/2560px-Sony_logo.svg.png',
-      categories: [
-          {
-              id: 'c-audio',
-              name: 'Headphones',
-              products: [
-                  {
-                      id: 'p-xm5',
-                      sku: 'WH1000XM5',
-                      name: 'Sony WH-1000XM5',
-                      description: 'Industry-leading noise cancellation. Exceptional sound quality and crystal clear calls.',
-                      features: ['Auto NC Optimizer', 'Multipoint Connection', '30hr Battery', 'LDAC Support'],
-                      specs: { 'Battery': '30 Hours', 'Weight': '250g', 'Bluetooth': '5.2' },
-                      imageUrl: 'https://www.sony.co.za/image/5d02da5df552836db894cead8afc2098?fmt=pjpeg&wid=330&bgcolor=FFFFFF&bgc=FFFFFF',
-                      dateAdded: new Date().toISOString()
-                  }
-              ]
-          }
-      ]
   }
 ];
 
-const MOCK_PRICELISTS: Pricelist[] = [
-    {
-        id: 'pl-1',
-        brandId: 'b-samsung',
-        title: 'Mobile Master Pricelist',
-        type: 'manual',
-        month: 'October',
-        year: '2023',
-        dateAdded: new Date().toISOString(),
-        url: '',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=2070&auto=format&fit=crop',
-        items: [
-            { id: 'i1', sku: 'S24-U-256', description: 'Galaxy S24 Ultra 256GB', normalPrice: 'R 29,999', promoPrice: 'R 27,499' },
-            { id: 'i2', sku: 'S24-P-256', description: 'Galaxy S24 Plus 256GB', normalPrice: 'R 22,499', promoPrice: 'R 20,999' },
-            { id: 'i3', sku: 'Z-FOLD-5', description: 'Galaxy Z Fold 5 512GB', normalPrice: 'R 45,999', promoPrice: 'R 39,999' }
-        ]
-    },
-    {
-        id: 'pl-2',
-        brandId: 'b-apple',
-        title: 'iPhone 15 Series Rates',
-        type: 'manual',
-        month: 'October',
-        year: '2023',
-        dateAdded: new Date().toISOString(),
-        url: '',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=2070&auto=format&fit=crop',
-        items: [
-            { id: 'i4', sku: 'IP15-PM-256', description: 'iPhone 15 Pro Max 256GB', normalPrice: 'R 33,499', promoPrice: 'R 31,999' },
-            { id: 'i5', sku: 'IP15-P-128', description: 'iPhone 15 Pro 128GB', normalPrice: 'R 27,999', promoPrice: 'R 26,499' }
-        ]
-    }
+const MOCK_PL_BRANDS: PricelistBrand[] = [
+    { id: 'b-samsung', name: 'Samsung', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Samsung_Logo.svg/2560px-Samsung_Logo.svg.png' },
+    { id: 'b-apple', name: 'Apple', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/1665px-Apple_logo_black.svg.png' },
+    { id: 'b-sony', name: 'Sony', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Sony_logo.svg/2560px-Sony_logo.svg.png' },
+    { id: 'b-lg', name: 'LG', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/LG_logo_%282015%29.svg/2560px-LG_logo_%282015%29.svg.png' },
+    { id: 'b-huawei', name: 'Huawei', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Huawei_logo.svg/2560px-Huawei_logo.svg.png' },
+    { id: 'b-xiaomi', name: 'Xiaomi', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Xiaomi_logo_%282021-present%29.svg/1200px-Xiaomi_logo_%282021-present%29.svg.png' },
+    { id: 'b-oppo', name: 'Oppo', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Oppo_logo_2019.svg/2560px-Oppo_logo_2019.svg.png' },
+    { id: 'b-vivo', name: 'Vivo', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Vivo_logo_2019.svg/2560px-Vivo_logo_2019.svg.png' },
+    { id: 'b-nokia', name: 'Nokia', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Nokia_logo.svg/2560px-Nokia_logo.svg.png' },
+    { id: 'b-motorola', name: 'Motorola', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Motorola_logo.svg/2560px-Motorola_logo.svg.png' },
+    { id: 'b-google', name: 'Google', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/2560px-Google_2015_logo.svg.png' },
+    { id: 'b-asus', name: 'Asus', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Asus_Logo.svg/2560px-Asus_Logo.svg.png' },
+    { id: 'b-dell', name: 'Dell', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Dell_logo_2016.svg/2560px-Dell_logo_2016.svg.png' },
+    { id: 'b-hp', name: 'HP', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/HP_logo_2012.svg/2560px-HP_logo_2012.svg.png' },
+    { id: 'b-lenovo', name: 'Lenovo', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Lenovo_logo_2015.svg/2560px-Lenovo_logo_2015.svg.png' }
 ];
 
-const MOCK_PL_BRANDS: PricelistBrand[] = [
-    { id: 'b-samsung', name: 'Samsung Mobile', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Samsung_Logo.svg/2560px-Samsung_Logo.svg.png' },
-    { id: 'b-apple', name: 'Apple Authorized', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/1665px-Apple_logo_black.svg.png' },
-    { id: 'b-sony', name: 'Sony Music & Tech', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Sony_logo.svg/2560px-Sony_logo.svg.png' }
-];
+const MOCK_PRICELISTS: Pricelist[] = MOCK_PL_BRANDS.map(brand => ({
+    id: `pl-${brand.id}`,
+    brandId: brand.id,
+    title: `${brand.name} Master Rates`,
+    type: 'manual',
+    month: 'October',
+    year: '2023',
+    dateAdded: new Date().toISOString(),
+    url: '',
+    items: [
+        { id: `i-${brand.id}-1`, sku: 'SKU-001', description: `${brand.name} Flagship Model A`, normalPrice: 'R 19,999', promoPrice: 'R 17,499' },
+        { id: `i-${brand.id}-2`, sku: 'SKU-002', description: `${brand.name} Premium Model B`, normalPrice: 'R 12,499', promoPrice: 'R 10,999' }
+    ]
+}));
 
 const DEFAULT_DATA: StoreData = {
   companyLogoUrl: "https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png",
   hero: {
-    title: "Flagship Retail Experience",
-    subtitle: "Experience the pinnacle of innovation. Browse our curated collection of premium electronics and lifestyle tech.",
+    title: "Premium Tech Kiosk",
+    subtitle: "Browse the latest hardware and official technical documentation.",
     backgroundImageUrl: "https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=2020&auto=format&fit=crop",
     logoUrl: "https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png",
     websiteUrl: "https://jstyp.me"
@@ -183,7 +135,7 @@ const DEFAULT_DATA: StoreData = {
   catalogues: [
       { 
           id: 'cat-main', 
-          title: 'Flagship Store Guide', 
+          title: 'Official Store Guide', 
           type: 'pamphlet', 
           year: 2024, 
           thumbnailUrl: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop',
@@ -193,37 +145,17 @@ const DEFAULT_DATA: StoreData = {
   pricelists: MOCK_PRICELISTS,
   pricelistBrands: MOCK_PL_BRANDS,
   brands: MOCK_BRANDS,
-  tv: {
-    brands: [
-        {
-            id: 'tvb-sony',
-            name: 'Sony Bravia',
-            logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Sony_logo.svg/2560px-Sony_logo.svg.png',
-            models: [
-                {
-                    id: 'm-oled',
-                    name: 'A95L OLED Master',
-                    videoUrls: ['https://v4.cdnpk.net/videvo_files/video/free/2014-12/large_watermarked/Raindrops_v2_videvo_preview.mp4']
-                }
-            ]
-        }
-    ]
-  },
+  tv: { brands: [] },
   ads: {
-    homeBottomLeft: [
-        { id: 'ad1', type: 'image', url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=2071&auto=format&fit=crop' }
-    ],
-    homeBottomRight: [
-        { id: 'ad2', type: 'image', url: 'https://images.unsplash.com/photo-1484704849700-f032a568e944?q=80&w=2070&auto=format&fit=crop' }
-    ],
+    homeBottomLeft: [],
+    homeBottomRight: [],
     homeSideVertical: [],
     screensaver: []
   },
   fleet: [],
   about: {
-      title: "Our Tech Vision",
-      text: "Serving the community with the latest innovation since 2010. Our store is designed to bring you closer to the future of retail.",
-      audioUrl: ""
+      title: "Retail Innovation",
+      text: "Digital transformation for modern storefronts.",
   },
   admins: [DEFAULT_ADMIN],
   appConfig: {
@@ -245,135 +177,50 @@ const migrateData = (data: any): StoreData => {
     if (!data.ads) data.ads = { ...DEFAULT_DATA.ads };
     if (!data.screensaverSettings) data.screensaverSettings = { ...DEFAULT_DATA.screensaverSettings };
     if (!data.about) data.about = { ...DEFAULT_DATA.about };
-    
-    if (!data.admins || !Array.isArray(data.admins) || data.admins.length === 0) {
-        data.admins = [DEFAULT_ADMIN];
-    }
-
+    if (!data.admins || !Array.isArray(data.admins) || data.admins.length === 0) data.admins = [DEFAULT_ADMIN];
     if (!data.appConfig) data.appConfig = { ...DEFAULT_DATA.appConfig };
     if (!data.tv) data.tv = DEFAULT_DATA.tv;
     if (!data.systemSettings) data.systemSettings = { ...DEFAULT_DATA.systemSettings };
-
-    // Migrate nested products for dimensions and manuals
-    data.brands.forEach((b: any) => {
-        if (!b.categories) b.categories = [];
-        b.categories.forEach((c: any) => {
-            if (!c.products) c.products = [];
-            c.products.forEach((p: any) => {
-                if (p.dimensions && !Array.isArray(p.dimensions)) {
-                    p.dimensions = [{ label: "Dimensions", ...p.dimensions }];
-                }
-                if (!p.manuals) p.manuals = [];
-                if (!p.dateAdded) p.dateAdded = new Date().toISOString();
-            });
-        });
-    });
-
     return data as StoreData;
-};
-
-const handleExpiration = async (data: StoreData): Promise<StoreData> => {
-    if (!data.catalogues) return data;
-    const now = new Date();
-    const activeCatalogues: Catalogue[] = [];
-    const expiredCatalogues: Catalogue[] = [];
-
-    data.catalogues.forEach(c => {
-        if (c.endDate && new Date(c.endDate) < now) expiredCatalogues.push(c);
-        else activeCatalogues.push(c);
-    });
-
-    if (expiredCatalogues.length > 0) {
-        const newArchive: ArchiveData = {
-            ...data.archive,
-            brands: data.archive?.brands || [],
-            products: data.archive?.products || [],
-            catalogues: [...(data.archive?.catalogues || []), ...expiredCatalogues],
-            deletedItems: data.archive?.deletedItems || [],
-            deletedAt: {
-                ...(data.archive?.deletedAt || {}),
-                ...expiredCatalogues.reduce((acc, curr) => ({ ...acc, [curr.id]: new Date().toISOString() }), {})
-            }
-        };
-        const updatedData = { ...data, catalogues: activeCatalogues, archive: newArchive };
-        if (supabase) await supabase.from('store_config').update({ data: updatedData }).eq('id', 1);
-        return updatedData;
-    }
-    return data;
 };
 
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
-
   if (supabase) {
       try {
           const [configResponse, fleetResponse] = await Promise.all([
               supabase.from('store_config').select('data').eq('id', 1).single(),
               supabase.from('kiosks').select('*')
           ]);
-          
           if (configResponse.data) {
               let processedData = migrateData(configResponse.data.data || {});
-              
               if (fleetResponse.data) {
-                  const mappedFleet: KioskRegistry[] = fleetResponse.data.map((k: any) => ({
-                      id: k.id,
-                      name: k.name,
-                      deviceType: k.device_type,
-                      status: k.status,
-                      last_seen: k.last_seen,
-                      wifiStrength: k.wifi_strength,
-                      ipAddress: k.ip_address,
-                      version: k.version,
-                      locationDescription: k.location_description,
-                      assignedZone: k.assigned_zone,
-                      notes: k.notes,
-                      restartRequested: k.restart_requested
+                  processedData.fleet = fleetResponse.data.map((k: any) => ({
+                      id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
+                      last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
+                      version: k.version, locationDescription: k.location_description,
+                      assignedZone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested
                   }));
-                  processedData.fleet = mappedFleet;
               }
-                  
-              processedData = await handleExpiration(processedData);
-
-              try {
-                  localStorage.setItem(STORAGE_KEY_ID + '_cloud_state', 'online');
-                  localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(processedData));
-              } catch (e) {}
-              
               return processedData;
           }
-      } catch (e) {
-          console.warn("Cloud fetch unavailable, falling back to local cache.", e);
-      }
+      } catch (e) {}
   }
-
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DATA);
     if (stored) return migrateData(JSON.parse(stored));
   } catch (e) {}
-
   return migrateData(DEFAULT_DATA);
 };
 
 export const saveStoreData = async (data: StoreData): Promise<void> => {
-    try {
-        localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
-    } catch (e) {}
-
+    try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data)); } catch (e) {}
     if (!supabase) initSupabase();
-
     if (supabase) {
         try {
             const { fleet, ...dataToSave } = data;
-            const { error } = await supabase
-                .from('store_config')
-                .upsert({ id: 1, data: dataToSave });
-            
-            if (error) throw error;
-        } catch (e) {
-            console.error("Cloud sync failed. Changes saved LOCALLY only.");
-            throw new Error("Connection failed.");
-        }
+            await supabase.from('store_config').upsert({ id: 1, data: dataToSave });
+        } catch (e) {}
     }
 };
 

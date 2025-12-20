@@ -350,6 +350,13 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       return (storeData?.pricelistBrands || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   }, [storeData?.pricelistBrands]);
 
+  // Duplicated brands for "Infinite" scroll feel
+  const loopingBrands = useMemo(() => {
+      if (pricelistBrands.length === 0) return [];
+      // Triple the list to ensure there's always plenty to scroll
+      return [...pricelistBrands, ...pricelistBrands, ...pricelistBrands];
+  }, [pricelistBrands]);
+
   const filteredPricelists = useMemo(() => {
       if (!selectedBrandForPricelist) return [];
       let lists = storeData?.pricelists?.filter(p => p.brandId === selectedBrandForPricelist) || [];
@@ -424,23 +431,30 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                    </div>
 
                    <div className="flex-1 flex overflow-hidden flex-col md:flex-row">
-                       {/* Compact Sidebar - Horizontally scrollable on mobile */}
-                       <div className="w-full md:w-48 bg-slate-50 border-r border-slate-100 overflow-x-auto md:overflow-y-auto shrink-0 flex md:flex-col gap-1 p-3 no-scrollbar">
-                           {pricelistBrands.map(brand => (
-                               <button 
-                                   key={brand.id} 
-                                   onClick={() => setSelectedBrandForPricelist(brand.id)} 
-                                   className={`flex-none md:flex-initial w-fit md:w-full text-left p-2.5 md:p-3 rounded-2xl transition-all flex items-center gap-3 group ${selectedBrandForPricelist === brand.id ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-slate-200 text-slate-500'}`}
-                               >
-                                   <div className={`w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm transition-transform ${selectedBrandForPricelist === brand.id ? 'scale-105' : 'group-hover:scale-105'}`}>
-                                       {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain p-1.5" /> : <span className="font-black text-slate-800 text-xs">{brand.name.charAt(0)}</span>}
-                                   </div>
-                                   <span className={`font-black text-[10px] uppercase tracking-wide hidden md:block ${selectedBrandForPricelist === brand.id ? 'text-white' : 'text-slate-600'}`}>{brand.name}</span>
-                               </button>
-                           ))}
+                       {/* Compact Sidebar - 3 Rows vertical layout with scrolling */}
+                       <div className="w-full md:w-48 bg-slate-50 border-r border-slate-100 overflow-y-auto shrink-0 p-3 no-scrollbar">
+                           <div className="grid grid-cols-3 md:grid-cols-3 gap-1 content-start">
+                               {loopingBrands.map((brand, idx) => (
+                                   <button 
+                                       key={`${brand.id}-${idx}`} 
+                                       onClick={() => setSelectedBrandForPricelist(brand.id)} 
+                                       className={`aspect-square p-2 rounded-xl transition-all flex items-center justify-center border-2 ${selectedBrandForPricelist === brand.id ? 'bg-blue-600 border-blue-400 shadow-md ring-2 ring-blue-500/20' : 'bg-white border-transparent hover:border-slate-200'}`}
+                                       title={brand.name}
+                                   >
+                                       <div className="w-full h-full flex items-center justify-center overflow-hidden">
+                                           {brand.logoUrl ? (
+                                               <img src={brand.logoUrl} className={`w-full h-full object-contain ${selectedBrandForPricelist === brand.id ? 'brightness-0 invert' : ''}`} alt={brand.name} />
+                                           ) : (
+                                               <span className={`font-black text-[10px] uppercase ${selectedBrandForPricelist === brand.id ? 'text-white' : 'text-slate-400'}`}>{brand.name.charAt(0)}</span>
+                                           )}
+                                       </div>
+                                   </button>
+                               ))}
+                           </div>
+                           <div className="h-4 w-full shrink-0"></div> {/* Spacer for scroll feel */}
                        </div>
 
-                       {/* Compact List View */}
+                       {/* Compact List View - Denser grid and shrink-to-fit labels */}
                        <div className="flex-1 bg-white flex flex-col min-w-0">
                            <div className="p-4 md:p-6 flex items-center justify-between gap-4 shrink-0 border-b border-slate-50">
                                <div className="relative flex-1 group">
@@ -455,34 +469,34 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                                </div>
                            </div>
 
-                           <div className="flex-1 overflow-y-auto p-4 md:p-6">
+                           <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50/30">
                                {selectedBrandForPricelist ? (
                                    filteredPricelists.length > 0 ? (
-                                       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 items-start">
                                            {filteredPricelists.map(pl => {
                                                const recent = isRecent(pl.dateAdded);
                                                return (
                                                <button 
                                                     key={pl.id} 
                                                     onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} 
-                                                    className={`group relative bg-white rounded-3xl overflow-hidden border transition-all flex flex-col hover:shadow-xl hover:-translate-y-1 ${recent ? 'border-yellow-200 shadow-yellow-500/10' : 'border-slate-100'}`}
+                                                    className={`group relative bg-white rounded-2xl overflow-hidden border transition-all flex flex-col hover:shadow-xl hover:-translate-y-1 shadow-sm ${recent ? 'border-yellow-200 ring-1 ring-yellow-400/30' : 'border-slate-100'}`}
                                                >
-                                                    <div className="aspect-[4/3] bg-slate-50 relative overflow-hidden flex items-center justify-center">
+                                                    <div className="aspect-[4/3] bg-slate-100 relative overflow-hidden flex items-center justify-center border-b border-slate-50">
                                                         {pl.thumbnailUrl ? (
                                                             <img src={pl.thumbnailUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                                                         ) : (
-                                                            <div className="text-slate-200">
-                                                                {pl.type === 'manual' ? <List size={32} /> : <FileText size={32} />}
+                                                            <div className="text-slate-300">
+                                                                {pl.type === 'manual' ? <List size={24} /> : <FileText size={24} />}
                                                             </div>
                                                         )}
-                                                        <div className={`absolute top-2 right-2 text-white text-[7px] font-black uppercase px-2 py-1 rounded-lg backdrop-blur-md ${pl.type === 'manual' ? 'bg-blue-600/80' : 'bg-red-600/80'}`}>
+                                                        <div className={`absolute top-1.5 right-1.5 text-white text-[6px] font-black uppercase px-1.5 py-0.5 rounded backdrop-blur-md ${pl.type === 'manual' ? 'bg-blue-600/80' : 'bg-red-600/80'}`}>
                                                             {pl.type === 'manual' ? 'Table' : 'PDF'}
                                                         </div>
-                                                        {recent && <div className="absolute bottom-2 left-2 bg-yellow-400 text-yellow-900 text-[7px] font-black uppercase px-2 py-0.5 rounded-lg shadow-sm">New Update</div>}
+                                                        {recent && <div className="absolute bottom-1.5 left-1.5 bg-yellow-400 text-yellow-900 text-[6px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm">New</div>}
                                                     </div>
-                                                    <div className="p-4 text-left">
-                                                        <h3 className="font-black text-slate-800 text-[10px] uppercase leading-tight line-clamp-1 mb-1 group-hover:text-blue-600 transition-colors">{pl.title}</h3>
-                                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{pl.month} {pl.year}</span>
+                                                    <div className="p-3 text-left">
+                                                        <h3 className="font-black text-slate-800 text-[9px] uppercase leading-tight line-clamp-2 mb-1 group-hover:text-blue-600 transition-colors">{pl.title}</h3>
+                                                        <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">{pl.month} {pl.year}</span>
                                                     </div>
                                                </button>
                                            )})}
