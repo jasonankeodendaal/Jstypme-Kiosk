@@ -194,7 +194,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block" onClick={onClose}>
       <style>{`
         @media print {
-          @page { size: auto; margin: 5mm; }
+          @page { size: A4; margin: 10mm; }
           body { 
             background: white !important; 
             -webkit-print-color-adjust: exact !important; 
@@ -216,28 +216,30 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
             overflow: visible !important;
             background: white !important;
             top: 0 !important;
+            display: block !important;
           }
           .table-scroll { overflow: visible !important; height: auto !important; padding: 0 !important; }
           .spreadsheet-table { 
             width: 100% !important; 
             border-collapse: collapse !important; 
             border: 2px solid #1e293b !important; 
+            table-layout: auto !important;
           }
           .spreadsheet-table th { 
             background: #a1a1aa !important; 
             color: #000 !important; 
-            border: 2px solid #1e293b !important; 
+            border: 1px solid #334155 !important; 
             font-weight: 900 !important;
             text-transform: uppercase !important;
-            padding: 12px 10px !important;
-            font-size: 14px !important;
+            padding: 8px 6px !important;
+            font-size: 11px !important;
           }
           .spreadsheet-table td { 
-            border: 2px solid #1e293b !important; 
+            border: 1px solid #cbd5e1 !important; 
             color: #000 !important; 
-            padding: 10px !important;
+            padding: 6px !important;
             font-weight: 700 !important;
-            font-size: 14px !important;
+            font-size: 10px !important;
           }
         }
         
@@ -262,7 +264,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
       `}</style>
 
-      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
+      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:w-[210mm] print:mx-auto ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
         
         {/* Screen-Only Header */}
         <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
@@ -293,52 +295,37 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           </div>
         </div>
 
-        {/* Print-Only Layout based on reference image */}
-        <div className="hidden print-only w-full px-6 py-4">
-            {/* Top Box Header */}
-            <div className="border-[3px] border-slate-900 p-4 mb-4 text-center">
-                <h2 className="text-5xl font-black uppercase tracking-[0.15em] text-slate-800">start from here</h2>
-            </div>
-
-            {/* Large Arrows Row */}
-            <div className="flex justify-between items-center px-4 mb-2">
-                <MoveUp size={180} strokeWidth={3} className="text-slate-900" />
-                <MoveUp size={180} strokeWidth={3} className="text-slate-900" />
-            </div>
-
-            {/* Logos and Main Title Row */}
-            <div className="flex items-center justify-between mb-8">
+        {/* Print-Only Professional Branding Header */}
+        <div className="hidden print-only w-full p-6">
+            <div className="flex items-center justify-between pb-6 border-b-2 border-slate-900">
                 {/* Left Logo Slot */}
-                <div className="w-1/3 flex justify-start">
+                <div className="w-1/4 flex justify-start">
                     {companyLogo ? (
-                        <img src={companyLogo} alt="Logo 1" className="h-24 object-contain" />
+                        <img src={companyLogo} alt="Logo 1" className="h-16 object-contain" />
                     ) : (
-                        <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center font-bold text-[8px]">LOGO 1</div>
+                        <div className="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center font-black text-[8px] uppercase">Main Logo</div>
                     )}
                 </div>
 
-                {/* Center Text Slot */}
-                <div className="w-1/3 text-center">
-                    <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 mb-1">New Pricelist</h1>
-                    <p className="text-xl font-bold text-slate-500 uppercase tracking-[0.1em]">{pricelist.month} {pricelist.year}</p>
+                {/* Center Title Content */}
+                <div className="flex-1 text-center px-4">
+                    <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 leading-none mb-1">{pricelist.title}</h1>
+                    <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.2em]">{pricelist.month} {pricelist.year}</p>
                 </div>
 
                 {/* Right Logo Slot */}
-                <div className="w-1/3 flex justify-end">
+                <div className="w-1/4 flex justify-end">
                     {brandLogo ? (
-                        <img src={brandLogo} alt="Logo 2" className="h-24 object-contain" />
+                        <img src={brandLogo} alt="Logo 2" className="h-16 object-contain" />
                     ) : (
-                        <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center font-bold text-[8px]">LOGO 2</div>
+                        <div className="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center font-black text-[8px] uppercase">Brand Logo</div>
                     )}
                 </div>
             </div>
-
-            {/* Heavy Horizontal Divider */}
-            <div className="h-1.5 bg-slate-800 w-full mb-8"></div>
         </div>
 
         {/* Spreadsheet / Table Area */}
-        <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:px-6">
+        <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:px-6 print:pt-0">
           <table className="spreadsheet-table w-full text-left border-collapse">
             <thead>
               <tr className="print:bg-[#a1a1aa]">
@@ -396,15 +383,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         </div>
 
         {/* Footer Area */}
-        <div className="p-3 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 print:hidden">
-          <div className="flex items-center gap-6">
+        <div className="p-3 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 print:block print:bg-white print:p-4">
+          <div className="flex items-center gap-6 print:hidden">
               <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                   <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Items: {(pricelist.items || []).length}</span>
               </div>
           </div>
-          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right">
-            System generated • Valid for {pricelist.month} {pricelist.year} • Prices include VAT where applicable.
+          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right print:text-slate-500 print:text-[8px]">
+            System generated • Valid for {pricelist.month} {pricelist.year} • Prices include VAT where applicable • Generated by Kiosk Pro
           </p>
         </div>
       </div>
