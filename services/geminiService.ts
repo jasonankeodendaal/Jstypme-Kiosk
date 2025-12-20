@@ -52,6 +52,7 @@ const DEFAULT_DATA: StoreData = {
     homeBottomLeft: [],
     homeBottomRight: [],
     homeSideVertical: [],
+    homeSideLeftVertical: [],
     screensaver: []
   },
   fleet: [],
@@ -77,7 +78,11 @@ const migrateData = (data: any): StoreData => {
     if (!data.pricelistBrands || !Array.isArray(data.pricelistBrands)) data.pricelistBrands = [];
     if (!data.fleet || !Array.isArray(data.fleet)) data.fleet = [];
     if (!data.hero) data.hero = { ...DEFAULT_DATA.hero };
-    if (!data.ads) data.ads = { ...DEFAULT_DATA.ads };
+    if (!data.ads) {
+        data.ads = { ...DEFAULT_DATA.ads };
+    } else {
+        if (!data.ads.homeSideLeftVertical) data.ads.homeSideLeftVertical = [];
+    }
     if (!data.screensaverSettings) data.screensaverSettings = { ...DEFAULT_DATA.screensaverSettings };
     if (!data.about) data.about = { ...DEFAULT_DATA.about };
     

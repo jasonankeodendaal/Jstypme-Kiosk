@@ -644,7 +644,7 @@ const downloadZip = async (storeData: StoreData) => {
         // Ads
         const adsFolder = mktFolder.folder("Ads");
         if (adsFolder && storeData.ads) {
-            for (const zone of ['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'screensaver']) {
+            for (const zone of ['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideLeftVertical', 'screensaver']) {
                 const zoneFolder = adsFolder.folder(zone);
                 const ads = (storeData.ads as any)[zone] || [];
                 for(let i=0; i<ads.length; i++) {
@@ -1477,7 +1477,7 @@ const ProductEditor = ({ product, onSave, onCancel }: { product: Product, onSave
                                      <div className="grid grid-cols-2 gap-2">
                                          <InputField label="Height" val={dim.height} onChange={(e:any) => updateDimension(idx, 'height', e.target.value)} half placeholder="10cm" />
                                          <InputField label="Width" val={dim.width} onChange={(e:any) => updateDimension(idx, 'width', e.target.value)} half placeholder="10cm" />
-                                         <InputField label="Depth" val={dim.depth} onChange={(e:any) => updateDimension(idx, 'depth', e.target.value)} half placeholder="10cm" />
+                                         <InputField label="Depth" val={dim.height} onChange={(e:any) => updateDimension(idx, 'depth', e.target.value)} half placeholder="10cm" />
                                          <InputField label="Weight" val={dim.weight} onChange={(e:any) => updateDimension(idx, 'weight', e.target.value)} half placeholder="1kg" />
                                      </div>
                                  </div>
@@ -2552,7 +2552,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                  </div>
 
                  <div className="flex items-center gap-3">
-                     <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300' : 'bg-orange-900/50 text-orange-300'}`}>
+                     <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>
                          {isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}
                          <span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span>
                      </div>
@@ -2757,11 +2757,11 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                     )}
                     {activeSubTab === 'ads' && (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'screensaver'].map(zone => (
+                            {['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideLeftVertical', 'screensaver'].map(zone => (
                                 <div key={zone} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                                     <h4 className="font-bold uppercase text-xs mb-1">{zone.replace('home', '')}</h4>
                                     <p className="text-[10px] text-slate-400 mb-4 uppercase font-bold tracking-wide">{zone.includes('Side') ? 'Size: 1080x1920 (Portrait)' : zone.includes('screensaver') ? 'Mixed Media' : 'Size: 1920x1080 (Landscape)'}</p>
-                                    <FileUpload label="Upload Media" accept="image/*,video/*" allowMultiple onUpload={(urls:any, type:any) => { const newAds = (Array.isArray(urls)?urls:[urls]).map(u=>({id:generateId('ad'), type, url:u, dateAdded: new Date().toISOString()})); handleLocalUpdate({...localData, ads: {...localData.ads, [zone]: [...(localData.ads as any)[zone], ...newAds]} as any}); }} />
+                                    <FileUpload label="Upload Media" accept="image/*,video/*" allowMultiple onUpload={(urls:any, type:any) => { const newAds = (Array.isArray(urls)?urls:[urls]).map(u=>({id:generateId('ad'), type, url:u, dateAdded: new Date().toISOString()})); handleLocalUpdate({...localData, ads: {...localData.ads, [zone]: [...((localData.ads as any)[zone] || []), ...newAds]} as any}); }} />
                                     <div className="grid grid-cols-3 gap-2 mt-4">
                                         {((localData.ads as any)[zone] || []).map((ad: any, idx: number) => (
                                             <div key={ad.id} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">

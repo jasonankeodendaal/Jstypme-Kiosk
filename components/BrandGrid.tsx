@@ -291,10 +291,17 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             </h2>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full flex flex-col lg:flex-row gap-6">
+      {/* Main Content Area - Updated to 3 columns on large screens */}
+      <div className="flex-1 p-4 md:p-8 max-w-[1600px] mx-auto w-full flex flex-col lg:flex-row gap-6">
         
-        {/* Left Column (Brands + Bottom Ads) */}
+        {/* Left Column (New Side Ad) */}
+        <div className="hidden lg:block w-72 shrink-0">
+             {ads && (
+                 <AdUnit items={ads.homeSideLeftVertical} className="h-full w-full min-h-[500px]" />
+             )}
+        </div>
+
+        {/* Center Column (Brands + Bottom Ads) */}
         <div className="flex-1 flex flex-col gap-8">
             
             {/* Grid - 4 Columns on Mobile (3 Brands + View All) -> Now showing 2 rows */}
@@ -348,8 +355,8 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             )}
         </div>
 
-        {/* Right Column (Side Ad) */}
-        <div className="hidden lg:block w-72 shrink-0">
+        {/* Right Column (Side Ad - Made wider) */}
+        <div className="hidden lg:block w-96 shrink-0">
              {ads && (
                  <AdUnit items={ads.homeSideVertical} className="h-full w-full min-h-[500px]" />
              )}
@@ -396,7 +403,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                           </div>
                         )}
                       </div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wide group-hover:text-blue-600 hidden">{brand.name}</span>
+                      <span className="text-[10px] md:text-sm font-bold text-slate-500 uppercase group-hover:text-blue-600 truncate w-full text-center">{brand.name}</span>
                     </button>
                   ))}
                </div>

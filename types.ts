@@ -133,6 +133,7 @@ export interface AdConfig {
   homeBottomLeft: AdItem[];
   homeBottomRight: AdItem[];
   homeSideVertical: AdItem[];
+  homeSideLeftVertical: AdItem[];
   screensaver: AdItem[];
 }
 
