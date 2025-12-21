@@ -24,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Activity, Signal } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Activity, Signal, Maximize } from 'lucide-react';
 
 const isRecent = (dateString?: string) => {
     if (!dateString) return false;
@@ -42,7 +42,6 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
   </svg>
 );
 
-// --- UPDATED COMPONENT: COMPACT SETUP SCREEN ---
 const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComplete: () => void }) => {
     const [step, setStep] = useState(1);
     const [shopName, setShopName] = useState('');
@@ -78,7 +77,6 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
     return (
         <div className="fixed inset-0 z-[300] bg-slate-950 flex items-center justify-center p-4">
-            {/* Background Ambience */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/10 via-slate-950 to-slate-950 opacity-100"></div>
 
             <div className="bg-white rounded-[2rem] w-full max-w-sm overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.6)] animate-fade-in border border-white/10 relative z-10">
@@ -94,7 +92,6 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
                 </div>
 
                 <div className="p-5 md:p-6">
-                    {/* Stepper */}
                     <div className="flex items-center justify-between mb-5">
                         <div className="flex gap-1">
                             {[1, 2, 3].map(s => (
@@ -219,7 +216,6 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
                     </div>
                 </div>
                 
-                {/* System Status Footer */}
                 <div className="bg-slate-50 border-t border-slate-100 p-3 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-1.5">
                         <Signal size={10} className="text-green-500" />
@@ -237,6 +233,17 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
 const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: { pricelist: Pricelist, onClose: () => void, companyLogo?: string, brandLogo?: string }) => {
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
+  const [zoom, setZoom] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return pricelist.items || [];
+    const q = searchQuery.toLowerCase();
+    return (pricelist.items || []).filter(item => 
+      item.sku.toLowerCase().includes(q) || 
+      item.description.toLowerCase().includes(q)
+    );
+  }, [pricelist.items, searchQuery]);
   
   const handlePrint = () => {
     window.print();
@@ -269,12 +276,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
             overflow: visible !important;
             background: white !important;
             top: 0 !important;
+            transform: none !important;
+            outline: none !important;
           }
           .table-scroll { overflow: visible !important; height: auto !important; padding: 0 !important; }
           .spreadsheet-table { 
             width: 100% !important; 
             border-collapse: collapse !important; 
             margin-top: 10px !important;
+            border: none !important;
           }
           .spreadsheet-table th { 
             background: #f1f5f9 !important; 
@@ -324,11 +334,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         .col-price { width: 1%; white-space: nowrap; text-align: right; }
       `}</style>
 
-      <div className={`viewer-container relative w-full h-full md:h-auto md:max-w-7xl bg-white md:rounded-3xl shadow-2xl overflow-hidden md:max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 md:ring-4 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
+      <div className={`viewer-container relative w-full h-full md:h-auto md:max-w-7xl bg-white md:rounded-3xl shadow-2xl overflow-hidden md:max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:border-none print:ring-0 ${isNewlyUpdated ? 'ring-4 ring-yellow-400 md:ring-4 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
         
-        {/* Screen-Only Header - Shrink for Mobile */}
-        <div className={`print-hidden p-3 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
-          <div className="flex items-center gap-2 md:gap-5">
+        <div className={`print-hidden p-3 md:p-6 text-white flex flex-col md:flex-row justify-between items-center shrink-0 border-b border-white/5 gap-4 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
+          <div className="flex items-center gap-2 md:gap-5 w-full md:w-auto">
              <div className="bg-white p-1 md:p-2 rounded-lg md:rounded-2xl shadow-xl flex items-center justify-center shrink-0 w-8 h-8 md:w-16 md:h-16 overflow-hidden">
                 {brandLogo ? (
                     <img src={brandLogo} alt="Brand Logo" className="w-full h-full object-contain" />
@@ -348,21 +357,43 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                 </div>
              </div>
           </div>
-          <div className="flex items-center gap-1.5 md:gap-3">
-             <button 
-                onClick={handlePrint}
-                className="flex items-center gap-1.5 bg-white text-slate-900 px-2.5 py-1.5 md:px-4 md:py-2.5 rounded-lg md:rounded-xl font-black text-[7px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group shrink-0"
-             >
-                <Printer size={12} className="group-hover:scale-110 transition-transform md:size-[16px]" /> <span className="hidden sm:inline">Print List</span>
-             </button>
-             <button onClick={onClose} className="p-1.5 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={16} className="md:size-[20px]"/></button>
+
+          <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
+              {/* Zoom Controls */}
+              <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1 border border-white/10">
+                  <button onClick={() => setZoom(Math.max(0.5, zoom - 0.1))} className="p-1 hover:bg-white/10 rounded text-white" title="Zoom Out"><ZoomOut size={16} /></button>
+                  <span className="text-[10px] font-black w-8 text-center">{Math.round(zoom * 100)}%</span>
+                  <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="p-1 hover:bg-white/10 rounded text-white" title="Zoom In"><ZoomIn size={16} /></button>
+                  <button onClick={() => setZoom(1)} className="p-1 hover:bg-white/10 rounded text-white ml-1 border-l border-white/10" title="Reset"><Maximize size={16} /></button>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative flex-1 md:flex-none md:w-48">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/50" size={12} />
+                  <input 
+                      type="text" 
+                      placeholder="Search SKU..." 
+                      className="w-full bg-white/10 border-white/20 border rounded-lg pl-8 pr-3 py-1.5 text-[10px] md:text-xs font-bold text-white outline-none focus:bg-white/20 focus:border-blue-500 transition-all placeholder:text-white/30 uppercase"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"><X size={10} /></button>}
+              </div>
+
+              <div className="flex items-center gap-1.5 md:gap-3">
+                 <button 
+                    onClick={handlePrint}
+                    className="flex items-center gap-1.5 bg-white text-slate-900 px-2.5 py-1.5 md:px-4 md:py-2.5 rounded-lg md:rounded-xl font-black text-[7px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group shrink-0"
+                 >
+                    <Printer size={12} className="group-hover:scale-110 transition-transform md:size-[16px]" /> <span className="hidden sm:inline">Print List</span>
+                 </button>
+                 <button onClick={onClose} className="p-1.5 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={16} className="md:size-[20px]"/></button>
+              </div>
           </div>
         </div>
 
-        {/* Print-Only Layout: Professional Header Section */}
         <div className="hidden print-only w-full px-8 pt-6 pb-2">
             <div className="flex items-center justify-between gap-6">
-                {/* Left: Company Logo */}
                 <div className="w-1/4 flex justify-start">
                     {companyLogo ? (
                         <img src={companyLogo} alt="Company Logo" className="h-16 md:h-24 object-contain" />
@@ -373,21 +404,18 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                     )}
                 </div>
 
-                {/* Center: Pricelist Metadata */}
                 <div className="flex-1 text-center border-x border-slate-100 px-4">
                     <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 leading-none mb-1">{pricelist.title}</h1>
                     <div className="flex items-center justify-center gap-3">
                         <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">{pricelist.month} {pricelist.year}</span>
                         <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Store Authorized</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">ADMIN AUTHORIZED</span>
                     </div>
-                    {/* Optional Brand Name if relevant */}
                     <div className="mt-2 inline-block bg-slate-900 text-white px-3 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
                          OFFICIAL PRICELIST
                     </div>
                 </div>
 
-                {/* Right: Brand Logo */}
                 <div className="w-1/4 flex justify-end">
                     {brandLogo ? (
                         <img src={brandLogo} alt="Brand Logo" className="h-16 md:h-24 object-contain" />
@@ -399,7 +427,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                 </div>
             </div>
 
-            {/* Aesthetic Separator */}
             <div className="mt-8 mb-4 h-0.5 w-full bg-slate-900"></div>
             <div className="flex justify-between text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">
                 <span>Code / SKU</span>
@@ -408,74 +435,74 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
             </div>
         </div>
 
-        {/* Spreadsheet / Table Area */}
         <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:px-8 print:py-0">
-          <table className="spreadsheet-table w-full text-left border-collapse">
-            <thead>
-              <tr className="print:bg-[#f1f5f9]">
-                <th className="p-2 md:p-4 text-[7px] md:text-[14px] font-black uppercase tracking-tight border border-slate-200 col-code print:border-slate-300">CODE</th>
-                <th className="p-2 md:p-4 text-[7px] md:text-[14px] font-black uppercase tracking-tight border border-slate-200 col-group print:border-slate-300">PRODUCT GROUP</th>
-                <th className="p-2 md:p-4 text-[7px] md:text-[14px] font-black uppercase tracking-tight border border-slate-200 col-price print:border-slate-300">NORMAL</th>
-                <th className="p-2 md:p-4 text-[7px] md:text-[14px] font-black uppercase tracking-tight border border-slate-200 col-price print:border-slate-300">PROMO</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 print:divide-slate-200">
-              {(pricelist.items || []).map((item) => (
-                <tr key={item.id} className="excel-row transition-colors group print:break-inside-avoid">
-                  <td className="p-1.5 md:p-3 border border-slate-200 print:border-slate-200 col-code">
-                    <span className="sku-font font-bold text-[7px] md:text-sm text-slate-900 uppercase tracking-tighter">
-                      {item.sku || '—'}
-                    </span>
-                  </td>
-                  <td className="p-1.5 md:p-3 border border-slate-200 print:border-slate-200 col-group min-w-0">
-                    <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 text-[8px] md:text-sm uppercase tracking-tighter leading-none line-clamp-2 group-hover:text-blue-600 transition-colors">
-                            {item.description}
-                        </span>
-                    </div>
-                  </td>
-                  <td className="p-1.5 md:p-3 border border-slate-200 print:border-slate-200 col-price">
-                    <span className="font-black text-[8px] md:text-base tracking-tighter text-slate-900">
-                      {item.normalPrice || 'POA'}
-                    </span>
-                  </td>
-                  <td className="p-1.5 md:p-3 border border-slate-200 print:border-slate-200 col-price bg-slate-50/10">
-                    {item.promoPrice ? (
-                       <span className="promo-text font-black text-[9px] md:text-xl text-red-600 tracking-tighter">
-                           {item.promoPrice}
-                       </span>
-                    ) : (
-                       <span className="font-bold text-[8px] md:text-base text-slate-300 tracking-tighter">
-                           —
-                       </span>
-                    )}
-                  </td>
+          <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: `${100 / zoom}%` }} className="transition-transform duration-200">
+            <table className="spreadsheet-table w-full text-left border-collapse">
+              <thead>
+                <tr className="print:bg-[#f1f5f9]">
+                  <th className="p-2 md:p-4 text-[7px] md:text-[14px] font-black uppercase tracking-tight border border-slate-200 col-code print:border-slate-300">CODE</th>
+                  <th className="p-2 md:p-4 text-[7px] md:text-[14px] font-black uppercase tracking-tight border border-slate-200 col-group print:border-slate-300">PRODUCT GROUP</th>
+                  <th className="p-2 md:p-4 text-[7px] md:text-[14px] font-black uppercase tracking-tight border border-slate-200 col-price print:border-slate-300">NORMAL</th>
+                  <th className="p-2 md:p-4 text-[7px] md:text-[14px] font-black uppercase tracking-tight border border-slate-200 col-price print:border-slate-300">PROMO</th>
                 </tr>
-              ))}
-              {(pricelist.items || []).length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-12 md:py-24 text-center">
-                    <div className="flex flex-col items-center gap-4 text-slate-300">
-                        <FileText size={40} className="opacity-10 md:size-[64px]" />
-                        <span className="font-black uppercase tracking-[0.3em] text-[7px] md:text-xs">No Items</span>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 print:divide-slate-200">
+                {filteredItems.map((item) => (
+                  <tr key={item.id} className="excel-row transition-colors group print:break-inside-avoid">
+                    <td className="p-1.5 md:p-3 border border-slate-200 print:border-slate-200 col-code">
+                      <span className="sku-font font-bold text-[7px] md:text-sm text-slate-900 uppercase tracking-tighter">
+                        {item.sku || '—'}
+                      </span>
+                    </td>
+                    <td className="p-1.5 md:p-3 border border-slate-200 print:border-slate-200 col-group min-w-0">
+                      <div className="flex flex-col">
+                          <span className="font-bold text-slate-900 text-[8px] md:text-sm uppercase tracking-tighter leading-none line-clamp-2 group-hover:text-blue-600 transition-colors">
+                              {item.description}
+                          </span>
+                      </div>
+                    </td>
+                    <td className="p-1.5 md:p-3 border border-slate-200 print:border-slate-200 col-price">
+                      <span className="font-black text-[8px] md:text-base tracking-tighter text-slate-900">
+                        {item.normalPrice || 'POA'}
+                      </span>
+                    </td>
+                    <td className="p-1.5 md:p-3 border border-slate-200 print:border-slate-200 col-price bg-slate-50/10">
+                      {item.promoPrice ? (
+                         <span className="promo-text font-black text-[9px] md:text-xl text-red-600 tracking-tighter">
+                             {item.promoPrice}
+                         </span>
+                      ) : (
+                         <span className="font-bold text-[8px] md:text-base text-slate-300 tracking-tighter">
+                             —
+                         </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {filteredItems.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-12 md:py-24 text-center">
+                      <div className="flex flex-col items-center gap-4 text-slate-300">
+                          <FileText size={40} className="opacity-10 md:size-[64px]" />
+                          <span className="font-black uppercase tracking-[0.3em] text-[7px] md:text-xs">No Items Matches</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Footer Area - Shrink for Mobile */}
         <div className="p-2 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-2 md:gap-4 shrink-0 print:border-none print:bg-white print:px-8">
           <div className="flex items-center gap-4 md:gap-6">
               <div className="flex items-center gap-1.5 md:gap-2">
                   <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500"></div>
-                  <span className="text-[6px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total: {(pricelist.items || []).length}</span>
+                  <span className="text-[6px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total: {filteredItems.length} {searchQuery ? '(Filtered)' : ''}</span>
               </div>
           </div>
-          <p className="text-[6px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right leading-tight">
-            System generated • Prices include VAT where applicable • E&OE.
+          <p className="text-[6px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right leading-tight print:hidden">
+            Document generated for viewing purposes.
           </p>
         </div>
       </div>
@@ -501,9 +528,7 @@ export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
   </div>
 );
 
-// --- NEW COMPONENT: COMPARISON MODAL ---
 const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Product[], onClose: () => void, onShowDetail: (p: Product) => void }) => {
-    // Unique spec keys across all products
     const specKeys = useMemo(() => {
         const keys = new Set<string>();
         products.forEach(p => Object.keys(p.specs).forEach(k => keys.add(k)));
@@ -545,7 +570,6 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {/* Description Row */}
                             <tr className="hover:bg-slate-50/50">
                                 <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Description</td>
                                 {products.map(p => (
@@ -555,7 +579,6 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                                 ))}
                             </tr>
                             
-                            {/* Specs Rows */}
                             {specKeys.map(key => (
                                 <tr key={key} className="hover:bg-slate-50/50">
                                     <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">{key}</td>
@@ -567,7 +590,6 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                                 </tr>
                             ))}
 
-                            {/* Features Row */}
                             <tr className="hover:bg-slate-50/50">
                                 <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Key Features</td>
                                 {products.map(p => (
@@ -584,7 +606,6 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                                 ))}
                             </tr>
 
-                            {/* Media Checks */}
                             <tr className="hover:bg-slate-50/50">
                                 <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Video Content</td>
                                 {products.map(p => (
@@ -611,7 +632,6 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
     );
 };
 
-// --- NEW COMPONENT: GLOBAL SEARCH ---
 const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: StoreData, onClose: () => void, onSelectProduct: (p: Product) => void }) => {
     const [query, setQuery] = useState('');
     const [filterBrand, setFilterBrand] = useState('all');
@@ -651,7 +671,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
     return (
         <div className="fixed inset-0 z-[120] bg-slate-900/95 backdrop-blur-xl flex flex-col animate-fade-in" onClick={onClose}>
             <div className="p-6 md:p-12 max-w-6xl mx-auto w-full flex flex-col h-full" onClick={e => e.stopPropagation()}>
-                {/* Search Bar Header */}
                 <div className="shrink-0 mb-8">
                     <div className="relative group">
                         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-500 w-8 h-8 group-focus-within:scale-110 transition-transform" />
@@ -669,7 +688,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                     </div>
                 </div>
 
-                {/* Filters Row */}
                 <div className="shrink-0 flex flex-wrap gap-4 mb-8">
                     <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10">
                         <div className="p-2 bg-blue-600 rounded-lg text-white"><Filter size={16} /></div>
@@ -710,7 +728,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                     </div>
                 </div>
 
-                {/* Results Grid */}
                 <div className="flex-1 overflow-y-auto no-scrollbar pb-20">
                     {results.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -754,7 +771,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
   const [kioskId, setKioskId] = useState(getKioskId());
   
-  // Derived state from storeData (Fleet Telemetry)
   const myFleetEntry = useMemo(() => storeData?.fleet?.find(f => f.id === kioskId), [storeData?.fleet, kioskId]);
   
   const currentShopName = myFleetEntry?.name || getShopName() || "New Device";
@@ -778,7 +794,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedBrandForPricelist, setSelectedBrandForPricelist] = useState<string | null>(null);
   
-  // New: Advanced Search and Compare states
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [compareProductIds, setCompareProductIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
@@ -829,7 +844,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
          }
       };
       syncCycle();
-      const interval = setInterval(syncCycle, 30000); // Heartbeat pulse
+      const interval = setInterval(syncCycle, 30000); 
       return () => { clearInterval(interval); clearInterval(clockInterval); };
     }
     return () => { clearInterval(clockInterval); };
@@ -852,7 +867,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const toggleCompareProduct = (product: Product) => {
     setCompareProductIds(prev => 
-        prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5) // Max 5 products
+        prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5) 
     );
   };
 
@@ -862,7 +877,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   if (!storeData) return null;
 
-  // Handle Setup Prompt
   if (!isSetup) {
       return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
   }
@@ -915,7 +929,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
               <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span></button>
           </div>
        </footer>
-       <footer className="hidden">No need to repeat content after footer</footer>
        <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
        
        {showGlobalSearch && <SearchModal storeData={storeData} onSelectProduct={(p) => { setActiveBrand(storeData.brands.find(b => b.id === (p as any).brandId)!); setActiveCategory(storeData.brands.find(b => b.id === (p as any).brandId)!.categories.find(c => c.id === (p as any).categoryId)!); setActiveProduct(p); }} onClose={() => setShowGlobalSearch(false)} />}
@@ -925,17 +938,13 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        {showPricelistModal && (
            <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-4 animate-fade-in print:hidden" onClick={() => setShowPricelistModal(false)}>
                <div className="relative w-full h-full md:h-auto md:max-w-5xl bg-white md:rounded-2xl shadow-2xl overflow-hidden md:max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                   {/* Modal Header */}
                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                       <h2 className="text-base md:text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={24} className="text-green-600" /> Pricelists</h2>
                       <button onClick={() => setShowPricelistModal(false)} className="p-2 rounded-full transition-colors hover:bg-slate-200"><X size={24} className="text-slate-500" /></button>
                    </div>
 
-                   {/* Responsive Body */}
                    <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                       {/* Brand Selector - DUAL ROW ON MOBILE TOP, SIDEBAR ON DESKTOP */}
                        <div className="shrink-0 w-full md:w-1/3 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 overflow-hidden flex flex-col">
-                           {/* MOBILE BRAND RIBBON - 2 ROWS HORIZONTAL */}
                            <div className="md:hidden">
                                <div className="p-2 bg-slate-100/50 border-b border-slate-200 flex items-center justify-between">
                                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest px-2">Select Brand Channel</span>
@@ -963,7 +972,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                                </div>
                            </div>
 
-                           {/* DESKTOP BRAND SIDEBAR */}
                            <div className="hidden md:flex flex-1 flex-col overflow-y-auto no-scrollbar">
                                {pricelistBrands.map(brand => (
                                    <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-green-500' : 'hover:bg-white'}`}>
@@ -976,7 +984,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                            </div>
                        </div>
                        
-                       {/* Pricelists Display Area */}
                        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 relative">
                            {selectedBrandForPricelist ? (
                                <div className="animate-fade-in">
@@ -1023,15 +1030,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                                            </button>
                                        ))}
                                    </div>
-                                   {storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).length === 0 && (
-                                       <div className="col-span-full h-64 flex flex-col items-center justify-center text-slate-300 gap-4 bg-white/50 rounded-2xl border-2 border-dashed border-slate-200">
-                                           <div className="p-4 bg-slate-100 rounded-full"><FileText size={40} className="opacity-20" /></div>
-                                           <div className="text-center">
-                                                <p className="uppercase font-black text-[10px] tracking-[0.2em]">Archive Empty</p>
-                                                <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">No documents found for this category</p>
-                                           </div>
-                                       </div>
-                                   )}
                                </div>
                            ) : (
                                <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">

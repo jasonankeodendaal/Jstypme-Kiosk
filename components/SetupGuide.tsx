@@ -1,13 +1,14 @@
 
 import React, { useState } from 'react';
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert } from 'lucide-react';
+/* Added ChevronRight to the import list from lucide-react */
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Table, List, RefreshCw, ChevronRight } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
 }
 
 const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'local' | 'build' | 'vercel' | 'supabase'>('supabase');
+  const [activeTab, setActiveTab] = useState<'local' | 'build' | 'vercel' | 'supabase' | 'pricelist'>('supabase');
   const [copiedStep, setCopiedStep] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, stepId: string) => {
@@ -110,9 +111,10 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
             <nav className="space-y-4">
                 {[
                     { id: 'supabase', label: '1. Supabase Cloud', sub: 'Backend API & RLS', icon: Database, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-600' },
-                    { id: 'local', label: '2. PC Station Hub', sub: 'Development Env', icon: Server, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
-                    { id: 'build', label: '3. Asset Pipeline', sub: 'Tree-Shaking & Min', icon: Hammer, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
-                    { id: 'vercel', label: '4. Edge Network', sub: 'Global CDN Delivery', icon: Globe, color: 'text-slate-900', bg: 'bg-slate-100', border: 'border-slate-900' }
+                    { id: 'pricelist', label: '2. Pricelist Engine', sub: 'Data Bridging Logic', icon: Table, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-600' },
+                    { id: 'local', label: '3. PC Station Hub', sub: 'Development Env', icon: Server, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
+                    { id: 'build', label: '4. Asset Pipeline', sub: 'Tree-Shaking & Min', icon: Hammer, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
+                    { id: 'vercel', label: '5. Edge Network', sub: 'Global CDN Delivery', icon: Globe, color: 'text-slate-900', bg: 'bg-slate-100', border: 'border-slate-900' }
                 ].map(tab => (
                     <button 
                         key={tab.id}
@@ -143,6 +145,70 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
         <div className="flex-1 overflow-y-auto bg-slate-50/70 p-4 md:p-12 scroll-smooth">
            <div className="max-w-4xl mx-auto bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden min-h-full pb-32">
               
+              {/* PHASE: PRICELIST ENGINE */}
+              {activeTab === 'pricelist' && (
+                  <div className="p-8 md:p-16 animate-fade-in">
+                      <SectionHeading icon={Table} subtitle="Decoupled brand channel logic and automated inventory bridging algorithms.">Pricelist Lifecycle & Workflow</SectionHeading>
+                      
+                      <WhyBox title="Decoupled Architecture">
+                          Unlike the Inventory, which is customer-facing and requires high-res assets, the <strong>Pricelist Module</strong> is designed for staff speed. We use separate "Pricelist Brands" so that lists can be organized by internal procurement channels rather than just retail marketing categories.
+                      </WhyBox>
+
+                      <div className="space-y-8">
+                          <Step number="1" title="The Builder Workflow">
+                              <p className="font-medium text-slate-700 leading-relaxed">Admin staff can create "Manual Tables" within a brand channel. Each table supports SKU-based entry, regular pricing, and red-text promotion overrides.</p>
+                              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Workflow Pipeline</h4>
+                                  <div className="flex items-center justify-between gap-2">
+                                      <div className="flex-1 bg-white p-3 rounded-xl border border-slate-100 text-center shadow-sm">
+                                          <div className="text-[9px] font-black uppercase text-blue-600 mb-1">Create</div>
+                                          <div className="text-[10px] font-bold text-slate-500">Define Brand Channel</div>
+                                      </div>
+                                      <ChevronRight size={16} className="text-slate-300" />
+                                      <div className="flex-1 bg-white p-3 rounded-xl border border-slate-100 text-center shadow-sm">
+                                          <div className="text-[9px] font-black uppercase text-green-600 mb-1">Build</div>
+                                          <div className="text-[10px] font-bold text-slate-500">Enter Rows/SKUs</div>
+                                      </div>
+                                      <ChevronRight size={16} className="text-slate-300" />
+                                      <div className="flex-1 bg-white p-3 rounded-xl border border-slate-100 text-center shadow-sm">
+                                          <div className="text-[9px] font-black uppercase text-purple-600 mb-1">Bridge</div>
+                                          <div className="text-[10px] font-bold text-slate-500">Auto-Inventory Sync</div>
+                                      </div>
+                                  </div>
+                              </div>
+                          </Step>
+
+                          <Step number="2" title="The Inventory Bridge Engine">
+                              <p className="font-medium text-slate-700">When a Manual Pricelist is saved, the system runs a <strong>Cross-Reference Bridge</strong>. If a SKU entered in the table does not exist in the main Inventory, the engine automatically creates a "Stub" product in the **Pricelist Imports** category of the corresponding Inventory Brand.</p>
+                              <WhyBox title="Why Bridge automatically?">
+                                  This ensures that even if you haven't uploaded pretty pictures yet, customers can still find the product via <strong>Universal Search</strong>. The SKU acts as the primary key connecting the "Quick-Entry" table to the "High-Res" customer showcase.
+                              </WhyBox>
+                          </Step>
+
+                          <Step number="3" title="Print & PDF Optimization">
+                              <p className="font-medium text-slate-700">Manual pricelists are dynamically transformed into printable sheets. The system automatically injects:</p>
+                              <ul className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <li className="flex gap-3 text-xs font-bold text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                      <CheckCircle2 size={16} className="text-blue-500 shrink-0" /> Company Logo from Global Hero Settings
+                                  </li>
+                                  <li className="flex gap-3 text-xs font-bold text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                      <CheckCircle2 size={16} className="text-blue-500 shrink-0" /> Brand Channel Logo from Pricelist Brand
+                                  </li>
+                                  <li className="flex gap-3 text-xs font-bold text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                      <CheckCircle2 size={16} className="text-blue-500 shrink-0" /> "Admin Authorized" verification stamp
+                                  </li>
+                                  <li className="flex gap-3 text-xs font-bold text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                      <CheckCircle2 size={16} className="text-blue-500 shrink-0" /> Month/Year Periodization
+                                  </li>
+                              </ul>
+                              <EngineerNote>
+                                  The print layout uses `@media print` CSS rules to strip the UI "chrome" (buttons, background blurs, navigation) and output a clean, high-contrast black-on-white document suitable for thermal or laser printers.
+                              </EngineerNote>
+                          </Step>
+                      </div>
+                  </div>
+              )}
+
               {/* PHASE 1: SUPABASE */}
               {activeTab === 'supabase' && (
                 <div className="p-8 md:p-16 animate-fade-in">
