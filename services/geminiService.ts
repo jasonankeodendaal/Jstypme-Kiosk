@@ -1,6 +1,8 @@
 
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser } from "../types";
 import { supabase, getEnv, initSupabase } from "./kioskService";
+// Fix: Use the correct named import as per GenAI guidelines
+import { GoogleGenAI } from "@google/genai";
 
 const STORAGE_KEY_DATA = 'kiosk_pro_store_data';
 const STORAGE_KEY_ID = 'kiosk_pro_device_id';
@@ -362,4 +364,21 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
 export const resetStoreData = async (): Promise<StoreData> => {
     await saveStoreData(DEFAULT_DATA);
     return DEFAULT_DATA;
+};
+
+// Fix: Implement AI-powered product description generation using Gemini SDK
+export const generateAIProductDescription = async (productName: string, specs: Record<string, string>) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Write a professional, sales-focused retail description for a product named "${productName}". 
+    Specifications: ${JSON.stringify(specs)}. 
+    Format: Keep it to about 3-4 compelling sentences optimized for a retail kiosk display.`,
+    config: {
+      temperature: 0.7,
+      topP: 0.95,
+      topK: 40,
+    }
+  });
+  return response.text;
 };
