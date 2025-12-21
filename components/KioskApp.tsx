@@ -353,7 +353,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                 </div>
 
                 <div className="flex flex-col items-end gap-3">
-                    {brandLogo && <img src={brandLogo} alt="Brand Logo" className="h-16 object-contain" />}
+                    {brandLogo && <img src={brandLogo} alt="Brand Logo" className="h-24 object-contain" />}
                     <div className="text-right">
                         <div className="bg-slate-900 text-white px-3 py-1 rounded text-xs font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
                         <p className="text-[9px] font-bold text-slate-400 uppercase mt-2">Document Reference: {pricelist.id.substring(0,8).toUpperCase()}</p>
@@ -1030,3 +1030,5 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     </div>
   );
 };
+
+export default KioskApp;
