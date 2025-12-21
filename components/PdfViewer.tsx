@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Printer, Download } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Printer, Download, Share2 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Fix for ESM import in some environments where the module is wrapped in 'default'
@@ -32,6 +32,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<any>(null);
   const loadingTaskRef = useRef<any>(null);
+
+  const isMobile = window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   // Track container size for responsive fitting
   useEffect(() => {
@@ -161,11 +163,23 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   const handleZoomOut = () => setScale(prev => prev > 0 ? Math.max(0.2, prev / 1.2) : 0);
   const handleFit = () => setScale(0);
 
-  const handlePrint = (e: React.MouseEvent) => {
+  const handlePrint = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    // On mobile/tablet, opening the raw PDF URL in a new window is the most reliable way 
-    // to trigger the native OS print/share/download dialogs.
-    window.open(url, '_blank');
+    
+    if (isMobile && navigator.share) {
+        try {
+            await navigator.share({
+                title: title,
+                text: `Pricelist Document: ${title}`,
+                url: url,
+            });
+        } catch (err) {
+            console.warn("Share failed", err);
+            window.open(url, '_blank');
+        }
+    } else {
+        window.open(url, '_blank');
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -207,7 +221,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
                 onClick={handlePrint}
                 className="flex items-center gap-1.5 md:gap-2 bg-white text-slate-900 px-3 py-1.5 md:px-4 md:py-2 rounded-lg font-black text-[9px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95"
               >
-                <Printer size={14} /> <span className="hidden sm:inline">Print / Open</span>
+                {isMobile ? <Share2 size={14} /> : <Printer size={14} />} 
+                <span className="hidden sm:inline">{isMobile ? 'Save / Share' : 'Print / Open'}</span>
               </button>
               <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20} /></button>
           </div>
