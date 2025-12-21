@@ -45,8 +45,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
     };
 
     window.addEventListener('resize', updateSize);
-    updateSize(); // Initial call
-    return () => window.removeEventListener('resize', updateSize);
+    // Use a small delay to ensure modal transition is finished on mobile
+    const timer = setTimeout(updateSize, 100);
+    return () => {
+        window.removeEventListener('resize', updateSize);
+        clearTimeout(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -78,7 +82,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
       } catch (err: any) {
         if (err?.message !== 'Loading aborted') {
             console.error("PDF Load Error:", err);
-            setError("Unable to load document.");
+            setError("Unable to load document. Check network connection.");
             setLoading(false);
         }
       }
@@ -91,7 +95,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
 
   useEffect(() => {
     const renderPage = async () => {
-      if (!pdf || !canvasRef.current || !containerRef.current) return;
+      if (!pdf || !canvasRef.current || !containerRef.current || containerSize.width === 0) return;
       
       try {
         if (renderTaskRef.current) {
@@ -105,17 +109,19 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
         
         // Dynamic "Shrink to Fit" Logic
         if (renderScale <= 0) {
-            const padding = 48; // Responsive margin
+            const padding = window.innerWidth < 768 ? 20 : 48; 
             const availableWidth = containerSize.width - padding;
             const availableHeight = containerSize.height - padding;
             
             const scaleX = availableWidth / viewportUnscaled.width;
             const scaleY = availableHeight / viewportUnscaled.height;
             
-            renderScale = Math.min(scaleX, scaleY, 2.0); // Don't auto-fit beyond 200% zoom
+            renderScale = Math.min(scaleX, scaleY, 2.0); 
         }
 
-        const outputScale = window.devicePixelRatio || 1;
+        // CAP DPR FOR MOBILE: High-end phones (DPR 3+) can exceed canvas memory limits
+        // 2.0 is a safe maximum for sharp text without crashing mobile GPUs
+        const outputScale = Math.min(window.devicePixelRatio || 1, 2);
         const viewport = page.getViewport({ scale: renderScale }); 
         
         const canvas = canvasRef.current;
@@ -149,7 +155,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   };
 
   const handleZoomIn = () => setScale(prev => {
-      const current = prev <= 0 ? (canvasRef.current?.clientWidth || 0) / (pdf ? 1000 : 1) : prev; // Approximate unscaled width
+      const current = prev <= 0 ? (canvasRef.current?.clientWidth || 0) / (pdf ? 1000 : 1) : prev;
       return Math.min(5.0, (current || 1) * 1.2);
   });
   const handleZoomOut = () => setScale(prev => prev > 0 ? Math.max(0.2, prev / 1.2) : 0);
@@ -178,7 +184,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
        <div className="flex items-center justify-between p-4 bg-slate-900 text-white border-b border-slate-800 shrink-0 z-20" onClick={e => e.stopPropagation()}>
           <div className="flex items-center gap-4 overflow-hidden">
               <div className="bg-red-500 p-2 rounded-lg shrink-0"><span className="font-black text-[10px] uppercase">PDF</span></div>
-              <h2 className="text-lg font-bold uppercase tracking-wider truncate max-w-md">{title}</h2>
+              <h2 className="text-lg font-bold uppercase tracking-wider truncate max-w-[160px] md:max-w-md">{title}</h2>
               {pdf && (
                   <div className="hidden md:flex items-center gap-2 bg-slate-800 rounded-lg p-1 ml-4 border border-slate-700">
                       <button onClick={handleFit} className={`p-1.5 rounded transition-colors ${scale === 0 ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Auto Fit"><Maximize size={16}/></button>
@@ -188,7 +194,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
                   </div>
               )}
           </div>
-          <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={24} /></button>
+          <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={24} /></button>
        </div>
 
        <div 
@@ -207,7 +213,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
               </div>
           )}
           {error && (
-              <div className="bg-slate-800 p-8 rounded-2xl border border-red-500/50 text-center max-w-md shadow-2xl">
+              <div className="bg-slate-800 p-8 rounded-2xl border border-red-500/50 text-center max-w-md shadow-2xl mx-4">
                   <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
                   <p className="font-bold text-lg mb-6 text-white">{error}</p>
                   <button onClick={onClose} className="bg-white text-slate-900 px-8 py-3 rounded-xl font-bold uppercase text-xs">Close Viewer</button>
@@ -222,13 +228,13 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
            <div className="p-4 bg-slate-900 border-t border-slate-800 flex justify-center items-center gap-4 md:gap-8 shrink-0 z-20" onClick={e => e.stopPropagation()}>
                <button disabled={pageNum <= 1} onClick={() => changePage(-1)} className="p-3 bg-blue-600 hover:bg-blue-500 rounded-full text-white disabled:opacity-20 transition-all shadow-lg active:scale-95"><ChevronLeft size={24} /></button>
                <div className="flex flex-col items-center min-w-[80px]">
-                   <span className="text-white font-black text-xl">{pageNum} <span className="text-slate-500 text-sm">/ {pdf.numPages}</span></span>
+                   <span className="text-white font-black text-lg md:text-xl">{pageNum} <span className="text-slate-500 text-sm">/ {pdf.numPages}</span></span>
                </div>
                <button disabled={pageNum >= pdf.numPages} onClick={() => changePage(1)} className="p-3 bg-blue-600 hover:bg-blue-500 rounded-full text-white disabled:opacity-20 transition-all shadow-lg active:scale-95"><ChevronRight size={24} /></button>
-               <div className="flex md:hidden items-center gap-2 bg-slate-800 rounded-lg p-1 ml-4 border border-slate-700">
-                    <button onClick={handleZoomOut} className="p-2 text-slate-300"><ZoomOut size={20}/></button>
-                    <button onClick={handleFit} className={`p-2 ${scale === 0 ? 'text-blue-400' : 'text-slate-500'}`}><Maximize size={20}/></button>
-                    <button onClick={handleZoomIn} className="p-2 text-slate-300"><ZoomIn size={20}/></button>
+               <div className="flex md:hidden items-center gap-1 bg-slate-800 rounded-lg p-1 ml-2 border border-slate-700">
+                    <button onClick={handleZoomOut} className="p-2 text-slate-300"><ZoomOut size={16}/></button>
+                    <button onClick={handleFit} className={`p-2 ${scale === 0 ? 'text-blue-400' : 'text-slate-500'}`}><Maximize size={16}/></button>
+                    <button onClick={handleZoomIn} className="p-2 text-slate-300"><ZoomIn size={16}/></button>
                </div>
            </div>
        )}

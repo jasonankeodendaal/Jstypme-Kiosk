@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
@@ -42,7 +41,7 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
   </svg>
 );
 
-// --- NEW COMPONENT: SETUP SCREEN ---
+// --- SETUP SCREEN ---
 const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComplete: () => void }) => {
     const [step, setStep] = useState(1);
     const [shopName, setShopName] = useState('');
@@ -185,26 +184,82 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
 const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: { pricelist: Pricelist, onClose: () => void, companyLogo?: string, brandLogo?: string }) => {
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
-  const [zoom, setZoom] = useState(1);
-  
+  const [zoom, setZoom] = useState(0); // 0 = Auto Fit Mode
+  const [isDragging, setIsDragging] = useState(false);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  // Auto-fit calculation on mount and resize
+  useEffect(() => {
+    const calculateFit = () => {
+        if (zoom !== 0) return; // Only if in fit mode
+        if (!containerRef.current || !tableRef.current) return;
+
+        const containerWidth = containerRef.current.clientWidth;
+        const tableWidth = 1000; // Standard reference width for the table
+        const padding = window.innerWidth < 768 ? 20 : 48;
+        
+        const fitScale = (containerWidth - padding) / tableWidth;
+        // Cap fit scale at 1.0 (no scaling up for fit)
+        const finalFit = Math.min(1.0, fitScale);
+        
+        // Update the scale of the element directly for responsiveness if zoom is 0
+        const tableWrapper = tableRef.current.parentElement;
+        if (tableWrapper) {
+            tableWrapper.style.transform = `scale(${finalFit})`;
+        }
+    };
+
+    calculateFit();
+    window.addEventListener('resize', calculateFit);
+    return () => window.removeEventListener('resize', calculateFit);
+  }, [zoom]);
+
   const handlePrint = () => {
     window.print();
   };
 
+  const currentScale = zoom === 0 ? 1 : zoom; // Effective scale for zoom buttons
+
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoom(prev => Math.min(prev + 0.1, 2.5));
+    setZoom(prev => {
+        const start = prev === 0 ? (containerRef.current?.clientWidth || 1000) / 1000 : prev;
+        return Math.min(start * 1.2, 3.0);
+    });
   };
 
   const handleZoomOut = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoom(prev => Math.max(prev - 0.1, 0.5));
+    setZoom(prev => prev > 0.1 ? prev / 1.2 : 0);
   };
 
   const handleResetZoom = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoom(1);
+    setZoom(0); // Reset to Auto Fit
   };
+
+  // Pan logic for mobile/desktop
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoom === 0 || !containerRef.current) return;
+    setIsDragging(true);
+    setStartPos({ x: e.pageX, y: e.pageY });
+    setScrollPos({ left: containerRef.current.scrollLeft, top: containerRef.current.scrollTop });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !containerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - startPos.x;
+    const y = e.pageY - startPos.y;
+    containerRef.current.scrollLeft = scrollPos.left - x;
+    containerRef.current.scrollTop = scrollPos.top - y;
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
 
   return (
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block" onClick={onClose}>
@@ -268,6 +323,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         .spreadsheet-table {
           border-collapse: separate;
           border-spacing: 0;
+          width: 1000px; /* Fixed logical width for scaling */
+          table-layout: fixed;
         }
         .spreadsheet-table th {
           position: sticky;
@@ -291,18 +348,22 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          font-size: clamp(8.5px, 1.3vw, 14px);
+          font-size: 14px;
           line-height: 1.2;
         }
         .sku-container {
-           font-size: clamp(7.5px, 1.1vw, 12px);
+           font-size: 12px;
            white-space: nowrap;
+        }
+        .table-wrapper {
+            will-change: transform;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
       `}</style>
 
       <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
         
-        {/* Screen-Only Header */}
+        {/* Header with Universal Zoom Controls */}
         <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 z-20 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
           <div className="flex items-center gap-4">
              <div className="hidden sm:flex bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10">
@@ -310,32 +371,32 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
              </div>
              <div>
                 <div className="flex items-center gap-2 md:gap-3">
-                  <h2 className="text-sm md:text-2xl font-black uppercase tracking-tight truncate max-w-[150px] md:max-w-none">{pricelist.title}</h2>
-                  {isNewlyUpdated && <span className="bg-white text-yellow-700 px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0 animate-pulse"><Sparkles size={10} /> NEW RELEASE</span>}
+                  <h2 className="text-sm md:text-2xl font-black uppercase tracking-tight truncate max-w-[120px] md:max-w-none">{pricelist.title}</h2>
+                  {isNewlyUpdated && <span className="bg-white text-yellow-700 px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0 animate-pulse"><Sparkles size={10} /> NEW</span>}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                   <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[9px] md:text-xs`}>{pricelist.month} {pricelist.year}</p>
-                   <div className={`w-1 h-1 rounded-full ${isNewlyUpdated ? 'bg-yellow-200' : 'bg-slate-700'}`}></div>
-                   <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[9px] md:text-xs`}>Pricelist Sheet</p>
+                   <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[8px] md:text-xs`}>{pricelist.month} {pricelist.year}</p>
                 </div>
              </div>
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-             {/* Zoom Controls */}
-             <div className="hidden sm:flex items-center gap-1 bg-white/10 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
-                <button onClick={handleZoomOut} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomOut size={18}/></button>
-                <button onClick={handleResetZoom} className="px-2 text-[10px] font-black uppercase tracking-widest min-w-[50px]">{Math.round(zoom * 100)}%</button>
-                <button onClick={handleZoomIn} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={18}/></button>
-                <div className="w-[1px] h-4 bg-white/20 mx-1"></div>
-                <button onClick={handleResetZoom} title="Reset to Fit" className="p-2 hover:bg-white/10 rounded-lg transition-colors"><Maximize size={18}/></button>
+             {/* Zoom Controls - Now visible on all devices */}
+             <div className="flex items-center gap-0.5 md:gap-1 bg-white/10 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
+                <button onClick={handleZoomOut} className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomOut size={16}/></button>
+                <button onClick={handleResetZoom} className={`px-1.5 md:px-2 text-[8px] md:text-[10px] font-black uppercase tracking-widest min-w-[35px] md:min-w-[50px] ${zoom === 0 ? 'text-blue-400' : 'text-white'}`}>
+                    {zoom === 0 ? 'FIT' : `${Math.round(zoom * 100)}%`}
+                </button>
+                <button onClick={handleZoomIn} className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={16}/></button>
+                <div className="hidden sm:block w-[1px] h-4 bg-white/20 mx-1"></div>
+                <button onClick={handleResetZoom} title="Reset to Fit" className="hidden sm:block p-2 hover:bg-white/10 rounded-lg transition-colors"><Maximize size={16}/></button>
              </div>
 
              <button 
                 onClick={handlePrint}
-                className="flex items-center gap-2 bg-white text-slate-900 px-4 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group"
+                className="hidden sm:flex items-center gap-2 bg-white text-slate-900 px-4 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group"
              >
-                <Printer size={16} className="group-hover:scale-110 transition-transform" /> <span className="hidden sm:inline">Export / Print</span>
+                <Printer size={16} className="group-hover:scale-110 transition-transform" /> <span>Export / Print</span>
              </button>
              <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20}/></button>
           </div>
@@ -360,50 +421,62 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                     </div>
                 </div>
             </div>
-
-            {/* Accent Divider */}
             <div className="h-1.5 bg-slate-900 w-full rounded-full mb-8"></div>
         </div>
 
-        {/* Spreadsheet / Table Area */}
-        <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:px-10">
-          <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', paddingBottom: zoom > 1 ? `${(zoom-1)*100}%` : '0' }} className="transition-transform duration-200">
-            <table className="spreadsheet-table w-full text-left border-collapse shadow-sm">
+        {/* Scalable Table Area */}
+        <div 
+          ref={containerRef}
+          className={`table-scroll flex-1 overflow-auto bg-white p-2 md:p-4 print:px-10 flex flex-col items-center ${zoom > 0 ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
+          <div 
+            className="table-wrapper transition-transform duration-200 origin-top"
+            style={{ 
+                transform: zoom > 0 ? `scale(${zoom})` : undefined, 
+                width: '1000px',
+                paddingBottom: zoom > 1 ? `${(zoom - 1) * 100}%` : '0' 
+            }}
+          >
+            <table ref={tableRef} className="spreadsheet-table text-left border-collapse shadow-sm">
                 <thead>
                 <tr className="print:bg-[#f1f5f9]">
-                    <th className="p-3 md:p-4 text-[10px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 w-24 md:w-40 print:text-slate-900 print:border-slate-800">CODE</th>
-                    <th className="p-3 md:p-4 text-[10px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 print:text-slate-900 print:border-slate-800">PRODUCT DESCRIPTION</th>
-                    <th className="p-3 md:p-4 text-[10px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:text-slate-900 print:border-slate-800">NORMAL</th>
-                    <th className="p-3 md:p-4 text-[10px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:text-slate-900 print:border-slate-800">OFFER</th>
+                    <th className="p-3 md:p-4 text-[14px] font-black uppercase tracking-tight border border-slate-300 w-32 print:text-slate-900 print:border-slate-800">CODE</th>
+                    <th className="p-3 md:p-4 text-[14px] font-black uppercase tracking-tight border border-slate-300 print:text-slate-900 print:border-slate-800">PRODUCT DESCRIPTION</th>
+                    <th className="p-3 md:p-4 text-[14px] font-black uppercase tracking-tight border border-slate-300 text-right w-32 print:text-slate-900 print:border-slate-800">NORMAL</th>
+                    <th className="p-3 md:p-4 text-[14px] font-black uppercase tracking-tight border border-slate-300 text-right w-32 print:text-slate-900 print:border-slate-800">OFFER</th>
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 print:divide-slate-200">
                 {(pricelist.items || []).map((item) => (
                     <tr key={item.id} className="excel-row transition-colors group">
-                    <td className="p-2 md:p-3 border border-slate-200 print:border-slate-300">
+                    <td className="p-3 border border-slate-200 print:border-slate-300">
                         <span className="sku-font font-bold sku-container text-slate-900 uppercase tracking-tighter">
                         {item.sku || 'N/A'}
                         </span>
                     </td>
-                    <td className="p-2 md:p-3 border border-slate-200 print:border-slate-300">
+                    <td className="p-3 border border-slate-200 print:border-slate-300">
                         <div className="flex flex-col">
                             <span className="font-bold text-slate-900 shrink-text uppercase tracking-tight leading-tight group-hover:text-blue-600 transition-colors">
                                 {item.description}
                             </span>
                         </div>
                     </td>
-                    <td className="p-2 md:p-3 text-right border border-slate-200 print:border-slate-300">
-                        <span className={`font-bold text-[10px] md:text-sm tracking-tighter ${item.promoPrice ? 'text-slate-500' : 'text-slate-900'}`}>
+                    <td className="p-3 text-right border border-slate-200 print:border-slate-300">
+                        <span className={`font-bold text-sm tracking-tighter ${item.promoPrice ? 'text-slate-500' : 'text-slate-900'}`}>
                         {item.normalPrice || 'POA'}
                         </span>
                     </td>
-                    <td className="p-2 md:p-3 text-right border border-slate-200 print:border-slate-300 bg-slate-50/10">
+                    <td className="p-3 text-right border border-slate-200 print:border-slate-300 bg-slate-50/10">
                         {item.promoPrice ? (
-                        <span className="font-black text-[11px] md:text-base text-red-600 tracking-tighter print:text-red-600">
+                        <span className="font-black text-base text-red-600 tracking-tighter print:text-red-600">
                             {item.promoPrice}
                         </span>
                         ) : (
-                        <span className="font-bold text-[10px] md:text-sm text-slate-900 tracking-tighter">
+                        <span className="font-bold text-sm text-slate-900 tracking-tighter">
                             {item.normalPrice || '—'}
                         </span>
                         )}
@@ -423,26 +496,16 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                 </tbody>
             </table>
           </div>
-          
-          {/* Print Footer */}
-          <div className="hidden print-only mt-8 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">
-              All prices include VAT where applicable. E&OE. Valid for {pricelist.month} {pricelist.year}.
-          </div>
         </div>
 
-        {/* Footer Area */}
-        <div className="p-3 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 print:hidden z-10">
-          <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Items: {(pricelist.items || []).length}</span>
-              </div>
-              <div className="hidden md:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  <Info size={12} className="text-blue-300" /> Adjust zoom for high-density reading
-              </div>
+        {/* Minimal Footer for Mobile */}
+        <div className="p-2 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-row justify-between items-center gap-4 shrink-0 print:hidden z-10">
+          <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+              <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Items: {(pricelist.items || []).length}</span>
           </div>
-          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right">
-            System generated • Valid for {pricelist.month} {pricelist.year} • Prices include VAT where applicable.
+          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
+            System valid for {pricelist.month} {pricelist.year}
           </p>
         </div>
       </div>
@@ -468,7 +531,7 @@ export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
   </div>
 );
 
-// --- NEW COMPONENT: COMPARISON MODAL ---
+// --- COMPARISON MODAL ---
 const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Product[], onClose: () => void, onShowDetail: (p: Product) => void }) => {
     // Unique spec keys across all products
     const specKeys = useMemo(() => {
@@ -512,7 +575,6 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {/* Description Row */}
                             <tr className="hover:bg-slate-50/50">
                                 <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Description</td>
                                 {products.map(p => (
@@ -522,7 +584,6 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                                 ))}
                             </tr>
                             
-                            {/* Specs Rows */}
                             {specKeys.map(key => (
                                 <tr key={key} className="hover:bg-slate-50/50">
                                     <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">{key}</td>
@@ -534,7 +595,6 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                                 </tr>
                             ))}
 
-                            {/* Features Row */}
                             <tr className="hover:bg-slate-50/50">
                                 <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Key Features</td>
                                 {products.map(p => (
@@ -551,7 +611,6 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                                 ))}
                             </tr>
 
-                            {/* Media Checks */}
                             <tr className="hover:bg-slate-50/50">
                                 <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Video Content</td>
                                 {products.map(p => (
@@ -578,7 +637,7 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
     );
 };
 
-// --- NEW COMPONENT: GLOBAL SEARCH ---
+// --- GLOBAL SEARCH ---
 const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: StoreData, onClose: () => void, onSelectProduct: (p: Product) => void }) => {
     const [query, setQuery] = useState('');
     const [filterBrand, setFilterBrand] = useState('all');
@@ -618,7 +677,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
     return (
         <div className="fixed inset-0 z-[120] bg-slate-900/95 backdrop-blur-xl flex flex-col animate-fade-in" onClick={onClose}>
             <div className="p-6 md:p-12 max-w-6xl mx-auto w-full flex flex-col h-full" onClick={e => e.stopPropagation()}>
-                {/* Search Bar Header */}
                 <div className="shrink-0 mb-8">
                     <div className="relative group">
                         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-500 w-8 h-8 group-focus-within:scale-110 transition-transform" />
@@ -636,7 +694,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                     </div>
                 </div>
 
-                {/* Filters Row */}
                 <div className="shrink-0 flex flex-wrap gap-4 mb-8">
                     <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10">
                         <div className="p-2 bg-blue-600 rounded-lg text-white"><Filter size={16} /></div>
@@ -677,7 +734,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                     </div>
                 </div>
 
-                {/* Results Grid */}
                 <div className="flex-1 overflow-y-auto no-scrollbar pb-20">
                     {results.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -721,7 +777,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
   const [kioskId, setKioskId] = useState(getKioskId());
   
-  // Derived state from storeData (Fleet Telemetry)
   const myFleetEntry = useMemo(() => storeData?.fleet?.find(f => f.id === kioskId), [storeData?.fleet, kioskId]);
   
   const currentShopName = myFleetEntry?.name || getShopName() || "New Device";
@@ -745,7 +800,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedBrandForPricelist, setSelectedBrandForPricelist] = useState<string | null>(null);
   
-  // New: Advanced Search and Compare states
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [compareProductIds, setCompareProductIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
@@ -796,7 +850,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
          }
       };
       syncCycle();
-      const interval = setInterval(syncCycle, 30000); // Heartbeat pulse
+      const interval = setInterval(syncCycle, 30000); 
       return () => { clearInterval(interval); clearInterval(clockInterval); };
     }
     return () => { clearInterval(clockInterval); };
@@ -819,7 +873,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const toggleCompareProduct = (product: Product) => {
     setCompareProductIds(prev => 
-        prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5) // Max 5 products
+        prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5) 
     );
   };
 
@@ -829,7 +883,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   if (!storeData) return null;
 
-  // Handle Setup Prompt
   if (!isSetup) {
       return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
   }
@@ -882,7 +935,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
               <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span></button>
           </div>
        </footer>
-       <footer className="hidden">No need to repeat content after footer</footer>
        <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
        
        {showGlobalSearch && <SearchModal storeData={storeData} onSelectProduct={(p) => { setActiveBrand(storeData.brands.find(b => b.id === (p as any).brandId)!); setActiveCategory(storeData.brands.find(b => b.id === (p as any).brandId)!.categories.find(c => c.id === (p as any).categoryId)!); setActiveProduct(p); }} onClose={() => setShowGlobalSearch(false)} />}
@@ -892,33 +944,24 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        {showPricelistModal && (
            <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-4 animate-fade-in print:hidden" onClick={() => setShowPricelistModal(false)}>
                <div className="relative w-full h-full md:h-auto md:max-w-5xl bg-white md:rounded-2xl shadow-2xl overflow-hidden md:max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                   {/* Modal Header */}
                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                       <h2 className="text-base md:text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={24} className="text-green-600" /> Pricelists</h2>
                       <button onClick={() => setShowPricelistModal(false)} className="p-2 rounded-full transition-colors hover:bg-slate-200"><X size={24} className="text-slate-500" /></button>
                    </div>
 
-                   {/* Responsive Body */}
                    <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                       {/* Brand Selector - DUAL ROW ON MOBILE TOP, SIDEBAR ON DESKTOP */}
                        <div className="shrink-0 w-full md:w-1/3 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 overflow-hidden flex flex-col">
-                           {/* MOBILE BRAND RIBBON - 2 ROWS HORIZONTAL */}
                            <div className="md:hidden">
                                <div className="p-2 bg-slate-100/50 border-b border-slate-200 flex items-center justify-between">
                                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest px-2">Select Brand Channel</span>
-                                   <div className="flex gap-1 pr-2">
-                                       <div className="w-1 h-1 rounded-full bg-slate-300"></div>
-                                       <div className="w-1 h-1 rounded-full bg-slate-300"></div>
-                                       <div className="w-1 h-1 rounded-full bg-slate-400"></div>
-                                   </div>
                                </div>
-                               <div className="overflow-x-auto no-scrollbar py-2">
-                                   <div className="grid grid-rows-2 grid-flow-col gap-2 px-2 min-w-max">
+                               <div className="overflow-x-auto no-scrollbar py-2 h-28">
+                                   <div className="grid grid-rows-2 grid-flow-col gap-2 px-2 min-w-max h-full">
                                        {pricelistBrands.map(brand => (
                                            <button 
                                                key={brand.id} 
                                                onClick={() => setSelectedBrandForPricelist(brand.id)} 
-                                               className={`flex items-center gap-2 p-2 rounded-xl border transition-all min-w-[120px] ${selectedBrandForPricelist === brand.id ? 'bg-white border-green-500 shadow-sm ring-1 ring-green-500/20' : 'bg-slate-100 border-transparent hover:bg-white'}`}
+                                               className={`flex items-center gap-2 p-2 rounded-xl border transition-all min-w-[140px] ${selectedBrandForPricelist === brand.id ? 'bg-white border-green-500 shadow-sm ring-1 ring-green-500/20' : 'bg-slate-100 border-transparent hover:bg-white'}`}
                                            >
                                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
                                                   {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-[10px]">{brand.name.charAt(0)}</span>}
@@ -930,7 +973,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                                </div>
                            </div>
 
-                           {/* DESKTOP BRAND SIDEBAR */}
                            <div className="hidden md:flex flex-1 flex-col overflow-y-auto no-scrollbar">
                                {pricelistBrands.map(brand => (
                                    <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-green-500' : 'hover:bg-white'}`}>
@@ -943,7 +985,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                            </div>
                        </div>
                        
-                       {/* Pricelists Display Area */}
                        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 relative">
                            {selectedBrandForPricelist ? (
                                <div className="animate-fade-in">
