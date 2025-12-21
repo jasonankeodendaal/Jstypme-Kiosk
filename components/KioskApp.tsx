@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
@@ -23,7 +24,6 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import * as htmlToImage from 'html-to-image';
 import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize } from 'lucide-react';
 
 const isRecent = (dateString?: string) => {
@@ -42,7 +42,7 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
   </svg>
 );
 
-// --- SETUP SCREEN ---
+// --- NEW COMPONENT: SETUP SCREEN ---
 const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComplete: () => void }) => {
     const [step, setStep] = useState(1);
     const [shopName, setShopName] = useState('');
@@ -185,122 +185,50 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
 const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: { pricelist: Pricelist, onClose: () => void, companyLogo?: string, brandLogo?: string }) => {
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
-  const [zoom, setZoom] = useState(0); // 0 = Auto Fit Mode
-  const [fitScale, setFitScale] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-  const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [mobileImagePreview, setMobileImagePreview] = useState<string | null>(null);
-
+  const [zoom, setZoom] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
-  const captureAreaRef = useRef<HTMLDivElement>(null);
-
-  const isMobile = useMemo(() => {
-    return window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  }, []);
-
-  // Intelligent auto-fit calculation
+  
+  // Initial "Fit to Width" for mobile
   useEffect(() => {
-    const calculateFit = () => {
-        if (!containerRef.current) return;
-        const containerWidth = containerRef.current.clientWidth;
-        const tableWidth = 1000; // Standard reference logical width
-        const padding = window.innerWidth < 768 ? 20 : 48;
-        const scale = (containerWidth - padding) / tableWidth;
-        setFitScale(Math.min(1.0, scale)); // Never scale up for fit
-    };
-
-    calculateFit();
-    window.addEventListener('resize', calculateFit);
-    const timer = setTimeout(calculateFit, 200);
-    return () => {
-        window.removeEventListener('resize', calculateFit);
-        clearTimeout(timer);
-    };
-  }, []);
-
-  const handlePrint = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (isMobile) {
-        setIsGenerating(true);
-        try {
-            // Ensure we are capturing at 1:1 scale for clarity
-            const node = captureAreaRef.current;
-            if (node) {
-                // htmlToImage works best on elements that aren't scaled via CSS transform
-                // We create a temporary high-quality image
-                const dataUrl = await htmlToImage.toPng(node, {
-                    quality: 1,
-                    pixelRatio: 2,
-                    backgroundColor: '#ffffff'
-                });
-                setMobileImagePreview(dataUrl);
-            }
-        } catch (err) {
-            console.error("Image generation failed", err);
-            alert("Could not generate preview. Please try standard print.");
-            setTimeout(() => window.print(), 50);
-        } finally {
-            setIsGenerating(false);
+    if (window.innerWidth < 768 && tableRef.current && containerRef.current) {
+        const tableWidth = tableRef.current.offsetWidth;
+        const containerWidth = containerRef.current.offsetWidth - 20; // 10px padding each side
+        if (tableWidth > containerWidth) {
+            const fitZoom = Math.max(0.4, containerWidth / tableWidth);
+            setZoom(fitZoom);
         }
-    } else {
-        setTimeout(() => window.print(), 50);
     }
-  };
+  }, [pricelist.id]);
 
-  const downloadMobileImage = (e: React.MouseEvent) => {
+  const handlePrint = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!mobileImagePreview) return;
-    const link = document.createElement('a');
-    link.download = `Pricelist_${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}_${pricelist.year}.png`;
-    link.href = mobileImagePreview;
-    link.click();
+    // Force a small delay to ensure UI updates before print dialog on some devices
+    setTimeout(() => {
+        window.print();
+    }, 100);
   };
 
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoom(prev => {
-        const current = prev === 0 ? fitScale : prev;
-        return Math.min(current * 1.25, 3.0);
-    });
+    setZoom(prev => Math.min(prev + 0.1, 2.5));
   };
 
   const handleZoomOut = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoom(prev => {
-        const current = prev === 0 ? fitScale : prev;
-        const next = current / 1.25;
-        return next <= fitScale ? 0 : next;
-    });
+    setZoom(prev => Math.max(prev - 0.1, 0.4));
   };
 
   const handleResetZoom = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoom(0); // Reset to Auto Fit
+    if (window.innerWidth < 768 && tableRef.current && containerRef.current) {
+        const tableWidth = tableRef.current.offsetWidth;
+        const containerWidth = containerRef.current.offsetWidth - 20;
+        setZoom(Math.max(0.4, containerWidth / tableWidth));
+    } else {
+        setZoom(1);
+    }
   };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoom === 0 || !containerRef.current) return;
-    setIsDragging(true);
-    setStartPos({ x: e.pageX, y: e.pageY });
-    setScrollPos({ left: containerRef.current.scrollLeft, top: containerRef.current.scrollTop });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !containerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - startPos.x;
-    const y = e.pageY - startPos.y;
-    containerRef.current.scrollLeft = scrollPos.left - x;
-    containerRef.current.scrollTop = scrollPos.top - y;
-  };
-
-  const handleMouseUp = () => setIsDragging(false);
-
-  const activeScale = zoom === 0 ? fitScale : zoom;
 
   return (
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block" onClick={onClose}>
@@ -356,13 +284,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
             font-size: 11px !important;
             line-height: 1.2 !important;
           }
+          .spreadsheet-table .excel-row:nth-child(even) {
+            background-color: #f8fafc !important;
+          }
         }
         
         .spreadsheet-table {
           border-collapse: separate;
           border-spacing: 0;
-          width: 1000px;
-          table-layout: fixed;
         }
         .spreadsheet-table th {
           position: sticky;
@@ -379,194 +308,157 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           background-color: #f1f5f9;
         }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        
+        /* Text Shrink logic */
         .shrink-text {
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          font-size: 14px;
-          line-height: 1.2;
+          font-size: clamp(8px, 1.2vw, 13px);
+          line-height: 1.1;
         }
-        .table-wrapper {
-            will-change: transform;
-            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        .sku-container {
+           font-size: clamp(7px, 1vw, 11px);
+           white-space: nowrap;
         }
       `}</style>
 
-      {/* Generating Overlay */}
-      {isGenerating && (
-          <div className="absolute inset-0 z-[150] bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center text-white">
-              <Loader2 className="animate-spin text-blue-500 mb-4" size={48} />
-              <p className="font-black uppercase tracking-widest text-sm">Preparing Digital Image...</p>
-          </div>
-      )}
-
-      {/* Mobile Print Preview Modal */}
-      {mobileImagePreview && (
-          <div className="fixed inset-0 z-[160] bg-black/95 flex flex-col animate-fade-in" onClick={() => setMobileImagePreview(null)}>
-              <div className="p-4 md:p-6 flex justify-between items-center bg-slate-900 text-white shrink-0">
-                  <div className="flex items-center gap-3">
-                      <div className="p-2 bg-green-600 rounded-lg"><Sparkles size={16} /></div>
-                      <h3 className="font-black uppercase text-sm">Print Preview</h3>
-                  </div>
-                  <button onClick={() => setMobileImagePreview(null)} className="p-2 hover:bg-white/10 rounded-full"><X size={24} /></button>
-              </div>
-              <div className="flex-1 overflow-auto p-4 flex flex-col items-center justify-start bg-slate-800">
-                   <div className="bg-white p-2 shadow-2xl rounded-sm max-w-full">
-                       <img src={mobileImagePreview} className="w-full h-auto" alt="Preview" />
-                   </div>
-                   <div className="mt-8 mb-12 text-center">
-                       <p className="text-slate-400 text-xs font-bold uppercase mb-4">High-Resolution Image Generated</p>
-                       <button 
-                          onClick={downloadMobileImage}
-                          className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center gap-3 shadow-xl shadow-blue-900/50"
-                       >
-                           <Download size={20} /> Save Image to Phone
-                       </button>
-                   </div>
-              </div>
-          </div>
-      )}
-
       <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
         
-        {/* Universal Header */}
-        <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 z-20 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
-          <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
-             <div className="hidden sm:flex bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10">
-                <RIcon size={28} className={isNewlyUpdated ? 'text-white' : 'text-green-400'} />
+        {/* Screen-Only Header */}
+        <div className={`print-hidden p-3 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 z-20 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
+          <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
+             <div className="flex bg-white/10 p-2 md:p-3 rounded-xl md:rounded-2xl backdrop-blur-md border border-white/10 shrink-0">
+                <RIcon size={20} className={isNewlyUpdated ? 'text-white' : 'text-green-400'} />
              </div>
              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm md:text-2xl font-black uppercase tracking-tight truncate max-w-[120px] md:max-w-none">{pricelist.title}</h2>
-                  {isNewlyUpdated && <span className="bg-white text-yellow-700 px-1.5 py-0.5 rounded-full text-[7px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0 animate-pulse"><Sparkles size={8} /> NEW</span>}
+                <div className="flex items-center gap-2 md:gap-3">
+                  <h2 className="text-xs md:text-2xl font-black uppercase tracking-tight truncate">{pricelist.title}</h2>
+                  {isNewlyUpdated && <span className="bg-white text-yellow-700 px-1.5 py-0.5 rounded-full text-[6px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0 animate-pulse"><Sparkles size={8} /> NEW</span>}
                 </div>
-                <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[8px] md:text-xs truncate`}>{pricelist.month} {pricelist.year}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                   <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[7px] md:text-xs`}>{pricelist.month} {pricelist.year}</p>
+                </div>
              </div>
           </div>
 
-          <div className="flex items-center gap-1.5 md:gap-4">
-             {/* Zoom Controls */}
-             <div className="flex items-center gap-0.5 md:gap-1 bg-white/10 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
-                <button onClick={handleZoomOut} className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomOut size={16}/></button>
-                <button onClick={handleResetZoom} className={`px-1 md:px-2 text-[8px] md:text-[10px] font-black uppercase tracking-widest min-w-[32px] md:min-w-[50px] ${zoom === 0 ? 'text-blue-400' : 'text-white'}`}>
-                    {zoom === 0 ? 'FIT' : `${Math.round(zoom * 100)}%`}
-                </button>
-                <button onClick={handleZoomIn} className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={16}/></button>
+          <div className="flex items-center gap-1 md:gap-4 shrink-0">
+             {/* Zoom Controls - ALWAYS VISIBLE NOW */}
+             <div className="flex items-center gap-0.5 md:gap-1 bg-white/10 p-0.5 md:p-1 rounded-lg md:rounded-xl border border-white/10 backdrop-blur-sm">
+                <button onClick={handleZoomOut} className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomOut size={14} className="md:w-[18px] md:h-[18px]" /></button>
+                <button onClick={handleResetZoom} className="px-1 md:px-2 text-[7px] md:text-[10px] font-black uppercase tracking-widest min-w-[30px] md:min-w-[50px]">{Math.round(zoom * 100)}%</button>
+                <button onClick={handleZoomIn} className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={14} className="md:w-[18px] md:h-[18px]" /></button>
+                <div className="w-[1px] h-3 md:h-4 bg-white/20 mx-0.5 md:mx-1"></div>
+                <button onClick={handleResetZoom} title="Reset to Fit" className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"><Maximize size={14} className="md:w-[18px] md:h-[18px]" /></button>
              </div>
 
              <button 
                 onClick={handlePrint}
-                className="flex items-center gap-2 bg-white text-slate-900 p-2 md:px-4 md:py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group"
+                className="flex items-center gap-1 md:gap-2 bg-white text-slate-900 px-3 py-2 md:px-4 md:py-2.5 rounded-lg md:rounded-xl font-black text-[8px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group"
              >
-                <Printer size={16} className="group-hover:scale-110 transition-transform" /> <span className="hidden md:inline">{isMobile ? 'Preview' : 'Print / Export'}</span>
+                <Printer size={14} className="group-hover:scale-110 transition-transform md:w-[16px] md:h-[16px]" /> <span className="hidden md:inline">Print</span>
              </button>
-             <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20}/></button>
+             <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={16} className="md:w-[20px] md:h-[20px]" /></button>
           </div>
         </div>
 
-        {/* Capture Wrapper (Used for html-to-image) */}
-        <div ref={captureAreaRef} className="bg-white w-full print:p-0">
-            {/* Print-Only Header (Also visible in capture) */}
-            <div className={`${isMobile && mobileImagePreview ? 'block' : 'hidden'} print:block w-full px-10 pt-8 pb-4`}>
-                <div className="flex justify-between items-end mb-8">
-                    <div className="flex flex-col gap-4">
-                        {companyLogo && <img src={companyLogo} alt="Logo" className="h-12 object-contain self-start" />}
-                        <div>
-                            <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none">Official Price List</h1>
-                            <p className="text-base font-bold text-blue-600 uppercase tracking-[0.2em] mt-2">{pricelist.title}</p>
-                        </div>
+        {/* Professional Print-Only Header */}
+        <div className="hidden print-only w-full px-10 pt-8 pb-4">
+            <div className="flex justify-between items-end mb-8">
+                <div className="flex flex-col gap-4">
+                    {companyLogo && <img src={companyLogo} alt="Company Logo" className="h-14 object-contain self-start" />}
+                    <div>
+                        <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Official Price List</h1>
+                        <p className="text-lg font-bold text-blue-600 uppercase tracking-[0.2em] mt-2">{pricelist.title}</p>
                     </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-3">
+                    {brandLogo && <img src={brandLogo} alt="Brand Logo" className="h-24 object-contain" />}
                     <div className="text-right">
-                        {brandLogo && <img src={brandLogo} alt="Brand" className="h-16 object-contain mb-2 ml-auto" />}
-                        <div className="bg-slate-900 text-white px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
+                        <div className="bg-slate-900 text-white px-3 py-1 rounded text-xs font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase mt-2">Document Reference: {pricelist.id.substring(0,8).toUpperCase()}</p>
                     </div>
                 </div>
-                <div className="h-1.5 bg-slate-900 w-full rounded-full mb-8"></div>
             </div>
+            <div className="h-1.5 bg-slate-900 w-full rounded-full mb-8"></div>
+        </div>
 
-            {/* Table Viewport */}
-            <div 
-            ref={containerRef}
-            className={`table-scroll flex-1 overflow-auto bg-white p-2 md:p-4 print:px-10 flex flex-col items-center ${zoom > 0 ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            >
-                <div 
-                    className="table-wrapper origin-top"
-                    style={{ 
-                        transform: `scale(${activeScale})`,
-                        width: '1000px',
-                        paddingBottom: activeScale > 1 ? `${(activeScale - 1) * 100}%` : '0' 
-                    }}
-                >
-                    <table ref={tableRef} className="spreadsheet-table text-left border-collapse shadow-sm">
-                        <thead>
-                        <tr className="print:bg-[#f1f5f9]">
-                            <th className="p-3 md:p-4 text-[14px] font-black uppercase tracking-tight border border-slate-300 w-32 print:text-slate-900 print:border-slate-800">CODE</th>
-                            <th className="p-3 md:p-4 text-[14px] font-black uppercase tracking-tight border border-slate-300 print:text-slate-900 print:border-slate-800">PRODUCT DESCRIPTION</th>
-                            <th className="p-3 md:p-4 text-[14px] font-black uppercase tracking-tight border border-slate-300 text-right w-32 print:text-slate-900 print:border-slate-800">NORMAL</th>
-                            <th className="p-3 md:p-4 text-[14px] font-black uppercase tracking-tight border border-slate-300 text-right w-32 print:text-slate-900 print:border-slate-800">OFFER</th>
-                        </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 print:divide-slate-200">
-                        {(pricelist.items || []).map((item) => (
-                            <tr key={item.id} className="excel-row transition-colors group">
-                            <td className="p-3 border border-slate-200 print:border-slate-300">
-                                <span className="sku-font font-bold text-[12px] text-slate-900 uppercase tracking-tighter">
-                                {item.sku || 'N/A'}
-                                </span>
-                            </td>
-                            <td className="p-3 border border-slate-200 print:border-slate-300">
-                                <span className="font-bold text-slate-900 shrink-text uppercase tracking-tight leading-tight group-hover:text-blue-600 transition-colors">
-                                    {item.description}
-                                </span>
-                            </td>
-                            <td className="p-3 text-right border border-slate-200 print:border-slate-300">
-                                <span className={`font-bold text-sm tracking-tighter ${item.promoPrice ? 'text-slate-500 line-through opacity-50' : 'text-slate-900'}`}>
-                                {item.normalPrice || 'POA'}
-                                </span>
-                            </td>
-                            <td className="p-3 text-right border border-slate-200 print:border-slate-300 bg-slate-50/10">
-                                {item.promoPrice ? (
-                                <span className="font-black text-base text-red-600 tracking-tighter print:text-red-600">
-                                    {item.promoPrice}
-                                </span>
-                                ) : (
-                                <span className="font-bold text-sm text-slate-900 tracking-tighter">
-                                    {item.normalPrice || '—'}
-                                </span>
-                                )}
-                            </td>
-                            </tr>
-                        ))}
-                        {(pricelist.items || []).length === 0 && (
-                            <tr>
-                            <td colSpan={4} className="py-24 text-center">
-                                <div className="flex flex-col items-center gap-4 text-slate-300">
-                                    <FileText size={64} className="opacity-10" />
-                                    <span className="font-black uppercase tracking-[0.3em] text-xs">Spreadsheet Empty</span>
-                                </div>
-                            </td>
-                            </tr>
+        {/* Spreadsheet / Table Area */}
+        <div ref={containerRef} className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:px-10">
+          <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', paddingBottom: zoom > 1 ? `${(zoom-1)*100}%` : '0' }} className="transition-transform duration-200">
+            <table ref={tableRef} className="spreadsheet-table w-full text-left border-collapse shadow-sm">
+                <thead>
+                <tr className="print:bg-[#f1f5f9]">
+                    <th className="p-2 md:p-4 text-[8px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 w-16 md:w-40 print:text-slate-900 print:border-slate-800">CODE</th>
+                    <th className="p-2 md:p-4 text-[8px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 print:text-slate-900 print:border-slate-800">PRODUCT DESCRIPTION</th>
+                    <th className="p-2 md:p-4 text-[8px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 text-right w-16 md:w-32 print:text-slate-900 print:border-slate-800">NORMAL</th>
+                    <th className="p-2 md:p-4 text-[8px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 text-right w-16 md:w-32 print:text-slate-900 print:border-slate-800">OFFER</th>
+                </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 print:divide-slate-200">
+                {(pricelist.items || []).map((item) => (
+                    <tr key={item.id} className="excel-row transition-colors group">
+                    <td className="p-1.5 md:p-3 border border-slate-200 print:border-slate-300">
+                        <span className="sku-font font-bold sku-container text-slate-900 uppercase tracking-tighter">
+                        {item.sku || 'N/A'}
+                        </span>
+                    </td>
+                    <td className="p-1.5 md:p-3 border border-slate-200 print:border-slate-300">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-slate-900 shrink-text uppercase tracking-tight leading-tight group-hover:text-blue-600 transition-colors">
+                                {item.description}
+                            </span>
+                        </div>
+                    </td>
+                    <td className="p-1.5 md:p-3 text-right border border-slate-200 print:border-slate-300">
+                        <span className={`font-bold text-[8px] md:text-sm tracking-tighter ${item.promoPrice ? 'text-slate-500' : 'text-slate-900'}`}>
+                        {item.normalPrice || 'POA'}
+                        </span>
+                    </td>
+                    <td className="p-1.5 md:p-3 text-right border border-slate-200 print:border-slate-300 bg-slate-50/10">
+                        {item.promoPrice ? (
+                        <span className="font-black text-[9px] md:text-base text-red-600 tracking-tighter print:text-red-600">
+                            {item.promoPrice}
+                        </span>
+                        ) : (
+                        <span className="font-bold text-[8px] md:text-sm text-slate-900 tracking-tighter">
+                            {item.normalPrice || '—'}
+                        </span>
                         )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                    </td>
+                    </tr>
+                ))}
+                {(pricelist.items || []).length === 0 && (
+                    <tr>
+                    <td colSpan={4} className="py-24 text-center">
+                        <div className="flex flex-col items-center gap-4 text-slate-300">
+                            <FileText size={64} className="opacity-10" />
+                            <span className="font-black uppercase tracking-[0.3em] text-xs">Spreadsheet Empty</span>
+                        </div>
+                    </td>
+                    </tr>
+                )}
+                </tbody>
+            </table>
+          </div>
+          <div className="hidden print-only mt-8 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">
+              All prices include VAT where applicable. E&OE. Valid for {pricelist.month} {pricelist.year}.
+          </div>
+        </div>
 
-            {/* Modal Footer (Capture visible) */}
-            <div className="p-2 md:p-4 bg-slate-50 border-t border-slate-100 flex flex-row justify-between items-center gap-4 shrink-0 print:hidden z-10">
-            <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Items: {(pricelist.items || []).length}</span>
-            </div>
-            <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-                E&OE • Valid for {pricelist.month} {pricelist.year}
-            </p>
-            </div>
+        {/* Footer Area */}
+        <div className="p-2 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-2 md:gap-4 shrink-0 print:hidden z-10">
+          <div className="flex items-center gap-4 md:gap-6">
+              <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                  <span className="text-[6px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total: {(pricelist.items || []).length}</span>
+              </div>
+          </div>
+          <p className="text-[6px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right">
+            Valid for {pricelist.month} {pricelist.year} • E&OE.
+          </p>
         </div>
       </div>
     </div>
@@ -591,7 +483,7 @@ export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
   </div>
 );
 
-// --- COMPARISON MODAL ---
+// --- NEW COMPONENT: COMPARISON MODAL ---
 const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Product[], onClose: () => void, onShowDetail: (p: Product) => void }) => {
     // Unique spec keys across all products
     const specKeys = useMemo(() => {
@@ -635,6 +527,7 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
+                            {/* Description Row */}
                             <tr className="hover:bg-slate-50/50">
                                 <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Description</td>
                                 {products.map(p => (
@@ -644,6 +537,7 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                                 ))}
                             </tr>
                             
+                            {/* Specs Rows */}
                             {specKeys.map(key => (
                                 <tr key={key} className="hover:bg-slate-50/50">
                                     <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">{key}</td>
@@ -655,6 +549,7 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                                 </tr>
                             ))}
 
+                            {/* Features Row */}
                             <tr className="hover:bg-slate-50/50">
                                 <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Key Features</td>
                                 {products.map(p => (
@@ -671,6 +566,7 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                                 ))}
                             </tr>
 
+                            {/* Media Checks */}
                             <tr className="hover:bg-slate-50/50">
                                 <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Video Content</td>
                                 {products.map(p => (
@@ -697,7 +593,7 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
     );
 };
 
-// --- GLOBAL SEARCH ---
+// --- NEW COMPONENT: GLOBAL SEARCH ---
 const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: StoreData, onClose: () => void, onSelectProduct: (p: Product) => void }) => {
     const [query, setQuery] = useState('');
     const [filterBrand, setFilterBrand] = useState('all');
@@ -737,6 +633,7 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
     return (
         <div className="fixed inset-0 z-[120] bg-slate-900/95 backdrop-blur-xl flex flex-col animate-fade-in" onClick={onClose}>
             <div className="p-6 md:p-12 max-w-6xl mx-auto w-full flex flex-col h-full" onClick={e => e.stopPropagation()}>
+                {/* Search Bar Header */}
                 <div className="shrink-0 mb-8">
                     <div className="relative group">
                         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-500 w-8 h-8 group-focus-within:scale-110 transition-transform" />
@@ -754,6 +651,7 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                     </div>
                 </div>
 
+                {/* Filters Row */}
                 <div className="shrink-0 flex flex-wrap gap-4 mb-8">
                     <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10">
                         <div className="p-2 bg-blue-600 rounded-lg text-white"><Filter size={16} /></div>
@@ -794,6 +692,7 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                     </div>
                 </div>
 
+                {/* Results Grid */}
                 <div className="flex-1 overflow-y-auto no-scrollbar pb-20">
                     {results.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -837,6 +736,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
   const [kioskId, setKioskId] = useState(getKioskId());
   
+  // Derived state from storeData (Fleet Telemetry)
   const myFleetEntry = useMemo(() => storeData?.fleet?.find(f => f.id === kioskId), [storeData?.fleet, kioskId]);
   
   const currentShopName = myFleetEntry?.name || getShopName() || "New Device";
@@ -860,6 +760,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedBrandForPricelist, setSelectedBrandForPricelist] = useState<string | null>(null);
   
+  // New: Advanced Search and Compare states
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [compareProductIds, setCompareProductIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
@@ -910,7 +811,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
          }
       };
       syncCycle();
-      const interval = setInterval(syncCycle, 30000); 
+      const interval = setInterval(syncCycle, 30000); // Heartbeat pulse
       return () => { clearInterval(interval); clearInterval(clockInterval); };
     }
     return () => { clearInterval(clockInterval); };
@@ -933,7 +834,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const toggleCompareProduct = (product: Product) => {
     setCompareProductIds(prev => 
-        prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5) 
+        prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5) // Max 5 products
     );
   };
 
@@ -943,6 +844,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   if (!storeData) return null;
 
+  // Handle Setup Prompt
   if (!isSetup) {
       return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
   }
@@ -995,6 +897,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
               <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span></button>
           </div>
        </footer>
+       <footer className="hidden">No need to repeat content after footer</footer>
        <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
        
        {showGlobalSearch && <SearchModal storeData={storeData} onSelectProduct={(p) => { setActiveBrand(storeData.brands.find(b => b.id === (p as any).brandId)!); setActiveCategory(storeData.brands.find(b => b.id === (p as any).brandId)!.categories.find(c => c.id === (p as any).categoryId)!); setActiveProduct(p); }} onClose={() => setShowGlobalSearch(false)} />}
@@ -1004,24 +907,33 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        {showPricelistModal && (
            <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-4 animate-fade-in print:hidden" onClick={() => setShowPricelistModal(false)}>
                <div className="relative w-full h-full md:h-auto md:max-w-5xl bg-white md:rounded-2xl shadow-2xl overflow-hidden md:max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                   {/* Modal Header */}
                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                       <h2 className="text-base md:text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={24} className="text-green-600" /> Pricelists</h2>
                       <button onClick={() => setShowPricelistModal(false)} className="p-2 rounded-full transition-colors hover:bg-slate-200"><X size={24} className="text-slate-500" /></button>
                    </div>
 
+                   {/* Responsive Body */}
                    <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                       {/* Brand Selector - DUAL ROW ON MOBILE TOP, SIDEBAR ON DESKTOP */}
                        <div className="shrink-0 w-full md:w-1/3 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 overflow-hidden flex flex-col">
+                           {/* MOBILE BRAND RIBBON - 2 ROWS HORIZONTAL */}
                            <div className="md:hidden">
                                <div className="p-2 bg-slate-100/50 border-b border-slate-200 flex items-center justify-between">
                                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest px-2">Select Brand Channel</span>
+                                   <div className="flex gap-1 pr-2">
+                                       <div className="w-1 h-1 rounded-full bg-slate-300"></div>
+                                       <div className="w-1 h-1 rounded-full bg-slate-300"></div>
+                                       <div className="w-1 h-1 rounded-full bg-slate-400"></div>
+                                   </div>
                                </div>
-                               <div className="overflow-x-auto no-scrollbar py-2 h-28">
-                                   <div className="grid grid-rows-2 grid-flow-col gap-2 px-2 min-w-max h-full">
+                               <div className="overflow-x-auto no-scrollbar py-2">
+                                   <div className="grid grid-rows-2 grid-flow-col gap-2 px-2 min-w-max">
                                        {pricelistBrands.map(brand => (
                                            <button 
                                                key={brand.id} 
                                                onClick={() => setSelectedBrandForPricelist(brand.id)} 
-                                               className={`flex items-center gap-2 p-2 rounded-xl border transition-all min-w-[140px] ${selectedBrandForPricelist === brand.id ? 'bg-white border-green-500 shadow-sm ring-1 ring-green-500/20' : 'bg-slate-100 border-transparent hover:bg-white'}`}
+                                               className={`flex items-center gap-2 p-2 rounded-xl border transition-all min-w-[120px] ${selectedBrandForPricelist === brand.id ? 'bg-white border-green-500 shadow-sm ring-1 ring-green-500/20' : 'bg-slate-100 border-transparent hover:bg-white'}`}
                                            >
                                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
                                                   {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-[10px]">{brand.name.charAt(0)}</span>}
@@ -1033,6 +945,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                                </div>
                            </div>
 
+                           {/* DESKTOP BRAND SIDEBAR */}
                            <div className="hidden md:flex flex-1 flex-col overflow-y-auto no-scrollbar">
                                {pricelistBrands.map(brand => (
                                    <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-green-500' : 'hover:bg-white'}`}>
@@ -1045,6 +958,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                            </div>
                        </div>
                        
+                       {/* Pricelists Display Area */}
                        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 relative">
                            {selectedBrandForPricelist ? (
                                <div className="animate-fade-in">
