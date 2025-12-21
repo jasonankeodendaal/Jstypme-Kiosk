@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert } from 'lucide-react';
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Cloud } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
@@ -74,7 +74,6 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-100 flex flex-col animate-fade-in overflow-hidden">
-      {/* Top Header Bar */}
       <div className="bg-slate-900 text-white p-6 shadow-2xl shrink-0 flex items-center justify-between border-b border-slate-800 z-50">
         <div className="flex items-center gap-5">
            <div className="bg-blue-600 p-3 rounded-2xl shadow-[0_0_25px_rgba(37,99,235,0.4)]"><ShieldCheck size={32} className="text-white" /></div>
@@ -89,7 +88,6 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
       </div>
 
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
-        {/* Navigation Sidebar */}
         <div className="w-full md:w-80 bg-white border-r border-slate-200 p-6 flex flex-col shrink-0 overflow-y-auto z-40">
             <div className="mb-8 px-2">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-1">Infrastructure phases</h3>
@@ -98,10 +96,10 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
             
             <nav className="space-y-4">
                 {[
-                    { id: 'supabase', label: '1. Supabase Backbone', sub: 'SQL & RLS Policies', icon: Database, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-600' },
-                    { id: 'local', label: '2. Local Dev Station', sub: 'Node.js Runtime', icon: Server, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
-                    { id: 'build', label: '3. Asset Pipeline', sub: 'Tree-Shaking & Min', icon: Hammer, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
-                    { id: 'vercel', label: '4. Vercel Edge', sub: 'Anycast CDN Hub', icon: Globe, color: 'text-slate-900', bg: 'bg-slate-100', border: 'border-slate-900' }
+                    { id: 'supabase', label: '1. Supabase Backbone', sub: 'SQL & Storage', icon: Database, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-600' },
+                    { id: 'local', label: '2. Source Control', sub: 'GitHub Repository', icon: Github, color: 'text-slate-900', bg: 'bg-slate-50', border: 'border-slate-400' },
+                    { id: 'build', label: '3. Asset Pipeline', sub: 'Vite & Build Config', icon: Hammer, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
+                    { id: 'vercel', label: '4. Vercel Cloud', sub: 'Deployment & Edge', icon: Globe, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' }
                 ].map(tab => (
                     <button 
                         key={tab.id}
@@ -120,7 +118,6 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
             </nav>
         </div>
 
-        {/* Content Area */}
         <div className="flex-1 overflow-y-auto bg-slate-50/70 p-4 md:p-12">
            <div className="max-w-4xl mx-auto bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden min-h-full pb-32">
               
@@ -128,22 +125,29 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                 <div className="p-8 md:p-16 animate-fade-in">
                     <SectionHeading icon={Database} subtitle="Provisioning the mission-critical cloud backbone.">Supabase Infrastructure</SectionHeading>
                     <WhyBox title="Architectural Choice">
-                        Kiosk Pro uses a **Schema-Driven Architecture**. By using PostgreSQL, we gain strict relational integrity and high-speed Realtime replication.
+                        Kiosk Pro uses a **Schema-Driven Architecture**. By using PostgreSQL, we gain relational integrity and high-speed Realtime replication for fleet updates.
                     </WhyBox>
                     <Step number="1" title="Initialize Storage Buckets">
-                        <p className="font-medium text-slate-700">Run this SQL in your Supabase dashboard to allow large asset hosting (Videos/Manuals).</p>
-                        <CodeBlock id="sql-bucket" label="Bucket Initialization" code={`insert into storage.buckets (id, name, public) values ('kiosk-media', 'kiosk-media', true);`} />
+                        <p className="font-medium text-slate-700">Run this SQL in your Supabase dashboard SQL Editor to create the media bucket for hosting Videos and Manuals.</p>
+                        <CodeBlock id="sql-bucket" label="Bucket Initialization" code={`-- Create a public bucket for media assets
+insert into storage.buckets (id, name, public) 
+values ('kiosk-media', 'kiosk-media', true);
+
+-- Add security policy to allow public reads
+create policy "Public Access"
+  on storage.objects for select
+  using ( bucket_id = 'kiosk-media' );`} />
                     </Step>
                     <Step number="2" title="Core Table Definitions">
-                        <CodeBlock id="sql-schema" label="Database Master Script" code={`
--- MASTER CONFIG TABLE
+                        <p className="font-medium text-slate-700">Define the schema for Store Configuration and Fleet Management.</p>
+                        <CodeBlock id="sql-schema" label="Database Master Script" code={`-- MASTER CONFIG TABLE (Stores all Brand/Product JSON)
 CREATE TABLE IF NOT EXISTS public.store_config ( 
     id serial PRIMARY KEY,
     data jsonb NOT NULL DEFAULT '{}'::jsonb,
     updated_at timestamp with time zone DEFAULT now()
 );
 
--- FLEET MANAGEMENT TABLE
+-- FLEET MANAGEMENT TABLE (Real-time device telemetry)
 CREATE TABLE IF NOT EXISTS public.kiosks ( 
     id text PRIMARY KEY, 
     name text, 
@@ -155,25 +159,55 @@ CREATE TABLE IF NOT EXISTS public.kiosks (
     version text, 
     assigned_zone text, 
     restart_requested boolean DEFAULT false 
-);`} />
+);
+
+-- ENABLE REALTIME
+ALTER TABLE public.store_config REPLICA IDENTITY FULL;
+ALTER TABLE public.kiosks REPLICA IDENTITY FULL;`} />
+                    </Step>
+                </div>
+              )}
+
+              {activeTab === 'local' && (
+                <div className="p-8 md:p-16 animate-fade-in">
+                    <SectionHeading icon={Github} subtitle="Source control and version management.">GitHub Repository</SectionHeading>
+                    <WhyBox title="CI/CD Workflow">
+                        Connecting your GitHub repo to Vercel enables automatic builds on every push. This ensures your fleet always runs the latest stable codebase.
+                    </WhyBox>
+                    <Step number="1" title="Initialize Repository">
+                        <p className="font-medium text-slate-700">Push your local files to a private or public GitHub repository.</p>
+                        <CodeBlock id="git-init" label="Git Commands" code={`git init\ngit add .\ngit commit -m "Initial Kiosk Build"\ngit remote add origin your-repo-url\ngit push -u origin main`} />
+                    </Step>
+                </div>
+              )}
+
+              {activeTab === 'build' && (
+                <div className="p-8 md:p-16 animate-fade-in">
+                    <SectionHeading icon={Hammer} subtitle="Asset pipeline and build configuration.">Vite & Build Config</SectionHeading>
+                    <WhyBox title="Performance Optimization">
+                        The `vite.config.ts` is configured with **Manual Chunking** to separate large libraries (Supabase, PDF.js) from the main app logic, improving load times on hardware tablets.
+                    </WhyBox>
+                    <Step number="1" title="Vite Configuration">
+                        <p className="font-medium text-slate-700">Ensure your `vite.config.ts` includes the chunking logic provided in the root directory.</p>
                     </Step>
                 </div>
               )}
 
               {activeTab === 'vercel' && (
                   <div className="p-8 md:p-16 animate-fade-in">
-                      <SectionHeading icon={Globe} subtitle="Global distribution via Anycast IP routing.">Deployment Protocol</SectionHeading>
-                      <WhyBox title="Why Vercel?">
-                          Vercel provides **Atomic Immutability**. Every code push creates a unique URL, allowing instant fleet-wide rollbacks if a visual bug is detected.
+                      <SectionHeading icon={Globe} subtitle="Global distribution via Anycast IP routing.">Vercel Deployment</SectionHeading>
+                      <WhyBox title="Edge Delivery">
+                          Vercel serves the kiosk app from global CDN nodes, ensuring low latency for heavy media assets even in remote store locations.
                       </WhyBox>
                       <Step number="1" title="Environment Secret Injection">
-                          <p className="font-medium text-slate-700">Add these keys to your Project Settings > Environment Variables.</p>
+                          <p className="font-medium text-slate-700">Navigate to Project Settings &gt; Environment Variables and add these keys:</p>
                           <CodeBlock id="env-vars" label="Vercel Secrets" code={`VITE_SUPABASE_URL=https://xxxx.supabase.co\nVITE_SUPABASE_ANON_KEY=your-anon-key`} />
+                      </Step>
+                      <Step number="2" title="Routing Config">
+                          <p className="font-medium text-slate-700">Your `vercel.json` must handle the SPA routing for the `/admin` path to function correctly after refresh.</p>
                       </Step>
                   </div>
               )}
-
-              {/* ... Rest of full setup guide tabs ... */}
            </div>
         </div>
       </div>

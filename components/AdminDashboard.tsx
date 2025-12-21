@@ -95,6 +95,12 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+    // TV Edit State
+    const [editingTvBrand, setEditingTvBrand] = useState<TVBrand | null>(null);
+
+    // Pricelist Edit State
+    const [editingPricelist, setEditingPricelist] = useState<Pricelist | null>(null);
+
     useEffect(() => { if (storeData && !hasUnsavedChanges) setLocalData(storeData); }, [storeData]);
 
     const updateData = (newData: StoreData) => { 
@@ -274,7 +280,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                         <div className="animate-fade-in space-y-12">
                             <SectionHeader title="Global Marketing Config" icon={Megaphone} />
                             
-                            {/* Hero Section Edit */}
                             <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-sm relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-10 opacity-5"><Layout size={180} /></div>
                                 <h3 className="text-xl font-black text-slate-900 uppercase mb-8 flex items-center gap-3"><LayoutTemplate size={20} className="text-blue-600" /> Landing Hero Content</h3>
@@ -291,18 +296,17 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                     </div>
                                     <div className="space-y-6">
                                         <div>
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Background Media URL (Video or Image)</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Background Media URL</label>
                                             <input className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono text-xs" value={localData?.hero.backgroundVideoUrl || localData?.hero.backgroundImageUrl} onChange={e => updateData({...localData!, hero: {...localData!.hero, backgroundVideoUrl: e.target.value}})} />
                                         </div>
                                         <div className="p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
                                             <ImageIcon size={40} className="text-slate-300 mb-4" />
-                                            <p className="text-xs font-black text-slate-400 uppercase">Interactive Preview Disabled in Hub</p>
+                                            <p className="text-xs font-black text-slate-400 uppercase">Preview Window</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Ad Zones */}
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 {['homeBottomLeft', 'homeBottomRight', 'homeSideVertical'].map(zone => (
                                     <div key={zone} className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col">
@@ -322,12 +326,133 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                                     <button className="text-red-400 hover:text-red-600"><Trash2 size={16}/></button>
                                                 </div>
                                             ))}
-                                            {(!((localData?.ads as any)[zone]) || (localData?.ads as any)[zone].length === 0) && (
-                                                <div className="py-12 border-2 border-dashed border-slate-100 rounded-3xl flex items-center justify-center text-[10px] font-black text-slate-300 uppercase tracking-widest">No Ads assigned</div>
-                                            )}
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PRICELISTS MODULE */}
+                    {activeTab === 'pricelists' && (
+                        <div className="animate-fade-in space-y-8">
+                            <SectionHeader title="Pricelist Documents" icon={Table} actions={
+                                <button onClick={() => {
+                                    const newPL: Pricelist = { id: generateId('pl'), brandId: '', title: 'New Pricelist', type: 'manual', items: [], url: '', month: 'January', year: '2024' };
+                                    updateData({ ...localData!, pricelists: [...(localData!.pricelists || []), newPL] });
+                                    setEditingPricelist(newPL);
+                                }} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 shadow-lg"><Plus size={16}/> New List</button>
+                            } />
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                {(localData?.pricelists || []).map(pl => (
+                                    <div key={pl.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col group hover:border-blue-400 transition-all">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
+                                                {pl.type === 'manual' ? <List size={24}/> : <FileIcon size={24}/>}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-black text-slate-900 uppercase truncate">{pl.title}</h3>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{pl.month} {pl.year}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 mt-auto pt-4 border-t border-slate-50">
+                                            <button onClick={() => setEditingPricelist(pl)} className="flex-1 bg-slate-900 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors">Edit Content</button>
+                                            <button className="p-2 text-red-400 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TV MODULE */}
+                    {activeTab === 'tv' && (
+                        <div className="animate-fade-in space-y-8">
+                            {!editingTvBrand ? (
+                                <>
+                                    <SectionHeader title="TV Mode Management" icon={Tv} actions={
+                                        <button onClick={() => {
+                                            const newB: TVBrand = { id: generateId('tvb'), name: 'New TV Brand', models: [] };
+                                            updateData({ ...localData!, tv: { ...localData!.tv!, brands: [...(localData!.tv?.brands || []), newB] } });
+                                            setEditingTvBrand(newB);
+                                        }} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 shadow-lg"><Plus size={16}/> New Channel</button>
+                                    } />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                        {(localData?.tv?.brands || []).map(b => (
+                                            <button key={b.id} onClick={() => setEditingTvBrand(b)} className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex items-center justify-between group hover:border-blue-400 transition-all text-left">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400">
+                                                        {b.logoUrl ? <img src={b.logoUrl} className="max-w-full max-h-full object-contain" /> : <Tv size={32}/>}
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-black text-xl text-slate-900 uppercase leading-none">{b.name}</h3>
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{b.models.length} Models</p>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight className="text-slate-300 group-hover:text-blue-600 transition-colors" size={24}/>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="space-y-8">
+                                    <button onClick={() => setEditingTvBrand(null)} className="flex items-center gap-2 text-slate-500 font-black uppercase text-[10px] tracking-widest hover:text-slate-900"><ArrowLeft size={16}/> Back to TV Channels</button>
+                                    <SectionHeader title={editingTvBrand.name} icon={Tv} actions={
+                                        <button className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2"><Plus size={16}/> Add Model</button>
+                                    } />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {editingTvBrand.models.map(m => (
+                                            <div key={m.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-200 flex items-center justify-between shadow-sm">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 font-black text-xs">MOD</div>
+                                                    <span className="font-black text-slate-900 uppercase tracking-tight">{m.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{m.videoUrls.length} Loops</span>
+                                                    <button className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:text-blue-600 transition-colors"><Edit2 size={18}/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* SCREENSAVER MODULE */}
+                    {activeTab === 'screensaver' && (
+                        <div className="animate-fade-in space-y-12">
+                            <SectionHeader title="Idle Screensaver Logic" icon={MonitorPlay} />
+                            
+                            <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-sm max-w-2xl mx-auto">
+                                <div className="space-y-8">
+                                    <div className="flex justify-between items-center pb-6 border-b border-slate-50">
+                                        <div>
+                                            <h4 className="font-black text-slate-900 uppercase text-sm">Idle Timeout</h4>
+                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Seconds until playback begins</p>
+                                        </div>
+                                        <input type="number" className="w-24 p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-black text-center" value={localData?.screensaverSettings?.idleTimeout} onChange={e => updateData({...localData!, screensaverSettings: {...localData!.screensaverSettings!, idleTimeout: parseInt(e.target.value)}})} />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {[
+                                            { id: 'showProductImages', label: 'Product Stills', icon: ImageIcon },
+                                            { id: 'showProductVideos', label: 'Product Reels', icon: Video },
+                                            { id: 'showPamphlets', label: 'Global Pamphlets', icon: BookOpen },
+                                            { id: 'showCustomAds', label: 'Marketing Ads', icon: Megaphone }
+                                        ].map(opt => (
+                                            <button 
+                                                key={opt.id}
+                                                onClick={() => updateData({...localData!, screensaverSettings: {...localData!.screensaverSettings!, [opt.id]: !(localData?.screensaverSettings as any)[opt.id]}})}
+                                                className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-4 text-center ${(localData?.screensaverSettings as any)[opt.id] ? 'bg-blue-50 border-blue-600 shadow-lg' : 'bg-white border-slate-100 text-slate-300'}`}
+                                            >
+                                                <opt.icon size={32} className={(localData?.screensaverSettings as any)[opt.id] ? 'text-blue-600' : 'text-slate-200'} />
+                                                <span className={`font-black uppercase text-[10px] tracking-widest ${(localData?.screensaverSettings as any)[opt.id] ? 'text-blue-900' : 'text-slate-400'}`}>{opt.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -384,14 +509,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                                 </td>
                                             </tr>
                                         ))}
-                                        {(localData?.fleet || []).length === 0 && (
-                                            <tr>
-                                                <td colSpan={4} className="p-32 text-center">
-                                                    <Activity size={80} className="mx-auto text-slate-100 mb-6" />
-                                                    <p className="font-black text-slate-300 uppercase tracking-[0.4em]">No active devices registered</p>
-                                                </td>
-                                            </tr>
-                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -404,19 +521,18 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                             <SectionHeader title="System Master Control" icon={Cpu} />
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                {/* Maintenance Card */}
                                 <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-sm relative overflow-hidden">
                                     <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none"><Database size={150} /></div>
                                     <h3 className="text-2xl font-black text-slate-900 uppercase mb-8 flex items-center gap-4"><CloudLightning size={24} className="text-blue-600" /> Maintenance Vault</h3>
                                     <div className="space-y-6">
                                         <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 text-center">
                                             <h4 className="font-black uppercase text-[10px] text-slate-400 tracking-widest mb-2">Manual Migration</h4>
-                                            <p className="text-xs text-slate-500 font-medium mb-8 leading-relaxed">Download a structured archive of every brand, product, and asset in the cloud.</p>
+                                            <p className="text-xs text-slate-500 font-medium mb-8 leading-relaxed">Download a structured archive of every brand, product, and asset.</p>
                                             <button onClick={handleBackupExport} className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-600 transition-all flex items-center justify-center gap-3"><Download size={18}/> Export System ZIP</button>
                                         </div>
                                         <div className="bg-blue-50 p-8 rounded-[2.5rem] border border-blue-100 text-center">
                                             <h4 className="font-black uppercase text-[10px] text-blue-400 tracking-widest mb-2">Emergency Sync</h4>
-                                            <p className="text-xs text-blue-700/60 font-medium mb-8 leading-relaxed">Restore system state from a verified master archive. Overwrites all current data.</p>
+                                            <p className="text-xs text-blue-700/60 font-medium mb-8 leading-relaxed">Restore system state from a verified master archive.</p>
                                             <label className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 cursor-pointer flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20">
                                                 <Upload size={18}/> Restore ZIP
                                                 <input type="file" className="hidden" accept=".zip" onChange={handleBackupImport} />
@@ -425,7 +541,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                     </div>
                                 </div>
 
-                                {/* Security Card */}
                                 <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-sm">
                                     <h3 className="text-2xl font-black text-slate-900 uppercase mb-8 flex items-center gap-4"><Lock size={24} className="text-red-600" /> Access Protocol</h3>
                                     <div className="space-y-8">
@@ -434,7 +549,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                             <div className="flex gap-4">
                                                 <input type="password" maxLength={8} className="flex-1 p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl font-mono text-3xl font-black tracking-[0.5em] outline-none focus:border-blue-500" value={localData?.systemSettings?.setupPin} onChange={e => updateData({...localData!, systemSettings: {...localData!.systemSettings, setupPin: e.target.value}})} />
                                             </div>
-                                            <p className="text-[10px] font-bold text-slate-400 mt-4 italic">Required during the "Device Identity Assignment" phase on new tablets.</p>
                                         </div>
                                         
                                         <div className="pt-8 border-t border-slate-100">
@@ -454,15 +568,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    {/* PRICELISTS & TV (Placeholder - Functional UI Logic follows Inventory pattern) */}
-                    {['pricelists', 'tv', 'screensaver'].includes(activeTab) && (
-                        <div className="flex flex-col items-center justify-center py-40 bg-white rounded-[3.5rem] border-4 border-dashed border-slate-200 text-slate-300">
-                            <Activity size={100} className="mb-8 opacity-20" />
-                            <h2 className="text-4xl font-black uppercase tracking-[0.4em] opacity-40">{activeTab} System</h2>
-                            <p className="mt-4 font-bold text-slate-400 uppercase tracking-widest">Logic Interface Loaded & Waiting</p>
                         </div>
                     )}
 
