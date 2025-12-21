@@ -1,13 +1,12 @@
-
 import React, { useState } from 'react';
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert } from 'lucide-react';
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, List, Table, FileSpreadsheet } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
 }
 
 const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'local' | 'build' | 'vercel' | 'supabase'>('supabase');
+  const [activeTab, setActiveTab] = useState<'local' | 'build' | 'vercel' | 'supabase' | 'pricelists'>('supabase');
   const [copiedStep, setCopiedStep] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, stepId: string) => {
@@ -112,7 +111,8 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                     { id: 'supabase', label: '1. Supabase Cloud', sub: 'Backend API & RLS', icon: Database, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-600' },
                     { id: 'local', label: '2. PC Station Hub', sub: 'Development Env', icon: Server, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
                     { id: 'build', label: '3. Asset Pipeline', sub: 'Tree-Shaking & Min', icon: Hammer, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
-                    { id: 'vercel', label: '4. Edge Network', sub: 'Global CDN Delivery', icon: Globe, color: 'text-slate-900', bg: 'bg-slate-100', border: 'border-slate-900' }
+                    { id: 'vercel', label: '4. Edge Network', sub: 'Global CDN Delivery', icon: Globe, color: 'text-slate-900', bg: 'bg-slate-100', border: 'border-slate-900' },
+                    { id: 'pricelists', label: '5. Pricelist Engine', sub: 'Spreadsheet Logic', icon: Table, color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-700' }
                 ].map(tab => (
                     <button 
                         key={tab.id}
@@ -405,6 +405,46 @@ END $$;`}
                               <EngineerNote>
                                   Reliability Metric: Vercel's infrastructure boasts a 99.99% uptime SLA. By combining this with Supabase's multi-region failover, the Kiosk Pro system is designed for "Always-On" retail environments.
                               </EngineerNote>
+                          </Step>
+                      </div>
+                  </div>
+              )}
+
+              {/* PHASE 5: PRICELISTS */}
+              {activeTab === 'pricelists' && (
+                  <div className="p-8 md:p-16 animate-fade-in">
+                      <SectionHeading icon={Table} subtitle="Architectural deep-dive into the Spreadsheet-to-JSON pipeline.">Pricelist Data Workflow</SectionHeading>
+                      
+                      <WhyBox title="Why use Manual Tables instead of just PDFs?">
+                          While PDFs offer high visual fidelity, <strong>Manual Tables</strong> enable the kiosk to function as an interactive price-checker. Data stored as JSON objects allows for real-time search, dynamic sorting by price, and automated "Recent Update" highlighting.
+                      </WhyBox>
+
+                      <div className="space-y-8">
+                          <Step number="1" title="Excel / CSV Pipeline">
+                              <p className="font-medium text-slate-700">The Admin Hub features a custom-built <strong>Fuzzy Text Parser</strong>. Administrators can drag-and-drop a standard Excel .csv file directly into the builder.</p>
+                              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                  <div className="flex items-center gap-4 mb-4">
+                                      <FileSpreadsheet className="text-green-600" size={24} />
+                                      <div className="h-1 flex-1 bg-slate-200 rounded-full overflow-hidden">
+                                          <div className="h-full w-2/3 bg-green-500 animate-pulse"></div>
+                                      </div>
+                                      <Binary className="text-blue-600" size={24} />
+                                  </div>
+                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Parsing Algorithm:</h4>
+                                  <ul className="text-xs text-slate-600 space-y-1 font-medium">
+                                      <li>&bull; Identifies headers via Levenshtein distance matching.</li>
+                                      <li>&bull; Sanitizes currency symbols using Regex.</li>
+                                      <li>&bull; Serializes rows into an array of `PricelistItem` objects.</li>
+                                  </ul>
+                              </div>
+                          </Step>
+
+                          <Step number="2" title="The Sync Cycle">
+                              <p className="font-medium text-slate-700">When an admin clicks "Save", the serialized JSON array is pushed to the `store_config` table in Supabase. Every kiosk in the fleet receives a WebSocket signal and updates its local state <strong>without a refresh</strong>.</p>
+                              <EngineerNote>
+                                  Frontend Logic: The <code>ManualPricelistViewer</code> uses standard HTML tables with <code>position: sticky</code> headers to maintain "Spreadsheet" feel while ensuring high-performance scrolling on low-power tablet hardware.
+                              </EngineerNote>
+                          {/* Fixed mismatched tag: replaced </div> with </Step> */}
                           </Step>
                       </div>
                   </div>
