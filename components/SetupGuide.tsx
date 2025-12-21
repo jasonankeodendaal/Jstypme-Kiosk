@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, List, Table, FileSpreadsheet } from 'lucide-react';
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, List, Table, FileSpreadsheet, Sparkles, Filter, Mouse, ArrowDownRight, MoveRight, Coins } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
@@ -84,6 +85,31 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-100 flex flex-col animate-fade-in overflow-hidden">
+      <style>{`
+        @keyframes slide-right {
+          0% { transform: translateX(-20px); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateX(20px); opacity: 0; }
+        }
+        .animate-data-flow {
+          animation: slide-right 2s infinite linear;
+        }
+        @keyframes rotate-gear {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-gear {
+          animation: rotate-gear 8s infinite linear;
+        }
+        @keyframes pulse-soft {
+          0%, 100% { opacity: 0.5; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.05); }
+        }
+        .animate-pulse-ui {
+          animation: pulse-soft 3s infinite ease-in-out;
+        }
+      `}</style>
+
       {/* Top Header Bar */}
       <div className="bg-slate-900 text-white p-6 shadow-2xl shrink-0 flex items-center justify-between border-b border-slate-800 z-50">
         <div className="flex items-center gap-5">
@@ -171,12 +197,10 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                                 id="sql-full"
                                 label="System Master SQL (Run in SQL Editor)"
                                 code={`-- PHASE 1: ASSET STORAGE BUCKET
--- This bucket stores high-res images and PDF manuals.
 insert into storage.buckets (id, name, public) 
 values ('kiosk-media', 'kiosk-media', true) 
 on conflict (id) do nothing;
 
--- Set up permissive policies safely
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow Public Viewing' AND tablename = 'objects' AND schemaname = 'storage') THEN
@@ -187,8 +211,6 @@ BEGIN
     END IF;
 END $$;
 
--- PHASE 2: FLEET & CONFIGURATION TABLES
--- Use robust column checks to prevent errors on existing installations
 CREATE TABLE IF NOT EXISTS public.store_config ( 
     id serial PRIMARY KEY,
     updated_at timestamp with time zone DEFAULT now()
@@ -214,41 +236,216 @@ CREATE TABLE IF NOT EXISTS public.kiosks (
     restart_requested boolean DEFAULT false 
 );
 
--- PHASE 3: REALTIME REPLICATION CONFIG
--- Safely add tables to publication without duplication errors
 ALTER TABLE public.store_config REPLICA IDENTITY FULL;
 ALTER TABLE public.kiosks REPLICA IDENTITY FULL;
 
 DO $$
 BEGIN
-    -- Ensure standard publication exists
     IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
         CREATE PUBLICATION supabase_realtime;
     END IF;
 
-    -- Add tables to publication, catching 'already exists' errors
     BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.store_config;
     EXCEPTION WHEN duplicate_object THEN
-        RAISE NOTICE 'Table store_config already exists in publication';
+        RAISE NOTICE 'Table store_config already exists';
     END;
 
     BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.kiosks;
     EXCEPTION WHEN duplicate_object THEN
-        RAISE NOTICE 'Table kiosks already exists in publication';
+        RAISE NOTICE 'Table kiosks already exists';
     END;
 END $$;`}
                             />
-                            <WhyBox title="Why JSONB instead of standard columns?">
-                                Retail data changes fast. One year you need "Battery Life" for phones, the next you need "Sleeve Length" for fashion. <strong>JSONB (Binary JSON)</strong> allows us to store these varying specs without constantly rewriting the database structure, while still allowing the Admin Hub to filter and sort efficiently.
-                            </WhyBox>
                         </Step>
                     </div>
                 </div>
               )}
 
-              {/* PHASE 2: LOCAL SETUP */}
+              {/* PHASE 5: PRICELISTS (ENHANCED) */}
+              {activeTab === 'pricelists' && (
+                  <div className="p-8 md:p-16 animate-fade-in">
+                      <SectionHeading icon={Table} subtitle="Architectural deep-dive into the Spreadsheet-to-JSON pipeline and native UI rendering.">Pricelist Data Engine</SectionHeading>
+                      
+                      <WhyBox title="The Manual Table Paradigm">
+                          While PDF pricelists are visually static, <strong>Manual Tables</strong> convert flat documents into queryable data structures. This enables:
+                          <ul className="mt-4 space-y-3">
+                              <li className="flex gap-3"><CheckCircle2 className="text-green-600 shrink-0" size={16}/> <strong>Elastic Search:</strong> Customers can find SKUs instantly via the kiosk search bar.</li>
+                              <li className="flex gap-3"><CheckCircle2 className="text-green-600 shrink-0" size={16}/> <strong>Dynamic Promotion:</strong> The UI automatically highlights price drops by comparing the <code>normalPrice</code> and <code>promoPrice</code> fields.</li>
+                              <li className="flex gap-3"><CheckCircle2 className="text-green-600 shrink-0" size={16}/> <strong>Accessibility:</strong> Native HTML tables allow for screen readers and high-contrast modes unlike static PDF pixels.</li>
+                          </ul>
+                      </WhyBox>
+
+                      {/* NEW ILLUSTRATION: DATA PIPELINE */}
+                      <div className="bg-slate-900 rounded-[2.5rem] p-8 md:p-12 mb-12 relative overflow-hidden border border-white/5 shadow-2xl">
+                          <div className="absolute top-0 right-0 p-8 opacity-5 text-white"><FileSpreadsheet size={160} /></div>
+                          <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mb-8 text-center">Ingestion Pipeline Architecture</h4>
+                          
+                          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                              {/* Source */}
+                              <div className="flex flex-col items-center gap-3 w-32">
+                                  <div className="w-20 h-20 bg-green-500/20 rounded-2xl border-2 border-green-500/50 flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.2)]">
+                                      <FileSpreadsheet className="text-green-400" size={32} />
+                                  </div>
+                                  <div className="text-[10px] font-black text-white uppercase tracking-wider">Excel / CSV</div>
+                              </div>
+
+                              {/* Flow Arrow */}
+                              <div className="flex-1 h-px bg-gradient-to-r from-green-500/50 via-blue-500 to-purple-500/50 relative hidden md:block">
+                                  <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-2 h-2 bg-blue-400 rounded-full animate-data-flow"></div>
+                                  <div className="absolute top-1/2 left-1/2 -translate-y-1/2 w-2 h-2 bg-blue-400 rounded-full animate-data-flow" style={{animationDelay: '0.6s'}}></div>
+                                  <div className="absolute top-1/2 left-3/4 -translate-y-1/2 w-2 h-2 bg-blue-400 rounded-full animate-data-flow" style={{animationDelay: '1.2s'}}></div>
+                              </div>
+
+                              {/* Parser Node */}
+                              <div className="flex flex-col items-center gap-3 w-40">
+                                  <div className="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center relative shadow-[0_0_30px_rgba(37,99,235,0.4)]">
+                                      <Settings className="text-white animate-gear" size={40} />
+                                      <Binary className="text-white/40 absolute bottom-2 right-2" size={16} />
+                                  </div>
+                                  <div className="text-[10px] font-black text-white uppercase tracking-wider">Fuzzy Parser</div>
+                              </div>
+
+                              {/* Flow Arrow */}
+                              <div className="flex-1 h-px bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500/50 relative hidden md:block">
+                                  <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-2 h-2 bg-purple-400 rounded-full animate-data-flow"></div>
+                                  <div className="absolute top-1/2 left-3/4 -translate-y-1/2 w-2 h-2 bg-purple-400 rounded-full animate-data-flow" style={{animationDelay: '0.8s'}}></div>
+                              </div>
+
+                              {/* Output */}
+                              <div className="flex flex-col items-center gap-3 w-32">
+                                  <div className="w-20 h-20 bg-purple-500/20 rounded-2xl border-2 border-purple-500/50 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.2)]">
+                                      <Database className="text-purple-400" size={32} />
+                                  </div>
+                                  <div className="text-[10px] font-black text-white uppercase tracking-wider">JSON Objects</div>
+                              </div>
+                          </div>
+
+                          <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-white/5 pt-8">
+                              <div className="bg-white/5 p-4 rounded-2xl">
+                                  <div className="text-blue-400 font-black text-[9px] uppercase tracking-widest mb-1">Normalization</div>
+                                  <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Strips currency symbols ($, R, £) and non-numeric noise for consistent sorting.</p>
+                              </div>
+                              <div className="bg-white/5 p-4 rounded-2xl">
+                                  <div className="text-blue-400 font-black text-[9px] uppercase tracking-widest mb-1">Header Mapping</div>
+                                  <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Uses fuzzy matching to detect "Price" vs "Unit Cost" vs "Amount" automatically.</p>
+                              </div>
+                              <div className="bg-white/5 p-4 rounded-2xl">
+                                  <div className="text-blue-400 font-black text-[9px] uppercase tracking-widest mb-1">Unique Keying</div>
+                                  <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Generates UUIDs for every row to ensure React DOM stability during rapid filtering.</p>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="space-y-12">
+                          <Step number="1" title="The Import Logic Pipeline">
+                              <div className="text-slate-600 space-y-4">
+                                  <p className="font-medium">The <code>ManualPricelistEditor</code> uses a client-side streaming parser to process large spreadsheets without freezing the browser UI.</p>
+                                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                      <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Algorithm Breakdown</h5>
+                                      <ul className="space-y-4">
+                                          <li className="flex gap-3">
+                                              <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-black text-[10px] shrink-0">1</div>
+                                              <div>
+                                                  <div className="text-xs font-bold text-slate-900">Buffered FileReader API</div>
+                                                  <p className="text-[10px] text-slate-500 mt-0.5">Reads the .csv as a binary string, converting to UTF-8 to handle special characters.</p>
+                                              </div>
+                                          </li>
+                                          <li className="flex gap-3">
+                                              <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-black text-[10px] shrink-0">2</div>
+                                              <div>
+                                                  <div className="text-xs font-bold text-slate-900">Regex Tokenization</div>
+                                                  <p className="text-[10px] text-slate-500 mt-0.5">Handles complex cases like values containing commas wrapped in quotes (e.g. "Samsung, Inc").</p>
+                                              </div>
+                                          </li>
+                                          <li className="flex gap-3">
+                                              <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-black text-[10px] shrink-0">3</div>
+                                              <div>
+                                                  <div className="text-xs font-bold text-slate-900">Delta Check</div>
+                                                  <p className="text-[10px] text-slate-500 mt-0.5">Allows for "Append" vs "Overwrite" modes when merging new pricing with existing data.</p>
+                                              </div>
+                                          </li>
+                                      </ul>
+                                  </div>
+                              </div>
+                          </Step>
+
+                          <Step number="2" title="Native UI Rendering (Kiosk Side)">
+                              <div className="text-slate-600 space-y-6">
+                                  <p className="font-medium">The <code>ManualPricelistViewer</code> renders the JSON data using optimized Virtual DOM principles to handle thousands of rows at 60fps.</p>
+
+                                  {/* UI SCHEMATIC ILLUSTRATION */}
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-slate-50 p-8 rounded-3xl border border-slate-200">
+                                      {/* Visual Representation */}
+                                      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-300 aspect-[4/3] flex flex-col relative group">
+                                          {/* Sticky Header */}
+                                          <div className="bg-slate-700 h-8 flex items-center px-3 gap-2 border-b border-slate-800 z-10">
+                                              <div className="w-8 h-2 bg-white/20 rounded-full"></div>
+                                              <div className="flex-1 h-2 bg-white/20 rounded-full"></div>
+                                              <div className="w-10 h-2 bg-white/20 rounded-full"></div>
+                                          </div>
+                                          {/* Table Rows */}
+                                          <div className="flex-1 p-3 space-y-3 overflow-hidden">
+                                              {[1, 2, 3, 4, 5].map(i => (
+                                                  <div key={i} className="flex items-center gap-3 border-b border-slate-100 pb-2">
+                                                      <div className="w-8 h-3 bg-slate-100 rounded"></div>
+                                                      <div className="flex-1 h-3 bg-slate-50 rounded"></div>
+                                                      <div className="w-12 h-3 bg-slate-100 rounded"></div>
+                                                  </div>
+                                              ))}
+                                              {/* Promo Highlight Item */}
+                                              <div className="flex items-center gap-3 border-b border-red-50 pb-2 bg-red-50/30 -mx-3 px-3 relative">
+                                                  <div className="w-8 h-3 bg-slate-200 rounded"></div>
+                                                  <div className="flex-1 h-3 bg-slate-200 rounded"></div>
+                                                  <div className="w-12 h-4 bg-red-500 rounded animate-pulse-ui"></div>
+                                                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[5px] px-1 rounded-full font-bold">OFFER</div>
+                                              </div>
+                                          </div>
+                                          {/* Print Label */}
+                                          <div className="absolute inset-0 bg-blue-600/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <div className="bg-white p-2 rounded-lg shadow-2xl flex items-center gap-2 border border-blue-100">
+                                                  <ArrowDownRight className="text-blue-600" size={14} />
+                                                  <span className="text-[8px] font-black uppercase tracking-widest text-blue-900">Virtual Viewport</span>
+                                              </div>
+                                          </div>
+                                      </div>
+
+                                      <div className="space-y-4">
+                                          <div className="flex gap-3">
+                                              <div className="p-2 bg-white rounded-xl shadow-sm"><Coins className="text-amber-500" size={16}/></div>
+                                              <div>
+                                                  <div className="text-xs font-black uppercase text-slate-800">Promo Logic</div>
+                                                  <p className="text-[10px] text-slate-500 leading-relaxed font-medium">If <code>promoPrice</code> exists, the engine overrides the standard color palette with high-contrast red tokens.</p>
+                                              </div>
+                                          </div>
+                                          <div className="flex gap-3">
+                                              <div className="p-2 bg-white rounded-xl shadow-sm"><Mouse className="text-blue-500" size={16}/></div>
+                                              <div>
+                                                  <div className="text-xs font-black uppercase text-slate-800">Sticky Compositing</div>
+                                                  <p className="text-[10px] text-slate-500 leading-relaxed font-medium">Headers use CSS <code>position: sticky</code> with hardware-accelerated Z-indexing to maintain orientation during scrolls.</p>
+                                              </div>
+                                          </div>
+                                          <div className="flex gap-3">
+                                              <div className="p-2 bg-white rounded-xl shadow-sm"><Filter className="text-purple-500" size={16}/></div>
+                                              <div>
+                                                  <div className="text-xs font-black uppercase text-slate-800">Real-time Diffing</div>
+                                                  <p className="text-[10px] text-slate-500 leading-relaxed font-medium">As users type in search, the React Reconciliation engine only re-paints affected table rows for maximum efficiency.</p>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+
+                                  <EngineerNote>
+                                      High-Density Performance: For lists over 1,000 items, the engine automatically switches to a <code>scale()</code> based zoom system instead of changing font sizes, which prevents browser layout re-calculation (Reflow) and maintains 60fps interaction.
+                                  </EngineerNote>
+                              </div>
+                          </Step>
+                      </div>
+                  </div>
+              )}
+
+              {/* ... (Existing Tabs: Local Setup, Build Pipeline, Vercel Deploy) */}
               {activeTab === 'local' && (
                   <div className="p-8 md:p-16 animate-fade-in">
                       <SectionHeading icon={Server} subtitle="Establishing the local engineering workspace for rapid testing and asset management.">PC Hub Configuration</SectionHeading>
@@ -289,7 +486,6 @@ END $$;`}
                   </div>
               )}
 
-              {/* PHASE 3: BUILD PIPELINE */}
               {activeTab === 'build' && (
                   <div className="p-8 md:p-16 animate-fade-in">
                       <SectionHeading icon={Hammer} subtitle="Advanced Tree-Shaking, AST Traversal, and Minification Algorithms.">Asset Pipeline & Optimization</SectionHeading>
@@ -342,15 +538,11 @@ END $$;`}
 
                           <Step number="2" title="Source Map Security">
                               <p className="font-medium text-slate-700">By default, Kiosk Pro <strong>disables</strong> source maps in production. This ensures that a curious user cannot use the browser's developer tools to reconstruct your original TypeScript logic from the minified bundles.</p>
-                              <EngineerNote>
-                                  Vulnerability Patch: In <code>vite.config.ts</code>, we ensure <code>build.sourcemap</code> is <code>false</code> to prevent "re-engineering" of your API connection logic.
-                              </EngineerNote>
                           </Step>
                       </div>
                   </div>
               )}
 
-              {/* PHASE 4: VERCEL DEPLOY */}
               {activeTab === 'vercel' && (
                   <div className="p-8 md:p-16 animate-fade-in">
                       <SectionHeading icon={Globe} subtitle="Anycast Networking, BGP Routing, and Layer 7 Global Content Delivery.">Edge Network Infrastructure</SectionHeading>
@@ -402,53 +594,11 @@ END $$;`}
 
                           <Step number="2" title="Cold vs. Hot Starts">
                               <p className="font-medium text-slate-700">Since the kiosk is a SPA (Single Page Application), it benefit from 100% "Static" performance. There are no server-side databases to "wake up" when a customer touches the screen; the entire UI logic resides in the tablet's browser cache, managed by our <strong>Service Worker (sw.js)</strong>.</p>
-                              <EngineerNote>
-                                  Reliability Metric: Vercel's infrastructure boasts a 99.99% uptime SLA. By combining this with Supabase's multi-region failover, the Kiosk Pro system is designed for "Always-On" retail environments.
-                              </EngineerNote>
                           </Step>
                       </div>
                   </div>
               )}
 
-              {/* PHASE 5: PRICELISTS */}
-              {activeTab === 'pricelists' && (
-                  <div className="p-8 md:p-16 animate-fade-in">
-                      <SectionHeading icon={Table} subtitle="Architectural deep-dive into the Spreadsheet-to-JSON pipeline.">Pricelist Data Workflow</SectionHeading>
-                      
-                      <WhyBox title="Why use Manual Tables instead of just PDFs?">
-                          While PDFs offer high visual fidelity, <strong>Manual Tables</strong> enable the kiosk to function as an interactive price-checker. Data stored as JSON objects allows for real-time search, dynamic sorting by price, and automated "Recent Update" highlighting.
-                      </WhyBox>
-
-                      <div className="space-y-8">
-                          <Step number="1" title="Excel / CSV Pipeline">
-                              <p className="font-medium text-slate-700">The Admin Hub features a custom-built <strong>Fuzzy Text Parser</strong>. Administrators can drag-and-drop a standard Excel .csv file directly into the builder.</p>
-                              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                                  <div className="flex items-center gap-4 mb-4">
-                                      <FileSpreadsheet className="text-green-600" size={24} />
-                                      <div className="h-1 flex-1 bg-slate-200 rounded-full overflow-hidden">
-                                          <div className="h-full w-2/3 bg-green-500 animate-pulse"></div>
-                                      </div>
-                                      <Binary className="text-blue-600" size={24} />
-                                  </div>
-                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Parsing Algorithm:</h4>
-                                  <ul className="text-xs text-slate-600 space-y-1 font-medium">
-                                      <li>&bull; Identifies headers via Levenshtein distance matching.</li>
-                                      <li>&bull; Sanitizes currency symbols using Regex.</li>
-                                      <li>&bull; Serializes rows into an array of `PricelistItem` objects.</li>
-                                  </ul>
-                              </div>
-                          </Step>
-
-                          <Step number="2" title="The Sync Cycle">
-                              <p className="font-medium text-slate-700">When an admin clicks "Save", the serialized JSON array is pushed to the `store_config` table in Supabase. Every kiosk in the fleet receives a WebSocket signal and updates its local state <strong>without a refresh</strong>.</p>
-                              <EngineerNote>
-                                  Frontend Logic: The <code>ManualPricelistViewer</code> uses standard HTML tables with <code>position: sticky</code> headers to maintain "Spreadsheet" feel while ensuring high-performance scrolling on low-power tablet hardware.
-                              </EngineerNote>
-                          {/* Fixed mismatched tag: replaced </div> with </Step> */}
-                          </Step>
-                      </div>
-                  </div>
-              )}
            </div>
         </div>
       </div>

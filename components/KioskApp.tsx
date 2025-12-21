@@ -345,7 +345,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         <div className="hidden print-only w-full px-10 pt-8 pb-4">
             <div className="flex justify-between items-end mb-8">
                 <div className="flex flex-col gap-4">
-                    {brandLogo && <img src={brandLogo} alt="Brand Logo" className="h-16 object-contain self-start" />}
+                    {companyLogo && <img src={companyLogo} alt="Company Logo" className="h-14 object-contain self-start" />}
                     <div>
                         <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Official Price List</h1>
                         <p className="text-lg font-bold text-blue-600 uppercase tracking-[0.2em] mt-2">{pricelist.title}</p>
@@ -353,7 +353,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                 </div>
 
                 <div className="flex flex-col items-end gap-3">
-                    {companyLogo && <img src={companyLogo} alt="Company Logo" className="h-14 object-contain" />}
+                    {brandLogo && <img src={brandLogo} alt="Brand Logo" className="h-16 object-contain" />}
                     <div className="text-right">
                         <div className="bg-slate-900 text-white px-3 py-1 rounded text-xs font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
                         <p className="text-[9px] font-bold text-slate-400 uppercase mt-2">Document Reference: {pricelist.id.substring(0,8).toUpperCase()}</p>
