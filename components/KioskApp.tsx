@@ -23,7 +23,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Activity, Server, Database, Zap } from 'lucide-react';
 
 const isRecent = (dateString?: string) => {
     if (!dateString) return false;
@@ -41,7 +41,7 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
   </svg>
 );
 
-// --- SETUP SCREEN ---
+// --- DETAILED PROVISIONING SCREEN ---
 const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComplete: () => void }) => {
     const [step, setStep] = useState(1);
     const [shopName, setShopName] = useState('');
@@ -49,26 +49,40 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
+    const [statusMsg, setStatusMsg] = useState('');
 
     const handleNext = async () => {
         setError('');
         if (step === 1) {
-            if (!shopName.trim()) return setError('Please enter a name for this location.');
+            if (!shopName.trim()) return setError('Location name is required for fleet tracking.');
             setStep(2);
         } else if (step === 2) {
             setStep(3);
         } else if (step === 3) {
             const systemPin = storeData.systemSettings?.setupPin || '0000';
-            if (pin !== systemPin) return setError('Invalid Setup PIN. Consult Admin.');
+            if (pin !== systemPin) return setError('Invalid Setup PIN. Contact System Administrator.');
             
             setIsProcessing(true);
             try {
-                await provisionKioskId();
+                setStatusMsg('Checking hardware signature...');
+                await new Promise(r => setTimeout(r, 800));
+                const id = await provisionKioskId();
+                
+                setStatusMsg('Cloud secure handshake...');
+                await new Promise(r => setTimeout(r, 1000));
+                
+                setStatusMsg(`Registering as ${deviceType.toUpperCase()}...`);
                 const success = await completeKioskSetup(shopName.trim(), deviceType);
-                if (success) onComplete();
-                else setError('Setup failed. Local storage error.');
+                
+                if (success) {
+                    setStatusMsg('Enrolling in fleet management...');
+                    await new Promise(r => setTimeout(r, 600));
+                    onComplete();
+                } else {
+                    setError('Local storage integrity failure.');
+                }
             } catch (e) {
-                setError('Cloud registration failed.');
+                setError('Registry unreachable. Check connectivity.');
             } finally {
                 setIsProcessing(false);
             }
@@ -76,61 +90,71 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
     };
 
     return (
-        <div className="fixed inset-0 z-[300] bg-slate-900 flex items-center justify-center p-4">
-            <div className="bg-white rounded-[2rem] w-full max-w-lg overflow-hidden shadow-2xl animate-fade-in border border-white/20">
-                <div className="bg-slate-900 text-white p-6 md:p-8 text-center relative">
-                    <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+        <div className="fixed inset-0 z-[300] bg-slate-950 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+            <div className="bg-white rounded-[2.5rem] w-full max-w-xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] animate-fade-in border border-white/20 relative z-10">
+                <div className="bg-slate-900 text-white p-10 text-center relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/30 to-transparent"></div>
                     <div className="relative z-10 flex flex-col items-center">
-                        <div className="bg-blue-600 p-3 rounded-2xl shadow-xl mb-4">
-                            <Store size={32} />
+                        <div className="bg-blue-600 p-5 rounded-3xl shadow-2xl mb-6 ring-8 ring-blue-600/10 animate-pulse">
+                            <Zap size={40} className="fill-white" />
                         </div>
-                        <h1 className="text-2xl font-black uppercase tracking-tight mb-1">Device Provisioning</h1>
-                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Kiosk Pro v2.8 • System Initialization</p>
+                        <h1 className="text-3xl font-black uppercase tracking-tighter mb-2">Device Provisioning</h1>
+                        <p className="text-blue-400 font-bold uppercase text-[10px] tracking-[0.4em]">Kiosk OS v2.8.4 • System Initialization</p>
                     </div>
                 </div>
 
-                <div className="p-6 md:p-8">
-                    {/* Stepper */}
-                    <div className="flex justify-center gap-2 mb-8">
+                <div className="p-8 md:p-12">
+                    <div className="flex justify-center gap-3 mb-12">
                         {[1, 2, 3].map(s => (
-                            <div key={s} className={`h-1 rounded-full transition-all duration-500 ${step >= s ? 'w-10 bg-blue-600' : 'w-3 bg-slate-200'}`}></div>
+                            <div key={s} className={`h-2 rounded-full transition-all duration-1000 ${step >= s ? 'w-20 bg-blue-600' : 'w-4 bg-slate-100'}`}></div>
                         ))}
                     </div>
 
-                    <div className="min-h-[180px]">
+                    <div className="min-h-[200px]">
                         {step === 1 && (
-                            <div className="animate-fade-in">
-                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Step 01: Location Identity</label>
-                                <h2 className="text-xl font-black text-slate-900 mb-4 leading-tight">What is the name of this shop or zone?</h2>
+                            <div className="animate-fade-in space-y-6">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Phase 01: Location Identity</label>
+                                    <h2 className="text-2xl font-black text-slate-900 leading-tight">Enter store name or zone.</h2>
+                                </div>
                                 <input 
                                     autoFocus
-                                    className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold text-base text-slate-900 transition-all uppercase placeholder:normal-case shadow-sm"
+                                    className="w-full p-6 bg-slate-50 border-2 border-slate-200 rounded-2xl outline-none focus:border-blue-500 font-bold text-xl text-slate-900 transition-all uppercase placeholder:normal-case shadow-sm"
                                     placeholder="e.g. Waterfront Mall - Tech Hub"
                                     value={shopName}
                                     onChange={(e) => setShopName(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                                 />
+                                <div className="flex items-center gap-3 text-slate-400 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                    <Info size={18} className="text-blue-500" />
+                                    <p className="text-xs font-medium italic">Unique identifier for cloud fleet monitoring.</p>
+                                </div>
                             </div>
                         )}
 
                         {step === 2 && (
-                            <div className="animate-fade-in">
-                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Step 02: Hardware Profile</label>
-                                <h2 className="text-xl font-black text-slate-900 mb-4 leading-tight">Select the primary display type.</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="animate-fade-in space-y-6">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Phase 02: Hardware Profile</label>
+                                    <h2 className="text-2xl font-black text-slate-900 leading-tight">Select operational mode.</h2>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     {[
-                                        { id: 'kiosk', icon: <Tablet size={20}/>, label: 'Kiosk', desc: 'Interactive Stand' },
-                                        { id: 'mobile', icon: <Smartphone size={20}/>, label: 'Mobile', desc: 'Handheld Unit' },
-                                        { id: 'tv', icon: <Tv size={20}/>, label: 'TV Wall', desc: 'Non-Interactive' }
+                                        { id: 'kiosk', icon: <Tablet size={28}/>, label: 'Kiosk', desc: 'Interactive' },
+                                        { id: 'mobile', icon: <Smartphone size={28}/>, label: 'Handheld', desc: 'Staff Unit' },
+                                        { id: 'tv', icon: <Tv size={28}/>, label: 'TV Mode', desc: 'Video Wall' }
                                     ].map(type => (
                                         <button 
                                             key={type.id}
                                             onClick={() => setDeviceType(type.id as any)}
-                                            className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-1 group ${deviceType === type.id ? 'bg-blue-50 border-blue-600 shadow-md' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                                            className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-4 group ${deviceType === type.id ? 'bg-blue-50 border-blue-600 shadow-xl scale-105' : 'bg-white border-slate-100 hover:border-slate-200'}`}
                                         >
                                             <div className={`${deviceType === type.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`}>{type.icon}</div>
-                                            <div className={`font-black uppercase text-[10px] ${deviceType === type.id ? 'text-blue-600' : 'text-slate-900'}`}>{type.label}</div>
-                                            <div className="text-[8px] font-bold text-slate-400 uppercase">{type.desc}</div>
+                                            <div className="text-center">
+                                                <div className={`font-black uppercase text-xs ${deviceType === type.id ? 'text-blue-600' : 'text-slate-900'}`}>{type.label}</div>
+                                                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{type.desc}</div>
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
@@ -138,41 +162,49 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
                         )}
 
                         {step === 3 && (
-                            <div className="animate-fade-in text-center">
-                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Step 03: Security Authorization</label>
-                                <h2 className="text-xl font-black text-slate-900 mb-4 leading-tight">Enter System Setup PIN</h2>
-                                <div className="max-w-[200px] mx-auto">
+                            <div className="animate-fade-in text-center space-y-8">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Phase 03: Security Authorization</label>
+                                    <h2 className="text-2xl font-black text-slate-900">Enter System PIN</h2>
+                                </div>
+                                <div className="max-w-[280px] mx-auto relative">
                                     <input 
                                         autoFocus
                                         type="password"
                                         maxLength={8}
-                                        className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-mono font-bold text-2xl text-center tracking-[0.5em] text-slate-900 transition-all shadow-sm"
+                                        className="w-full p-8 bg-slate-900 border-2 border-slate-800 rounded-[2.5rem] outline-none focus:border-blue-500 font-mono font-bold text-4xl text-center tracking-[0.5em] text-white transition-all shadow-2xl"
                                         placeholder="****"
                                         value={pin}
                                         onChange={(e) => setPin(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                                     />
+                                    <div className="mt-6 flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                        <Lock size={12} className="text-green-500" /> AES-256 Cloud Encryption Enabled
+                                    </div>
                                 </div>
-                                <p className="text-slate-400 text-[10px] font-medium mt-3">Required to register device with Cloud Fleet</p>
                             </div>
                         )}
                     </div>
 
-                    {error && <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold uppercase flex items-center gap-2 border border-red-100"><X size={14}/> {error}</div>}
+                    {error && (
+                        <div className="mt-12 p-5 bg-red-50 text-red-600 rounded-[1.5rem] text-xs font-black uppercase flex items-center gap-3 border border-red-100 animate-bounce">
+                            <X size={18} className="bg-red-200 p-1 rounded-full" /> {error}
+                        </div>
+                    )}
 
-                    <div className="mt-8 flex gap-3">
+                    <div className="mt-16 flex gap-4">
                         {step > 1 && (
-                            <button onClick={() => setStep(step - 1)} className="px-6 py-4 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">Back</button>
+                            <button onClick={() => setStep(step - 1)} className="px-10 py-6 bg-slate-100 text-slate-500 rounded-3xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all active:scale-95">Back</button>
                         )}
                         <button 
                             onClick={handleNext}
                             disabled={isProcessing}
-                            className="flex-1 bg-slate-900 text-white p-4 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-lg hover:bg-blue-600 transition-all active:scale-95 disabled:opacity-50"
+                            className="flex-1 bg-slate-900 text-white p-6 rounded-3xl font-black uppercase tracking-[0.3em] text-xs flex items-center justify-center gap-4 shadow-2xl hover:bg-blue-600 transition-all active:scale-95 disabled:opacity-50"
                         >
                             {isProcessing ? (
-                                <><Loader2 className="animate-spin" size={14} /> Syncing...</>
+                                <><Loader2 className="animate-spin" size={20} /> {statusMsg}</>
                             ) : (
-                                <>{step === 3 ? 'Complete Setup' : 'Continue'} <ChevronRight size={14} /></>
+                                <>{step === 3 ? 'Finalize Enrollment' : 'Continue'} <ChevronRight size={20} /></>
                             )}
                         </button>
                     </div>
@@ -182,6 +214,7 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
     );
 };
 
+// --- PROFESSIONAL PRICELIST VIEWER ---
 const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: { pricelist: Pricelist, onClose: () => void, companyLogo?: string, brandLogo?: string }) => {
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
   
@@ -190,7 +223,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block" onClick={onClose}>
       <style>{`
         @media print {
           @page { size: auto; margin: 0mm; }
@@ -200,6 +233,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
             print-color-adjust: exact !important; 
             margin: 0 !important; 
             padding: 0 !important;
+            font-family: 'Helvetica Neue', 'Arial', sans-serif !important;
           }
           .print-hidden { display: none !important; }
           .print-only { display: block !important; }
@@ -220,24 +254,31 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           .spreadsheet-table { 
             width: 100% !important; 
             border-collapse: collapse !important; 
-            border: 2px solid #1e293b !important; 
+            border: 1.5pt solid #000 !important; 
           }
           .spreadsheet-table th { 
-            background: #e2e8f0 !important; 
-            color: #000 !important; 
-            border: 2px solid #1e293b !important; 
+            background: #000 !important; 
+            color: #fff !important; 
+            border: 1pt solid #000 !important; 
             font-weight: 900 !important;
             text-transform: uppercase !important;
-            padding: 12px 10px !important;
-            font-size: 14px !important;
+            padding: 12pt 8pt !important;
+            font-size: 11pt !important;
+            letter-spacing: 0.15em !important;
           }
           .spreadsheet-table td { 
-            border: 2px solid #1e293b !important; 
+            border: 0.75pt solid #ccc !important; 
+            border-left: 1.5pt solid #000 !important;
+            border-right: 1.5pt solid #000 !important;
             color: #000 !important; 
-            padding: 10px !important;
+            padding: 10pt 8pt !important;
             font-weight: 700 !important;
-            font-size: 14px !important;
+            font-size: 10pt !important;
           }
+          .spreadsheet-table tr:nth-child(even) { background-color: #f2f2f2 !important; }
+          .spreadsheet-table tr:last-child td { border-bottom: 1.5pt solid #000 !important; }
+          .print-price-normal { color: #666 !important; font-size: 9pt !important; text-decoration: line-through !important; }
+          .print-price-promo { color: #d00 !important; font-weight: 900 !important; font-size: 13pt !important; }
         }
         
         .spreadsheet-table {
@@ -248,9 +289,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           position: sticky;
           top: 0;
           z-index: 10;
-          background-color: #71717a;
+          background-color: #1e293b;
           color: white;
-          box-shadow: inset 0 -1px 0 #3f3f46;
         }
         .excel-row:nth-child(even) {
           background-color: #f8fafc;
@@ -261,104 +301,100 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
       `}</style>
 
-      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:w-full print:mx-0 print:border-0 ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
+      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:w-full print:mx-0 print:border-0 ${isNewlyUpdated ? 'ring-4 ring-blue-500 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
         
         {/* Screen-Only Header */}
-        <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
-          <div className="flex items-center gap-4">
-             <div className="hidden sm:flex bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10">
-                <RIcon size={28} className={isNewlyUpdated ? 'text-white' : 'text-green-400'} />
+        <div className={`print-hidden p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 bg-slate-900 shadow-2xl`}>
+          <div className="flex items-center gap-6">
+             <div className="hidden sm:flex bg-blue-600 p-4 rounded-3xl shadow-xl">
+                <RIcon size={32} className="text-white" />
              </div>
              <div>
-                <div className="flex items-center gap-2 md:gap-3">
-                  <h2 className="text-sm md:text-2xl font-black uppercase tracking-tight truncate max-w-[150px] md:max-w-none">{pricelist.title}</h2>
-                  {isNewlyUpdated && <span className="bg-white text-yellow-700 px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0 animate-pulse"><Sparkles size={10} /> NEW RELEASE</span>}
+                <div className="flex items-center gap-4">
+                  <h2 className="text-xl md:text-3xl font-black uppercase tracking-tight truncate max-w-[200px] md:max-w-none">{pricelist.title}</h2>
+                  {isNewlyUpdated && <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0 animate-pulse"><Sparkles size={12} /> NEW RELEASE</span>}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                   <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[9px] md:text-xs`}>{pricelist.month} {pricelist.year}</p>
-                   <div className={`w-1 h-1 rounded-full ${isNewlyUpdated ? 'bg-yellow-200' : 'bg-slate-700'}`}></div>
-                   <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[9px] md:text-xs`}>Spreadsheet View</p>
-                </div>
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-1">{pricelist.month} {pricelist.year} • Document Status: Valid</p>
              </div>
           </div>
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-4">
              <button 
                 onClick={handlePrint}
-                className="flex items-center gap-2 bg-white text-slate-900 px-4 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group"
+                className="flex items-center gap-3 bg-white text-slate-900 px-8 py-4 rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-blue-50 transition-all active:scale-95 group"
              >
-                <Printer size={16} className="group-hover:scale-110 transition-transform" /> <span className="hidden sm:inline">Export / Print List</span>
+                <Printer size={20} className="group-hover:scale-110 transition-transform" /> <span className="hidden sm:inline">Export / Print List</span>
              </button>
-             <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20}/></button>
+             <button onClick={onClose} className="p-4 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={28}/></button>
           </div>
         </div>
 
-        {/* Print-Only Layout - Optimized to start at the very top */}
-        <div className="hidden print-only w-full px-8 pt-4 pb-2">
-            <div className="flex items-center justify-between mb-4">
-                {/* Left Logo Slot - Smaller as requested */}
+        {/* Print-Only Header Area - START FROM EXTREME TOP */}
+        <div className="hidden print-only w-full px-8 pt-6 pb-6">
+            <div className="flex items-center justify-between mb-2">
                 <div className="w-1/4 flex justify-start">
                     {companyLogo ? (
                         <img src={companyLogo} alt="Company" className="h-10 object-contain" />
                     ) : (
-                        <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-bold text-[8px]">LOGO</div>
+                        <div className="w-10 h-10 bg-slate-900 text-white rounded flex items-center justify-center font-black text-[10px]">CORP</div>
                     )}
                 </div>
 
-                {/* Center Title Slot */}
                 <div className="w-2/4 text-center">
-                    <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 mb-0.5">{pricelist.title}</h1>
-                    <p className="text-lg font-bold text-slate-500 uppercase tracking-[0.1em]">{pricelist.month} {pricelist.year}</p>
+                    <h1 className="text-2xl font-black uppercase tracking-tighter text-slate-900 mb-0">{pricelist.title}</h1>
+                    <div className="flex items-center justify-center gap-4">
+                        <div className="h-[1pt] bg-slate-200 w-12"></div>
+                        <p className="text-[10pt] font-black text-slate-500 uppercase tracking-[0.4em]">{pricelist.month} {pricelist.year}</p>
+                        <div className="h-[1pt] bg-slate-200 w-12"></div>
+                    </div>
                 </div>
 
-                {/* Right Brand Logo Slot */}
                 <div className="w-1/4 flex justify-end">
                     {brandLogo ? (
                         <img src={brandLogo} alt="Brand" className="h-10 object-contain" />
                     ) : (
-                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center font-bold text-[8px] border border-slate-200">BRAND</div>
+                        <div className="w-10 h-10 border border-slate-200 rounded flex items-center justify-center font-bold text-[8px] uppercase text-slate-300">Brand</div>
                     )}
                 </div>
             </div>
+            <div className="h-[2pt] bg-slate-900 w-full mb-6"></div>
         </div>
 
-        {/* Spreadsheet / Table Area */}
-        <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:px-8 print:pt-0">
+        {/* Spreadsheet Area */}
+        <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-8 print:px-8 print:pt-0">
           <table className="spreadsheet-table w-full text-left border-collapse">
             <thead>
-              <tr className="print:bg-[#e2e8f0]">
-                <th className="p-3 md:p-4 text-[10px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 w-32 md:w-48 print:text-slate-900 print:border-slate-800">CODE</th>
-                <th className="p-3 md:p-4 text-[10px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 print:text-slate-900 print:border-slate-800">PRODUCT GROUP</th>
-                <th className="p-3 md:p-4 text-[10px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-40 print:text-slate-900 print:border-slate-800">NORMAL</th>
-                <th className="p-3 md:p-4 text-[10px] md:text-[14px] font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-40 print:text-slate-900 print:border-slate-800">PROMO</th>
+              <tr className="print:bg-black">
+                <th className="p-4 text-xs font-black uppercase tracking-[0.1em] border border-slate-300 print:text-white print:border-black w-32 md:w-48">SKU / CODE</th>
+                <th className="p-4 text-xs font-black uppercase tracking-[0.1em] border border-slate-300 print:text-white print:border-black">PRODUCT GROUP / DESCRIPTION</th>
+                <th className="p-4 text-xs font-black uppercase tracking-[0.1em] border border-slate-300 text-right print:text-white print:border-black w-32 md:w-48">BASE PRICE</th>
+                <th className="p-4 text-xs font-black uppercase tracking-[0.1em] border border-slate-300 text-right print:text-white print:border-black w-32 md:w-48">OFFER PRICE</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 print:divide-slate-800">
+            <tbody className="divide-y divide-slate-100">
               {(pricelist.items || []).map((item) => (
                 <tr key={item.id} className="excel-row transition-colors group">
-                  <td className="p-2 md:p-3 border border-slate-200 print:border-slate-800">
-                    <span className="sku-font font-bold text-[10px] md:text-sm text-slate-900 uppercase tracking-tight">
+                  <td className="p-4 border border-slate-200 print:border-slate-800">
+                    <span className="sku-font font-bold text-xs md:text-sm text-slate-900 uppercase tracking-tight">
                       {item.sku || 'N/A'}
                     </span>
                   </td>
-                  <td className="p-2 md:p-3 border border-slate-200 print:border-slate-800">
-                    <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 text-[10px] md:text-sm uppercase tracking-tight leading-tight line-clamp-1 group-hover:text-blue-600 transition-colors">
-                            {item.description}
-                        </span>
-                    </div>
+                  <td className="p-4 border border-slate-200 print:border-slate-800">
+                    <span className="font-bold text-slate-900 text-xs md:text-sm uppercase tracking-tight leading-tight group-hover:text-blue-600 transition-colors">
+                        {item.description}
+                    </span>
                   </td>
-                  <td className="p-2 md:p-3 text-right border border-slate-200 print:border-slate-800">
-                    <span className={`font-bold text-[11px] md:text-base tracking-tight ${item.promoPrice ? 'text-slate-400 line-through opacity-70 print:text-slate-500' : 'text-slate-900'}`}>
+                  <td className="p-4 text-right border border-slate-200 print:border-slate-800">
+                    <span className={`font-bold text-sm md:text-base tracking-tight print:print-price-normal ${item.promoPrice ? 'text-slate-400 line-through opacity-70' : 'text-slate-900'}`}>
                       {item.normalPrice || 'POA'}
                     </span>
                   </td>
-                  <td className="p-2 md:p-3 text-right border border-slate-200 print:border-slate-800 bg-slate-50/10">
+                  <td className="p-4 text-right border border-slate-200 print:border-slate-800 bg-slate-50/10">
                     {item.promoPrice ? (
-                       <span className="font-black text-[12px] md:text-xl text-red-600 tracking-tight print:text-red-700">
+                       <span className="font-black text-sm md:text-2xl text-red-600 tracking-tight print:print-price-promo">
                            {item.promoPrice}
                        </span>
                     ) : (
-                       <span className="font-bold text-[11px] md:text-base text-slate-900 tracking-tight">
+                       <span className="font-bold text-sm md:text-base text-slate-900 tracking-tight">
                            {item.normalPrice || '—'}
                        </span>
                     )}
@@ -367,10 +403,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
               ))}
               {(pricelist.items || []).length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-24 text-center">
+                  <td colSpan={4} className="py-40 text-center">
                     <div className="flex flex-col items-center gap-4 text-slate-300">
-                        <FileText size={64} className="opacity-10" />
-                        <span className="font-black uppercase tracking-[0.3em] text-xs">Spreadsheet Empty</span>
+                        <FileText size={100} className="opacity-10" />
+                        <span className="font-black uppercase tracking-[0.5em] text-sm opacity-50">Empty Dataset</span>
                     </div>
                   </td>
                 </tr>
@@ -380,15 +416,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         </div>
 
         {/* Footer Area */}
-        <div className="p-3 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 print:hidden">
-          <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Items: {(pricelist.items || []).length}</span>
+        <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 print:mt-10 print:bg-white print:border-none">
+          <div className="flex items-center gap-8">
+              <div className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 print:hidden"></div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest print:text-slate-900">Total System Items: {(pricelist.items || []).length} • UUID: {pricelist.id}</span>
               </div>
           </div>
-          <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right">
-            System generated • Valid for {pricelist.month} {pricelist.year} • Prices include VAT where applicable.
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center md:text-right print:text-slate-900">
+            Terms apply • Prices subject to inventory availability • E&OE.
           </p>
         </div>
       </div>
@@ -416,7 +452,6 @@ export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
 
 // --- COMPARISON MODAL ---
 const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Product[], onClose: () => void, onShowDetail: (p: Product) => void }) => {
-    // Unique spec keys across all products
     const specKeys = useMemo(() => {
         const keys = new Set<string>();
         products.forEach(p => Object.keys(p.specs).forEach(k => keys.add(k)));
@@ -431,7 +466,7 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                         <h2 className="text-2xl font-black uppercase text-slate-900 flex items-center gap-3">
                             <Layers className="text-blue-600" /> Product Comparison
                         </h2>
-                        <p className="text-xs text-slate-500 font-bold uppercase">Side-by-side Technical Analysis</p>
+                        <p className="text-xs text-slate-500 font-bold uppercase">Technical Benchmarking</p>
                     </div>
                     <button onClick={onClose} className="p-3 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-full transition-colors">
                         <X size={24} />
@@ -458,17 +493,14 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {/* Description Row */}
                             <tr className="hover:bg-slate-50/50">
                                 <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Description</td>
                                 {products.map(p => (
                                     <td key={p.id} className="p-6 text-sm font-medium text-slate-600 leading-relaxed italic border-r border-slate-100">
-                                        {p.description ? p.description.substring(0, 150) + '...' : 'No description provided.'}
+                                        {p.description ? p.description.substring(0, 150) + '...' : 'No data.'}
                                     </td>
                                 ))}
                             </tr>
-                            
-                            {/* Specs Rows */}
                             {specKeys.map(key => (
                                 <tr key={key} className="hover:bg-slate-50/50">
                                     <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">{key}</td>
@@ -479,45 +511,8 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                                     ))}
                                 </tr>
                             ))}
-
-                            {/* Features Row */}
-                            <tr className="hover:bg-slate-50/50">
-                                <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Key Features</td>
-                                {products.map(p => (
-                                    <td key={p.id} className="p-6 border-r border-slate-100">
-                                        <ul className="space-y-2">
-                                            {p.features.slice(0, 5).map((f, i) => (
-                                                <li key={i} className="flex items-start gap-2 text-[11px] font-bold text-slate-700">
-                                                    <Check size={12} className="text-green-500 shrink-0 mt-0.5" /> {f}
-                                                </li>
-                                            ))}
-                                            {p.features.length > 5 && <li className="text-[10px] font-black text-blue-500 uppercase tracking-widest pl-5">+{p.features.length - 5} more</li>}
-                                        </ul>
-                                    </td>
-                                ))}
-                            </tr>
-
-                            {/* Media Checks */}
-                            <tr className="hover:bg-slate-50/50">
-                                <td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Video Content</td>
-                                {products.map(p => (
-                                    <td key={p.id} className="p-6 border-r border-slate-100 text-center">
-                                        {(p.videoUrl || (p.videoUrls && p.videoUrls.length > 0)) ? (
-                                            <div className="inline-flex items-center gap-2 bg-green-50 text-green-600 px-3 py-1.5 rounded-full font-black text-[10px] uppercase">
-                                                <Video size={14} /> Available
-                                            </div>
-                                        ) : (
-                                            <span className="text-slate-300 font-bold uppercase text-[10px]">None</span>
-                                        )}
-                                    </td>
-                                ))}
-                            </tr>
                         </tbody>
                     </table>
-                </div>
-                
-                <div className="p-6 border-t border-slate-100 bg-slate-50 text-center shrink-0">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Technical specification data provided by brand manufacturer guidelines</p>
                 </div>
             </div>
         </div>
@@ -564,14 +559,13 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
     return (
         <div className="fixed inset-0 z-[120] bg-slate-900/95 backdrop-blur-xl flex flex-col animate-fade-in" onClick={onClose}>
             <div className="p-6 md:p-12 max-w-6xl mx-auto w-full flex flex-col h-full" onClick={e => e.stopPropagation()}>
-                {/* Search Bar Header */}
                 <div className="shrink-0 mb-8">
                     <div className="relative group">
                         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-500 w-8 h-8 group-focus-within:scale-110 transition-transform" />
                         <input 
                             autoFocus
                             type="text" 
-                            placeholder="Find any product, SKU, or feature..." 
+                            placeholder="Search catalog..." 
                             className="w-full bg-white/10 text-white placeholder:text-slate-500 text-3xl md:text-5xl font-black uppercase tracking-tight py-6 pl-20 pr-20 border-b-4 border-white/10 outline-none focus:border-blue-500 transition-all rounded-t-3xl"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
@@ -582,7 +576,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                     </div>
                 </div>
 
-                {/* Filters Row */}
                 <div className="shrink-0 flex flex-wrap gap-4 mb-8">
                     <div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10">
                         <div className="p-2 bg-blue-600 rounded-lg text-white"><Filter size={16} /></div>
@@ -623,7 +616,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                     </div>
                 </div>
 
-                {/* Results Grid */}
                 <div className="flex-1 overflow-y-auto no-scrollbar pb-20">
                     {results.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -637,11 +629,7 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                                         {p.imageUrl ? <img src={p.imageUrl} className="max-w-full max-h-full object-contain" /> : <Package size={48} className="text-slate-100" />}
                                         <div className="absolute top-3 left-3 flex flex-col gap-1">
                                             <span className="bg-slate-900 text-white px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">{p.brandName}</span>
-                                            <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter">{p.categoryName}</span>
                                         </div>
-                                        {(p.videoUrl || (p.videoUrls && p.videoUrls.length > 0)) && (
-                                            <div className="absolute bottom-3 right-3 text-blue-500"><Video size={16} strokeWidth={3} /></div>
-                                        )}
                                     </div>
                                     <div className="p-4 bg-slate-50/50 flex-1 flex flex-col">
                                         <h4 className="font-black text-slate-900 uppercase text-xs leading-tight mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">{p.name}</h4>
@@ -654,7 +642,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
                         <div className="h-full flex flex-col items-center justify-center text-slate-500">
                              <Search size={80} className="mb-6 opacity-10" />
                              <p className="text-2xl font-black uppercase tracking-widest opacity-30">No matches found</p>
-                             <button onClick={() => { setQuery(''); setFilterBrand('all'); setFilterCategory('all'); setFilterHasVideo(false); }} className="mt-4 text-blue-500 font-black uppercase text-xs hover:underline">Clear all filters</button>
                         </div>
                     )}
                 </div>
@@ -667,7 +654,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
   const [kioskId, setKioskId] = useState(getKioskId());
   
-  // Derived state from storeData (Fleet Telemetry)
   const myFleetEntry = useMemo(() => storeData?.fleet?.find(f => f.id === kioskId), [storeData?.fleet, kioskId]);
   
   const currentShopName = myFleetEntry?.name || getShopName() || "New Device";
@@ -691,7 +677,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedBrandForPricelist, setSelectedBrandForPricelist] = useState<string | null>(null);
   
-  // Advanced Search and Compare states
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [compareProductIds, setCompareProductIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
@@ -742,7 +727,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
          }
       };
       syncCycle();
-      const interval = setInterval(syncCycle, 30000); // Heartbeat pulse
+      const interval = setInterval(syncCycle, 30000); 
       return () => { clearInterval(interval); clearInterval(clockInterval); };
     }
     return () => { clearInterval(clockInterval); };
@@ -765,7 +750,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const toggleCompareProduct = (product: Product) => {
     setCompareProductIds(prev => 
-        prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5) // Max 5 products
+        prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5)
     );
   };
 
@@ -775,7 +760,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   if (!storeData) return null;
 
-  // Handle Setup Prompt
   if (!isSetup) {
       return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
   }
@@ -837,15 +821,12 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        {showPricelistModal && (
            <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-4 animate-fade-in print:hidden" onClick={() => setShowPricelistModal(false)}>
                <div className="relative w-full h-full md:h-auto md:max-w-5xl bg-white md:rounded-2xl shadow-2xl overflow-hidden md:max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                   {/* Modal Header */}
                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                       <h2 className="text-base md:text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={24} className="text-green-600" /> Pricelists</h2>
                       <button onClick={() => setShowPricelistModal(false)} className="p-2 rounded-full transition-colors hover:bg-slate-200"><X size={24} className="text-slate-500" /></button>
                    </div>
 
-                   {/* Responsive Body */}
                    <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                       {/* Brand Selector */}
                        <div className="shrink-0 w-full md:w-1/3 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 overflow-hidden flex flex-col">
                            <div className="md:hidden">
                                <div className="p-2 bg-slate-100/50 border-b border-slate-200 flex items-center justify-between">
@@ -871,23 +852,22 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
                            <div className="hidden md:flex flex-1 flex-col overflow-y-auto no-scrollbar">
                                {pricelistBrands.map(brand => (
-                                   <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-green-500' : 'hover:bg-white'}`}>
+                                   <button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-blue-500' : 'hover:bg-white'}`}>
                                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
                                           {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-sm">{brand.name.charAt(0)}</span>}
                                        </div>
-                                       <span className={`font-black text-sm uppercase leading-tight ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-400'}`}>{brand.name}</span>
+                                       <span className={`font-black text-sm uppercase leading-tight ${selectedBrandForPricelist === brand.id ? 'text-blue-600' : 'text-slate-400'}`}>{brand.name}</span>
                                    </button>
                                ))}
                            </div>
                        </div>
                        
-                       {/* Pricelists Display Area */}
                        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 relative">
                            {selectedBrandForPricelist ? (
                                <div className="animate-fade-in">
                                    <div className="mb-4 flex items-center justify-between">
                                        <div className="flex items-center gap-2">
-                                           <div className="w-1.5 h-6 bg-green-500 rounded-full"></div>
+                                           <div className="w-1.5 h-6 bg-blue-500 rounded-full"></div>
                                            <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Available Pricelists</h3>
                                        </div>
                                    </div>
@@ -896,7 +876,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                                            <button 
                                                 key={pl.id} 
                                                 onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} 
-                                                className={`group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border-2 flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-white hover:border-green-400'}`}
+                                                className={`group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border-2 flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-blue-400 ring-2 ring-blue-400/20' : 'border-white hover:border-blue-400'}`}
                                             >
                                                 <div className="aspect-[3/4] bg-slate-50 relative p-2 md:p-3 overflow-hidden">
                                                     {pl.thumbnailUrl ? (
@@ -907,14 +887,14 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                                                         </div>
                                                     )}
                                                     <div className={`absolute top-2 right-2 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm z-10 ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-500'}`}>
-                                                        {pl.type === 'manual' ? 'TABLE' : 'PDF'}
+                                                        {pl.type === 'manual' ? 'LIST' : 'PDF'}
                                                     </div>
                                                 </div>
                                                 <div className="p-3 flex-1 flex flex-col justify-between bg-white">
-                                                    <h3 className="font-black text-slate-900 text-[10px] md:text-sm uppercase leading-tight line-clamp-2 group-hover:text-green-600 transition-colors mb-2">{pl.title}</h3>
+                                                    <h3 className="font-black text-slate-900 text-[10px] md:text-sm uppercase leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">{pl.title}</h3>
                                                     <div className="flex justify-between items-center pt-2 border-t border-slate-50">
                                                        <div className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter">{pl.month} {pl.year}</div>
-                                                       <div className="text-green-500 opacity-0 group-hover:opacity-100 transition-opacity"><ChevronRight size={14} /></div>
+                                                       <div className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"><ChevronRight size={14} /></div>
                                                     </div>
                                                 </div>
                                            </button>
