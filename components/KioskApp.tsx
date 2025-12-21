@@ -194,7 +194,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block" onClick={onClose}>
       <style>{`
         @media print {
-          @page { size: auto; margin: 5mm; }
+          @page { size: auto; margin: 0mm; }
           body { 
             background: white !important; 
             -webkit-print-color-adjust: exact !important; 
@@ -293,52 +293,40 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           </div>
         </div>
 
-        {/* Print-Only Layout based on reference image */}
-        <div className="hidden print-only w-full px-6 py-4">
-            {/* Top Box Header */}
-            <div className="border-[3px] border-slate-900 p-4 mb-4 text-center">
-                <h2 className="text-5xl font-black uppercase tracking-[0.15em] text-slate-800">start from here</h2>
-            </div>
-
-            {/* Large Arrows Row */}
-            <div className="flex justify-between items-center px-4 mb-2">
-                <MoveUp size={180} strokeWidth={3} className="text-slate-900" />
-                <MoveUp size={180} strokeWidth={3} className="text-slate-900" />
-            </div>
-
-            {/* Logos and Main Title Row */}
-            <div className="flex items-center justify-between mb-8">
-                {/* Left Logo Slot */}
-                <div className="w-1/3 flex justify-start">
+        {/* Print-Only Layout - Optimized for content starting at top */}
+        <div className="hidden print-only w-full px-8 pt-8 pb-4">
+            <div className="flex items-center justify-between mb-6">
+                {/* Left Logo Slot - Smaller as requested */}
+                <div className="w-1/4 flex justify-start">
                     {companyLogo ? (
-                        <img src={companyLogo} alt="Logo 1" className="h-24 object-contain" />
+                        <img src={companyLogo} alt="Company" className="h-16 object-contain" />
                     ) : (
-                        <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center font-bold text-[8px]">LOGO 1</div>
+                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center font-bold text-[8px]">LOGO</div>
                     )}
                 </div>
 
-                {/* Center Text Slot */}
-                <div className="w-1/3 text-center">
-                    <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900 mb-1">New Pricelist</h1>
+                {/* Center Title Slot */}
+                <div className="w-2/4 text-center">
+                    <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 mb-1">{pricelist.title}</h1>
                     <p className="text-xl font-bold text-slate-500 uppercase tracking-[0.1em]">{pricelist.month} {pricelist.year}</p>
                 </div>
 
-                {/* Right Logo Slot */}
-                <div className="w-1/3 flex justify-end">
+                {/* Right Brand Logo Slot */}
+                <div className="w-1/4 flex justify-end">
                     {brandLogo ? (
-                        <img src={brandLogo} alt="Logo 2" className="h-24 object-contain" />
+                        <img src={brandLogo} alt="Brand" className="h-16 object-contain" />
                     ) : (
-                        <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center font-bold text-[8px]">LOGO 2</div>
+                        <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center font-bold text-[8px] border border-slate-200">BRAND</div>
                     )}
                 </div>
             </div>
 
-            {/* Heavy Horizontal Divider */}
-            <div className="h-1.5 bg-slate-800 w-full mb-8"></div>
+            {/* Content Start Line */}
+            <div className="h-1 bg-slate-900 w-full mb-6"></div>
         </div>
 
         {/* Spreadsheet / Table Area */}
-        <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:px-6">
+        <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:px-8">
           <table className="spreadsheet-table w-full text-left border-collapse">
             <thead>
               <tr className="print:bg-[#a1a1aa]">

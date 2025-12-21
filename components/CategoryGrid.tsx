@@ -1,8 +1,7 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Brand, Category, Catalogue, Pricelist } from '../types';
-import { Smartphone, Laptop, Watch, Headphones, Monitor, Tablet, Box, ChevronLeft, ArrowRight, BookOpen, MonitorPlay, MonitorStop, Calendar, DollarSign, X, FileText } from 'lucide-react';
-import { StoreData } from '../types'; 
+import { Smartphone, Laptop, Watch, Headphones, Monitor, Tablet, Box, ChevronLeft, BookOpen, MonitorPlay, MonitorStop } from 'lucide-react';
 
 interface CategoryGridProps {
   brand: Brand;
@@ -25,12 +24,15 @@ const IconMap: Record<string, React.ReactNode> = {
   'Tablet': <Tablet className="w-5 h-5 md:w-12 md:h-12" strokeWidth={1.5} />,
 };
 
+// Fix: Completed truncated component and added default export
 const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSelectCategory, onViewCatalog, onBack, screensaverEnabled, onToggleScreensaver, showScreensaverButton = true }) => {
   // Filter catalogs for this brand ONLY
-  const brandCatalogs = storeCatalogs?.filter(c => c.brandId === brand.id).sort((a, b) => {
+  const brandCatalogs = useMemo(() => 
+    storeCatalogs?.filter(c => c.brandId === brand.id).sort((a, b) => {
       if (a.year && b.year && a.year !== b.year) return b.year - a.year; // Recent first
       return 0;
-  }) || [];
+    }) || [], 
+  [storeCatalogs, brand.id]);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
@@ -81,7 +83,7 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
       {/* Grid Content */}
       <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col pb-40 md:pb-8">
         
-        {/* Categories Grid - Smaller on Mobile (4 columns) */}
+        {/* Categories Grid */}
         <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-6 mb-12">
           {sortedCategories.map((category) => (
             <button
@@ -95,17 +97,17 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
                 {IconMap[category.name] || <Box className="w-4 h-4 md:w-10 md:h-10" strokeWidth={1.5} />}
               </div>
               
-              <div className="w-full">
-                <h3 className="text-[8px] md:text-lg font-black text-slate-900 group-hover:text-blue-900 transition-colors truncate w-full uppercase tracking-tight leading-tight">
+              <div className="w-full px-1">
+                <h3 className="text-[7px] xs:text-[8px] sm:text-xs md:text-lg font-black text-slate-900 group-hover:text-blue-900 transition-colors truncate w-full uppercase tracking-tighter leading-tight">
                     {category.name}
                 </h3>
-                <p className="text-slate-400 mt-0.5 text-[7px] md:text-xs font-bold uppercase tracking-widest hidden sm:block">{category.products.length} Models</p>
+                <p className="text-slate-400 mt-0.5 text-[6px] md:text-xs font-bold uppercase tracking-widest hidden sm:block truncate">{category.products.length} Models</p>
               </div>
             </button>
           ))}
         </div>
 
-        {/* Brand Catalogs Section - STICKY TO BOTTOM OF CONTENT IF FEW CATEGORIES */}
+        {/* Brand Catalogs Section */}
         {brandCatalogs.length > 0 && onViewCatalog && (
             <div className="mt-auto border-t-2 border-slate-200 pt-8 bg-slate-100/50 p-4 md:p-6 rounded-2xl relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
@@ -118,9 +120,8 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
                 </div>
                 
                 <div className="flex gap-4 md:gap-8 overflow-x-auto pb-4 no-scrollbar items-start">
-                    {brandCatalogs.map((catalog, idx) => (
+                    {brandCatalogs.map((catalog) => (
                         <div key={catalog.id} className="flex flex-col gap-2 group w-20 md:w-48 shrink-0">
-                            {/* Thumbnail Container */}
                             <button 
                                 onClick={() => onViewCatalog(catalog)} 
                                 className="w-full aspect-[2/3] bg-white shadow-md group-hover:shadow-xl rounded-lg border border-slate-200 transition-transform transform group-hover:-translate-y-1 overflow-hidden relative"
@@ -143,21 +144,11 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
                                 {catalog.pdfUrl && <div className="absolute top-1 right-1 bg-red-500 text-white text-[6px] font-bold px-1 py-0.5 rounded">PDF</div>}
                             </button>
                             
-                            {/* Info Section */}
                             <div className="flex flex-col">
-                                <h4 className="text-[8px] md:text-xs font-black text-slate-800 uppercase leading-tight line-clamp-2 group-hover:text-blue-700 transition-colors">
-                                    {catalog.title}
-                                </h4>
-                                {(catalog.startDate || catalog.year) && (
-                                    <div className="flex items-center gap-1 text-[7px] md:text-[9px] text-slate-500 font-bold mt-1">
-                                        <Calendar size={8} className="md:w-3 md:h-3" />
-                                        <span>
-                                            {catalog.year ? catalog.year : ''} 
-                                            {catalog.year && catalog.startDate ? ' • ' : ''}
-                                            {catalog.startDate ? formatDate(catalog.startDate) : ''}
-                                        </span>
-                                    </div>
-                                )}
+                                <h4 className="text-[8px] md:text-xs font-bold text-slate-800 line-clamp-1">{catalog.title}</h4>
+                                <p className="text-[6px] md:text-[10px] text-slate-500 font-bold uppercase">
+                                    {catalog.type === 'catalogue' ? catalog.year : formatDate(catalog.startDate)}
+                                </p>
                             </div>
                         </div>
                     ))}
