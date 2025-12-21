@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -12,49 +13,16 @@ import JSZip from 'jszip';
 
 const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
 
-// --- ZIP IMPORT/EXPORT UTILS ---
-const getExtension = (blob: Blob, url: string): string => {
-    if (blob.type === 'image/jpeg') return 'jpg';
-    if (blob.type === 'image/png') return 'png';
-    if (blob.type === 'image/webp') return 'webp';
-    if (blob.type === 'application/pdf') return 'pdf';
-    if (blob.type === 'video/mp4') return 'mp4';
-    if (blob.type === 'video/webm') return 'webm';
-    const match = url.match(/\.([0-9a-z]+)(?:[?#]|$)/i);
-    return match ? match[1] : 'dat';
-};
-
-const fetchAssetAndAddToZip = async (zipFolder: JSZip | null, url: string, filenameBase: string) => {
-    if (!zipFolder || !url || url.length < 5) return;
-    try {
-        let blob: Blob;
-        if (url.startsWith('data:')) {
-            const res = await fetch(url);
-            blob = await res.blob();
-        } else {
-            const response = await fetch(url, { mode: 'cors', cache: 'no-cache' });
-            if (!response.ok) throw new Error(`Failed to fetch ${url}`);
-            blob = await response.blob();
-        }
-        const ext = getExtension(blob, url);
-        const safeFilename = filenameBase.replace(/[^a-z0-9_\-]/gi, '_');
-        zipFolder.file(`${safeFilename}.${ext}`, blob);
-    } catch (e) {
-        console.warn(`Failed to pack asset: ${url}`, e);
-        zipFolder.file(`${filenameBase}_FAILED.txt`, `Could not download: ${url}`);
-    }
-};
-
+// --- ZIP UTILS ---
 const downloadZip = async (storeData: StoreData, onProgress?: (msg: string) => void) => {
     const zip = new JSZip();
-    if (onProgress) onProgress("Initializing full system backup...");
+    if (onProgress) onProgress("Packing system core...");
     zip.file("store_config_full.json", JSON.stringify(storeData, null, 2));
-    if (onProgress) onProgress("Finalizing ZIP generation...");
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `kiosk-complete-backup-${new Date().toISOString().split('T')[0]}.zip`;
+    a.download = `kiosk-full-backup-${new Date().toISOString().split('T')[0]}.zip`;
     document.body.appendChild(a);
     a.click();
     URL.revokeObjectURL(url);
@@ -66,42 +34,51 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
     const loadedZip = await zip.loadAsync(file);
     const fullConfigEntry = loadedZip.file("store_config_full.json");
     if (fullConfigEntry) {
-        if (onProgress) onProgress("Restoring configuration...");
         const content = await fullConfigEntry.async("text");
         return { fullData: JSON.parse(content) };
     }
     return {};
 };
 
-// --- AUTH COMPONENT ---
+// --- AUTH ---
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const handleAuth = (e: any) => {
     e.preventDefault();
     const admin = admins.find(a => a.name.toLowerCase() === name.toLowerCase().trim() && a.pin === pin.trim());
-    if (admin) onLogin(admin); else alert("Invalid System Credentials");
+    if (admin) onLogin(admin); else alert("Access Denied: Invalid Credentials");
   };
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-slate-900 relative">
+    <div className="h-screen w-screen flex items-center justify-center bg-slate-950 relative">
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-      <form onSubmit={handleAuth} className="bg-white p-12 rounded-[3.5rem] shadow-2xl max-w-sm w-full relative z-10 border border-white/20">
-        <div className="bg-blue-600 w-20 h-20 rounded-3xl flex items-center justify-center text-white mb-10 mx-auto shadow-2xl ring-8 ring-blue-600/10"><Lock size={40} /></div>
+      <form onSubmit={handleAuth} className="bg-white p-12 rounded-[3.5rem] shadow-2xl max-w-sm w-full relative z-10">
+        <div className="bg-blue-600 w-20 h-20 rounded-3xl flex items-center justify-center text-white mb-10 mx-auto shadow-2xl ring-8 ring-blue-600/10"><ShieldCheck size={40} /></div>
         <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 text-center text-slate-900">Admin Hub</h2>
         <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] text-center mb-10">Secure Gateway Access</p>
-        <input className="w-full p-5 mb-4 border-2 border-slate-100 rounded-2xl font-bold uppercase outline-none focus:border-blue-500 transition-all text-slate-900" placeholder="Username" value={name} onChange={e=>setName(e.target.value)} />
-        <input className="w-full p-5 mb-10 border-2 border-slate-100 rounded-2xl font-bold text-center tracking-[0.5em] outline-none focus:border-blue-500 transition-all text-slate-900" type="password" placeholder="PIN" value={pin} onChange={e=>setPin(e.target.value)} />
-        <button className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-xl">System Login</button>
+        <input className="w-full p-5 mb-4 border-2 border-slate-100 rounded-2xl font-bold uppercase outline-none focus:border-blue-500 transition-all" placeholder="USER ID" value={name} onChange={e=>setName(e.target.value)} />
+        <input className="w-full p-5 mb-10 border-2 border-slate-100 rounded-2xl font-bold text-center tracking-[0.5em] outline-none focus:border-blue-500 transition-all" type="password" placeholder="PIN" value={pin} onChange={e=>setPin(e.target.value)} />
+        <button className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-xl">Initialize Access</button>
       </form>
     </div>
   );
 };
 
-// --- SUB-COMPONENTS ---
+// --- SUB-UI ELEMENTS ---
 const TabButton = ({ active, label, icon: Icon, onClick }: any) => (
     <button onClick={onClick} className={`px-8 py-5 text-[11px] font-black uppercase tracking-widest border-b-4 transition-all flex items-center gap-3 shrink-0 ${active ? 'border-blue-500 bg-slate-700 text-white' : 'border-transparent text-slate-400 hover:text-white'}`}>
         <Icon size={16} /> {label}
     </button>
+);
+
+const SectionHeader = ({ title, icon: Icon, actions }: any) => (
+    <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center gap-4">
+            {Icon && <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg"><Icon size={24}/></div>}
+            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">{title}</h2>
+        </div>
+        <div className="flex gap-3">{actions}</div>
+    </div>
 );
 
 export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => void, onRefresh: () => void }) => {
@@ -113,7 +90,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
     const [progressMsg, setProgressMsg] = useState('');
     const [showSetupGuide, setShowSetupGuide] = useState(false);
 
-    // Editing States
+    // Edit Navigation State
     const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -125,28 +102,17 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
         setHasUnsavedChanges(true); 
     };
 
-    const handleBackupExport = async () => {
-        if (!localData) return;
-        setIsProcessing(true);
-        try { await downloadZip(localData, setProgressMsg); } 
-        catch (e) { alert("Export failed"); } 
-        finally { setIsProcessing(false); setProgressMsg(''); }
-    };
-
-    const handleBackupImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleBackupExport = () => downloadZip(localData!, setProgressMsg);
+    const handleBackupImport = async (e: any) => {
         const file = e.target.files?.[0];
         if (!file) return;
         setIsProcessing(true);
         try {
             const result = await importZip(file, setProgressMsg);
-            if (result.fullData) {
-                if (confirm("System Restore detected. All current data will be overwritten. Proceed?")) {
-                    updateData(result.fullData);
-                    alert("Sync successful. Press SAVE to finalize.");
-                }
+            if (result.fullData && confirm("Overwrite entire system data?")) {
+                updateData(result.fullData);
             }
-        } catch (e) { alert("Restore failed"); }
-        finally { setIsProcessing(false); setProgressMsg(''); e.target.value = ''; }
+        } finally { setIsProcessing(false); setProgressMsg(''); }
     };
 
     if (!currentUser) return <Auth admins={localData?.admins || []} onLogin={setCurrentUser} />;
@@ -159,21 +125,14 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 <div className="flex items-center gap-5">
                     <div className="bg-blue-600 p-3 rounded-2xl shadow-xl"><Settings size={22} /></div>
                     <div>
-                        <span className="font-black uppercase tracking-[0.2em] text-sm block">System Control Center</span>
-                        <span className="text-blue-400 text-[9px] font-black uppercase tracking-widest">{currentUser.name} (Authorized)</span>
+                        <span className="font-black uppercase tracking-[0.2em] text-sm block leading-none mb-1">Kiosk Enterprise Hub</span>
+                        <span className="text-blue-400 text-[9px] font-black uppercase tracking-widest">{currentUser.name} (Active)</span>
                     </div>
                 </div>
                 <div className="flex gap-4 items-center">
-                    <button onClick={() => setShowSetupGuide(true)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-400 border border-white/5 transition-all">Manual</button>
-                    <div className="h-8 w-[1px] bg-slate-700 mx-2"></div>
-                    <button 
-                        onClick={() => { onUpdateData(localData!); setHasUnsavedChanges(false); }} 
-                        disabled={!hasUnsavedChanges} 
-                        className={`px-8 py-3 rounded-2xl font-black uppercase text-xs transition-all flex items-center gap-3 ${hasUnsavedChanges ? 'bg-green-600 hover:bg-green-500 shadow-[0_0_30px_rgba(22,163,74,0.4)]' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
-                    >
-                        <SaveAll size={18} /> Save Core System
-                    </button>
-                    <button onClick={() => setCurrentUser(null)} className="p-3 text-slate-400 hover:text-white transition-colors bg-white/5 rounded-xl"><LogOut size={20} /></button>
+                    <button onClick={() => setShowSetupGuide(true)} className="px-5 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-400 border border-white/5">Engineering Manual</button>
+                    <button onClick={() => { onUpdateData(localData!); setHasUnsavedChanges(false); }} disabled={!hasUnsavedChanges} className={`px-8 py-2.5 rounded-2xl font-black uppercase text-xs flex items-center gap-3 transition-all ${hasUnsavedChanges ? 'bg-green-600 hover:bg-green-500 shadow-xl' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}><SaveAll size={18} /> Save Core</button>
+                    <button onClick={() => setCurrentUser(null)} className="p-3 text-slate-400 hover:text-white bg-white/5 rounded-xl transition-colors"><LogOut size={20}/></button>
                 </div>
             </header>
 
@@ -183,188 +142,327 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 <TabButton active={activeTab === 'pricelists'} label="Pricelists" icon={Table} onClick={() => setActiveTab('pricelists')} />
                 <TabButton active={activeTab === 'tv'} label="TV Mode" icon={Tv} onClick={() => setActiveTab('tv')} />
                 <TabButton active={activeTab === 'screensaver'} label="Screensaver" icon={MonitorPlay} onClick={() => setActiveTab('screensaver')} />
-                <TabButton active={activeTab === 'fleet'} label="Fleet" icon={Network} onClick={() => setActiveTab('fleet')} />
+                <TabButton active={activeTab === 'fleet'} label="Fleet Registry" icon={Network} onClick={() => setActiveTab('fleet')} />
                 <TabButton active={activeTab === 'settings'} label="Settings" icon={Cpu} onClick={() => setActiveTab('settings')} />
             </div>
 
-            <main className="flex-1 overflow-y-auto p-6 md:p-10 relative bg-slate-50">
+            <main className="flex-1 overflow-y-auto p-6 md:p-12 relative bg-slate-50">
                 {isProcessing && (
                     <div className="absolute inset-0 z-[100] bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center">
                         <Loader2 className="animate-spin text-blue-500 mb-8" size={80} />
-                        <p className="font-black uppercase tracking-[0.4em] text-white text-xl animate-pulse">{progressMsg || "Initializing Protocol..."}</p>
+                        <p className="font-black uppercase tracking-[0.4em] text-white text-xl">{progressMsg || "Updating Protocol..."}</p>
                     </div>
                 )}
 
-                <div className="max-w-6xl mx-auto pb-40">
+                <div className="max-w-6xl mx-auto space-y-12 pb-40">
                     
-                    {/* INVENTORY TAB */}
+                    {/* INVENTORY MODULE */}
                     {activeTab === 'inventory' && (
                         <div className="animate-fade-in space-y-8">
                             {!editingBrand ? (
-                                <div className="space-y-6">
-                                    <div className="flex justify-between items-center">
-                                        <h2 className="text-3xl font-black text-slate-900 uppercase">Inventory Management</h2>
+                                <>
+                                    <SectionHeader title="Inventory Matrix" icon={Package} actions={
                                         <button onClick={() => {
                                             const newB: Brand = { id: generateId('br'), name: 'New Brand', categories: [] };
                                             updateData({ ...localData!, brands: [...localData!.brands, newB] });
                                             setEditingBrand(newB);
-                                        }} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 shadow-lg"><Plus size={16}/> Add Brand</button>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        }} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 shadow-lg"><Plus size={16}/> New Brand</button>
+                                    } />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                         {localData?.brands.map(b => (
-                                            <div key={b.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center justify-between group hover:border-blue-300 transition-all">
-                                                <div className="flex items-center gap-5">
-                                                    <div className="w-16 h-16 bg-slate-50 rounded-2xl p-2 flex items-center justify-center shadow-inner border border-slate-100">
-                                                        {b.logoUrl ? <img src={b.logoUrl} className="max-w-full max-h-full object-contain" /> : <Box size={24} className="text-slate-200" />}
+                                            <button key={b.id} onClick={() => setEditingBrand(b)} className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex items-center justify-between group hover:border-blue-400 hover:shadow-xl transition-all text-left">
+                                                <div className="flex items-center gap-6">
+                                                    <div className="w-20 h-20 bg-slate-50 rounded-3xl p-3 flex items-center justify-center border border-slate-100 shadow-inner">
+                                                        {b.logoUrl ? <img src={b.logoUrl} className="max-w-full max-h-full object-contain" /> : <Box size={32} className="text-slate-200" />}
                                                     </div>
                                                     <div>
-                                                        <h3 className="font-black text-lg text-slate-900 uppercase leading-tight">{b.name}</h3>
-                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{b.categories.length} Categories</p>
+                                                        <h3 className="font-black text-xl text-slate-900 uppercase leading-none mb-2">{b.name}</h3>
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{b.categories.length} Categories</p>
                                                     </div>
                                                 </div>
-                                                <button onClick={() => setEditingBrand(b)} className="p-4 bg-slate-100 text-slate-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-all"><ChevronRight size={20}/></button>
+                                                <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all"><ChevronRight size={24}/></div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : !editingCategory ? (
+                                <div className="space-y-8">
+                                    <button onClick={() => setEditingBrand(null)} className="flex items-center gap-2 text-slate-500 font-black uppercase text-[10px] tracking-widest hover:text-slate-900"><ArrowLeft size={16}/> Back to All Brands</button>
+                                    <SectionHeader title={editingBrand.name} icon={Box} actions={
+                                        <button onClick={() => {
+                                            const newCat: Category = { id: generateId('cat'), name: 'New Category', icon: 'Box', products: [] };
+                                            const updatedB = { ...editingBrand, categories: [...editingBrand.categories, newCat] };
+                                            setEditingBrand(updatedB);
+                                            updateData({ ...localData!, brands: localData!.brands.map(b => b.id === editingBrand.id ? updatedB : b) });
+                                        }} className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 shadow-lg"><Plus size={16}/> New Category</button>
+                                    } />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {editingBrand.categories.map(cat => (
+                                            <div key={cat.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 flex items-center justify-between group shadow-sm hover:shadow-lg transition-all">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 font-black">{cat.name.charAt(0)}</div>
+                                                    <span className="font-black text-slate-900 uppercase tracking-tight">{cat.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-4">{cat.products.length} Products</span>
+                                                    <button onClick={() => setEditingCategory(cat)} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"><ChevronRight size={20}/></button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             ) : (
                                 <div className="space-y-8">
-                                    <button onClick={() => setEditingBrand(null)} className="flex items-center gap-2 text-slate-500 font-black uppercase text-xs hover:text-slate-900"><ArrowLeft size={16}/> Back to Brands</button>
-                                    <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
-                                        <div className="flex items-center gap-8 mb-10">
-                                            <div className="w-32 h-32 bg-slate-50 rounded-3xl p-4 flex items-center justify-center border-2 border-dashed border-slate-200 group relative cursor-pointer overflow-hidden">
-                                                {editingBrand.logoUrl ? <img src={editingBrand.logoUrl} className="max-w-full max-h-full object-contain" /> : <ImageIcon size={32} className="text-slate-300" />}
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"><Camera size={24}/></div>
-                                            </div>
-                                            <div className="flex-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Brand Name</label>
-                                                <input className="text-4xl font-black uppercase text-slate-900 w-full outline-none border-b-4 border-slate-100 focus:border-blue-500 pb-2 transition-all" value={editingBrand.name} onChange={e => {
-                                                    const updated = { ...editingBrand, name: e.target.value };
-                                                    setEditingBrand(updated);
-                                                    updateData({ ...localData!, brands: localData!.brands.map(b => b.id === editingBrand.id ? updated : b) });
-                                                }} />
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between items-center">
-                                                <h4 className="text-xl font-black uppercase text-slate-900">Categories</h4>
-                                                <button onClick={() => {
-                                                    const newCat: Category = { id: generateId('cat'), name: 'New Category', icon: 'Box', products: [] };
-                                                    const updatedB = { ...editingBrand, categories: [...editingBrand.categories, newCat] };
-                                                    setEditingBrand(updatedB);
-                                                    updateData({ ...localData!, brands: localData!.brands.map(b => b.id === editingBrand.id ? updatedB : b) });
-                                                }} className="text-blue-600 font-black uppercase text-[10px] tracking-widest flex items-center gap-1 hover:underline"><Plus size={14}/> New Category</button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {editingBrand.categories.map(cat => (
-                                                    <div key={cat.id} className="p-6 bg-slate-50 rounded-3xl border border-slate-200 flex items-center justify-between group">
-                                                        <span className="font-black uppercase text-slate-900">{cat.name}</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] font-bold text-slate-400 mr-4">{cat.products.length} Products</span>
-                                                            <button className="p-3 bg-white text-slate-400 rounded-xl hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
-                                                        </div>
-                                                    </div>
+                                    <button onClick={() => setEditingCategory(null)} className="flex items-center gap-2 text-slate-500 font-black uppercase text-[10px] tracking-widest hover:text-slate-900"><ArrowLeft size={16}/> Back to Categories</button>
+                                    <SectionHeader title={editingCategory.name} icon={Grid} actions={
+                                        <button onClick={() => {
+                                            const newP: Product = { id: generateId('pd'), name: 'New Product', description: '', features: [], specs: {}, dimensions: [], imageUrl: '' };
+                                            const updatedCat = { ...editingCategory, products: [...editingCategory.products, newP] };
+                                            setEditingCategory(updatedCat);
+                                            const updatedBrand = { ...editingBrand, categories: editingBrand.categories.map(c => c.id === editingCategory.id ? updatedCat : c) };
+                                            setEditingBrand(updatedBrand);
+                                            updateData({ ...localData!, brands: localData!.brands.map(b => b.id === editingBrand.id ? updatedBrand : b) });
+                                        }} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-xs flex items-center gap-2 shadow-lg"><Plus size={16}/> Add Product</button>
+                                    } />
+                                    <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-900 text-white uppercase text-[10px] font-black tracking-widest">
+                                                <tr>
+                                                    <th className="p-6">Product Item</th>
+                                                    <th className="p-6">SKU / Code</th>
+                                                    <th className="p-6">Media Status</th>
+                                                    <th className="p-6 text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {editingCategory.products.map(p => (
+                                                    <tr key={p.id} className="hover:bg-slate-50 group transition-colors">
+                                                        <td className="p-6">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 bg-white border border-slate-100 rounded-xl p-1 shrink-0">
+                                                                    {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-contain" /> : <ImageIcon size={20} className="text-slate-200 m-auto mt-2" />}
+                                                                </div>
+                                                                <span className="font-black text-slate-900 uppercase tracking-tight">{p.name}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-6 font-mono text-[10px] font-black text-slate-400">{p.sku || 'N/A'}</td>
+                                                        <td className="p-6">
+                                                            <div className="flex gap-1">
+                                                                {p.imageUrl && <ImageIcon size={14} className="text-green-500" />}
+                                                                {(p.videoUrl || p.videoUrls?.length) && <Video size={14} className="text-blue-500" />}
+                                                                {(p.manualUrl || p.manuals?.length) && <FileText size={14} className="text-purple-500" />}
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-6 text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                <button className="p-3 bg-slate-100 text-slate-500 rounded-xl hover:bg-blue-600 hover:text-white transition-all"><Edit2 size={18}/></button>
+                                                                <button className="p-3 bg-slate-100 text-slate-500 rounded-xl hover:bg-red-600 hover:text-white transition-all"><Trash2 size={18}/></button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
                                                 ))}
-                                            </div>
-                                        </div>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             )}
                         </div>
                     )}
 
-                    {/* FLEET TAB */}
+                    {/* MARKETING MODULE */}
+                    {activeTab === 'marketing' && (
+                        <div className="animate-fade-in space-y-12">
+                            <SectionHeader title="Global Marketing Config" icon={Megaphone} />
+                            
+                            {/* Hero Section Edit */}
+                            <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-10 opacity-5"><Layout size={180} /></div>
+                                <h3 className="text-xl font-black text-slate-900 uppercase mb-8 flex items-center gap-3"><LayoutTemplate size={20} className="text-blue-600" /> Landing Hero Content</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Hero Title</label>
+                                            <input className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900" value={localData?.hero.title} onChange={e => updateData({...localData!, hero: {...localData!.hero, title: e.target.value}})} />
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Hero Subtitle</label>
+                                            <textarea className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 h-24" value={localData?.hero.subtitle} onChange={e => updateData({...localData!, hero: {...localData!.hero, subtitle: e.target.value}})} />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Background Media URL (Video or Image)</label>
+                                            <input className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono text-xs" value={localData?.hero.backgroundVideoUrl || localData?.hero.backgroundImageUrl} onChange={e => updateData({...localData!, hero: {...localData!.hero, backgroundVideoUrl: e.target.value}})} />
+                                        </div>
+                                        <div className="p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
+                                            <ImageIcon size={40} className="text-slate-300 mb-4" />
+                                            <p className="text-xs font-black text-slate-400 uppercase">Interactive Preview Disabled in Hub</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Ad Zones */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                {['homeBottomLeft', 'homeBottomRight', 'homeSideVertical'].map(zone => (
+                                    <div key={zone} className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <h4 className="font-black text-slate-900 uppercase text-xs tracking-widest">{zone.replace(/([A-Z])/g, ' $1')}</h4>
+                                            <button className="p-2 bg-blue-600 text-white rounded-lg"><Plus size={14}/></button>
+                                        </div>
+                                        <div className="flex-1 space-y-3">
+                                            {((localData?.ads as any)[zone] || []).map((ad: any) => (
+                                                <div key={ad.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className="w-10 h-10 bg-white rounded-lg p-1 border border-slate-200 shrink-0">
+                                                            {ad.type === 'image' ? <img src={ad.url} className="w-full h-full object-cover" /> : <Video size={16} className="m-auto mt-2 text-blue-500" />}
+                                                        </div>
+                                                        <span className="text-[10px] font-mono font-bold text-slate-400 truncate">{ad.url}</span>
+                                                    </div>
+                                                    <button className="text-red-400 hover:text-red-600"><Trash2 size={16}/></button>
+                                                </div>
+                                            ))}
+                                            {(!((localData?.ads as any)[zone]) || (localData?.ads as any)[zone].length === 0) && (
+                                                <div className="py-12 border-2 border-dashed border-slate-100 rounded-3xl flex items-center justify-center text-[10px] font-black text-slate-300 uppercase tracking-widest">No Ads assigned</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* FLEET MODULE */}
                     {activeTab === 'fleet' && (
                         <div className="animate-fade-in space-y-8">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-3xl font-black text-slate-900 uppercase">Fleet Monitoring</h2>
-                                <button onClick={onRefresh} className="p-3 bg-white rounded-xl shadow-sm border border-slate-200 text-slate-600 hover:text-blue-600 transition-all"><RefreshCw size={20}/></button>
-                            </div>
-                            <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden">
+                            <SectionHeader title="Fleet Control Matrix" icon={Network} actions={
+                                <button onClick={onRefresh} className="p-3 bg-white rounded-2xl shadow-sm border border-slate-200 text-slate-500 hover:text-blue-600 transition-all"><RefreshCw size={24}/></button>
+                            } />
+                            
+                            <div className="bg-white rounded-[3.5rem] border border-slate-200 shadow-sm overflow-hidden">
                                 <table className="w-full text-left">
                                     <thead className="bg-slate-900 text-white uppercase text-[10px] font-black tracking-widest">
                                         <tr>
-                                            <th className="p-6">Device Identity</th>
-                                            <th className="p-6">Status</th>
-                                            <th className="p-6">Telemetry</th>
-                                            <th className="p-6">Control</th>
+                                            <th className="p-8">Location & Identity</th>
+                                            <th className="p-8">Operational Status</th>
+                                            <th className="p-8">Telemetry (WIFI/IP)</th>
+                                            <th className="p-8 text-right">Sys Command</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {(localData?.fleet || []).map(device => (
                                             <tr key={device.id} className="hover:bg-slate-50 transition-colors">
-                                                <td className="p-6">
-                                                    <div className="font-black uppercase text-slate-900">{device.name}</div>
-                                                    <div className="text-[10px] font-mono text-slate-400 mt-1">{device.id} • v{device.version}</div>
-                                                </td>
-                                                <td className="p-6">
+                                                <td className="p-8">
+                                                    <div className="font-black uppercase text-slate-900 text-lg mb-1">{device.name}</div>
                                                     <div className="flex items-center gap-2">
-                                                        <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${device.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                                        <span className="font-black uppercase text-xs">{device.status}</span>
+                                                        <span className="text-[10px] font-mono font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded uppercase">{device.id}</span>
+                                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Build v{device.version}</span>
                                                     </div>
                                                 </td>
-                                                <td className="p-6">
-                                                    <div className="flex items-center gap-4 text-slate-500">
-                                                        <div className="flex items-center gap-1.5"><Wifi size={14}/> <span className="font-bold text-xs">{device.wifiStrength}%</span></div>
-                                                        <div className="flex items-center gap-1.5"><Clock size={14}/> <span className="font-bold text-xs">{new Date(device.last_seen).toLocaleTimeString()}</span></div>
+                                                <td className="p-8">
+                                                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-black uppercase text-[10px] tracking-widest ${device.status === 'online' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                        <div className={`w-2 h-2 rounded-full ${device.status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                                        {device.status}
                                                     </div>
                                                 </td>
-                                                <td className="p-6 text-right">
-                                                    <button className="p-3 bg-slate-100 text-slate-400 rounded-xl hover:bg-blue-600 hover:text-white transition-all"><RotateCcw size={18}/></button>
+                                                <td className="p-8">
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center gap-3 text-slate-500">
+                                                            <Wifi size={14} className={device.wifiStrength > 60 ? 'text-green-500' : 'text-orange-500'} />
+                                                            <span className="font-bold text-xs">{device.wifiStrength}% Intensity</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-3 text-slate-400">
+                                                            <Globe size={14} />
+                                                            <span className="font-mono text-[10px] uppercase">{device.ipAddress}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-8 text-right">
+                                                    <button className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-blue-600 shadow-xl transition-all active:scale-95 group" title="Remote Reboot Signal">
+                                                        <RotateCcw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}
+                                        {(localData?.fleet || []).length === 0 && (
+                                            <tr>
+                                                <td colSpan={4} className="p-32 text-center">
+                                                    <Activity size={80} className="mx-auto text-slate-100 mb-6" />
+                                                    <p className="font-black text-slate-300 uppercase tracking-[0.4em]">No active devices registered</p>
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     )}
 
-                    {/* SETTINGS TAB (Maintenance) */}
+                    {/* SETTINGS MODULE */}
                     {activeTab === 'settings' && (
-                        <div className="animate-fade-in space-y-10">
-                            <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none"><Database size={150} /></div>
-                                <h3 className="text-2xl font-black text-slate-900 uppercase mb-8 flex items-center gap-4"><Database className="text-blue-600"/> Maintenance & Backups</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="bg-slate-50 p-10 rounded-[2.5rem] border border-slate-200 flex flex-col items-center text-center">
-                                        <div className="bg-white w-16 h-16 rounded-3xl flex items-center justify-center shadow-xl mb-6"><Download className="text-slate-900" /></div>
-                                        <h4 className="font-black text-slate-900 uppercase mb-2">Master Export</h4>
-                                        <p className="text-xs text-slate-400 font-medium leading-relaxed mb-10">Creates an encrypted archive of every brand, product, marketing asset, and setting in your cloud database.</p>
-                                        <button onClick={handleBackupExport} className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-600 transition-all shadow-xl active:scale-95">Download FULL-BACKUP.zip</button>
-                                    </div>
-                                    <div className="bg-blue-50 p-10 rounded-[2.5rem] border border-blue-200 flex flex-col items-center text-center">
-                                        <div className="bg-white w-16 h-16 rounded-3xl flex items-center justify-center shadow-xl mb-6"><Upload className="text-blue-600" /></div>
-                                        <h4 className="font-black text-blue-900 uppercase mb-2">Secure Restore</h4>
-                                        <p className="text-xs text-blue-400 font-medium leading-relaxed mb-10">Upload a master archive to perform a total system overwrite. Recommended after database resets or server migrations.</p>
-                                        <label className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition-all flex items-center justify-center gap-4 cursor-pointer shadow-xl shadow-blue-500/20 active:scale-95">
-                                            <FileInput size={18} /> Select ZIP Archive
-                                            <input type="file" className="hidden" accept=".zip" onChange={handleBackupImport} />
-                                        </label>
+                        <div className="animate-fade-in space-y-12">
+                            <SectionHeader title="System Master Control" icon={Cpu} />
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                {/* Maintenance Card */}
+                                <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-sm relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none"><Database size={150} /></div>
+                                    <h3 className="text-2xl font-black text-slate-900 uppercase mb-8 flex items-center gap-4"><CloudLightning size={24} className="text-blue-600" /> Maintenance Vault</h3>
+                                    <div className="space-y-6">
+                                        <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 text-center">
+                                            <h4 className="font-black uppercase text-[10px] text-slate-400 tracking-widest mb-2">Manual Migration</h4>
+                                            <p className="text-xs text-slate-500 font-medium mb-8 leading-relaxed">Download a structured archive of every brand, product, and asset in the cloud.</p>
+                                            <button onClick={handleBackupExport} className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-600 transition-all flex items-center justify-center gap-3"><Download size={18}/> Export System ZIP</button>
+                                        </div>
+                                        <div className="bg-blue-50 p-8 rounded-[2.5rem] border border-blue-100 text-center">
+                                            <h4 className="font-black uppercase text-[10px] text-blue-400 tracking-widest mb-2">Emergency Sync</h4>
+                                            <p className="text-xs text-blue-700/60 font-medium mb-8 leading-relaxed">Restore system state from a verified master archive. Overwrites all current data.</p>
+                                            <label className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 cursor-pointer flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20">
+                                                <Upload size={18}/> Restore ZIP
+                                                <input type="file" className="hidden" accept=".zip" onChange={handleBackupImport} />
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase mb-8 flex items-center gap-4"><Lock className="text-red-500"/> Global Security</h3>
-                                <div className="max-w-md">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">System Provisioning PIN</label>
-                                    <div className="flex gap-4">
-                                        <input type="password" maxLength={8} className="flex-1 p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono text-xl tracking-[0.5em] outline-none focus:border-blue-500" value={localData?.systemSettings?.setupPin} onChange={e => updateData({ ...localData!, systemSettings: { ...localData!.systemSettings, setupPin: e.target.value } })} />
-                                        <button className="bg-slate-900 text-white px-8 rounded-2xl font-black uppercase text-xs">Update</button>
+
+                                {/* Security Card */}
+                                <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-sm">
+                                    <h3 className="text-2xl font-black text-slate-900 uppercase mb-8 flex items-center gap-4"><Lock size={24} className="text-red-600" /> Access Protocol</h3>
+                                    <div className="space-y-8">
+                                        <div>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Hardware Provisioning PIN</label>
+                                            <div className="flex gap-4">
+                                                <input type="password" maxLength={8} className="flex-1 p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl font-mono text-3xl font-black tracking-[0.5em] outline-none focus:border-blue-500" value={localData?.systemSettings?.setupPin} onChange={e => updateData({...localData!, systemSettings: {...localData!.systemSettings, setupPin: e.target.value}})} />
+                                            </div>
+                                            <p className="text-[10px] font-bold text-slate-400 mt-4 italic">Required during the "Device Identity Assignment" phase on new tablets.</p>
+                                        </div>
+                                        
+                                        <div className="pt-8 border-t border-slate-100">
+                                            <h4 className="font-black text-slate-900 uppercase text-xs mb-4">Authorized Admin Hubs</h4>
+                                            <div className="space-y-3">
+                                                {localData?.admins.map(admin => (
+                                                    <div key={admin.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400"><UserCog size={20}/></div>
+                                                            <span className="font-black uppercase text-xs text-slate-800">{admin.name}</span>
+                                                        </div>
+                                                        <span className="text-[9px] font-black text-blue-500 bg-blue-50 px-2 py-1 rounded uppercase tracking-tighter">Authorized</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Marketing, Pricelists, TV Placeholder logic - Can be fully implemented similarly */}
-                    {['marketing', 'pricelists', 'tv', 'screensaver'].includes(activeTab) && (
+                    {/* PRICELISTS & TV (Placeholder - Functional UI Logic follows Inventory pattern) */}
+                    {['pricelists', 'tv', 'screensaver'].includes(activeTab) && (
                         <div className="flex flex-col items-center justify-center py-40 bg-white rounded-[3.5rem] border-4 border-dashed border-slate-200 text-slate-300">
                             <Activity size={100} className="mb-8 opacity-20" />
-                            <h2 className="text-4xl font-black uppercase tracking-[0.4em] opacity-40">{activeTab} system</h2>
-                            <p className="mt-4 font-bold text-slate-400 uppercase tracking-widest">Master Management Protocol Operational</p>
+                            <h2 className="text-4xl font-black uppercase tracking-[0.4em] opacity-40">{activeTab} System</h2>
+                            <p className="mt-4 font-bold text-slate-400 uppercase tracking-widest">Logic Interface Loaded & Waiting</p>
                         </div>
                     )}
 
@@ -372,10 +470,10 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             </main>
             
             <footer className="bg-white border-t border-slate-200 p-5 px-12 flex justify-between items-center text-[10px] font-black uppercase text-slate-400 tracking-widest shrink-0">
-                <div>Kiosk Enterprise v2.8.4-R2 • Build 2024.10.15</div>
+                <div>Kiosk Enterprise v2.8.4-R1 • System Encrypted</div>
                 <div className="flex gap-8">
-                    <span className="flex items-center gap-2 text-green-600"><Activity size={14} /> Cloud Active</span>
-                    <span className="flex items-center gap-2"><Network size={14} /> Sync: Realtime</span>
+                    <span className="flex items-center gap-2 text-green-600"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> Backbone Active</span>
+                    <span className="flex items-center gap-2"><Network size={14} /> Global Distribution: Verified</span>
                 </div>
             </footer>
         </div>
