@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Printer, Download } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Fix for ESM import in some environments where the module is wrapped in 'default'
@@ -161,6 +161,13 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   const handleZoomOut = () => setScale(prev => prev > 0 ? Math.max(0.2, prev / 1.2) : 0);
   const handleFit = () => setScale(0);
 
+  const handlePrint = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // On mobile/tablet, opening the raw PDF URL in a new window is the most reliable way 
+    // to trigger the native OS print/share/download dialogs.
+    window.open(url, '_blank');
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0 || !containerRef.current || scale <= 0) return;
     setIsDragging(true);
@@ -181,20 +188,29 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex flex-col animate-fade-in" onClick={onClose}>
-       <div className="flex items-center justify-between p-4 bg-slate-900 text-white border-b border-slate-800 shrink-0 z-20" onClick={e => e.stopPropagation()}>
-          <div className="flex items-center gap-4 overflow-hidden">
-              <div className="bg-red-500 p-2 rounded-lg shrink-0"><span className="font-black text-[10px] uppercase">PDF</span></div>
-              <h2 className="text-lg font-bold uppercase tracking-wider truncate max-w-[160px] md:max-w-md">{title}</h2>
+       <div className="flex items-center justify-between p-3 md:p-4 bg-slate-900 text-white border-b border-slate-800 shrink-0 z-20" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
+              <div className="bg-red-500 p-1.5 md:p-2 rounded-lg shrink-0"><span className="font-black text-[8px] md:text-[10px] uppercase">PDF</span></div>
+              <h2 className="text-sm md:text-lg font-bold uppercase tracking-wider truncate max-w-[120px] md:max-w-md">{title}</h2>
               {pdf && (
-                  <div className="hidden md:flex items-center gap-2 bg-slate-800 rounded-lg p-1 ml-4 border border-slate-700">
-                      <button onClick={handleFit} className={`p-1.5 rounded transition-colors ${scale === 0 ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Auto Fit"><Maximize size={16}/></button>
-                      <div className="w-[1px] h-4 bg-slate-700 mx-1"></div>
-                      <button onClick={handleZoomOut} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><ZoomOut size={16}/></button>
-                      <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><ZoomIn size={16}/></button>
+                  <div className="flex items-center gap-1 md:gap-2 bg-slate-800 rounded-lg p-0.5 md:p-1 md:ml-4 border border-slate-700">
+                      <button onClick={handleFit} className={`p-1 md:p-1.5 rounded transition-colors ${scale === 0 ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Auto Fit"><Maximize size={14}/></button>
+                      <div className="w-[1px] h-3 md:h-4 bg-slate-700 mx-0.5 md:mx-1"></div>
+                      <button onClick={handleZoomOut} className="p-1 md:p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><ZoomOut size={14}/></button>
+                      <button onClick={handleZoomIn} className="p-1 md:p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><ZoomIn size={14}/></button>
                   </div>
               )}
           </div>
-          <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={24} /></button>
+          
+          <div className="flex items-center gap-2">
+              <button 
+                onClick={handlePrint}
+                className="flex items-center gap-1.5 md:gap-2 bg-white text-slate-900 px-3 py-1.5 md:px-4 md:py-2 rounded-lg font-black text-[9px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95"
+              >
+                <Printer size={14} /> <span className="hidden sm:inline">Print / Open</span>
+              </button>
+              <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20} /></button>
+          </div>
        </div>
 
        <div 
@@ -225,17 +241,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
        </div>
        
        {pdf && (
-           <div className="p-4 bg-slate-900 border-t border-slate-800 flex justify-center items-center gap-4 md:gap-8 shrink-0 z-20" onClick={e => e.stopPropagation()}>
-               <button disabled={pageNum <= 1} onClick={() => changePage(-1)} className="p-3 bg-blue-600 hover:bg-blue-500 rounded-full text-white disabled:opacity-20 transition-all shadow-lg active:scale-95"><ChevronLeft size={24} /></button>
-               <div className="flex flex-col items-center min-w-[80px]">
-                   <span className="text-white font-black text-lg md:text-xl">{pageNum} <span className="text-slate-500 text-sm">/ {pdf.numPages}</span></span>
+           <div className="p-3 md:p-4 bg-slate-900 border-t border-slate-800 flex justify-center items-center gap-4 md:gap-8 shrink-0 z-20" onClick={e => e.stopPropagation()}>
+               <button disabled={pageNum <= 1} onClick={() => changePage(-1)} className="p-2.5 md:p-3 bg-blue-600 hover:bg-blue-500 rounded-full text-white disabled:opacity-20 transition-all shadow-lg active:scale-95"><ChevronLeft size={20} /></button>
+               <div className="flex flex-col items-center min-w-[60px] md:min-w-[80px]">
+                   <span className="text-white font-black text-base md:text-xl">{pageNum} <span className="text-slate-500 text-xs md:text-sm">/ {pdf.numPages}</span></span>
                </div>
-               <button disabled={pageNum >= pdf.numPages} onClick={() => changePage(1)} className="p-3 bg-blue-600 hover:bg-blue-500 rounded-full text-white disabled:opacity-20 transition-all shadow-lg active:scale-95"><ChevronRight size={24} /></button>
-               <div className="flex md:hidden items-center gap-1 bg-slate-800 rounded-lg p-1 ml-2 border border-slate-700">
-                    <button onClick={handleZoomOut} className="p-2 text-slate-300"><ZoomOut size={16}/></button>
-                    <button onClick={handleFit} className={`p-2 ${scale === 0 ? 'text-blue-400' : 'text-slate-500'}`}><Maximize size={16}/></button>
-                    <button onClick={handleZoomIn} className="p-2 text-slate-300"><ZoomIn size={16}/></button>
-               </div>
+               <button disabled={pageNum >= pdf.numPages} onClick={() => changePage(1)} className="p-2.5 md:p-3 bg-blue-600 hover:bg-blue-500 rounded-full text-white disabled:opacity-20 transition-all shadow-lg active:scale-95"><ChevronRight size={20} /></button>
            </div>
        )}
     </div>

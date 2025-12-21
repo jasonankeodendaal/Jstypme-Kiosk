@@ -216,7 +216,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
 
   const handlePrint = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.print();
+    // Direct call to window.print() is standard, but some mobile environments 
+    // prefer it triggered without other logic interfering.
+    setTimeout(() => window.print(), 50);
   };
 
   const handleZoomIn = (e: React.MouseEvent) => {
@@ -380,8 +382,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                     {zoom === 0 ? 'FIT' : `${Math.round(zoom * 100)}%`}
                 </button>
                 <button onClick={handleZoomIn} className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={16}/></button>
-                <div className="hidden sm:block w-[1px] h-4 bg-white/20 mx-1"></div>
-                <button onClick={handleResetZoom} title="Reset to Fit" className="hidden sm:block p-2 hover:bg-white/10 rounded-lg transition-colors"><Maximize size={16}/></button>
              </div>
 
              <button 
