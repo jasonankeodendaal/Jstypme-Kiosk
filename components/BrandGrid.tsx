@@ -126,32 +126,19 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
 const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewGlobalCatalog, onExport, screensaverEnabled, onToggleScreensaver }) => {
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(11);
-  const [heroProductIndex, setHeroProductIndex] = useState(0);
   
-  // Collect all product main images for hero fallback
-  const productImages = useMemo(() => {
-    return brands.flatMap(b => b.categories.flatMap(c => c.products.map(p => p.imageUrl))).filter(Boolean);
-  }, [brands]);
-
-  // Hero Background Slideshow logic (if no background is explicitly set)
-  useEffect(() => {
-    if ((!heroConfig?.backgroundImageUrl && !heroConfig?.backgroundVideoUrl) && productImages.length > 1) {
-        const interval = setInterval(() => {
-            setHeroProductIndex(prev => (prev + 1) % productImages.length);
-        }, 8000);
-        return () => clearInterval(interval);
-    }
-  }, [productImages, heroConfig]);
-
   // Dynamic Responsive Limit: Show 2 rows based on grid columns
   useEffect(() => {
     const handleResize = () => {
         const width = window.innerWidth;
         if (width < 640) {
+            // Mobile (4 cols): 2 rows = 8 slots -> 7 brands + view all
             setDisplayLimit(7);
         } else if (width < 768) {
+            // Tablet SM (5 cols): 2 rows = 10 slots -> 9 brands + view all
             setDisplayLimit(9);
         } else {
+            // Desktop (6 cols): 2 rows = 12 slots -> 11 brands + view all
             setDisplayLimit(11);
         }
     };
@@ -184,27 +171,14 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
       
       {/* Hero Section */}
       <div className="bg-slate-900 text-white relative overflow-hidden shrink-0 min-h-[20vh] md:min-h-[40vh] flex flex-col">
-        <div className="absolute inset-0 z-0">
-            {heroConfig?.backgroundVideoUrl ? (
-                <video 
-                    src={heroConfig.backgroundVideoUrl} 
-                    autoPlay 
-                    muted 
-                    loop 
-                    playsInline 
-                    className="w-full h-full object-cover opacity-60" 
-                />
-            ) : heroConfig?.backgroundImageUrl ? (
+        {heroConfig?.backgroundImageUrl ? (
+            <div className="absolute inset-0 z-0">
                 <img src={heroConfig.backgroundImageUrl} alt="" className="w-full h-full object-cover opacity-40 blur-sm scale-105" />
-            ) : productImages.length > 0 ? (
-                <div key={heroProductIndex} className="w-full h-full animate-fade-in">
-                    <img src={productImages[heroProductIndex]} alt="" className="w-full h-full object-cover opacity-30 blur-md scale-110" />
-                </div>
-            ) : (
-                <div className="absolute inset-0 z-0 bg-gradient-to-br from-slate-900 to-slate-800"></div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/80 to-slate-900/30"></div>
-        </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/80 to-slate-900/30"></div>
+            </div>
+        ) : (
+             <div className="absolute inset-0 z-0 bg-gradient-to-br from-slate-900 to-slate-800"></div>
+        )}
 
         <div className="relative z-10 flex-1 flex flex-row items-center justify-center p-2 md:p-8 gap-2 md:gap-8 max-w-7xl mx-auto w-full">
             <div className="flex-1 flex flex-col justify-center text-left space-y-0.5 md:space-y-4 max-w-[55%] md:max-w-2xl shrink-0 h-full">
@@ -275,7 +249,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         </div>
       </div>
 
-      {/* Pamphlet Strip */}
+      {/* Pamphlet Strip - Fixed flex gap issues by using space-x-3 for margin injection */}
       {globalPamphlets.length > 0 && (
             <div className="bg-slate-100 border-b border-slate-200 p-2 md:p-4">
                  <div className="max-w-7xl mx-auto">
@@ -317,7 +291,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             </h2>
       </div>
 
-      {/* Main Content Area */}
+      {/* Main Content Area - Updated to 3 columns on large screens */}
       <div className="flex-1 p-4 md:p-8 max-w-[1600px] mx-auto w-full flex flex-col lg:flex-row gap-6">
         
         {/* Left Column (New Side Ad) */}
@@ -330,14 +304,14 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         {/* Center Column (Brands + Bottom Ads) */}
         <div className="flex-1 flex flex-col gap-8">
             
-            {/* Grid */}
+            {/* Grid - 4 Columns on Mobile (3 Brands + View All) -> Now showing 2 rows */}
             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-6 gap-2 md:gap-8 w-full">
               {visibleBrands.map((brand) => (
                 <button
                   key={brand.id}
                   onClick={() => onSelectBrand(brand)}
                   className="group flex flex-col items-center justify-start gap-2 p-2 hover:bg-slate-100 rounded-xl transition-all duration-300"
-                  title={brand.name}
+                  title={brand.name} // Keeps hover tooltip for accessibility/desktop
                 >
                   <div className="relative w-12 h-12 md:w-20 md:h-20 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
                     {brand.logoUrl ? (
@@ -352,6 +326,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                       </div>
                     )}
                   </div>
+                  {/* Name STRICTLY removed per user request - Logo only */}
                 </button>
               ))}
 
@@ -380,7 +355,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             )}
         </div>
 
-        {/* Right Column */}
+        {/* Right Column (Side Ad - Made wider) */}
         <div className="hidden lg:block w-96 shrink-0">
              {ads && (
                  <AdUnit items={ads.homeSideVertical} className="h-full w-full min-h-[500px]" />
@@ -388,7 +363,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         </div>
       </div>
 
-      {/* ALL BRANDS MODAL */}
+      {/* ALL BRANDS MODAL - Removed Backdrop Blur */}
       {showAllBrands && (
         <div className="fixed inset-0 z-[60] bg-white/95 p-4 md:p-12 animate-fade-in flex flex-col">
             <div className="flex justify-between items-center mb-8 shrink-0">

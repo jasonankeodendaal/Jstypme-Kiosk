@@ -77,7 +77,6 @@ export interface HeroConfig {
   title: string;
   subtitle: string;
   backgroundImageUrl?: string;
-  backgroundVideoUrl?: string; // New: Support for video background
   logoUrl?: string;
   websiteUrl?: string;
 }
