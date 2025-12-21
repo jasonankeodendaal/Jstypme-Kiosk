@@ -394,9 +394,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
 
              <button 
                 onClick={handlePrint}
-                className="hidden sm:flex items-center gap-2 bg-white text-slate-900 px-4 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group"
+                className="flex items-center gap-2 bg-white text-slate-900 p-2.5 md:px-4 md:py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group"
              >
-                <Printer size={16} className="group-hover:scale-110 transition-transform" /> <span>Export / Print</span>
+                <Printer size={16} className="group-hover:scale-110 transition-transform" /> <span className="hidden md:inline">Export / Print</span>
              </button>
              <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20}/></button>
           </div>
