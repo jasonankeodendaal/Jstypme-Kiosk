@@ -29,7 +29,6 @@ const SystemDocumentation = () => {
     const sections = [
         { id: 'architecture', label: 'Core Architecture', icon: <Network size={16} /> },
         { id: 'inventory', label: 'Inventory Logic', icon: <Box size={16}/> },
-        { id: 'pricelists', label: 'Pricelist System', icon: <Table size={16}/> },
         { id: 'screensaver', label: 'Screensaver Automation', icon: <Zap size={16}/> },
         { id: 'fleet', label: 'Fleet & Telemetry', icon: <Activity size={16}/> },
         { id: 'tv', label: 'TV Mode Logic', icon: <Tv size={16}/> },
@@ -290,84 +289,6 @@ const SystemDocumentation = () => {
     }
   ]
 }`}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeSection === 'pricelists' && (
-                    <div className="space-y-8 max-w-4xl mx-auto animate-fade-in">
-                        <div className="border-b border-slate-100 pb-6">
-                            <h2 className="text-3xl font-black text-slate-900 mb-2 flex items-center gap-3">
-                                <Table className="text-green-600" size={32} /> Pricelist Engine
-                            </h2>
-                            <p className="text-slate-500 font-medium">Hybrid architecture supporting static PDF documents and interactive manual tables.</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-6">
-                                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                                    <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                        <FileText size={18} className="text-red-500" /> Mode 1: Static PDF
-                                    </h3>
-                                    <p className="text-sm text-slate-600 leading-relaxed mb-4">
-                                        Designed for high-fidelity manufacturer documents that require professional branding and layout preservation.
-                                    </p>
-                                    <ul className="space-y-2 text-xs font-bold text-slate-500 uppercase tracking-wide">
-                                        <li className="flex items-center gap-2"><Check size={14} className="text-green-500"/> CDN Optimized Streaming</li>
-                                        <li className="flex items-center gap-2"><Check size={14} className="text-green-500"/> Multi-Page Navigation</li>
-                                        <li className="flex items-center gap-2"><Check size={14} className="text-green-500"/> Zoom & Print Support</li>
-                                    </ul>
-                                </div>
-
-                                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                                    <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                        <List size={18} className="text-blue-500" /> Mode 2: Interactive Table
-                                    </h3>
-                                    <p className="text-sm text-slate-600 leading-relaxed mb-4">
-                                        Built for dynamic pricing updates and searchable retail lists. Renders native HTML components for instant interaction.
-                                    </p>
-                                    <ul className="space-y-2 text-xs font-bold text-slate-500 uppercase tracking-wide">
-                                        <li className="flex items-center gap-2"><Check size={14} className="text-green-500"/> Excel / CSV Import Pipeline</li>
-                                        <li className="flex items-center gap-2"><Check size={14} className="text-green-500"/> Promo Highlighting Logic</li>
-                                        <li className="flex items-center gap-2"><Check size={14} className="text-green-500"/> Responsive Auto-Fit UI</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative border border-white/5 h-full">
-                                <div className="absolute top-0 right-0 p-4 opacity-5 text-green-500"><Sparkles size={80} /></div>
-                                <h4 className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em] mb-4">Logic Flow: Manual Import</h4>
-                                <div className="space-y-5 relative z-10">
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center font-black text-[10px] shrink-0">1</div>
-                                        <div>
-                                            <div className="text-xs font-bold">Parser Stage</div>
-                                            <p className="text-[10px] text-slate-400 mt-1">Accepts .CSV or .TSV files. Identifies headers (SKU, Desc, Price) using fuzzy string matching.</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center font-black text-[10px] shrink-0">2</div>
-                                        <div>
-                                            <div className="text-xs font-bold">Normalization</div>
-                                            <p className="text-[10px] text-slate-400 mt-1">Cleans whitespace, ensures currency formats, and generates unique IDs for kiosk-side key indexing.</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center font-black text-[10px] shrink-0">3</div>
-                                        <div>
-                                            <div className="text-xs font-bold">JSONB Storage</div>
-                                            <p className="text-[10px] text-slate-400 mt-1">The entire array is serialized into the `pricelists.items` JSONB field for synchronized delivery.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="mt-8 pt-6 border-t border-white/10">
-                                     <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-                                         <p className="text-[9px] font-mono text-blue-300 leading-relaxed italic">
-                                             "New" Flagging Logic: The system compares 'dateAdded' against current server time. If difference is &lt; 30 days, the 'Recent' UI badges are triggered fleet-wide.
-                                         </p>
-                                     </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1154,7 +1075,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
               {items.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="p-2"><input value={item.sku} onChange={(e) => updateItem(item.id, 'sku', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="SKU-123" /></td>
-                  <td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="Product details..." /></td>
+                  <td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none text-sm" placeholder="Product details..." /></td>
                   <td className="p-2"><input value={item.normalPrice} onChange={(e) => updateItem(item.id, 'normalPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-black text-sm" placeholder="R 999" /></td>
                   <td className="p-2"><input value={item.promoPrice} onChange={(e) => updateItem(item.id, 'promoPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-red-500 outline-none font-black text-sm text-red-600" placeholder="R 799" /></td>
                   <td className="p-2 text-center">
