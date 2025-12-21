@@ -185,6 +185,7 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: { pricelist: Pricelist, onClose: () => void, companyLogo?: string, brandLogo?: string }) => {
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
   const [zoom, setZoom] = useState(0); // 0 = Auto Fit Mode
+  const [fitScale, setFitScale] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
@@ -192,49 +193,47 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
 
-  // Auto-fit calculation on mount and resize
+  // Intelligent auto-fit calculation
   useEffect(() => {
     const calculateFit = () => {
-        if (zoom !== 0) return; // Only if in fit mode
-        if (!containerRef.current || !tableRef.current) return;
-
+        if (!containerRef.current) return;
         const containerWidth = containerRef.current.clientWidth;
-        const tableWidth = 1000; // Standard reference width for the table
+        const tableWidth = 1000; // Standard reference logical width
         const padding = window.innerWidth < 768 ? 20 : 48;
-        
-        const fitScale = (containerWidth - padding) / tableWidth;
-        // Cap fit scale at 1.0 (no scaling up for fit)
-        const finalFit = Math.min(1.0, fitScale);
-        
-        // Update the scale of the element directly for responsiveness if zoom is 0
-        const tableWrapper = tableRef.current.parentElement;
-        if (tableWrapper) {
-            tableWrapper.style.transform = `scale(${finalFit})`;
-        }
+        const scale = (containerWidth - padding) / tableWidth;
+        setFitScale(Math.min(1.0, scale)); // Never scale up for fit
     };
 
     calculateFit();
     window.addEventListener('resize', calculateFit);
-    return () => window.removeEventListener('resize', calculateFit);
-  }, [zoom]);
+    // Extra trigger for mobile orientation changes
+    const timer = setTimeout(calculateFit, 200);
+    return () => {
+        window.removeEventListener('resize', calculateFit);
+        clearTimeout(timer);
+    };
+  }, []);
 
-  const handlePrint = () => {
+  const handlePrint = (e: React.MouseEvent) => {
+    e.stopPropagation();
     window.print();
   };
-
-  const currentScale = zoom === 0 ? 1 : zoom; // Effective scale for zoom buttons
 
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
     setZoom(prev => {
-        const start = prev === 0 ? (containerRef.current?.clientWidth || 1000) / 1000 : prev;
-        return Math.min(start * 1.2, 3.0);
+        const current = prev === 0 ? fitScale : prev;
+        return Math.min(current * 1.25, 3.0);
     });
   };
 
   const handleZoomOut = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoom(prev => prev > 0.1 ? prev / 1.2 : 0);
+    setZoom(prev => {
+        const current = prev === 0 ? fitScale : prev;
+        const next = current / 1.25;
+        return next <= fitScale ? 0 : next;
+    });
   };
 
   const handleResetZoom = (e: React.MouseEvent) => {
@@ -242,7 +241,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
     setZoom(0); // Reset to Auto Fit
   };
 
-  // Pan logic for mobile/desktop
   const handleMouseDown = (e: React.MouseEvent) => {
     if (zoom === 0 || !containerRef.current) return;
     setIsDragging(true);
@@ -260,6 +258,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
   };
 
   const handleMouseUp = () => setIsDragging(false);
+
+  const activeScale = zoom === 0 ? fitScale : zoom;
 
   return (
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block" onClick={onClose}>
@@ -323,7 +323,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         .spreadsheet-table {
           border-collapse: separate;
           border-spacing: 0;
-          width: 1000px; /* Fixed logical width for scaling */
+          width: 1000px;
           table-layout: fixed;
         }
         .spreadsheet-table th {
@@ -341,8 +341,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           background-color: #f1f5f9;
         }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-        
-        /* Text Shrink logic */
         .shrink-text {
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -350,10 +348,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           overflow: hidden;
           font-size: 14px;
           line-height: 1.2;
-        }
-        .sku-container {
-           font-size: 12px;
-           white-space: nowrap;
         }
         .table-wrapper {
             will-change: transform;
@@ -363,28 +357,26 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
 
       <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
         
-        {/* Header with Universal Zoom Controls */}
+        {/* Universal Header */}
         <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 z-20 ${isNewlyUpdated ? 'bg-yellow-600 shadow-yellow-600/20' : 'bg-slate-900 shadow-xl'}`}>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
              <div className="hidden sm:flex bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10">
                 <RIcon size={28} className={isNewlyUpdated ? 'text-white' : 'text-green-400'} />
              </div>
-             <div>
-                <div className="flex items-center gap-2 md:gap-3">
+             <div className="min-w-0">
+                <div className="flex items-center gap-2">
                   <h2 className="text-sm md:text-2xl font-black uppercase tracking-tight truncate max-w-[120px] md:max-w-none">{pricelist.title}</h2>
-                  {isNewlyUpdated && <span className="bg-white text-yellow-700 px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0 animate-pulse"><Sparkles size={10} /> NEW</span>}
+                  {isNewlyUpdated && <span className="bg-white text-yellow-700 px-1.5 py-0.5 rounded-full text-[7px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-lg shrink-0 animate-pulse"><Sparkles size={8} /> NEW</span>}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                   <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[8px] md:text-xs`}>{pricelist.month} {pricelist.year}</p>
-                </div>
+                <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[8px] md:text-xs truncate`}>{pricelist.month} {pricelist.year}</p>
              </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
-             {/* Zoom Controls - Now visible on all devices */}
+          <div className="flex items-center gap-1.5 md:gap-4">
+             {/* Zoom Controls */}
              <div className="flex items-center gap-0.5 md:gap-1 bg-white/10 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
                 <button onClick={handleZoomOut} className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomOut size={16}/></button>
-                <button onClick={handleResetZoom} className={`px-1.5 md:px-2 text-[8px] md:text-[10px] font-black uppercase tracking-widest min-w-[35px] md:min-w-[50px] ${zoom === 0 ? 'text-blue-400' : 'text-white'}`}>
+                <button onClick={handleResetZoom} className={`px-1 md:px-2 text-[8px] md:text-[10px] font-black uppercase tracking-widest min-w-[32px] md:min-w-[50px] ${zoom === 0 ? 'text-blue-400' : 'text-white'}`}>
                     {zoom === 0 ? 'FIT' : `${Math.round(zoom * 100)}%`}
                 </button>
                 <button onClick={handleZoomIn} className="p-1.5 md:p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={16}/></button>
@@ -394,37 +386,33 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
 
              <button 
                 onClick={handlePrint}
-                className="flex items-center gap-2 bg-white text-slate-900 p-2.5 md:px-4 md:py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group"
+                className="flex items-center gap-2 bg-white text-slate-900 p-2 md:px-4 md:py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group"
              >
-                <Printer size={16} className="group-hover:scale-110 transition-transform" /> <span className="hidden md:inline">Export / Print</span>
+                <Printer size={16} className="group-hover:scale-110 transition-transform" /> <span className="hidden md:inline">Print / Export</span>
              </button>
              <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20}/></button>
           </div>
         </div>
 
-        {/* Professional Print-Only Header */}
+        {/* Print-Only Header */}
         <div className="hidden print-only w-full px-10 pt-8 pb-4">
             <div className="flex justify-between items-end mb-8">
                 <div className="flex flex-col gap-4">
-                    {companyLogo && <img src={companyLogo} alt="Company Logo" className="h-14 object-contain self-start" />}
+                    {companyLogo && <img src={companyLogo} alt="Logo" className="h-12 object-contain self-start" />}
                     <div>
-                        <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Official Price List</h1>
-                        <p className="text-lg font-bold text-blue-600 uppercase tracking-[0.2em] mt-2">{pricelist.title}</p>
+                        <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none">Official Price List</h1>
+                        <p className="text-base font-bold text-blue-600 uppercase tracking-[0.2em] mt-2">{pricelist.title}</p>
                     </div>
                 </div>
-
-                <div className="flex flex-col items-end gap-3">
-                    {brandLogo && <img src={brandLogo} alt="Brand Logo" className="h-24 object-contain" />}
-                    <div className="text-right">
-                        <div className="bg-slate-900 text-white px-3 py-1 rounded text-xs font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase mt-2">Document Reference: {pricelist.id.substring(0,8).toUpperCase()}</p>
-                    </div>
+                <div className="text-right">
+                    {brandLogo && <img src={brandLogo} alt="Brand" className="h-16 object-contain mb-2 ml-auto" />}
+                    <div className="bg-slate-900 text-white px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
                 </div>
             </div>
             <div className="h-1.5 bg-slate-900 w-full rounded-full mb-8"></div>
         </div>
 
-        {/* Scalable Table Area */}
+        {/* Table Viewport */}
         <div 
           ref={containerRef}
           className={`table-scroll flex-1 overflow-auto bg-white p-2 md:p-4 print:px-10 flex flex-col items-center ${zoom > 0 ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
@@ -434,11 +422,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           onMouseLeave={handleMouseUp}
         >
           <div 
-            className="table-wrapper transition-transform duration-200 origin-top"
+            className="table-wrapper origin-top"
             style={{ 
-                transform: zoom > 0 ? `scale(${zoom})` : undefined, 
+                transform: `scale(${activeScale})`,
                 width: '1000px',
-                paddingBottom: zoom > 1 ? `${(zoom - 1) * 100}%` : '0' 
+                paddingBottom: activeScale > 1 ? `${(activeScale - 1) * 100}%` : '0' 
             }}
           >
             <table ref={tableRef} className="spreadsheet-table text-left border-collapse shadow-sm">
@@ -454,19 +442,17 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                 {(pricelist.items || []).map((item) => (
                     <tr key={item.id} className="excel-row transition-colors group">
                     <td className="p-3 border border-slate-200 print:border-slate-300">
-                        <span className="sku-font font-bold sku-container text-slate-900 uppercase tracking-tighter">
+                        <span className="sku-font font-bold text-[12px] text-slate-900 uppercase tracking-tighter">
                         {item.sku || 'N/A'}
                         </span>
                     </td>
                     <td className="p-3 border border-slate-200 print:border-slate-300">
-                        <div className="flex flex-col">
-                            <span className="font-bold text-slate-900 shrink-text uppercase tracking-tight leading-tight group-hover:text-blue-600 transition-colors">
-                                {item.description}
-                            </span>
-                        </div>
+                        <span className="font-bold text-slate-900 shrink-text uppercase tracking-tight leading-tight group-hover:text-blue-600 transition-colors">
+                            {item.description}
+                        </span>
                     </td>
                     <td className="p-3 text-right border border-slate-200 print:border-slate-300">
-                        <span className={`font-bold text-sm tracking-tighter ${item.promoPrice ? 'text-slate-500' : 'text-slate-900'}`}>
+                        <span className={`font-bold text-sm tracking-tighter ${item.promoPrice ? 'text-slate-500 line-through opacity-50' : 'text-slate-900'}`}>
                         {item.normalPrice || 'POA'}
                         </span>
                     </td>
@@ -498,14 +484,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           </div>
         </div>
 
-        {/* Minimal Footer for Mobile */}
-        <div className="p-2 md:p-5 bg-slate-50 border-t border-slate-100 flex flex-row justify-between items-center gap-4 shrink-0 print:hidden z-10">
+        {/* Modal Footer */}
+        <div className="p-2 md:p-4 bg-slate-50 border-t border-slate-100 flex flex-row justify-between items-center gap-4 shrink-0 print:hidden z-10">
           <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-              <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Items: {(pricelist.items || []).length}</span>
+              <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Items: {(pricelist.items || []).length}</span>
           </div>
           <p className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-            System valid for {pricelist.month} {pricelist.year}
+            E&OE • Valid for {pricelist.month} {pricelist.year}
           </p>
         </div>
       </div>
