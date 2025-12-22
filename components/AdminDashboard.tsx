@@ -2633,7 +2633,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                                 </button>
                             ))}
                        </div>
-                       <div className="mt-8 border-t border-slate-200 pt-8"><h3 className="font-bold text-slate-900 uppercase text-sm mb-4">Brand Catalogues</h3><CatalogueManager catalogues={localData.catalogues?.filter(c => c.brandId === selectedBrand.id) || []} brandId={selectedBrand.id} onSave={(c) => { const brandCatalogues = (localData.catalogues || []).filter(c => c.brandId); handleLocalUpdate({ ...localData, catalogues: [...brandCatalogues, ...c] }); }} /></div>
+                       <div className="mt-8 border-t border-slate-200 pt-8"><h3 className="font-bold text-slate-900 uppercase text-sm mb-4">Brand Catalogues</h3><CatalogueManager catalogues={localData.catalogues?.filter(c => c.brandId === selectedBrand.id) || []} brandId={selectedBrand.id} onSave={(c) => { const otherCatalogues = (localData.catalogues || []).filter(cat => cat.brandId !== selectedBrand.id); handleLocalUpdate({ ...localData, catalogues: [...otherCatalogues, ...c] }); }} /></div>
                    </div>
                ) : (
                    <div className="animate-fade-in h-full flex flex-col">
@@ -3133,6 +3133,23 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
             {activeTab === 'settings' && (
                <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
                    
+                   {/* BRANDING SECTION */}
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
+                           <ImageIcon size={20} className="text-blue-500" /> System Branding
+                       </h3>
+                       <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                           <FileUpload 
+                               label="Main Company Logo (PDFs & Header)" 
+                               currentUrl={localData.companyLogoUrl} 
+                               onUpload={(url: string) => handleLocalUpdate({...localData, companyLogoUrl: url})} 
+                           />
+                           <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                               This logo is used at the top of the Kiosk App and as the primary branding on all exported PDF Pricelists.
+                           </p>
+                       </div>
+                   </div>
+
                    {/* GLOBAL SYSTEM PIN */}
                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                        <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">

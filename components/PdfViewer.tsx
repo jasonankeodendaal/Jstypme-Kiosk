@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -115,20 +116,30 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
             renderScale = Math.min(scaleX, scaleY, 2.0); // Don't auto-fit beyond 200% zoom
         }
 
-        const outputScale = window.devicePixelRatio || 1;
+        // CRITICAL FIX: Ensure sharp rendering by multiplying by devicePixelRatio
+        // AND rendering at the ACTUAL zoom scale requested.
+        const dpr = window.devicePixelRatio || 1;
         const viewport = page.getViewport({ scale: renderScale }); 
         
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
         
         if (context) {
-            canvas.width = Math.floor(viewport.width * outputScale);
-            canvas.height = Math.floor(viewport.height * outputScale);
+            // Buffer size = visual size * DPR
+            canvas.width = Math.floor(viewport.width * dpr);
+            canvas.height = Math.floor(viewport.height * dpr);
+            
+            // Visual size = unscaled size * scale
             canvas.style.width = Math.floor(viewport.width) + "px";
             canvas.style.height = Math.floor(viewport.height) + "px";
 
-            const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
-            const renderContext = { canvasContext: context, viewport: viewport, transform: transform };
+            // Apply transform for DPR scaling
+            const transform = [dpr, 0, 0, dpr, 0, 0];
+            const renderContext = { 
+                canvasContext: context, 
+                viewport: viewport, 
+                transform: transform 
+            };
             
             const task = page.render(renderContext);
             renderTaskRef.current = task;
@@ -149,10 +160,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   };
 
   const handleZoomIn = () => setScale(prev => {
-      const current = prev <= 0 ? (canvasRef.current?.clientWidth || 0) / (pdf ? 1000 : 1) : prev; // Approximate unscaled width
-      return Math.min(5.0, (current || 1) * 1.2);
+      const current = prev <= 0 ? (canvasRef.current?.clientWidth || 0) / (pdf ? 1000 : 1) : prev;
+      return Math.min(5.0, (current || 1) * 1.5); // 50% increments for noticeable clarity jumps
   });
-  const handleZoomOut = () => setScale(prev => prev > 0 ? Math.max(0.2, prev / 1.2) : 0);
+  
+  const handleZoomOut = () => setScale(prev => prev > 0 ? Math.max(0.2, prev / 1.5) : 0);
   const handleFit = () => setScale(0);
 
   const handleMouseDown = (e: React.MouseEvent) => {
