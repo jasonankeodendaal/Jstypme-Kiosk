@@ -23,7 +23,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 const isRecent = (dateString?: string) => {
@@ -188,6 +188,34 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
   const [zoom, setZoom] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   
+  // Dragging State
+  const [isDragging, setIsDragging] = useState(false);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoom <= 1 || !scrollContainerRef.current) return;
+    setIsDragging(true);
+    setStartPos({ x: e.pageX, y: e.pageY });
+    setScrollPos({ 
+      left: scrollContainerRef.current.scrollLeft, 
+      top: scrollContainerRef.current.scrollTop 
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !scrollContainerRef.current) return;
+    e.preventDefault();
+    const dx = e.pageX - startPos.x;
+    const dy = e.pageY - startPos.y;
+    scrollContainerRef.current.scrollLeft = scrollPos.left - dx;
+    scrollContainerRef.current.scrollTop = scrollPos.top - dy;
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+
   const handlePrint = () => {
     window.print();
   };
@@ -361,12 +389,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
 
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoom(prev => Math.min(prev + 0.1, 2.5));
+    setZoom(prev => Math.min(prev + 0.25, 2.5));
   };
 
   const handleZoomOut = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setZoom(prev => Math.max(prev - 0.1, 0.5));
+    setZoom(prev => Math.max(prev - 0.25, 0.5));
   };
 
   const handleResetZoom = (e: React.MouseEvent) => {
@@ -529,8 +557,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         </div>
 
         {/* Spreadsheet Table Area */}
-        <div className="table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:p-0 print:overflow-visible">
-          <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }} className="transition-transform duration-200 print:transform-none">
+        <div 
+            ref={scrollContainerRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            className={`table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
+        >
+          <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }} className="transition-transform duration-200 print:transform-none select-none">
             <table className="spreadsheet-table w-full text-left border-collapse print:table">
                 <thead className="print:table-header-group">
                 <tr className="print:bg-[#f1f5f9]">

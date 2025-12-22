@@ -1,14 +1,26 @@
 
-import React, { useState } from 'react';
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+/* Added Tablet and Tv imports from lucide-react */
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
 }
 
 const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'local' | 'build' | 'vercel' | 'supabase'>('supabase');
+  const [activeTab, setActiveTab] = useState<'local' | 'build' | 'vercel' | 'supabase' | 'pricelists'>('supabase');
   const [copiedStep, setCopiedStep] = useState<string | null>(null);
+  const [roundDemoValue, setRoundDemoValue] = useState(799);
+
+  // Animation for the rounding demo in the Pricelist tab
+  useEffect(() => {
+    if (activeTab === 'pricelists') {
+        const interval = setInterval(() => {
+            setRoundDemoValue(prev => prev === 799 ? 4449 : prev === 4449 ? 122 : 799);
+        }, 3000);
+        return () => clearInterval(interval);
+    }
+  }, [activeTab]);
 
   const copyToClipboard = (text: string, stepId: string) => {
     navigator.clipboard.writeText(text);
@@ -85,13 +97,34 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-100 flex flex-col animate-fade-in overflow-hidden">
+      <style>{`
+        @keyframes pulse-ring {
+          0% { transform: scale(0.8); opacity: 0.5; }
+          100% { transform: scale(2); opacity: 0; }
+        }
+        .animate-ring { animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+        
+        @keyframes data-flow {
+          0% { transform: translateX(0); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateX(120px); opacity: 0; }
+        }
+        .data-packet { animation: data-flow 2s infinite linear; }
+        
+        @keyframes subtle-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+        .animate-float-small { animation: subtle-bounce 3s ease-in-out infinite; }
+      `}</style>
+
       {/* Top Header Bar */}
       <div className="bg-slate-900 text-white p-6 shadow-2xl shrink-0 flex items-center justify-between border-b border-slate-800 z-50">
         <div className="flex items-center gap-5">
            <div className="bg-blue-600 p-3 rounded-2xl shadow-[0_0_25px_rgba(37,99,235,0.4)]"><ShieldCheck size={32} className="text-white" /></div>
            <div>
              <h1 className="text-2xl font-black tracking-tighter uppercase leading-none mb-1">System Engineering Manual</h1>
-             <p className="text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] opacity-80">v2.8.4 Enterprise Infrastructure Protocol</p>
+             <p className="text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] opacity-80">v2.8.5 Enterprise Infrastructure Protocol</p>
            </div>
         </div>
         <button onClick={onClose} className="p-3 hover:bg-red-600/20 hover:text-red-500 rounded-2xl transition-all border border-white/5 bg-white/5 group">
@@ -112,7 +145,8 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                     { id: 'supabase', label: '1. Supabase Cloud', sub: 'Backend API & RLS', icon: Database, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-600' },
                     { id: 'local', label: '2. PC Station Hub', sub: 'Development Env', icon: Server, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
                     { id: 'build', label: '3. Asset Pipeline', sub: 'Tree-Shaking & Min', icon: Hammer, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
-                    { id: 'vercel', label: '4. Edge Network', sub: 'Global CDN Delivery', icon: Globe, color: 'text-slate-900', bg: 'bg-slate-100', border: 'border-slate-900' }
+                    { id: 'vercel', label: '4. Edge Network', sub: 'Global CDN Delivery', icon: Globe, color: 'text-slate-900', bg: 'bg-slate-100', border: 'border-slate-900' },
+                    { id: 'pricelists', label: '5. Pricelist Engine', sub: 'XLSX & Distribution', icon: Table, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-600' }
                 ].map(tab => (
                     <button 
                         key={tab.id}
@@ -130,6 +164,23 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                 ))}
             </nav>
             
+            <div className="mt-8">
+                <a 
+                    href="https://github.com/jasonankeodendaal/Jstypme-Kiosk.git" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full p-5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-[2rem] transition-all flex items-center gap-4 border border-slate-200 group"
+                >
+                    <div className="p-3 bg-white rounded-2xl shadow-sm group-hover:scale-110 transition-transform">
+                        <Github size={22} className="text-slate-900" />
+                    </div>
+                    <div className="min-w-0">
+                        <span className="font-black text-sm block leading-none mb-1">GitHub Repo</span>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Source Code Access</span>
+                    </div>
+                </a>
+            </div>
+
             <div className="mt-auto pt-8">
                 <div className="p-5 bg-slate-900 rounded-[2rem] text-white relative overflow-hidden shadow-xl border border-white/5">
                     <div className="absolute top-0 right-0 p-4 opacity-10"><Activity size={40} /></div>
@@ -404,6 +455,118 @@ END $$;`}
                               <p className="font-medium text-slate-700">Since the kiosk is a SPA (Single Page Application), it benefit from 100% "Static" performance. There are no server-side databases to "wake up" when a customer touches the screen; the entire UI logic resides in the tablet's browser cache, managed by our <strong>Service Worker (sw.js)</strong>.</p>
                               <EngineerNote>
                                   Reliability Metric: Vercel's infrastructure boasts a 99.99% uptime SLA. By combining this with Supabase's multi-region failover, the Kiosk Pro system is designed for "Always-On" retail environments.
+                              </EngineerNote>
+                          </Step>
+                      </div>
+                  </div>
+              )}
+
+              {/* PHASE 5: PRICELIST ENGINE (NEW) */}
+              {activeTab === 'pricelists' && (
+                  <div className="p-8 md:p-16 animate-fade-in">
+                      <SectionHeading icon={Table} subtitle="Automated Ingestion, Pricing Normalization, and Real-Time Distribution.">Pricelist Intelligence Engine</SectionHeading>
+                      
+                      {/* Animated Workflow Illustration */}
+                      <div className="bg-slate-900 rounded-[3rem] p-8 md:p-12 mb-12 shadow-2xl relative overflow-hidden">
+                          <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+                          
+                          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
+                              {/* Source Node */}
+                              <div className="flex flex-col items-center gap-4 group">
+                                  <div className="w-24 h-24 bg-white/5 rounded-3xl border-2 border-green-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(34,197,94,0.2)] animate-float-small">
+                                      <FileSpreadsheet size={40} className="text-green-400" />
+                                  </div>
+                                  <div className="text-center">
+                                      <div className="text-white font-black uppercase text-[10px] tracking-widest">Ingestion</div>
+                                      <div className="text-green-500/60 text-[9px] font-mono">XLSX / CSV</div>
+                                  </div>
+                              </div>
+
+                              {/* Path 1 */}
+                              <div className="hidden md:block flex-1 h-1 bg-white/5 relative mx-2 overflow-hidden rounded-full">
+                                  <div className="absolute inset-0 bg-blue-500 data-packet"></div>
+                              </div>
+
+                              {/* Logic Node */}
+                              <div className="flex flex-col items-center gap-4 group">
+                                  <div className="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.4)] relative">
+                                      <div className="absolute inset-0 animate-ring border-2 border-blue-400 rounded-3xl"></div>
+                                      <RefreshCw size={40} className="text-white animate-spin-slow" />
+                                  </div>
+                                  <div className="text-center">
+                                      <div className="text-white font-black uppercase text-[10px] tracking-widest">Normalization</div>
+                                      <div className="text-blue-400 text-[9px] font-mono">Auto-Rounding</div>
+                                  </div>
+                              </div>
+
+                              {/* Path 2 */}
+                              <div className="hidden md:block flex-1 h-1 bg-white/5 relative mx-2 overflow-hidden rounded-full">
+                                  <div className="absolute inset-0 bg-purple-500 data-packet" style={{animationDelay: '1s'}}></div>
+                              </div>
+
+                              {/* Output Node */}
+                              <div className="flex flex-col items-center gap-4 group">
+                                  <div className="w-24 h-24 bg-white/5 rounded-3xl border-2 border-purple-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.2)]">
+                                      <div className="grid grid-cols-2 gap-1 scale-75">
+                                          <Smartphone size={20} className="text-purple-400" />
+                                          <Tablet size={20} className="text-purple-400" />
+                                          <Tv size={20} className="text-purple-400" />
+                                          <FileText size={20} className="text-red-400" />
+                                      </div>
+                                  </div>
+                                  <div className="text-center">
+                                      <div className="text-white font-black uppercase text-[10px] tracking-widest">Deployment</div>
+                                      <div className="text-purple-400 text-[9px] font-mono">Fleet & PDF</div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+
+                      <WhyBox title="Why Normalization Logic?">
+                          Retail data is often messy. Admins enter prices like <code>799</code>, <code>4449</code>, or <code>R 122</code>. Our engine performs <strong>Sanitization & Normalization</strong>:
+                          <ul className="mt-4 space-y-4">
+                              <li className="flex gap-4 bg-white/50 p-4 rounded-2xl border border-orange-100">
+                                  <div className="p-3 bg-white rounded-xl shadow-sm h-fit"><Sparkles className="text-orange-500" size={20}/></div>
+                                  <div>
+                                      <strong>Auto-Rounding Algorithm:</strong> 
+                                      If a price isn't a multiple of 10, it's automatically rounded up. This ensures professional "Psychological Pricing" across the whole store without manual math.
+                                      
+                                      <div className="mt-3 flex items-center gap-3 bg-slate-900 p-3 rounded-xl">
+                                          <div className="text-[10px] font-mono text-slate-500 uppercase">Input:</div>
+                                          <div className="text-xs font-mono text-red-400 line-through">R {roundDemoValue}</div>
+                                          <ArrowRight size={12} className="text-slate-600" />
+                                          <div className="text-[10px] font-mono text-slate-500 uppercase">Logic:</div>
+                                          <div className="text-xs font-mono text-green-400 font-black animate-pulse">R {Math.ceil(roundDemoValue/10)*10}</div>
+                                      </div>
+                                  </div>
+                              </li>
+                              <li className="flex gap-4">
+                                  <div className="p-3 bg-blue-50 rounded-xl h-fit"><RefreshCw className="text-blue-600" size={20}/></div>
+                                  <div>
+                                      <strong>Realtime Propagation:</strong> 
+                                      The moment you hit "Save" in the Builder, a SQL update triggers a Supabase <strong>Replication Event</strong>. Every active Kiosk tablet listens to this channel and updates its price list <em>without</em> a page reload.
+                                  </div>
+                              </li>
+                          </ul>
+                      </WhyBox>
+
+                      <div className="space-y-8">
+                          <Step number="1" title="The XLSX Import Parser">
+                              <p className="font-medium text-slate-700">The system uses <code>SheetJS (xlsx)</code> to process binary spreadsheet data entirely in the browser. This eliminates the need for server-side processing and protects privacy.</p>
+                              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Expected Schema</h4>
+                                  <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                                      {['SKU', 'Description', 'Normal Price', 'Promo Price'].map(col => (
+                                          <div key={col} className="bg-white px-3 py-2 rounded-lg border border-slate-200 font-mono text-[10px] font-bold text-slate-600 shadow-sm whitespace-nowrap">{col}</div>
+                                      ))}
+                                  </div>
+                              </div>
+                          </Step>
+
+                          <Step number="2" title="Vectorized PDF Generation">
+                              <p className="font-medium text-slate-700">When a customer clicks "Save as PDF", the app uses <code>jsPDF</code> to generate a vector document on-the-fly. It renders the store logo and price table using MM coordinates to ensure print-perfect quality on A4 paper.</p>
+                              <EngineerNote>
+                                  Technical Detail: To prevent blurring on high-DPI tablets, the `ManualPricelistViewer` uses a hidden high-resolution canvas for scaling before embedding assets into the PDF binary stream.
                               </EngineerNote>
                           </Step>
                       </div>

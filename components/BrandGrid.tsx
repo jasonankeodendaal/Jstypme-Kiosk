@@ -249,12 +249,12 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         </div>
       </div>
 
-      {/* Pamphlet Strip - Fixed flex gap issues by using space-x-3 for margin injection */}
+      {/* Pamphlet Strip - Fixed flex gap issues */}
       {globalPamphlets.length > 0 && (
             <div className="bg-slate-100 border-b border-slate-200 p-2 md:p-4">
                  <div className="max-w-7xl mx-auto">
                      <div className="flex space-x-3 md:space-x-6 overflow-x-auto no-scrollbar items-start py-2">
-                        {globalPamphlets.map((catalog, idx) => (
+                        {globalPamphlets.map((catalog) => (
                              <button 
                                  key={catalog.id} 
                                  onClick={() => onViewGlobalCatalog(catalog)}
@@ -291,7 +291,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             </h2>
       </div>
 
-      {/* Main Content Area - Updated to 3 columns on large screens */}
+      {/* Main Content Area */}
       <div className="flex-1 p-4 md:p-8 max-w-[1600px] mx-auto w-full flex flex-col lg:flex-row gap-6">
         
         {/* Left Column (New Side Ad) */}
@@ -304,29 +304,29 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         {/* Center Column (Brands + Bottom Ads) */}
         <div className="flex-1 flex flex-col gap-8">
             
-            {/* Grid - 4 Columns on Mobile (3 Brands + View All) -> Now showing 2 rows */}
+            {/* Grid - Logos standardized size/look */}
             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-6 gap-2 md:gap-8 w-full">
               {visibleBrands.map((brand) => (
                 <button
                   key={brand.id}
                   onClick={() => onSelectBrand(brand)}
-                  className="group flex flex-col items-center justify-start gap-2 p-2 hover:bg-slate-100 rounded-xl transition-all duration-300"
-                  title={brand.name} // Keeps hover tooltip for accessibility/desktop
+                  className="group flex flex-col items-center justify-center p-1 md:p-2 hover:bg-white hover:shadow-xl hover:shadow-blue-500/10 rounded-2xl transition-all duration-300 border border-transparent hover:border-slate-200"
+                  title={brand.name}
                 >
-                  <div className="relative w-12 h-12 md:w-20 md:h-20 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+                  <div className="relative w-16 h-16 md:w-28 md:h-28 flex items-center justify-center transition-transform duration-300 group-hover:scale-105 p-3 md:p-5">
                     {brand.logoUrl ? (
                       <img 
                         src={brand.logoUrl} 
                         alt={brand.name} 
                         className="w-full h-full object-contain filter grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
+                        style={{ maxWidth: '100%', maxHeight: '100%' }}
                       />
                     ) : (
-                      <div className="w-full h-full rounded-full bg-slate-200 text-slate-400 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center text-xl font-black transition-colors duration-300">
+                      <div className="w-full h-full rounded-full bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center text-2xl font-black transition-colors duration-300 border-2 border-dashed border-slate-200 group-hover:border-transparent">
                         {brand.name.charAt(0)}
                       </div>
                     )}
                   </div>
-                  {/* Name STRICTLY removed per user request - Logo only */}
                 </button>
               ))}
 
@@ -334,14 +334,12 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
               {hasMoreBrands && (
                 <button
                   onClick={() => setShowAllBrands(true)}
-                  className="group flex flex-col items-center justify-start gap-2 p-2 hover:bg-slate-100 rounded-xl transition-all duration-300"
+                  className="group flex flex-col items-center justify-center p-1 md:p-2 hover:bg-white hover:shadow-xl hover:shadow-blue-500/10 rounded-2xl transition-all duration-300 border border-transparent hover:border-slate-200"
                 >
-                   <div className="relative w-12 h-12 md:w-20 md:h-20 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 rounded-full bg-slate-200 group-hover:bg-blue-600 text-slate-400 group-hover:text-white">
-                       <Grid size={24} />
+                   <div className="relative w-16 h-16 md:w-28 md:h-28 flex flex-col items-center justify-center transition-transform duration-300 group-hover:scale-105 rounded-full bg-slate-100 group-hover:bg-blue-600 text-slate-400 group-hover:text-white">
+                       <Grid size={28} />
+                       <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest mt-1">All</span>
                    </div>
-                   <span className="text-[8px] md:text-xs font-bold text-slate-500 group-hover:text-blue-900 uppercase tracking-wide text-center leading-tight">
-                      View All
-                  </span>
                 </button>
               )}
             </div>
@@ -355,7 +353,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             )}
         </div>
 
-        {/* Right Column (Side Ad - Adjusted to match left) */}
+        {/* Right Column (Side Ad) */}
         <div className="hidden lg:block w-80 shrink-0">
              {ads && (
                  <AdUnit items={ads.homeSideVertical} className="h-full w-full min-h-[500px]" />
@@ -363,7 +361,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         </div>
       </div>
 
-      {/* ALL BRANDS MODAL - Removed Backdrop Blur */}
+      {/* ALL BRANDS MODAL */}
       {showAllBrands && (
         <div className="fixed inset-0 z-[60] bg-white/95 p-4 md:p-12 animate-fade-in flex flex-col">
             <div className="flex justify-between items-center mb-8 shrink-0">
@@ -390,7 +388,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                       className="group flex flex-col items-center justify-center gap-2 transition-transform duration-300 hover:scale-110 p-4 rounded-xl hover:bg-white/50 border border-transparent hover:border-slate-200/50"
                       title={brand.name}
                     >
-                      <div className="relative w-12 h-12 md:w-24 md:h-24 flex items-center justify-center">
+                      <div className="relative w-16 h-16 md:w-24 md:h-24 flex items-center justify-center p-4">
                         {brand.logoUrl ? (
                           <img 
                             src={brand.logoUrl} 
