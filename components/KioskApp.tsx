@@ -24,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Activity } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 const isRecent = (dateString?: string) => {
@@ -235,47 +235,25 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   };
 
   const handleDragEnd = () => setIsDragging(false);
+  const handlePrint = () => window.print();
 
-  const loadImage = async (url: string): Promise<{ img: HTMLImageElement, format: string, dataUrl: string } | null> => {
-    if (!url) return null;
+  const loadImage = (url: string): Promise<{ img: HTMLImageElement, format: string } | null> => {
     return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          const format = url.toLowerCase().includes('.png') ? 'PNG' : 'JPEG';
-          const dataUrl = canvas.toDataURL(`image/${format === 'PNG' ? 'png' : 'jpeg'}`);
-          resolve({ img, format, dataUrl });
-        } else {
-          resolve(null);
-        }
-      };
-      img.onerror = () => {
-        // Fallback: try fetch with CORS if direct load fails
-        fetch(url, { mode: 'cors' })
-          .then(res => res.blob())
-          .then(blob => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const dataUrl = reader.result as string;
-              const innerImg = new Image();
-              innerImg.onload = () => {
-                const format = url.toLowerCase().includes('.png') || dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-                resolve({ img: innerImg, format, dataUrl });
-              };
-              innerImg.onerror = () => resolve(null);
-              innerImg.src = dataUrl;
-            };
-            reader.readAsDataURL(blob);
-          })
-          .catch(() => resolve(null));
-      };
-      img.src = url;
+        if (!url) return resolve(null);
+        const img = new Image();
+        // Crucial for PDF generation: enable CORS for external images
+        img.crossOrigin = "anonymous";
+        
+        img.onload = () => {
+            // Determine format for jsPDF optimization
+            const format = url.toLowerCase().includes('.png') || url.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            resolve({ img, format });
+        };
+        img.onerror = () => {
+            console.error(`Failed to load PDF asset: ${url}`);
+            resolve(null);
+        };
+        img.src = url;
     });
   };
 
@@ -293,88 +271,96 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             companyLogo ? loadImage(companyLogo) : Promise.resolve(null)
         ]);
 
-        const drawHeader = () => {
+        const drawHeader = (pageNum: number) => {
             let topY = 15;
-            if (companyAsset) {
-                const ratio = companyAsset.img.width / companyAsset.img.height;
-                const h = 10; 
-                const w = h * ratio;
-                doc.addImage(companyAsset.dataUrl, companyAsset.format, margin, topY, w, h);
-            }
+            
+            // Brand Logo / Name on Left
             if (brandAsset) {
                 const ratio = brandAsset.img.width / brandAsset.img.height;
-                const h = 18; 
+                const h = 20; 
                 const w = h * ratio;
-                doc.addImage(brandAsset.dataUrl, brandAsset.format, pageWidth - margin - w, topY, w, h);
+                doc.addImage(brandAsset.img, brandAsset.format, margin, topY, w, h);
             } else if (brandName) {
-                doc.setTextColor(30, 41, 59); doc.setFontSize(22); doc.setFont('helvetica', 'black');
-                doc.text(brandName.toUpperCase(), pageWidth - margin, topY + 12, { align: 'right' });
+                doc.setTextColor(30, 41, 59); doc.setFontSize(28); doc.setFont('helvetica', 'black');
+                doc.text(brandName.toUpperCase(), margin, topY + 15);
             }
+
+            // Company Logo on Far Right
+            if (companyAsset) {
+                const ratio = companyAsset.img.width / companyAsset.img.height;
+                const h = 12; 
+                const w = h * ratio;
+                doc.addImage(companyAsset.img, companyAsset.format, pageWidth - margin - w, topY, w, h);
+            }
+
             doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
             doc.text("PRICE LIST", margin, topY + 28);
+            
             doc.setTextColor(148, 163, 184); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
             doc.text("NEW PRICELIST", margin, topY + 34);
+
             const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
             doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
             doc.text(`${pricelist.month} ${pricelist.year}`.toUpperCase(), boxX + (boxW/2), boxY + 6, { align: 'center' });
+            
             doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
             doc.text(`DOCUMENT REF: ${pricelist.id.substring(0,10).toUpperCase()}`, boxX + boxW, boxY + 14, { align: 'right' });
+
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3);
             doc.line(margin, topY + 42, pageWidth - margin, topY + 42);
+            
             return topY + 52;
         };
 
         const drawTableHeaders = (startY: number) => {
             doc.setFillColor(241, 245, 249); doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
-            doc.setTextColor(0, 0, 0); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-            doc.text("SKU", margin + 3, startY); doc.text("DESCRIPTION", margin + 45, startY);
+            doc.setTextColor(30, 41, 59); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+            doc.text("CODE", margin + 3, startY); doc.text("PRODUCT DESCRIPTION", margin + 45, startY);
             doc.text("NORMAL", pageWidth - margin - 40, startY, { align: 'right' });
-            doc.text("PROMO", pageWidth - margin - 5, startY, { align: 'right' });
+            doc.text("OFFER", pageWidth - margin - 5, startY, { align: 'right' });
             return startY + 8;
         };
 
-        let currentY = drawHeader();
+        let currentY = drawHeader(1);
         currentY = drawTableHeaders(currentY);
         
         const items = pricelist.items || [];
-        const rowHeight = 9; 
-        const footerMargin = 25;
+        const rowHeight = 9; const footerMargin = 20;
 
         items.forEach((item, index) => {
             if (currentY + rowHeight > pageHeight - footerMargin) {
                 doc.addPage();
-                currentY = drawHeader();
+                currentY = drawHeader(doc.internal.getNumberOfPages());
                 currentY = drawTableHeaders(currentY);
             }
+            
             if (index % 2 !== 0) {
-                doc.setFillColor(248, 250, 252); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
+                doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
             }
-            doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.1);
-            doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'S');
-            doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+
+            doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
             doc.text(item.sku || 'POA', margin + 3, currentY);
+            
             doc.setFont('helvetica', 'bold');
             const desc = item.description.length > 55 ? item.description.substring(0, 52) + "..." : item.description;
             doc.text(desc.toUpperCase(), margin + 45, currentY);
-            if (item.promoPrice) {
-                doc.setTextColor(148, 163, 184); doc.setFont('helvetica', 'bold');
-            } else {
-                doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold');
-            }
+            
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
             doc.text(item.normalPrice || 'POA', pageWidth - margin - 40, currentY, { align: 'right' });
+            
             if (item.promoPrice) {
-                doc.setTextColor(220, 38, 38); doc.setFont('helvetica', 'black');
+                doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'bold');
                 doc.text(item.promoPrice, pageWidth - margin - 5, currentY, { align: 'right' });
             } else {
-                doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold');
+                doc.setTextColor(30, 41, 59);
                 doc.text(item.normalPrice || '—', pageWidth - margin - 5, currentY, { align: 'right' });
             }
+            
             currentY += rowHeight;
         });
 
-        // FIX: doc.getNumberOfPages() is available on the doc instance directly
-        const totalPages = doc.getNumberOfPages();
+        const totalPages = doc.internal.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
             doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
@@ -383,7 +369,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
     } catch (err) {
         console.error("PDF Export failed", err);
-        alert("Unable to generate PDF.");
+        alert("Unable to generate PDF. Check browser permissions or network connectivity.");
     } finally {
         setIsExporting(false);
     }
@@ -397,23 +383,23 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block overflow-hidden print:overflow-visible" onClick={onClose}>
       <style>{`
         @media print {
-          @page { size: portrait; margin: 10mm; }
-          body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0 !important; padding: 0 !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
+          @page { size: portrait; margin: 5mm; }
+          body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0 !important; padding: 0 !important; height: auto !important; width: 100% !important; overflow: visible !important; }
           .print-hidden { display: none !important; }
           .print-only { display: block !important; }
           #root, .relative, .viewer-container, .table-scroll { display: block !important; position: static !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
-          .viewer-container { box-shadow: none !important; border: none !important; width: 100% !important; max-width: none !important; height: auto !important; }
-          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; margin-bottom: 25mm !important; }
+          .viewer-container { box-shadow: none !important; border: none !important; }
+          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
           .spreadsheet-table thead { display: table-header-group !important; }
           .spreadsheet-table tr { page-break-inside: avoid !important; }
-          .spreadsheet-table th { position: static !important; background: #f1f5f9 !important; color: #000 !important; border: 0.1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 9pt !important; }
-          .spreadsheet-table td { border: 0.1pt solid #e2e8f0 !important; color: #000 !important; padding: 8pt !important; font-size: 8pt !important; }
+          .spreadsheet-table th { position: static !important; background: #f1f5f9 !important; color: #000 !important; border: 1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 10pt !important; }
+          .spreadsheet-table td { border: 0.5pt solid #e2e8f0 !important; color: #000 !important; padding: 8pt !important; font-size: 10pt !important; }
           .excel-row:nth-child(even) { background-color: #f8fafc !important; }
-          .footer-print { position: fixed; bottom: 5mm; left: 10mm; right: 10mm; text-align: center; font-size: 7pt; color: #94a3b8; display: block !important; }
         }
-        .spreadsheet-table { border-collapse: separate; border-spacing: 0; width: 100%; }
-        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #f1f5f9; color: #000; font-weight: 900; }
+        .spreadsheet-table { border-collapse: separate; border-spacing: 0; }
+        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; }
         .excel-row:nth-child(even) { background-color: #f8fafc; }
+        .excel-row:hover { background-color: #f1f5f9; }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
       `}</style>
 
@@ -442,9 +428,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 <button onClick={handleZoomIn} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={18}/></button>
              </div>
              <div className="flex gap-2">
-                <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-600 transition-all active:scale-95 group disabled:opacity-50 border border-white/10">
-                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} className="text-blue-400" />}
+                <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-2 bg-white text-slate-900 px-4 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group disabled:opacity-50">
+                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} className="text-blue-600" />}
                     <span>{isExporting ? 'Generating...' : 'Save as PDF'}</span>
+                </button>
+                <button onClick={handlePrint} className="hidden md:flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-slate-700 transition-all group">
+                    <Printer size={16} /> <span>Print</span>
                 </button>
              </div>
              <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20}/></button>
@@ -473,66 +462,66 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
-                  <tr className="border-none">
+                  <tr className="hidden print:table-row border-none">
                       <th colSpan={4} className="p-0 border-none bg-white">
-                          <div className="w-full px-4 md:px-10 pt-6 md:pt-10 pb-6 text-left">
-                              <div className="flex justify-between items-start mb-6 md:mb-10">
-                                  <div className="flex flex-col gap-4 md:gap-6">
-                                      {companyLogo && <img src={companyLogo} alt="Store" className="h-6 md:h-10 object-contain self-start" />}
-                                      <div>
-                                          <h1 className="text-xl md:text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Price List</h1>
-                                          <p className="text-xs md:text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 md:mt-3">New Pricelist</p>
-                                      </div>
-                                  </div>
-                                  <div className="flex flex-col items-end gap-4 md:gap-6 text-right">
+                          <div className="w-full px-10 pt-10 pb-6 text-left">
+                              <div className="flex justify-between items-start mb-10">
+                                  <div className="flex flex-col gap-6">
                                       {brandLogo ? (
-                                          <img src={brandLogo} alt="Brand" className="h-8 md:h-16 object-contain" />
+                                          <img src={brandLogo} alt="Brand" className="h-20 object-contain self-start" />
                                       ) : brandName ? (
-                                          <h2 className="text-xl md:text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2>
+                                          <h2 className="text-6xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2>
                                       ) : null}
                                       <div>
-                                          <div className="bg-slate-900 text-white px-3 py-1.5 md:px-6 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
-                                          <p className="text-[7px] md:text-[10px] font-bold text-slate-400 uppercase mt-2 md:mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p>
+                                          <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mt-4">Price List</h1>
+                                          <p className="text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">New Pricelist</p>
+                                      </div>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-6 text-right">
+                                      {companyLogo && <img src={companyLogo} alt="Company" className="h-14 object-contain" />}
+                                      <div>
+                                          <div className="bg-slate-900 text-white px-6 py-2 rounded-xl text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
+                                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p>
                                       </div>
                                   </div>
                               </div>
-                              <div className="h-0.5 md:h-1 bg-slate-200 w-full rounded-full mb-6 md:mb-10"></div>
+                              <div className="h-1 bg-slate-200 w-full rounded-full mb-10"></div>
                           </div>
                       </th>
                   </tr>
                   
-                  <tr className="bg-slate-100/80 print:bg-[#f1f5f9]">
-                      <th className="p-2 md:p-5 text-[8px] md:text-sm font-black uppercase tracking-tight border border-slate-200 w-20 md:w-40 print:border-slate-400 print:text-black">SKU</th>
-                      <th className="p-2 md:p-5 text-[8px] md:text-sm font-black uppercase tracking-tight border border-slate-200 print:border-slate-400 print:text-black">DESCRIPTION</th>
-                      <th className="p-2 md:p-5 text-[8px] md:text-sm font-black uppercase tracking-tight border border-slate-200 text-right w-20 md:w-32 print:border-slate-400 print:text-black">NORMAL</th>
-                      <th className="p-2 md:p-5 text-[8px] md:text-sm font-black uppercase tracking-tight border border-slate-200 text-right w-20 md:w-32 print:border-slate-400 print:text-black">PROMO</th>
+                  <tr className="print:bg-[#f1f5f9]">
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 w-24 md:w-40 print:border-slate-400 print:text-black">CODE</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 print:border-slate-400 print:text-black">PRODUCT DESCRIPTION</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">NORMAL</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">OFFER</th>
                   </tr>
                   </thead>
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
                       <tr key={item.id} className="excel-row transition-colors group">
-                      <td className="p-2 md:p-4 border border-slate-100 print:border-slate-300">
-                          <span className="sku-font font-bold text-[8px] md:text-sm text-slate-900 uppercase">
+                      <td className="p-3 md:p-4 border border-slate-200 print:border-slate-300">
+                          <span className="sku-font font-bold text-xs md:text-sm text-slate-900 uppercase">
                           {item.sku || 'N/A'}
                           </span>
                       </td>
-                      <td className="p-2 md:p-4 border border-slate-100 print:border-slate-300">
-                          <span className="font-bold text-slate-900 text-[8px] md:text-sm uppercase tracking-tight group-hover:text-blue-600 transition-colors">
+                      <td className="p-3 md:p-4 border border-slate-200 print:border-slate-300">
+                          <span className="font-bold text-slate-900 text-xs md:text-sm uppercase tracking-tight group-hover:text-blue-600 transition-colors">
                               {item.description}
                           </span>
                       </td>
-                      <td className="p-2 md:p-4 text-right border border-slate-100 print:border-slate-300">
-                          <span className={`font-bold text-[8px] md:text-sm ${item.promoPrice ? 'text-slate-400' : 'text-slate-900'}`}>
+                      <td className="p-3 md:p-4 text-right border border-slate-200 print:border-slate-300">
+                          <span className={`font-bold text-xs md:text-sm ${item.promoPrice ? 'text-slate-400' : 'text-slate-900'}`}>
                           {item.normalPrice || 'POA'}
                           </span>
                       </td>
-                      <td className="p-2 md:p-4 text-right border border-slate-100 print:border-slate-300">
+                      <td className="p-3 md:p-4 text-right border border-slate-200 print:border-slate-300 bg-slate-50/10">
                           {item.promoPrice ? (
-                          <span className="font-black text-[9px] md:text-base text-red-600 tracking-tighter">
+                          <span className="font-black text-xs md:text-base text-red-600 tracking-tighter">
                               {item.promoPrice}
                           </span>
                           ) : (
-                          <span className="font-bold text-[8px] md:text-sm text-slate-900">
+                          <span className="font-bold text-xs md:text-sm text-slate-900">
                               {item.normalPrice || '—'}
                           </span>
                           )}
@@ -541,9 +530,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   ))}
                   </tbody>
               </table>
-              <div className="hidden print-only footer-print">
-                  Kiosk Pro Smart Retail Solution • Page 1 of 1 • {new Date().toLocaleDateString()}
-              </div>
+              {zoom > 1.2 && !isDragging && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
+                    <Grip size={120} className="text-black" />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -559,7 +550,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
 export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => (
   <div className={`fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 transition-all duration-300 ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={onClose}>
-    <div className="relative w-full max-xs md:max-w-sm rounded-3xl overflow-hidden shadow-2xl border border-white/20 aspect-[4/5] flex flex-col items-center justify-center text-center p-6 bg-slate-900" onClick={e => e.stopPropagation()}>
+    <div className="relative w-full max-w-xs md:max-w-sm rounded-3xl overflow-hidden shadow-2xl border border-white/20 aspect-[4/5] flex flex-col items-center justify-center text-center p-6 bg-slate-900" onClick={e => e.stopPropagation()}>
       <div className="absolute inset-0 bg-[url('https://i.ibb.co/dsh2c2hp/unnamed.jpg')] bg-cover bg-center opacity-30"></div>
       <div className="relative z-10">
         <img src="https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png" alt="Logo" className="w-24 h-24 mx-auto mb-4" />
@@ -739,23 +730,8 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
          {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={storeData.catalogues || []} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} selectedForCompare={compareProductIds} onToggleCompare={toggleCompareProduct} onStartCompare={() => setShowCompareModal(true)} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} />}
        </div>
        <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[8px] md:text-[10px] print:hidden">
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="flex items-center gap-1"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase">{isOnline ? 'Connected' : 'Offline'}</span></div>
-            {kioskId && (
-                <div className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-400 font-mono text-[7px] md:text-[9px]">
-                    <Lock size={8} />
-                    <span>ID: {kioskId}</span>
-                </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 md:gap-4">
-            {lastSyncTime && (
-                <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-md shadow-sm">
-                    <RefreshCw size={8} className="text-blue-500 animate-pulse" />
-                    <span className="font-mono font-bold text-[7px] md:text-[9px] uppercase tracking-tighter text-slate-400">Sync: {lastSyncTime}</span>
-                </div>
-            )}
-            {pricelistBrands.length > 0 && (<button onClick={() => { setSelectedBrandForPricelist(pricelistBrands[0]?.id || null); setShowPricelistModal(true); }} className="bg-blue-600 hover:bg-blue-700 text-white w-5 h-5 rounded flex items-center justify-center shadow-sm active:scale-95 transition-all" title="Pricelists"><RIcon size={10} className="text-white" /></button>)}<button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span></button></div>
+          <div className="flex items-center gap-1"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase">{isOnline ? 'Connected' : 'Offline'}</span></div>
+          <div className="flex items-center gap-4">{pricelistBrands.length > 0 && (<button onClick={() => { setSelectedBrandForPricelist(pricelistBrands[0]?.id || null); setShowPricelistModal(true); }} className="bg-blue-600 hover:bg-blue-700 text-white w-5 h-5 rounded flex items-center justify-center shadow-sm active:scale-95 transition-all" title="Pricelists"><RIcon size={10} className="text-white" /></button>)}<button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span></button></div>
        </footer>
        <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
        {showGlobalSearch && <SearchModal storeData={storeData} onSelectProduct={(p) => { setActiveBrand(storeData.brands.find(b => b.id === (p as any).brandId)!); setActiveCategory(storeData.brands.find(b => b.id === (p as any).brandId)!.categories.find(c => c.id === (p as any).categoryId)!); setActiveProduct(p); }} onClose={() => setShowGlobalSearch(false)} />}
@@ -772,7 +748,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
           <ManualPricelistViewer 
             pricelist={viewingManualList} 
             onClose={() => setViewingManualList(null)} 
-            companyLogo={storeData.companyLogoUrl}
+            companyLogo={storeData.hero.logoUrl || storeData.companyLogoUrl}
             brandLogo={getActiveBrandLogo()}
             brandName={getActiveBrandName()}
           />
