@@ -236,40 +236,27 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const handleDragEnd = () => setIsDragging(false);
 
-  /**
-   * Robust Image Loader for PDF Generation
-   * Standardizes to PNG to avoid jsPDF format detection issues.
-   */
   const loadImage = async (url: string): Promise<{ img: HTMLImageElement, format: string, dataUrl: string } | null> => {
     if (!url) return null;
     return new Promise((resolve) => {
-      const processImage = (img: HTMLImageElement) => {
-          try {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width;
-              canvas.height = img.height;
-              const ctx = canvas.getContext('2d');
-              if (ctx) {
-                  ctx.drawImage(img, 0, 0);
-                  // Standardize to PNG for maximum compatibility with jsPDF
-                  const dataUrl = canvas.toDataURL('image/png');
-                  resolve({ img, format: 'PNG', dataUrl });
-              } else {
-                  resolve(null);
-              }
-          } catch (e) {
-              console.warn("Canvas export failed (likely CORS)", e);
-              resolve(null);
-          }
-      };
-
       const img = new Image();
       img.crossOrigin = "anonymous";
-      
-      img.onload = () => processImage(img);
-      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          const format = url.toLowerCase().includes('.png') ? 'PNG' : 'JPEG';
+          const dataUrl = canvas.toDataURL(`image/${format === 'PNG' ? 'png' : 'jpeg'}`);
+          resolve({ img, format, dataUrl });
+        } else {
+          resolve(null);
+        }
+      };
       img.onerror = () => {
-        // Fallback: Attempt fetch with CORS if direct load fails
+        // Fallback: try fetch with CORS if direct load fails
         fetch(url, { mode: 'cors' })
           .then(res => res.blob())
           .then(blob => {
@@ -277,7 +264,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             reader.onloadend = () => {
               const dataUrl = reader.result as string;
               const innerImg = new Image();
-              innerImg.onload = () => processImage(innerImg);
+              innerImg.onload = () => {
+                const format = url.toLowerCase().includes('.png') || dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+                resolve({ img: innerImg, format, dataUrl });
+              };
               innerImg.onerror = () => resolve(null);
               innerImg.src = dataUrl;
             };
@@ -285,7 +275,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           })
           .catch(() => resolve(null));
       };
-      
       img.src = url;
     });
   };
@@ -299,7 +288,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
         
-        // Parallel load assets
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImage(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImage(companyLogo) : Promise.resolve(null)
@@ -307,73 +295,40 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
         const drawHeader = () => {
             let topY = 15;
-            
-            // Draw Company Logo (Top Left)
             if (companyAsset) {
                 const ratio = companyAsset.img.width / companyAsset.img.height;
                 const h = 10; 
                 const w = h * ratio;
                 doc.addImage(companyAsset.dataUrl, companyAsset.format, margin, topY, w, h);
             }
-            
-            // Draw Brand Identity (Top Right)
             if (brandAsset) {
                 const ratio = brandAsset.img.width / brandAsset.img.height;
                 const h = 18; 
-                const w = Math.min(h * ratio, 60); // Constrain width
+                const w = h * ratio;
                 doc.addImage(brandAsset.dataUrl, brandAsset.format, pageWidth - margin - w, topY, w, h);
             } else if (brandName) {
-                doc.setTextColor(30, 41, 59);
-                doc.setFontSize(22);
-                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(30, 41, 59); doc.setFontSize(22); doc.setFont('helvetica', 'black');
                 doc.text(brandName.toUpperCase(), pageWidth - margin, topY + 12, { align: 'right' });
             }
-
-            // Document Title
-            doc.setTextColor(0, 0, 0); 
-            doc.setFontSize(18); 
-            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
             doc.text("PRICE LIST", margin, topY + 28);
-            
-            doc.setTextColor(148, 163, 184); 
-            doc.setFontSize(10); 
-            doc.setFont('helvetica', 'bold');
-            doc.text("OFFICIAL DOCUMENT", margin, topY + 34);
-
-            // Month/Year Box
-            const boxW = 45; 
-            const boxH = 9; 
-            const boxX = pageWidth - margin - boxW; 
-            const boxY = topY + 22;
-            doc.setFillColor(30, 41, 59); 
-            doc.rect(boxX, boxY, boxW, boxH, 'F');
-            doc.setTextColor(255, 255, 255); 
-            doc.setFontSize(10); 
-            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(148, 163, 184); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+            doc.text("NEW PRICELIST", margin, topY + 34);
+            const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
+            doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
+            doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
             doc.text(`${pricelist.month} ${pricelist.year}`.toUpperCase(), boxX + (boxW/2), boxY + 6, { align: 'center' });
-            
-            // Document Ref
-            doc.setTextColor(148, 163, 184); 
-            doc.setFontSize(7); 
-            doc.setFont('helvetica', 'normal');
-            doc.text(`REF: ${pricelist.id.substring(0,10).toUpperCase()}`, boxX + boxW, boxY + 14, { align: 'right' });
-
-            // Divider Line
-            doc.setDrawColor(203, 213, 225); 
-            doc.setLineWidth(0.3);
+            doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+            doc.text(`DOCUMENT REF: ${pricelist.id.substring(0,10).toUpperCase()}`, boxX + boxW, boxY + 14, { align: 'right' });
+            doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3);
             doc.line(margin, topY + 42, pageWidth - margin, topY + 42);
-            
             return topY + 52;
         };
 
         const drawTableHeaders = (startY: number) => {
-            doc.setFillColor(241, 245, 249); 
-            doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
-            doc.setTextColor(0, 0, 0); 
-            doc.setFontSize(9); 
-            doc.setFont('helvetica', 'bold');
-            doc.text("SKU", margin + 3, startY); 
-            doc.text("DESCRIPTION", margin + 45, startY);
+            doc.setFillColor(241, 245, 249); doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
+            doc.setTextColor(0, 0, 0); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+            doc.text("SKU", margin + 3, startY); doc.text("DESCRIPTION", margin + 45, startY);
             doc.text("NORMAL", pageWidth - margin - 40, startY, { align: 'right' });
             doc.text("PROMO", pageWidth - margin - 5, startY, { align: 'right' });
             return startY + 8;
@@ -392,55 +347,39 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 currentY = drawHeader();
                 currentY = drawTableHeaders(currentY);
             }
-            
             if (index % 2 !== 0) {
-                doc.setFillColor(248, 250, 252); 
-                doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
+                doc.setFillColor(248, 250, 252); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
             }
-            
-            doc.setDrawColor(226, 232, 240); 
-            doc.setLineWidth(0.1);
+            doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.1);
             doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'S');
-            
-            doc.setTextColor(0, 0, 0); 
-            doc.setFont('helvetica', 'normal'); 
-            doc.setFontSize(8);
-            doc.text(item.sku || 'N/A', margin + 3, currentY);
-            
+            doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+            doc.text(item.sku || 'POA', margin + 3, currentY);
             doc.setFont('helvetica', 'bold');
             const desc = item.description.length > 55 ? item.description.substring(0, 52) + "..." : item.description;
             doc.text(desc.toUpperCase(), margin + 45, currentY);
-            
             if (item.promoPrice) {
-                doc.setTextColor(148, 163, 184); 
-                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(148, 163, 184); doc.setFont('helvetica', 'bold');
             } else {
-                doc.setTextColor(0, 0, 0); 
-                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold');
             }
             doc.text(item.normalPrice || 'POA', pageWidth - margin - 40, currentY, { align: 'right' });
-            
             if (item.promoPrice) {
-                doc.setTextColor(220, 38, 38); 
-                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(220, 38, 38); doc.setFont('helvetica', 'black');
                 doc.text(item.promoPrice, pageWidth - margin - 5, currentY, { align: 'right' });
             } else {
-                doc.setTextColor(0, 0, 0); 
-                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold');
                 doc.text(item.normalPrice || '—', pageWidth - margin - 5, currentY, { align: 'right' });
             }
             currentY += rowHeight;
         });
 
+        // FIX: doc.getNumberOfPages() is available on the doc instance directly
         const totalPages = doc.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i); 
-            doc.setFontSize(7); 
-            doc.setTextColor(148, 163, 184);
+            doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
             doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
             doc.text(`Kiosk Pro Smart Retail Solution • ${new Date().toLocaleDateString()}`, margin, pageHeight - 10);
         }
-        
         doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
     } catch (err) {
         console.error("PDF Export failed", err);
@@ -803,7 +742,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
           <div className="flex items-center gap-2 md:gap-3">
             <div className="flex items-center gap-1"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase">{isOnline ? 'Connected' : 'Offline'}</span></div>
             {kioskId && (
-                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-400 font-mono text-[7px] md:text-[9px]">
+                <div className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-400 font-mono text-[7px] md:text-[9px]">
                     <Lock size={8} />
                     <span>ID: {kioskId}</span>
                 </div>
@@ -811,7 +750,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
           </div>
           <div className="flex items-center gap-2 md:gap-4">
             {lastSyncTime && (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-md shadow-sm">
+                <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-md shadow-sm">
                     <RefreshCw size={8} className="text-blue-500 animate-pulse" />
                     <span className="font-mono font-bold text-[7px] md:text-[9px] uppercase tracking-tighter text-slate-400">Sync: {lastSyncTime}</span>
                 </div>
