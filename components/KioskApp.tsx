@@ -188,7 +188,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const [zoom, setZoom] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   
-  // Unified Dragging Logic
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
@@ -231,22 +230,29 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging || e.touches.length !== 1) return;
-    // Prevent default scroll behavior only if we're actually panning a zoomed view
     if (zoom > 1) e.preventDefault();
     onDragMove(e.touches[0].pageX, e.touches[0].pageY);
   };
 
   const handleDragEnd = () => setIsDragging(false);
-
   const handlePrint = () => window.print();
 
-  const loadImage = (url: string): Promise<HTMLImageElement | null> => {
+  const loadImage = (url: string): Promise<{ img: HTMLImageElement, format: string } | null> => {
     return new Promise((resolve) => {
         if (!url) return resolve(null);
         const img = new Image();
+        // Crucial for PDF generation: enable CORS for external images
         img.crossOrigin = "anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
+        
+        img.onload = () => {
+            // Determine format for jsPDF optimization
+            const format = url.toLowerCase().includes('.png') || url.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            resolve({ img, format });
+        };
+        img.onerror = () => {
+            console.error(`Failed to load PDF asset: ${url}`);
+            resolve(null);
+        };
         img.src = url;
     });
   };
@@ -260,7 +266,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
         
-        const [brandImg, companyImg] = await Promise.all([
+        const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImage(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImage(companyLogo) : Promise.resolve(null)
         ]);
@@ -269,30 +275,30 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             let topY = 15;
             
             // Brand Logo / Name on Left
-            if (brandImg) {
-                const ratio = brandImg.width / brandImg.height;
-                const h = 20; const w = h * ratio;
-                doc.addImage(brandImg, 'PNG', margin, topY, w, h);
+            if (brandAsset) {
+                const ratio = brandAsset.img.width / brandAsset.img.height;
+                const h = 20; 
+                const w = h * ratio;
+                doc.addImage(brandAsset.img, brandAsset.format, margin, topY, w, h);
             } else if (brandName) {
                 doc.setTextColor(30, 41, 59); doc.setFontSize(28); doc.setFont('helvetica', 'black');
                 doc.text(brandName.toUpperCase(), margin, topY + 15);
             }
 
             // Company Logo on Far Right
-            if (companyImg) {
-                const ratio = companyImg.width / companyImg.height;
-                const h = 12; const w = h * ratio;
-                doc.addImage(companyImg, 'PNG', pageWidth - margin - w, topY, w, h);
+            if (companyAsset) {
+                const ratio = companyAsset.img.width / companyAsset.img.height;
+                const h = 12; 
+                const w = h * ratio;
+                doc.addImage(companyAsset.img, companyAsset.format, pageWidth - margin - w, topY, w, h);
             }
 
-            // Subtitle logic (Price List)
             doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
             doc.text("PRICE LIST", margin, topY + 28);
             
             doc.setTextColor(148, 163, 184); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
             doc.text("NEW PRICELIST", margin, topY + 34);
 
-            // Month Year Badge on Right
             const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
             doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
@@ -340,7 +346,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             const desc = item.description.length > 55 ? item.description.substring(0, 52) + "..." : item.description;
             doc.text(desc.toUpperCase(), margin + 45, currentY);
             
-            // Prices - Never cross out
             doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
             doc.text(item.normalPrice || 'POA', pageWidth - margin - 40, currentY, { align: 'right' });
             
@@ -364,60 +369,30 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
     } catch (err) {
         console.error("PDF Export failed", err);
-        alert("Unable to generate PDF. Check browser permissions.");
+        alert("Unable to generate PDF. Check browser permissions or network connectivity.");
     } finally {
         setIsExporting(false);
     }
   };
 
-  const handleZoomIn = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setZoom(prev => Math.min(prev + 0.25, 2.5));
-  };
-
-  const handleZoomOut = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setZoom(prev => Math.max(prev - 0.25, 1));
-  };
-
-  const handleResetZoom = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setZoom(1);
-  };
+  const handleZoomIn = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.min(prev + 0.25, 2.5)); };
+  const handleZoomOut = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.max(prev - 0.25, 1)); };
+  const handleResetZoom = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(1); };
 
   return (
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block overflow-hidden print:overflow-visible" onClick={onClose}>
       <style>{`
         @media print {
           @page { size: portrait; margin: 5mm; }
-          body { 
-            background: white !important; 
-            -webkit-print-color-adjust: exact !important; 
-            print-color-adjust: exact !important; 
-            margin: 0 !important; 
-            padding: 0 !important;
-            height: auto !important;
-            width: 100% !important;
-            overflow: visible !important;
-          }
+          body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0 !important; padding: 0 !important; height: auto !important; width: 100% !important; overflow: visible !important; }
           .print-hidden { display: none !important; }
           .print-only { display: block !important; }
-          #root, .relative, .viewer-container, .table-scroll {
-             display: block !important;
-             position: static !important;
-             height: auto !important;
-             width: 100% !important;
-             overflow: visible !important;
-             transform: none !important;
-             zoom: 1 !important;
-          }
+          #root, .relative, .viewer-container, .table-scroll { display: block !important; position: static !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
           .viewer-container { box-shadow: none !important; border: none !important; }
           .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
+          .spreadsheet-table thead { display: table-header-group !important; }
           .spreadsheet-table tr { page-break-inside: avoid !important; }
-          .spreadsheet-table th { 
-            background: #f1f5f9 !important; color: #000 !important; border: 1pt solid #cbd5e1 !important; 
-            font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 10pt !important;
-          }
+          .spreadsheet-table th { position: static !important; background: #f1f5f9 !important; color: #000 !important; border: 1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 10pt !important; }
           .spreadsheet-table td { border: 0.5pt solid #e2e8f0 !important; color: #000 !important; padding: 8pt !important; font-size: 10pt !important; }
           .excel-row:nth-child(even) { background-color: #f8fafc !important; }
         }
@@ -465,30 +440,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           </div>
         </div>
 
-        <div className="hidden print-only w-full px-10 pt-10 pb-6">
-            <div className="flex justify-between items-start mb-10">
-                <div className="flex flex-col gap-6">
-                    {brandLogo ? (
-                        <img src={brandLogo} alt="Brand" className="h-20 object-contain self-start" />
-                    ) : brandName ? (
-                        <h2 className="text-6xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2>
-                    ) : null}
-                    <div>
-                        <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mt-4">Price List</h1>
-                        <p className="text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">New Pricelist</p>
-                    </div>
-                </div>
-                <div className="flex flex-col items-end gap-6 text-right">
-                    {companyLogo && <img src={companyLogo} alt="Company" className="h-14 object-contain" />}
-                    <div>
-                        <div className="bg-slate-900 text-white px-6 py-2 rounded-xl text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p>
-                    </div>
-                </div>
-            </div>
-            <div className="h-1 bg-slate-200 w-full rounded-full mb-10"></div>
-        </div>
-
         <div 
             ref={scrollContainerRef}
             onMouseDown={handleMouseDown}
@@ -511,6 +462,34 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
+                  <tr className="hidden print:table-row border-none">
+                      <th colSpan={4} className="p-0 border-none bg-white">
+                          <div className="w-full px-10 pt-10 pb-6 text-left">
+                              <div className="flex justify-between items-start mb-10">
+                                  <div className="flex flex-col gap-6">
+                                      {brandLogo ? (
+                                          <img src={brandLogo} alt="Brand" className="h-20 object-contain self-start" />
+                                      ) : brandName ? (
+                                          <h2 className="text-6xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2>
+                                      ) : null}
+                                      <div>
+                                          <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mt-4">Price List</h1>
+                                          <p className="text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">New Pricelist</p>
+                                      </div>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-6 text-right">
+                                      {companyLogo && <img src={companyLogo} alt="Company" className="h-14 object-contain" />}
+                                      <div>
+                                          <div className="bg-slate-900 text-white px-6 py-2 rounded-xl text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
+                                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p>
+                                      </div>
+                                  </div>
+                              </div>
+                              <div className="h-1 bg-slate-200 w-full rounded-full mb-10"></div>
+                          </div>
+                      </th>
+                  </tr>
+                  
                   <tr className="print:bg-[#f1f5f9]">
                       <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 w-24 md:w-40 print:border-slate-400 print:text-black">CODE</th>
                       <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 print:border-slate-400 print:text-black">PRODUCT DESCRIPTION</th>
@@ -564,7 +543,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Items: {(pricelist.items || []).length}</span>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Official Kiosk Pro Document • VAT Incl.</p>
         </div>
-        <div className="hidden print-only text-center py-6 text-[10pt] text-slate-400 font-bold uppercase">Generated from Kiosk Pro System • Standard Retail Terms Apply</div>
       </div>
     </div>
   );
@@ -627,7 +605,7 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
                         <tbody className="divide-y divide-slate-100">
                             <tr className="hover:bg-slate-50/50"><td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Description</td>{products.map(p => (<td key={p.id} className="p-6 text-sm font-medium text-slate-600 leading-relaxed italic border-r border-slate-100">{p.description ? p.description.substring(0, 150) + '...' : 'No description provided.'}</td>))}</tr>
                             {specKeys.map(key => (<tr key={key} className="hover:bg-slate-50/50"><td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">{key}</td>{products.map(p => (<td key={p.id} className="p-6 text-sm font-black text-slate-900 border-r border-slate-100">{p.specs[key] || <span className="text-slate-200">—</span>}</td>))}</tr>))}
-                            <tr className="hover:bg-slate-50/50"><td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Key Features</td>{products.map(p => (<td key={p.id} className="p-6 border-r border-slate-100"><ul className="space-y-2">{p.features.slice(0, 5).map((f, i) => (<li key={i} className="flex items-start gap-2 text-[11px] font-bold text-slate-700"><Check size={12} className="text-green-500 shrink-0 mt-0.5" /> {f}</li>))}{p.features.length > 5 && <li className="text-[10px] font-black text-blue-500 uppercase tracking-widest pl-5">+{p.features.length - 5} more</li>}</ul></td>))}</tr>
+                            <tr className="hover:bg-slate-50/50"><td className="p-6 bg-slate-50/50 font-black uppercase text-[10px] text-slate-400 border-r border-slate-100">Key Features</td>{products.map(p => (<td key={p.id} className="p-6 border-r border-slate-100"><ul className="space-y-2">{p.features.slice(0, 5).map((f, i) => (<li key={i} className="flex items-start gap-3 text-[11px] font-bold text-slate-700"><Check size={12} className="text-green-500 shrink-0 mt-0.5" /> {f}</li>))}{p.features.length > 5 && <li className="text-[10px] font-black text-blue-500 uppercase tracking-widest pl-5">+{p.features.length - 5} more</li>}</ul></td>))}</tr>
                         </tbody>
                     </table>
                 </div>
@@ -692,6 +670,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [showCompareModal, setShowCompareModal] = useState(false);
   const timerRef = useRef<number | null>(null);
   const idleTimeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
+  
   const resetIdleTimer = useCallback(() => {
     setIsIdle(false);
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -701,7 +680,9 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       }, idleTimeout);
     }
   }, [screensaverEnabled, idleTimeout, deviceType, isSetup]);
+
   const resetDeviceIdentity = useCallback(() => { localStorage.clear(); window.location.reload(); }, []);
+
   useEffect(() => {
     window.addEventListener('touchstart', resetIdleTimer); window.addEventListener('click', resetIdleTimer);
     const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -717,13 +698,16 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     }
     return () => { clearInterval(clockInterval); };
   }, [resetIdleTimer, isSetup, resetDeviceIdentity]);
+
   const allProductsFlat = useMemo(() => {
       if (!storeData?.brands) return [];
       return storeData.brands.flatMap(b => (b.categories || []).flatMap(c => (c.products || []).map(p => ({...p, brandName: b.name, categoryName: c.name} as FlatProduct))));
   }, [storeData?.brands]);
+
   const pricelistBrands = useMemo(() => (storeData?.pricelistBrands || []).slice().sort((a, b) => a.name.localeCompare(b.name)), [storeData?.pricelistBrands]);
   const toggleCompareProduct = (product: Product) => setCompareProductIds(prev => prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5));
   const productsToCompare = useMemo(() => allProductsFlat.filter(p => compareProductIds.includes(p.id)), [allProductsFlat, compareProductIds]);
+
   if (!storeData) return null;
   if (!isSetup) return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
   if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} />;
