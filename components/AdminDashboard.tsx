@@ -975,29 +975,45 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
     setItems(items.map(item => item.id === id ? { ...item, [field]: val } : item));
   };
 
-  const handlePriceBlur = (id: string, field: 'normalPrice' | 'promoPrice', value: string) => {
-    if (!value) return;
+  /**
+   * Universal format and rounding logic:
+   * 1. Handles decimals correctly (R20 000.00 -> R 20 000)
+   * 2. Rounds up to nearest 10 (R299 -> R 300, R20 999 -> R 21 000)
+   */
+  const smartFormatPrice = (value: string): string => {
+    if (!value) return '';
     
-    // Extract only numbers
-    const numericPart = value.replace(/[^0-9]/g, '');
-    if (!numericPart) {
-        // If not a number but has text, just prepend R if needed
-        if (value && !value.startsWith('R ')) {
-            updateItem(id, field, `R ${value}`);
-        }
-        return;
+    // First, remove "R", spaces, and any standard thousands separators like commas
+    // but KEEP the decimal point for float parsing
+    let clean = value.replace(/[R\s,]/g, '');
+    
+    // Try to parse the numeric value
+    let num = parseFloat(clean);
+    
+    if (isNaN(num)) {
+        // Fallback for cases with mixed text: just strip everything but digits and dots
+        const numericOnly = value.replace(/[^0-9.]/g, '');
+        num = parseFloat(numericOnly);
     }
 
-    let num = parseInt(numericPart);
+    if (isNaN(num)) return value;
+
+    // Phase 1: Round up to the nearest whole integer to strip cents/decimals
+    num = Math.ceil(num);
     
-    // Auto round up logic: round to the nearest 10 if not already a multiple of 10
-    // This handles the user examples: 799 -> 800, 4499 -> 4500
+    // Phase 2: Apply the "round up to nearest 10" rule
+    // This handles the user examples: 299 -> 300, 20999 -> 21000
     if (num % 10 !== 0) {
         num = Math.ceil(num / 10) * 10;
     }
     
-    // Format back with R and grouping
-    const formatted = `R ${num.toLocaleString()}`;
+    // Format back with R and grouping using space as thousands separator
+    return `R ${num.toLocaleString().replace(/,/g, ' ')}`;
+  };
+
+  const handlePriceBlur = (id: string, field: 'normalPrice' | 'promoPrice', value: string) => {
+    if (!value) return;
+    const formatted = smartFormatPrice(value);
     updateItem(id, field, formatted);
   };
 
@@ -1044,24 +1060,15 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
         const dataRows = hasHeader ? validRows.slice(1) : validRows;
         
         const newImportedItems: PricelistItem[] = dataRows.map(row => {
-            // Apply R and rounding to imported prices too
             const rawNormal = String(row[2] || '').trim();
             const rawPromo = String(row[3] || '').trim();
             
-            const formatImported = (val: string) => {
-                const numeric = val.replace(/[^0-9]/g, '');
-                if (!numeric) return val;
-                let n = parseInt(numeric);
-                if (n % 10 !== 0) n = Math.ceil(n / 10) * 10;
-                return `R ${n.toLocaleString()}`;
-            };
-
             return {
                 id: generateId('imp'),
                 sku: String(row[0] || '').trim().toUpperCase(),
                 description: String(row[1] || '').trim(),
-                normalPrice: formatImported(rawNormal),
-                promoPrice: rawPromo ? formatImported(rawPromo) : ''
+                normalPrice: smartFormatPrice(rawNormal),
+                promoPrice: rawPromo ? smartFormatPrice(rawPromo) : ''
             };
         });
 
@@ -1133,7 +1140,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
           <div className="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center gap-3">
               <Info size={18} className="text-blue-500 shrink-0" />
               <p className="text-[10px] text-blue-800 font-bold uppercase leading-tight">
-                  Price Tip: Typing a number will auto-add 'R' and round up to the nearest 10 (e.g. 799 → 800) when you finish editing the cell.
+                  Price Logic: .00 decimals are automatically removed and prices round up to the nearest 10 (e.g. 299 → 300, 20999 → 21000).
               </p>
           </div>
 
