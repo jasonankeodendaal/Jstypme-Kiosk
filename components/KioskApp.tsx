@@ -235,40 +235,59 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   };
 
   const handleDragEnd = () => setIsDragging(false);
-  const handlePrint = () => window.print();
 
+  /**
+   * Robust Image Loader for PDF Generation
+   * Standardizes to PNG to avoid jsPDF format detection issues.
+   */
   const loadImage = async (url: string): Promise<{ img: HTMLImageElement, format: string, dataUrl: string } | null> => {
     if (!url) return null;
-    try {
-        const response = await fetch(url, { mode: 'cors' });
-        const blob = await response.blob();
-        const dataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-        });
+    return new Promise((resolve) => {
+      const processImage = (img: HTMLImageElement) => {
+          try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                  ctx.drawImage(img, 0, 0);
+                  // Standardize to PNG for maximum compatibility with jsPDF
+                  const dataUrl = canvas.toDataURL('image/png');
+                  resolve({ img, format: 'PNG', dataUrl });
+              } else {
+                  resolve(null);
+              }
+          } catch (e) {
+              console.warn("Canvas export failed (likely CORS)", e);
+              resolve(null);
+          }
+      };
 
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-                const format = url.toLowerCase().includes('.png') || dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-                resolve({ img, format, dataUrl });
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      img.onload = () => processImage(img);
+      
+      img.onerror = () => {
+        // Fallback: Attempt fetch with CORS if direct load fails
+        fetch(url, { mode: 'cors' })
+          .then(res => res.blob())
+          .then(blob => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const dataUrl = reader.result as string;
+              const innerImg = new Image();
+              innerImg.onload = () => processImage(innerImg);
+              innerImg.onerror = () => resolve(null);
+              innerImg.src = dataUrl;
             };
-            img.onerror = () => resolve(null);
-            img.src = dataUrl;
-        });
-    } catch (e) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.onload = () => {
-                const format = url.toLowerCase().includes('.png') ? 'PNG' : 'JPEG';
-                resolve({ img, format, dataUrl: url });
-            };
-            img.onerror = () => resolve(null);
-            img.src = url;
-        });
-    }
+            reader.readAsDataURL(blob);
+          })
+          .catch(() => resolve(null));
+      };
+      
+      img.src = url;
+    });
   };
 
   const handleExportPDF = async (e: React.MouseEvent) => {
@@ -280,6 +299,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
         
+        // Parallel load assets
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImage(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImage(companyLogo) : Promise.resolve(null)
@@ -287,40 +307,73 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
         const drawHeader = () => {
             let topY = 15;
+            
+            // Draw Company Logo (Top Left)
             if (companyAsset) {
                 const ratio = companyAsset.img.width / companyAsset.img.height;
                 const h = 10; 
                 const w = h * ratio;
-                doc.addImage(companyAsset.img, companyAsset.format, margin, topY, w, h);
+                doc.addImage(companyAsset.dataUrl, companyAsset.format, margin, topY, w, h);
             }
+            
+            // Draw Brand Identity (Top Right)
             if (brandAsset) {
                 const ratio = brandAsset.img.width / brandAsset.img.height;
                 const h = 18; 
-                const w = h * ratio;
-                doc.addImage(brandAsset.img, brandAsset.format, pageWidth - margin - w, topY, w, h);
+                const w = Math.min(h * ratio, 60); // Constrain width
+                doc.addImage(brandAsset.dataUrl, brandAsset.format, pageWidth - margin - w, topY, w, h);
             } else if (brandName) {
-                doc.setTextColor(30, 41, 59); doc.setFontSize(22); doc.setFont('helvetica', 'black');
+                doc.setTextColor(30, 41, 59);
+                doc.setFontSize(22);
+                doc.setFont('helvetica', 'bold');
                 doc.text(brandName.toUpperCase(), pageWidth - margin, topY + 12, { align: 'right' });
             }
-            doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
+
+            // Document Title
+            doc.setTextColor(0, 0, 0); 
+            doc.setFontSize(18); 
+            doc.setFont('helvetica', 'bold');
             doc.text("PRICE LIST", margin, topY + 28);
-            doc.setTextColor(148, 163, 184); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-            doc.text("NEW PRICELIST", margin, topY + 34);
-            const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
-            doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
-            doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+            
+            doc.setTextColor(148, 163, 184); 
+            doc.setFontSize(10); 
+            doc.setFont('helvetica', 'bold');
+            doc.text("OFFICIAL DOCUMENT", margin, topY + 34);
+
+            // Month/Year Box
+            const boxW = 45; 
+            const boxH = 9; 
+            const boxX = pageWidth - margin - boxW; 
+            const boxY = topY + 22;
+            doc.setFillColor(30, 41, 59); 
+            doc.rect(boxX, boxY, boxW, boxH, 'F');
+            doc.setTextColor(255, 255, 255); 
+            doc.setFontSize(10); 
+            doc.setFont('helvetica', 'bold');
             doc.text(`${pricelist.month} ${pricelist.year}`.toUpperCase(), boxX + (boxW/2), boxY + 6, { align: 'center' });
-            doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
-            doc.text(`DOCUMENT REF: ${pricelist.id.substring(0,10).toUpperCase()}`, boxX + boxW, boxY + 14, { align: 'right' });
-            doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3);
+            
+            // Document Ref
+            doc.setTextColor(148, 163, 184); 
+            doc.setFontSize(7); 
+            doc.setFont('helvetica', 'normal');
+            doc.text(`REF: ${pricelist.id.substring(0,10).toUpperCase()}`, boxX + boxW, boxY + 14, { align: 'right' });
+
+            // Divider Line
+            doc.setDrawColor(203, 213, 225); 
+            doc.setLineWidth(0.3);
             doc.line(margin, topY + 42, pageWidth - margin, topY + 42);
+            
             return topY + 52;
         };
 
         const drawTableHeaders = (startY: number) => {
-            doc.setFillColor(241, 245, 249); doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
-            doc.setTextColor(0, 0, 0); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-            doc.text("SKU", margin + 3, startY); doc.text("DESCRIPTION", margin + 45, startY);
+            doc.setFillColor(241, 245, 249); 
+            doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
+            doc.setTextColor(0, 0, 0); 
+            doc.setFontSize(9); 
+            doc.setFont('helvetica', 'bold');
+            doc.text("SKU", margin + 3, startY); 
+            doc.text("DESCRIPTION", margin + 45, startY);
             doc.text("NORMAL", pageWidth - margin - 40, startY, { align: 'right' });
             doc.text("PROMO", pageWidth - margin - 5, startY, { align: 'right' });
             return startY + 8;
@@ -339,38 +392,55 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 currentY = drawHeader();
                 currentY = drawTableHeaders(currentY);
             }
+            
             if (index % 2 !== 0) {
-                doc.setFillColor(248, 250, 252); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
+                doc.setFillColor(248, 250, 252); 
+                doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
             }
-            doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.1);
+            
+            doc.setDrawColor(226, 232, 240); 
+            doc.setLineWidth(0.1);
             doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'S');
-            doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-            doc.text(item.sku || 'POA', margin + 3, currentY);
+            
+            doc.setTextColor(0, 0, 0); 
+            doc.setFont('helvetica', 'normal'); 
+            doc.setFontSize(8);
+            doc.text(item.sku || 'N/A', margin + 3, currentY);
+            
             doc.setFont('helvetica', 'bold');
             const desc = item.description.length > 55 ? item.description.substring(0, 52) + "..." : item.description;
             doc.text(desc.toUpperCase(), margin + 45, currentY);
+            
             if (item.promoPrice) {
-                doc.setTextColor(148, 163, 184); doc.setFont('helvetica', 'bold');
+                doc.setTextColor(148, 163, 184); 
+                doc.setFont('helvetica', 'bold');
             } else {
-                doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 0, 0); 
+                doc.setFont('helvetica', 'bold');
             }
             doc.text(item.normalPrice || 'POA', pageWidth - margin - 40, currentY, { align: 'right' });
+            
             if (item.promoPrice) {
-                doc.setTextColor(220, 38, 38); doc.setFont('helvetica', 'black');
+                doc.setTextColor(220, 38, 38); 
+                doc.setFont('helvetica', 'bold');
                 doc.text(item.promoPrice, pageWidth - margin - 5, currentY, { align: 'right' });
             } else {
-                doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 0, 0); 
+                doc.setFont('helvetica', 'bold');
                 doc.text(item.normalPrice || '—', pageWidth - margin - 5, currentY, { align: 'right' });
             }
             currentY += rowHeight;
         });
 
-        const totalPages = doc.internal.getNumberOfPages();
+        const totalPages = doc.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
+            doc.setPage(i); 
+            doc.setFontSize(7); 
+            doc.setTextColor(148, 163, 184);
             doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
             doc.text(`Kiosk Pro Smart Retail Solution • ${new Date().toLocaleDateString()}`, margin, pageHeight - 10);
         }
+        
         doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
     } catch (err) {
         console.error("PDF Export failed", err);
@@ -433,12 +503,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 <button onClick={handleZoomIn} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={18}/></button>
              </div>
              <div className="flex gap-2">
-                <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-2 bg-white text-slate-900 px-4 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group disabled:opacity-50">
-                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} className="text-blue-600" />}
+                <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-600 transition-all active:scale-95 group disabled:opacity-50 border border-white/10">
+                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} className="text-blue-400" />}
                     <span>{isExporting ? 'Generating...' : 'Save as PDF'}</span>
-                </button>
-                <button onClick={handlePrint} className="hidden md:flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-slate-700 transition-all group">
-                    <Printer size={16} /> <span>Print</span>
                 </button>
              </div>
              <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20}/></button>
