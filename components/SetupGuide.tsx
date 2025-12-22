@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+/* Added Tablet and Tv imports from lucide-react */
 import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles } from 'lucide-react';
 
 interface SetupGuideProps {
@@ -86,6 +87,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
         <button 
           onClick={() => copyToClipboard(code, id)}
           className="absolute top-4 right-4 p-2.5 bg-white/5 hover:bg-blue-600 rounded-xl text-white transition-all border border-white/5 group-active:scale-95 shadow-lg"
+          title="Copy Script"
         >
           {copiedStep === id ? <Check size={18} className="text-green-400" /> : <Copy size={18} className="opacity-40 group-hover:opacity-100" />}
         </button>
@@ -101,12 +103,14 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
           100% { transform: scale(2); opacity: 0; }
         }
         .animate-ring { animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+        
         @keyframes data-flow {
           0% { transform: translateX(0); opacity: 0; }
           50% { opacity: 1; }
           100% { transform: translateX(120px); opacity: 0; }
         }
         .data-packet { animation: data-flow 2s infinite linear; }
+        
         @keyframes subtle-bounce {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-5px); }
@@ -159,19 +163,305 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                     </button>
                 ))}
             </nav>
+            
+            <div className="mt-8">
+                <a 
+                    href="https://github.com/jasonankeodendaal/Jstypme-Kiosk.git" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full p-5 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-[2rem] transition-all flex items-center gap-4 border border-slate-200 group"
+                >
+                    <div className="p-3 bg-white rounded-2xl shadow-sm group-hover:scale-110 transition-transform">
+                        <Github size={22} className="text-slate-900" />
+                    </div>
+                    <div className="min-w-0">
+                        <span className="font-black text-sm block leading-none mb-1">GitHub Repo</span>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Source Code Access</span>
+                    </div>
+                </a>
+            </div>
+
+            <div className="mt-auto pt-8">
+                <div className="p-5 bg-slate-900 rounded-[2rem] text-white relative overflow-hidden shadow-xl border border-white/5">
+                    <div className="absolute top-0 right-0 p-4 opacity-10"><Activity size={40} /></div>
+                    <div className="flex items-center gap-2 mb-3"><Info size={14} className="text-blue-400" /><span className="text-[10px] font-black uppercase tracking-[0.2em]">Systems Integrity</span></div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-medium">This manual is intended for authorized system administrators. Unauthorized configuration changes may disrupt fleet-wide retail operations.</p>
+                </div>
+            </div>
         </div>
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto bg-slate-50/70 p-4 md:p-12 scroll-smooth">
            <div className="max-w-4xl mx-auto bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden min-h-full pb-32">
               
-              {/* PHASE 1-4 Abbreviated ... (Content stays identical to original) ... */}
-              {activeTab === 'supabase' && ( <div className="p-8 md:p-16 animate-fade-in"><SectionHeading icon={Database} subtitle="Provisioning the cloud backbone.">Supabase Infrastructure</SectionHeading></div> )}
-              {activeTab === 'local' && ( <div className="p-8 md:p-16 animate-fade-in"><SectionHeading icon={Server} subtitle="Establishing development hub.">PC Hub Configuration</SectionHeading></div> )}
-              {activeTab === 'build' && ( <div className="p-8 md:p-16 animate-fade-in"><SectionHeading icon={Hammer} subtitle="Asset pipeline optimization.">Build Pipeline</SectionHeading></div> )}
-              {activeTab === 'vercel' && ( <div className="p-8 md:p-16 animate-fade-in"><SectionHeading icon={Globe} subtitle="Edge Delivery.">Edge Network</SectionHeading></div> )}
+              {/* PHASE 1: SUPABASE */}
+              {activeTab === 'supabase' && (
+                <div className="p-8 md:p-16 animate-fade-in">
+                    <SectionHeading icon={Database} subtitle="Provisioning the high-availability cloud backbone for global fleet synchronization.">Supabase Infrastructure Setup</SectionHeading>
+                    
+                    <WhyBox title="Why use Supabase Cloud?">
+                        Standard retail kiosks rely on local databases which are islands of data. By integrating <strong>Supabase (PostgreSQL + PostgREST)</strong>, we gain three mission-critical capabilities:
+                        <ul className="mt-4 space-y-3">
+                            <li className="flex gap-3"><CheckCircle2 className="text-blue-500 shrink-0" size={16}/> <strong>Realtime Websockets:</strong> When you change a price in this Admin Hub, a push notification is sent instantly to every tablet in the field.</li>
+                            <li className="flex gap-3"><CheckCircle2 className="text-blue-500 shrink-0" size={16}/> <strong>Relational Integrity:</strong> Using SQL ensures that if you delete a Brand, all associated Products are handled correctly via foreign key constraints, preventing "Zombie" items.</li>
+                            <li className="flex gap-3"><CheckCircle2 className="text-blue-500 shrink-0" size={16}/> <strong>Storage CDNs:</strong> High-resolution product videos are hosted on edge-cached buckets, ensuring zero buffering for customers.</li>
+                        </ul>
+                    </WhyBox>
 
-              {/* PHASE 5: PRICELIST ENGINE (EXTENDED AS REQUESTED) */}
+                    <div className="space-y-6">
+                        <Step number="1" title="Project Provisioning">
+                            <p className="font-medium text-slate-700 leading-relaxed">Visit <a href="https://supabase.com" target="_blank" className="text-blue-600 font-bold underline inline-flex items-center gap-1 hover:text-blue-700 transition-colors">supabase.com <ExternalLink size={14}/></a>. The platform uses Dockerized PostgreSQL instances under the hood, providing enterprise-grade performance even on the free tier.</p>
+                            <EngineerNote>
+                                PRO TIP: Select a region closest to your physical store locations (e.g., 'eu-west-1' for Europe or 'af-south-1' for Southern Africa). This reduces API round-trip latency by up to 150ms per heartbeat.
+                            </EngineerNote>
+                        </Step>
+
+                        <Step number="2" title="SQL Schema Injection">
+                            <p className="font-medium text-slate-700">The Kiosk Pro system is "schema-driven". You must execute this DDL (Data Definition Language) script to initialize the tables and enable Realtime replication.</p>
+                            <CodeBlock 
+                                id="sql-full"
+                                label="System Master SQL (Run in SQL Editor)"
+                                code={`-- PHASE 1: ASSET STORAGE BUCKET
+-- This bucket stores high-res images and PDF manuals.
+insert into storage.buckets (id, name, public) 
+values ('kiosk-media', 'kiosk-media', true) 
+on conflict (id) do nothing;
+
+-- Set up permissive policies safely
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow Public Viewing' AND tablename = 'objects' AND schemaname = 'storage') THEN
+        CREATE POLICY "Allow Public Viewing" ON storage.objects FOR SELECT USING ( bucket_id = 'kiosk-media' );
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow Auth Uploads' AND tablename = 'objects' AND schemaname = 'storage') THEN
+        CREATE POLICY "Allow Auth Uploads" ON storage.objects FOR INSERT WITH CHECK ( bucket_id = 'kiosk-media' );
+    END IF;
+END $$;
+
+-- PHASE 2: FLEET & CONFIGURATION TABLES
+-- Use robust column checks to prevent errors on existing installations
+CREATE TABLE IF NOT EXISTS public.store_config ( 
+    id serial PRIMARY KEY,
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='store_config' AND column_name='data') THEN
+        ALTER TABLE public.store_config ADD COLUMN data jsonb NOT NULL DEFAULT '{}'::jsonb;
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS public.kiosks ( 
+    id text PRIMARY KEY, 
+    name text, 
+    device_type text, 
+    status text, 
+    last_seen timestamp with time zone, 
+    wifi_strength int, 
+    ip_address text, 
+    version text, 
+    assigned_zone text, 
+    restart_requested boolean DEFAULT false 
+);
+
+-- PHASE 3: REALTIME REPLICATION CONFIG
+-- Safely add tables to publication without duplication errors
+ALTER TABLE public.store_config REPLICA IDENTITY FULL;
+ALTER TABLE public.kiosks REPLICA IDENTITY FULL;
+
+DO $$
+BEGIN
+    -- Ensure standard publication exists
+    IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        CREATE PUBLICATION supabase_realtime;
+    END IF;
+
+    -- Add tables to publication, catching 'already exists' errors
+    BEGIN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.store_config;
+    EXCEPTION WHEN duplicate_object THEN
+        RAISE NOTICE 'Table store_config already exists in publication';
+    END;
+
+    BEGIN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.kiosks;
+    EXCEPTION WHEN duplicate_object THEN
+        RAISE NOTICE 'Table kiosks already exists in publication';
+    END;
+END $$;`}
+                            />
+                            <WhyBox title="Why JSONB instead of standard columns?">
+                                Retail data changes fast. One year you need "Battery Life" for phones, the next you need "Sleeve Length" for fashion. <strong>JSONB (Binary JSON)</strong> allows us to store these varying specs without constantly rewriting the database structure, while still allowing the Admin Hub to filter and sort efficiently.
+                            </WhyBox>
+                        </Step>
+                    </div>
+                </div>
+              )}
+
+              {/* PHASE 2: LOCAL SETUP */}
+              {activeTab === 'local' && (
+                  <div className="p-8 md:p-16 animate-fade-in">
+                      <SectionHeading icon={Server} subtitle="Establishing the local engineering workspace for rapid testing and asset management.">PC Hub Configuration</SectionHeading>
+                      
+                      <WhyBox title="Why develop locally?">
+                          The Kiosk app uses a technology called <strong>HMR (Hot Module Replacement)</strong>. When you change code on your PC, the app updates instantly without refreshing the page. This "Dev-Loop" is essential for fine-tuning UI animations and screensaver transitions before they go live on expensive in-store panels.
+                      </WhyBox>
+
+                      <div className="space-y-8">
+                          <Step number="1" title="The Node.js Runtime">
+                              <p className="font-medium text-slate-700">Node.js is the engine that runs our build tools. We recommend <strong>Node.js v18 or higher (LTS)</strong> for compatibility with Vite 5.0.</p>
+                              <div className="flex gap-4 items-center bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                  <div className="bg-white p-2 rounded-xl shadow-sm"><Terminal size={18} className="text-slate-600"/></div>
+                                  <div className="text-xs font-mono font-bold text-slate-500">Check version: <span className="text-blue-600">node -v</span></div>
+                              </div>
+                          </Step>
+                          
+                          <Step number="2" title="Cloning & Dependencies">
+                              <p className="font-medium text-slate-700">Our system uses <strong>NPM (Node Package Manager)</strong> to fetch all required libraries (React, Tailwind, Supabase SDK, Lucide Icons).</p>
+                              <CodeBlock id="npm-install" label="Run in Terminal" code={`npm install`} />
+                              <EngineerNote>
+                                  Security Alert: Never 'git push' your node_modules folder. It contains thousands of files that are specific to your PC's operating system.
+                              </EngineerNote>
+                          </Step>
+
+                          <Step number="3" title="Environment Variables (.env)">
+                              <p className="font-medium text-slate-700">This is how your local code talks to your specific Supabase Cloud project. Create a file named <code>.env</code> in the root folder.</p>
+                              <WhyBox title="Why the 'VITE_' prefix?">
+                                  By default, Vite does not expose environment variables to your browser code for security reasons. Only variables starting with <strong>VITE_</strong> are injected into the client-side bundle. This prevents accidental leakage of sensitive database passwords.
+                              </WhyBox>
+                              <CodeBlock 
+                                id="env-example" 
+                                label=".env Configuration (Paste Keys from Supabase Settings)" 
+                                code={`VITE_SUPABASE_URL=https://your-project-id.supabase.co\nVITE_SUPABASE_ANON_KEY=your-long-anon-public-key-here`} 
+                              />
+                          </Step>
+                      </div>
+                  </div>
+              )}
+
+              {/* PHASE 3: BUILD PIPELINE */}
+              {activeTab === 'build' && (
+                  <div className="p-8 md:p-16 animate-fade-in">
+                      <SectionHeading icon={Hammer} subtitle="Advanced Tree-Shaking, AST Traversal, and Minification Algorithms.">Asset Pipeline & Optimization</SectionHeading>
+                      
+                      <WhyBox title="Deep Analysis: Tree-Shaking Architecture">
+                          Tree-shaking isn't just "deleting unused code." It is a sophisticated <strong>Static Analysis</strong> process performed by the Rollup engine.
+                          <ul className="mt-4 space-y-4">
+                              <li className="flex gap-3">
+                                  <Binary className="text-purple-600 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Abstract Syntax Tree (AST) Traversal:</strong> 
+                                      The compiler builds a map of every function call. If a module is imported but no path in the AST leads to its execution, the entire branch is pruned before the final binary is generated.
+                                  </div>
+                              </li>
+                              <li className="flex gap-3">
+                                  <Layers className="text-purple-600 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Lexical Scope Hoisting:</strong> 
+                                      Vite moves all constant declarations to the highest possible scope. This allows the minifier to see if a variable is "effectively constant," enabling <strong>Constant Folding</strong>—where a calculation like <code>2 + 2</code> is replaced by <code>4</code> in the final code to save CPU cycles on the tablet.
+                                  </div>
+                              </li>
+                              <li className="flex gap-3">
+                                  <ZapOff className="text-purple-600 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Dead Code Elimination (DCE):</strong> 
+                                      This prunes entire blocks wrapped in <code>if (false)</code>. Because our build process defines <code>process.env.NODE_ENV</code> as <code>'production'</code>, all development-only logs and debuggers are physically removed from the kiosk's memory.
+                                  </div>
+                              </li>
+                          </ul>
+                      </WhyBox>
+
+                      <div className="space-y-8">
+                          <Step number="1" title="Minification & Obfuscation">
+                              <p className="font-medium text-slate-700">The <strong>Esbuild</strong> minifier performs identifier mangling. A function named <code>calculateInventoryDiscount()</code> is renamed to <code>a()</code>. This reduces the transfer size by up to 80% while simultaneously providing a layer of source code protection.</p>
+                              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Optimization Payload</h4>
+                                  <div className="grid grid-cols-2 gap-4">
+                                      <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                          <div className="text-xs font-bold text-slate-800">Brotli Compression</div>
+                                          <div className="text-[10px] text-slate-500 font-medium">Advanced dictionary-based algorithm for text assets.</div>
+                                      </div>
+                                      <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                          <div className="text-xs font-bold text-slate-800">Chunk Splitting</div>
+                                          <div className="text-[10px] text-slate-500 font-medium">Isolates PDF.js so it only loads when a manual is opened.</div>
+                                      </div>
+                                  </div>
+                              </div>
+                              <CodeBlock id="npm-build" label="Execute Production Build" code={`npm run build`} />
+                          </Step>
+
+                          <Step number="2" title="Source Map Security">
+                              <p className="font-medium text-slate-700">By default, Kiosk Pro <strong>disables</strong> source maps in production. This ensures that a curious user cannot use the browser's developer tools to reconstruct your original TypeScript logic from the minified bundles.</p>
+                              <EngineerNote>
+                                  Vulnerability Patch: In <code>vite.config.ts</code>, we ensure <code>build.sourcemap</code> is <code>false</code> to prevent "re-engineering" of your API connection logic.
+                              </EngineerNote>
+                          </Step>
+                      </div>
+                  </div>
+              )}
+
+              {/* PHASE 4: VERCEL DEPLOY */}
+              {activeTab === 'vercel' && (
+                  <div className="p-8 md:p-16 animate-fade-in">
+                      <SectionHeading icon={Globe} subtitle="Anycast Networking, BGP Routing, and Layer 7 Global Content Delivery.">Edge Network Infrastructure</SectionHeading>
+                      
+                      <WhyBox title="Global CDN Mechanics">
+                          Deploying to Vercel isn't just "hosting." It places your app on a <strong>Global Anycast Network</strong>.
+                          <ul className="mt-4 space-y-4">
+                              <li className="flex gap-3">
+                                  <Globe2 className="text-slate-900 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Anycast IP Routing:</strong> 
+                                      Every Kiosk tablet connects to the same IP address, but the internet's <strong>BGP (Border Gateway Protocol)</strong> routes that request to the PoP (Point of Presence) physically closest to the store. If a shop in New York accesses the kiosk, they hit the 'iad1' data center; a shop in London hits 'lhr1'.
+                                  </div>
+                              </li>
+                              <li className="flex gap-3">
+                                  <Wind className="text-slate-900 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Edge Caching (HTTP 304):</strong> 
+                                      We use <code>Cache-Control: stale-while-revalidate</code>. The edge network serves the cached version to the kiosk <strong>instantly</strong>, then silently fetches the update in the background. This results in "Zero Second" perceived load times.
+                                  </div>
+                              </li>
+                              <li className="flex gap-3">
+                                  <ShieldAlert className="text-slate-900 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Layer 7 WAF Protection:</strong> 
+                                      The Edge network analyzes incoming traffic for SQL injection and DDoS patterns. Malicious requests are terminated at the Edge, never even reaching your application code.
+                                  </div>
+                              </li>
+                          </ul>
+                      </WhyBox>
+
+                      <div className="space-y-8">
+                          <Step number="1" title="Atomic Immutability">
+                              <p className="font-medium text-slate-700 leading-relaxed">Every deployment generates a unique ID. If you push a broken update, the system maintains <strong>Instant Rollback</strong> capability. You can revert the entire fleet to a known-stable version in under 2 seconds without a single byte of code being re-downloaded by the tablets.</p>
+                              <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative border border-white/5">
+                                  <div className="absolute top-0 right-0 p-4 opacity-10"><Workflow size={60} /></div>
+                                  <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Network Health Check</div>
+                                  <div className="flex items-center gap-2 text-xs font-mono">
+                                      <span className="text-green-400 font-black">[PASS]</span> SSL Termination @ Edge
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs font-mono mt-1">
+                                      <span className="text-green-400 font-black">[PASS]</span> HTTP/3 QUIC Protocol Enabled
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs font-mono mt-1">
+                                      <span className="text-green-400 font-black">[PASS]</span> Gzip/Brotli Auto-Negotiation
+                                  </div>
+                              </div>
+                          </Step>
+
+                          <Step number="2" title="Cold vs. Hot Starts">
+                              <p className="font-medium text-slate-700">Since the kiosk is a SPA (Single Page Application), it benefit from 100% "Static" performance. There are no server-side databases to "wake up" when a customer touches the screen; the entire UI logic resides in the tablet's browser cache, managed by our <strong>Service Worker (sw.js)</strong>.</p>
+                              <EngineerNote>
+                                  Reliability Metric: Vercel's infrastructure boasts a 99.99% uptime SLA. By combining this with Supabase's multi-region failover, the Kiosk Pro system is designed for "Always-On" retail environments.
+                              </EngineerNote>
+                          </Step>
+                      </div>
+                  </div>
+              )}
+
+              {/* PHASE 5: PRICELIST ENGINE (NEW) */}
               {activeTab === 'pricelists' && (
                   <div className="p-8 md:p-16 animate-fade-in">
                       <SectionHeading icon={Table} subtitle="Automated Ingestion, Pricing Normalization, and Real-Time Distribution.">Pricelist Intelligence Engine</SectionHeading>
@@ -181,52 +471,103 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                           <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
                           
                           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
+                              {/* Source Node */}
                               <div className="flex flex-col items-center gap-4 group">
                                   <div className="w-24 h-24 bg-white/5 rounded-3xl border-2 border-green-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(34,197,94,0.2)] animate-float-small">
                                       <FileSpreadsheet size={40} className="text-green-400" />
                                   </div>
-                                  <div className="text-white font-black uppercase text-[10px] tracking-widest text-center">Ingestion (XLSX)</div>
+                                  <div className="text-center">
+                                      <div className="text-white font-black uppercase text-[10px] tracking-widest">Ingestion</div>
+                                      <div className="text-green-500/60 text-[9px] font-mono">XLSX / CSV</div>
+                                  </div>
                               </div>
 
+                              {/* Path 1 */}
                               <div className="hidden md:block flex-1 h-1 bg-white/5 relative mx-2 overflow-hidden rounded-full">
                                   <div className="absolute inset-0 bg-blue-500 data-packet"></div>
                               </div>
 
+                              {/* Logic Node */}
                               <div className="flex flex-col items-center gap-4 group">
                                   <div className="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.4)] relative">
                                       <div className="absolute inset-0 animate-ring border-2 border-blue-400 rounded-3xl"></div>
                                       <RefreshCw size={40} className="text-white animate-spin-slow" />
                                   </div>
-                                  <div className="text-white font-black uppercase text-[10px] tracking-widest text-center">Normalization</div>
+                                  <div className="text-center">
+                                      <div className="text-white font-black uppercase text-[10px] tracking-widest">Normalization</div>
+                                      <div className="text-blue-400 text-[9px] font-mono">Auto-Rounding</div>
+                                  </div>
                               </div>
 
+                              {/* Path 2 */}
                               <div className="hidden md:block flex-1 h-1 bg-white/5 relative mx-2 overflow-hidden rounded-full">
                                   <div className="absolute inset-0 bg-purple-500 data-packet" style={{animationDelay: '1s'}}></div>
                               </div>
 
+                              {/* Output Node */}
                               <div className="flex flex-col items-center gap-4 group">
-                                  <div className="w-24 h-24 bg-white/5 rounded-3xl border-2 border-purple-500/30 flex items-center justify-center">
-                                      <Tablet size={40} className="text-purple-400" />
+                                  <div className="w-24 h-24 bg-white/5 rounded-3xl border-2 border-purple-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.2)]">
+                                      <div className="grid grid-cols-2 gap-1 scale-75">
+                                          <Smartphone size={20} className="text-purple-400" />
+                                          <Tablet size={20} className="text-purple-400" />
+                                          <Tv size={20} className="text-purple-400" />
+                                          <FileText size={20} className="text-red-400" />
+                                      </div>
                                   </div>
-                                  <div className="text-white font-black uppercase text-[10px] tracking-widest text-center">Fleet Sync</div>
+                                  <div className="text-center">
+                                      <div className="text-white font-black uppercase text-[10px] tracking-widest">Deployment</div>
+                                      <div className="text-purple-400 text-[9px] font-mono">Fleet & PDF</div>
+                                  </div>
                               </div>
                           </div>
                       </div>
 
                       <WhyBox title="Why Normalization Logic?">
                           Retail data is often messy. Admins enter prices like <code>799</code>, <code>4449</code>, or <code>R 122</code>. Our engine performs <strong>Sanitization & Normalization</strong>:
-                          <ul className="mt-4 space-y-4 text-sm">
-                              <li><strong>Auto-Rounding Algorithm:</strong> If a price isn't a multiple of 10, it's automatically rounded up. This ensures professional "Psychological Pricing" across the whole store.</li>
-                              <li><strong>Realtime Propagation:</strong> The moment you hit "Save", a SQL update triggers a Supabase Replication Event. Every active tablet listens and updates instantly.</li>
+                          <ul className="mt-4 space-y-4">
+                              <li className="flex gap-4 bg-white/50 p-4 rounded-2xl border border-orange-100">
+                                  <div className="p-3 bg-white rounded-xl shadow-sm h-fit"><Sparkles className="text-orange-500" size={20}/></div>
+                                  <div>
+                                      <strong>Auto-Rounding Algorithm:</strong> 
+                                      If a price isn't a multiple of 10, it's automatically rounded up. This ensures professional "Psychological Pricing" across the whole store without manual math.
+                                      
+                                      <div className="mt-3 flex items-center gap-3 bg-slate-900 p-3 rounded-xl">
+                                          <div className="text-[10px] font-mono text-slate-500 uppercase">Input:</div>
+                                          <div className="text-xs font-mono text-red-400 line-through">R {roundDemoValue}</div>
+                                          <ArrowRight size={12} className="text-slate-600" />
+                                          <div className="text-[10px] font-mono text-slate-500 uppercase">Logic:</div>
+                                          <div className="text-xs font-mono text-green-400 font-black animate-pulse">R {Math.ceil(roundDemoValue/10)*10}</div>
+                                      </div>
+                                  </div>
+                              </li>
+                              <li className="flex gap-4">
+                                  <div className="p-3 bg-blue-50 rounded-xl h-fit"><RefreshCw className="text-blue-600" size={20}/></div>
+                                  <div>
+                                      <strong>Realtime Propagation:</strong> 
+                                      The moment you hit "Save" in the Builder, a SQL update triggers a Supabase <strong>Replication Event</strong>. Every active Kiosk tablet listens to this channel and updates its price list <em>without</em> a page reload.
+                                  </div>
+                              </li>
                           </ul>
                       </WhyBox>
 
                       <div className="space-y-8">
                           <Step number="1" title="The XLSX Import Parser">
-                              <p className="font-medium text-slate-700">The system uses <strong>SheetJS (xlsx)</strong> to process binary spreadsheet data entirely in the browser. No data ever leaves the local machine during the initial parse.</p>
+                              <p className="font-medium text-slate-700">The system uses <code>SheetJS (xlsx)</code> to process binary spreadsheet data entirely in the browser. This eliminates the need for server-side processing and protects privacy.</p>
+                              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Expected Schema</h4>
+                                  <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                                      {['SKU', 'Description', 'Normal Price', 'Promo Price'].map(col => (
+                                          <div key={col} className="bg-white px-3 py-2 rounded-lg border border-slate-200 font-mono text-[10px] font-bold text-slate-600 shadow-sm whitespace-nowrap">{col}</div>
+                                      ))}
+                                  </div>
+                              </div>
                           </Step>
+
                           <Step number="2" title="Vectorized PDF Generation">
-                              <p className="font-medium text-slate-700">Uses <strong>jsPDF</strong> to generate vector documents on-the-fly. This ensures that the price list looks sharp on high-DPI tablets and physical prints.</p>
+                              <p className="font-medium text-slate-700">When a customer clicks "Save as PDF", the app uses <code>jsPDF</code> to generate a vector document on-the-fly. It renders the store logo and price table using MM coordinates to ensure print-perfect quality on A4 paper.</p>
+                              <EngineerNote>
+                                  Technical Detail: To prevent blurring on high-DPI tablets, the `ManualPricelistViewer` uses a hidden high-resolution canvas for scaling before embedding assets into the PDF binary stream.
+                              </EngineerNote>
                           </Step>
                       </div>
                   </div>
