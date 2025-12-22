@@ -509,7 +509,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-             <div className="hidden sm:flex items-center gap-1 bg-white/10 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
+             <div className="hidden sm:flex items-center gap-1 bg-white/10 rounded-xl border border-white/10 backdrop-blur-sm">
                 <button onClick={handleZoomOut} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomOut size={18}/></button>
                 <button onClick={handleResetZoom} className="px-2 text-[10px] font-black uppercase tracking-widest min-w-[50px]">{Math.round(zoom * 100)}%</button>
                 <button onClick={handleZoomIn} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={18}/></button>
@@ -563,9 +563,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            className={`table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
+            className={`table-scroll flex-1 overflow-auto bg-white p-0 md:p-4 print:p-0 print:overflow-visible touch-none ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
         >
-          <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }} className="transition-transform duration-200 print:transform-none select-none">
+          {/* 
+            FIX: transformOrigin changed to '0 0' (top left).
+            This ensures that when zoomed, the table grows only to the right and down.
+            With the previous 'top center' origin, the left side of the table (SKU side)
+            would grow into negative coordinate space, making it impossible to scroll back to.
+          */}
+          <div style={{ transform: `scale(${zoom})`, transformOrigin: '0 0', width: zoom > 1 ? 'fit-content' : '100%' }} className="transition-transform duration-200 print:transform-none select-none">
             <table className="spreadsheet-table w-full text-left border-collapse print:table">
                 <thead className="print:table-header-group">
                 <tr className="print:bg-[#f1f5f9]">
