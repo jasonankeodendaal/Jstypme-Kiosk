@@ -1043,7 +1043,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
 
         const dataRows = hasHeader ? validRows.slice(1) : validRows;
         
-        const newItems: PricelistItem[] = dataRows.map(row => {
+        const newImportedItems: PricelistItem[] = dataRows.map(row => {
             // Apply R and rounding to imported prices too
             const rawNormal = String(row[2] || '').trim();
             const rawPromo = String(row[3] || '').trim();
@@ -1065,12 +1065,34 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             };
         });
 
-        if (newItems.length > 0) {
-            const message = `Successfully parsed ${newItems.length} items. \n\nReplace current list or Append?`;
-            if (confirm(message)) {
-                setItems(newItems);
-            } else if (confirm("Append items instead?")) {
-                setItems([...items, ...newItems]);
+        if (newImportedItems.length > 0) {
+            const userChoice = confirm(`Parsed ${newImportedItems.length} items.\n\nOK -> UPDATE existing SKUs and ADD new ones (Merge).\nCANCEL -> REPLACE entire current list.`);
+            
+            if (userChoice) {
+                // MERGE Logic
+                const merged = [...items];
+                const onlyNew: PricelistItem[] = [];
+
+                newImportedItems.forEach(newItem => {
+                    const existingIdx = merged.findIndex(curr => curr.sku && newItem.sku && curr.sku.trim().toUpperCase() === newItem.sku.trim().toUpperCase());
+                    if (existingIdx > -1) {
+                        // Update existing entry with new prices (and description if provided)
+                        merged[existingIdx] = {
+                            ...merged[existingIdx],
+                            description: newItem.description || merged[existingIdx].description,
+                            normalPrice: newItem.normalPrice || merged[existingIdx].normalPrice,
+                            promoPrice: newItem.promoPrice || merged[existingIdx].promoPrice
+                        };
+                    } else {
+                        onlyNew.push(newItem);
+                    }
+                });
+                setItems([...merged, ...onlyNew]);
+                alert(`Merge Complete: Updated existing SKUs and added ${onlyNew.length} new items.`);
+            } else {
+                // REPLACE Logic
+                setItems(newImportedItems);
+                alert("Pricelist replaced with imported data.");
             }
         } else {
             alert("Could not extract any valid items. Ensure the sheet follows the format: SKU, Description, Normal Price, Promo Price.");
