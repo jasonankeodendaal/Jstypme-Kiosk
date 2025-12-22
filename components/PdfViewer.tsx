@@ -3,10 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Fix for ESM import in some environments where the module is wrapped in 'default'
 const pdfjs: any = (pdfjsLib as any).default || pdfjsLib;
 
-// Worker configuration matching the version in importmap
 if (pdfjs.GlobalWorkerOptions) {
   pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 }
@@ -20,7 +18,7 @@ interface PdfViewerProps {
 const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   const [pdf, setPdf] = useState<any>(null);
   const [pageNum, setPageNum] = useState(1);
-  const [scale, setScale] = useState(0); // 0 = Auto Fit Mode
+  const [scale, setScale] = useState(0); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -34,7 +32,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   const renderTaskRef = useRef<any>(null);
   const loadingTaskRef = useRef<any>(null);
 
-  // Track container size for responsive fitting
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -44,23 +41,16 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
         });
       }
     };
-
     window.addEventListener('resize', updateSize);
-    updateSize(); // Initial call
+    updateSize();
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
   useEffect(() => {
     const loadPdf = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        setPageNum(1);
-        
-        if (loadingTaskRef.current) {
-            loadingTaskRef.current.destroy().catch(() => {});
-        }
-
+        setLoading(true); setError(null); setPageNum(1);
+        if (loadingTaskRef.current) loadingTaskRef.current.destroy().catch(() => {});
         const loadingTask = pdfjs.getDocument({
             url,
             cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
@@ -68,84 +58,50 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
             disableRange: false,
             disableStream: false,
         });
-        
         loadingTaskRef.current = loadingTask;
         const doc = await loadingTask.promise;
-        
-        if (loadingTaskRef.current === loadingTask) {
-            setPdf(doc);
-            setLoading(false);
-        }
+        if (loadingTaskRef.current === loadingTask) { setPdf(doc); setLoading(false); }
       } catch (err: any) {
-        if (err?.message !== 'Loading aborted') {
-            console.error("PDF Load Error:", err);
-            setError("Unable to load document.");
-            setLoading(false);
-        }
+        if (err?.message !== 'Loading aborted') { setError("Unable to load document."); setLoading(false); }
       }
     };
     loadPdf();
-    return () => {
-        if (loadingTaskRef.current) loadingTaskRef.current.destroy().catch(() => {});
-    };
+    return () => { if (loadingTaskRef.current) loadingTaskRef.current.destroy().catch(() => {}); };
   }, [url]);
 
   useEffect(() => {
     const renderPage = async () => {
       if (!pdf || !canvasRef.current || !containerRef.current) return;
-      
       try {
-        if (renderTaskRef.current) {
-          await renderTaskRef.current.cancel();
-        }
-
+        if (renderTaskRef.current) await renderTaskRef.current.cancel();
         const page = await pdf.getPage(pageNum);
         const viewportUnscaled = page.getViewport({ scale: 1.0 });
-        
         let renderScale = scale;
-        
-        // Dynamic "Shrink to Fit" Logic
         if (renderScale <= 0) {
-            const padding = 48; // Responsive margin
+            const padding = 48;
             const availableWidth = containerSize.width - padding;
             const availableHeight = containerSize.height - padding;
-            
             const scaleX = availableWidth / viewportUnscaled.width;
             const scaleY = availableHeight / viewportUnscaled.height;
-            
-            renderScale = Math.min(scaleX, scaleY, 2.0); // Don't auto-fit beyond 200% zoom
+            renderScale = Math.min(scaleX, scaleY, 2.0);
         }
-
-        // Sharp rendering by multiplying by devicePixelRatio
         const dpr = window.devicePixelRatio || 1;
         const viewport = page.getViewport({ scale: renderScale }); 
-        
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
-        
         if (context) {
             canvas.width = Math.floor(viewport.width * dpr);
             canvas.height = Math.floor(viewport.height * dpr);
-            
             canvas.style.width = Math.floor(viewport.width) + "px";
             canvas.style.height = Math.floor(viewport.height) + "px";
-
             const transform = [dpr, 0, 0, dpr, 0, 0];
-            const renderContext = { 
-                canvasContext: context, 
-                viewport: viewport, 
-                transform: transform 
-            };
-            
+            const renderContext = { canvasContext: context, viewport: viewport, transform: transform };
             const task = page.render(renderContext);
             renderTaskRef.current = task;
             await task.promise;
         }
-      } catch (err: any) {
-        if (err?.name !== 'RenderingCancelledException') console.error("Render Error", err);
-      }
+      } catch (err: any) { if (err?.name !== 'RenderingCancelledException') console.error("Render Error", err); }
     };
-    
     renderPage();
   }, [pdf, pageNum, scale, containerSize]);
 
@@ -159,21 +115,15 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
       const current = prev <= 0 ? (canvasRef.current?.clientWidth || 0) / (pdf ? 1000 : 1) : prev;
       return Math.min(5.0, (current || 1) * 1.5);
   });
-  
   const handleZoomOut = () => setScale(prev => prev > 0 ? Math.max(0.2, prev / 1.5) : 0);
   const handleFit = () => setScale(0);
 
-  // DRAG LOGIC (Unified Mouse & Touch)
   const onStart = (clientX: number, clientY: number) => {
-    if (!containerRef.current || scale <= 0) return;
+    if (!containerRef.current) return;
     setIsDragging(true);
     setStartPos({ x: clientX, y: clientY });
-    setScrollPos({ 
-      left: containerRef.current.scrollLeft, 
-      top: containerRef.current.scrollTop 
-    });
+    setScrollPos({ left: containerRef.current.scrollLeft, top: containerRef.current.scrollTop });
   };
-
   const onMove = (clientX: number, clientY: number) => {
     if (!isDragging || !containerRef.current) return;
     const dx = clientX - startPos.x;
@@ -181,36 +131,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
     containerRef.current.scrollLeft = scrollPos.left - dx;
     containerRef.current.scrollTop = scrollPos.top - dy;
   };
-
   const onEnd = () => setIsDragging(false);
 
-  // Mouse Event Handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    onStart(e.pageX, e.pageY);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    onMove(e.pageX, e.pageY);
-  };
-
-  // Touch Event Handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length !== 1) return;
-    onStart(e.touches[0].pageX, e.touches[0].pageY);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || e.touches.length !== 1) return;
-    // We only prevent default if we're actually dragging a zoomed image
-    // to allow scrolling the page/modal if scale is fit-to-screen
-    if (scale > 0) {
-      e.preventDefault();
-    }
-    onMove(e.touches[0].pageX, e.touches[0].pageY);
-  };
+  const handleMouseDown = (e: React.MouseEvent) => { if (e.button === 0) onStart(e.pageX, e.pageY); };
+  const handleMouseMove = (e: React.MouseEvent) => { if (isDragging) { e.preventDefault(); onMove(e.pageX, e.pageY); } };
+  const handleTouchStart = (e: React.TouchEvent) => { if (e.touches.length === 1) onStart(e.touches[0].pageX, e.touches[0].pageY); };
+  const handleTouchMove = (e: React.TouchEvent) => { if (isDragging && e.touches.length === 1) { e.preventDefault(); onMove(e.touches[0].pageX, e.touches[0].pageY); } };
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex flex-col animate-fade-in" onClick={onClose}>
@@ -249,14 +175,15 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
               </div>
           )}
           {error && (
-              <div className="bg-slate-800 p-8 rounded-2xl border border-red-500/50 text-center max-w-md shadow-2xl">
-                  <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-                  <p className="font-bold text-lg mb-6 text-white">{error}</p>
-                  <button onClick={onClose} className="bg-white text-slate-900 px-8 py-3 rounded-xl font-bold uppercase text-xs">Close Viewer</button>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="bg-slate-800 p-8 rounded-2xl border border-red-500/50 text-center max-w-md shadow-2xl">
+                    <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+                    <p className="font-bold text-lg mb-6 text-white">{error}</p>
+                    <button onClick={onClose} className="bg-white text-slate-900 px-8 py-3 rounded-xl font-bold uppercase text-xs">Close Viewer</button>
+                </div>
               </div>
           )}
           
-          {/* Centering Wrapper: min-w-full ensures the container is at least as large as the parent for flex centering */}
           <div className="min-w-full min-h-full flex items-center justify-center p-8 md:p-12 pointer-events-none">
              <div className={`relative shadow-2xl transition-opacity duration-500 pointer-events-auto ${loading ? 'opacity-0' : 'opacity-100'}`}>
                   <canvas ref={canvasRef} className="bg-white rounded shadow-inner" />
