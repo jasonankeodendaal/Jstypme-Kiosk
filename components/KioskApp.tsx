@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
@@ -236,24 +237,44 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const handleDragEnd = () => setIsDragging(false);
   const handlePrint = () => window.print();
 
-  const loadImage = (url: string): Promise<{ img: HTMLImageElement, format: string } | null> => {
-    return new Promise((resolve) => {
-        if (!url) return resolve(null);
-        const img = new Image();
-        // Crucial for PDF generation: enable CORS for external images
-        img.crossOrigin = "anonymous";
-        
-        img.onload = () => {
-            // Determine format for jsPDF optimization
-            const format = url.toLowerCase().includes('.png') || url.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-            resolve({ img, format });
-        };
-        img.onerror = () => {
-            console.error(`Failed to load PDF asset: ${url}`);
-            resolve(null);
-        };
-        img.src = url;
-    });
+  /**
+   * Enhanced image loading with explicit CORS handling
+   * Uses fetch to get a blob first, which is often more reliable for CORS
+   */
+  const loadImage = async (url: string): Promise<{ img: HTMLImageElement, format: string, dataUrl: string } | null> => {
+    if (!url) return null;
+    try {
+        // Try fetch first for robust CORS
+        const response = await fetch(url, { mode: 'cors' });
+        const blob = await response.blob();
+        const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+        });
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const format = url.toLowerCase().includes('.png') || dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+                resolve({ img, format, dataUrl });
+            };
+            img.onerror = () => resolve(null);
+            img.src = dataUrl;
+        });
+    } catch (e) {
+        // Fallback to direct image load if fetch fails
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+                const format = url.toLowerCase().includes('.png') ? 'PNG' : 'JPEG';
+                resolve({ img, format, dataUrl: url });
+            };
+            img.onerror = () => resolve(null);
+            img.src = url;
+        });
+    }
   };
 
   const handleExportPDF = async (e: React.MouseEvent) => {
@@ -265,6 +286,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
         
+        // Load Assets
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImage(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImage(companyLogo) : Promise.resolve(null)
@@ -273,31 +295,35 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const drawHeader = (pageNum: number) => {
             let topY = 15;
             
-            // Brand Logo / Name on Left
-            if (brandAsset) {
-                const ratio = brandAsset.img.width / brandAsset.img.height;
-                const h = 20; 
-                const w = h * ratio;
-                doc.addImage(brandAsset.img, brandAsset.format, margin, topY, w, h);
-            } else if (brandName) {
-                doc.setTextColor(30, 41, 59); doc.setFontSize(28); doc.setFont('helvetica', 'black');
-                doc.text(brandName.toUpperCase(), margin, topY + 15);
-            }
-
-            // Company Logo on Far Right
+            // Layout Swapped to match User Screenshot Preference
+            // Store/Company Logo on Left
             if (companyAsset) {
                 const ratio = companyAsset.img.width / companyAsset.img.height;
-                const h = 12; 
+                const h = 10; 
                 const w = h * ratio;
-                doc.addImage(companyAsset.img, companyAsset.format, pageWidth - margin - w, topY, w, h);
+                doc.addImage(companyAsset.img, companyAsset.format, margin, topY, w, h);
             }
 
+            // Brand Logo on Right (Priority position matching screenshot)
+            if (brandAsset) {
+                const ratio = brandAsset.img.width / brandAsset.img.height;
+                const h = 18; 
+                const w = h * ratio;
+                // Positioned on the right side
+                doc.addImage(brandAsset.img, brandAsset.format, pageWidth - margin - w, topY, w, h);
+            } else if (brandName) {
+                doc.setTextColor(30, 41, 59); doc.setFontSize(22); doc.setFont('helvetica', 'black');
+                doc.text(brandName.toUpperCase(), pageWidth - margin, topY + 12, { align: 'right' });
+            }
+
+            // Price List Title on Left
             doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
             doc.text("PRICE LIST", margin, topY + 28);
             
             doc.setTextColor(148, 163, 184); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
             doc.text("NEW PRICELIST", margin, topY + 34);
 
+            // Month Box on Right
             const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
             doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
@@ -306,6 +332,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
             doc.text(`DOCUMENT REF: ${pricelist.id.substring(0,10).toUpperCase()}`, boxX + boxW, boxY + 14, { align: 'right' });
 
+            // Separator line
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3);
             doc.line(margin, topY + 42, pageWidth - margin, topY + 42);
             
@@ -466,18 +493,20 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                           <div className="w-full px-10 pt-10 pb-6 text-left">
                               <div className="flex justify-between items-start mb-10">
                                   <div className="flex flex-col gap-6">
-                                      {brandLogo ? (
-                                          <img src={brandLogo} alt="Brand" className="h-20 object-contain self-start" />
-                                      ) : brandName ? (
-                                          <h2 className="text-6xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2>
-                                      ) : null}
+                                      {/* Store Logo on Left in Print View */}
+                                      {companyLogo && <img src={companyLogo} alt="Store" className="h-10 object-contain self-start" />}
                                       <div>
-                                          <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mt-4">Price List</h1>
+                                          <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Price List</h1>
                                           <p className="text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">New Pricelist</p>
                                       </div>
                                   </div>
                                   <div className="flex flex-col items-end gap-6 text-right">
-                                      {companyLogo && <img src={companyLogo} alt="Company" className="h-14 object-contain" />}
+                                      {/* Brand Logo on Right in Print View */}
+                                      {brandLogo ? (
+                                          <img src={brandLogo} alt="Brand" className="h-16 object-contain" />
+                                      ) : brandName ? (
+                                          <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2>
+                                      ) : null}
                                       <div>
                                           <div className="bg-slate-900 text-white px-6 py-2 rounded-xl text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
                                           <p className="text-[10px] font-bold text-slate-400 uppercase mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p>
