@@ -295,7 +295,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
       <div className="flex-1 p-4 md:p-8 max-w-[1600px] mx-auto w-full flex flex-col lg:flex-row gap-6">
         
         {/* Left Column (New Side Ad) */}
-        <div className="hidden lg:block w-72 shrink-0">
+        <div className="hidden lg:block w-80 shrink-0">
              {ads && (
                  <AdUnit items={ads.homeSideLeftVertical} className="h-full w-full min-h-[500px]" />
              )}
@@ -355,8 +355,8 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             )}
         </div>
 
-        {/* Right Column (Side Ad - Made wider) */}
-        <div className="hidden lg:block w-96 shrink-0">
+        {/* Right Column (Side Ad - Adjusted to match left) */}
+        <div className="hidden lg:block w-80 shrink-0">
              {ads && (
                  <AdUnit items={ads.homeSideVertical} className="h-full w-full min-h-[500px]" />
              )}
