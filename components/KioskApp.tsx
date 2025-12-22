@@ -239,12 +239,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   /**
    * Enhanced image loading with explicit CORS handling
-   * Uses fetch to get a blob first, which is often more reliable for CORS
    */
   const loadImage = async (url: string): Promise<{ img: HTMLImageElement, format: string, dataUrl: string } | null> => {
     if (!url) return null;
     try {
-        // Try fetch first for robust CORS
         const response = await fetch(url, { mode: 'cors' });
         const blob = await response.blob();
         const dataUrl = await new Promise<string>((resolve) => {
@@ -263,7 +261,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             img.src = dataUrl;
         });
     } catch (e) {
-        // Fallback to direct image load if fetch fails
         return new Promise((resolve) => {
             const img = new Image();
             img.crossOrigin = "anonymous";
@@ -295,8 +292,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const drawHeader = (pageNum: number) => {
             let topY = 15;
             
-            // Layout Swapped to match User Screenshot Preference
-            // Store/Company Logo on Left
+            // Store Logo on Left
             if (companyAsset) {
                 const ratio = companyAsset.img.width / companyAsset.img.height;
                 const h = 10; 
@@ -304,26 +300,25 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.addImage(companyAsset.img, companyAsset.format, margin, topY, w, h);
             }
 
-            // Brand Logo on Right (Priority position matching screenshot)
+            // Brand Logo on Right
             if (brandAsset) {
                 const ratio = brandAsset.img.width / brandAsset.img.height;
                 const h = 18; 
                 const w = h * ratio;
-                // Positioned on the right side
                 doc.addImage(brandAsset.img, brandAsset.format, pageWidth - margin - w, topY, w, h);
             } else if (brandName) {
                 doc.setTextColor(30, 41, 59); doc.setFontSize(22); doc.setFont('helvetica', 'black');
                 doc.text(brandName.toUpperCase(), pageWidth - margin, topY + 12, { align: 'right' });
             }
 
-            // Price List Title on Left
+            // Title section
             doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
             doc.text("PRICE LIST", margin, topY + 28);
             
             doc.setTextColor(148, 163, 184); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
             doc.text("NEW PRICELIST", margin, topY + 34);
 
-            // Month Box on Right
+            // Date Box (Matching Print View)
             const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
             doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
@@ -341,7 +336,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
         const drawTableHeaders = (startY: number) => {
             doc.setFillColor(241, 245, 249); doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
-            doc.setTextColor(30, 41, 59); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
             doc.text("SKU", margin + 3, startY); doc.text("DESCRIPTION", margin + 45, startY);
             doc.text("NORMAL", pageWidth - margin - 40, startY, { align: 'right' });
             doc.text("PROMO", pageWidth - margin - 5, startY, { align: 'right' });
@@ -361,31 +356,48 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 currentY = drawTableHeaders(currentY);
             }
             
+            // Zebra striping
             if (index % 2 !== 0) {
-                doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
+                doc.setFillColor(248, 250, 252); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
             }
 
-            doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+            // Borders
+            doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.1);
+            doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'S');
+
+            // Cell Data
+            doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
             doc.text(item.sku || 'POA', margin + 3, currentY);
             
             doc.setFont('helvetica', 'bold');
             const desc = item.description.length > 55 ? item.description.substring(0, 52) + "..." : item.description;
             doc.text(desc.toUpperCase(), margin + 45, currentY);
             
-            doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+            // Normal Price logic (Greyed if promo exists)
+            if (item.promoPrice) {
+                doc.setTextColor(148, 163, 184); // slate-400
+                doc.setFont('helvetica', 'bold');
+            } else {
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
+            }
             doc.text(item.normalPrice || 'POA', pageWidth - margin - 40, currentY, { align: 'right' });
             
+            // Promo Price logic (Red if promo exists)
             if (item.promoPrice) {
-                doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'bold');
+                doc.setTextColor(220, 38, 38); // red-600
+                doc.setFont('helvetica', 'black');
                 doc.text(item.promoPrice, pageWidth - margin - 5, currentY, { align: 'right' });
             } else {
-                doc.setTextColor(30, 41, 59);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('helvetica', 'bold');
                 doc.text(item.normalPrice || '—', pageWidth - margin - 5, currentY, { align: 'right' });
             }
             
             currentY += rowHeight;
         });
 
+        // Add page numbers
         const totalPages = doc.internal.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
@@ -395,7 +407,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
     } catch (err) {
         console.error("PDF Export failed", err);
-        alert("Unable to generate PDF. Check browser permissions or network connectivity.");
+        alert("Unable to generate PDF.");
     } finally {
         setIsExporting(false);
     }
@@ -493,7 +505,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                           <div className="w-full px-10 pt-10 pb-6 text-left">
                               <div className="flex justify-between items-start mb-10">
                                   <div className="flex flex-col gap-6">
-                                      {/* Store Logo on Left in Print View */}
+                                      {/* Store Logo on Left */}
                                       {companyLogo && <img src={companyLogo} alt="Store" className="h-10 object-contain self-start" />}
                                       <div>
                                           <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Price List</h1>
@@ -501,7 +513,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                                       </div>
                                   </div>
                                   <div className="flex flex-col items-end gap-6 text-right">
-                                      {/* Brand Logo on Right in Print View */}
+                                      {/* Brand Logo on Right */}
                                       {brandLogo ? (
                                           <img src={brandLogo} alt="Brand" className="h-16 object-contain" />
                                       ) : brandName ? (
