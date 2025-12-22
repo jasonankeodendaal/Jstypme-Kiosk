@@ -361,21 +361,21 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             }
 
             doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-            doc.text(item.sku || 'POA', margin + 3, currentY);
+            doc.text(item.sku || '', margin + 3, currentY);
             
             doc.setFont('helvetica', 'bold');
             const desc = item.description.length > 55 ? item.description.substring(0, 52) + "..." : item.description;
             doc.text(desc.toUpperCase(), margin + 45, currentY);
             
             doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-            doc.text(item.normalPrice || 'POA', pageWidth - margin - 40, currentY, { align: 'right' });
+            doc.text(item.normalPrice || '', pageWidth - margin - 40, currentY, { align: 'right' });
             
             if (item.promoPrice) {
                 doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'bold');
                 doc.text(item.promoPrice, pageWidth - margin - 5, currentY, { align: 'right' });
             } else {
                 doc.setTextColor(30, 41, 59);
-                doc.text(item.normalPrice || '—', pageWidth - margin - 5, currentY, { align: 'right' });
+                doc.text(item.normalPrice || '', pageWidth - margin - 5, currentY, { align: 'right' });
             }
             
             currentY += rowHeight;
@@ -405,7 +405,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
       <style>{`
         @media print {
           @page { size: portrait; margin: 5mm; }
-          body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0 !important; padding: 0 !important; height: auto !important; width: 100% !important; overflow: visible !important; }
+          body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0 !important; padding: 0 !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
           .print-hidden { display: none !important; }
           .print-only { display: block !important; }
           #root, .relative, .viewer-container, .table-scroll { display: block !important; position: static !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
@@ -520,7 +520,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                       <tr key={item.id} className="excel-row transition-colors group">
                       <td className="p-3 md:p-4 border border-slate-200 print:border-slate-300">
                           <span className="sku-font font-bold text-xs md:text-sm text-slate-900 uppercase">
-                          {item.sku || 'N/A'}
+                          {item.sku || ''}
                           </span>
                       </td>
                       <td className="p-3 md:p-4 border border-slate-200 print:border-slate-300">
@@ -530,7 +530,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                       </td>
                       <td className="p-3 md:p-4 text-right border border-slate-200 print:border-slate-300">
                           <span className={`font-bold text-xs md:text-sm ${item.promoPrice ? 'text-slate-400' : 'text-slate-900'}`}>
-                          {item.normalPrice || 'POA'}
+                          {item.normalPrice || ''}
                           </span>
                       </td>
                       <td className="p-3 md:p-4 text-right border border-slate-200 print:border-slate-300 bg-slate-50/10">
@@ -540,7 +540,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                           </span>
                           ) : (
                           <span className="font-bold text-xs md:text-sm text-slate-900">
-                              {item.normalPrice || '—'}
+                              {item.normalPrice || ''}
                           </span>
                           )}
                       </td>
