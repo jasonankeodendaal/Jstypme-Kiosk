@@ -975,45 +975,29 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
     setItems(items.map(item => item.id === id ? { ...item, [field]: val } : item));
   };
 
-  /**
-   * Universal format and rounding logic:
-   * 1. Handles decimals correctly (R20 000.00 -> R 20 000)
-   * 2. Rounds up to nearest 10 (R299 -> R 300, R20 999 -> R 21 000)
-   */
-  const smartFormatPrice = (value: string): string => {
-    if (!value) return '';
+  const handlePriceBlur = (id: string, field: 'normalPrice' | 'promoPrice', value: string) => {
+    if (!value) return;
     
-    // First, remove "R", spaces, and any standard thousands separators like commas
-    // but KEEP the decimal point for float parsing
-    let clean = value.replace(/[R\s,]/g, '');
-    
-    // Try to parse the numeric value
-    let num = parseFloat(clean);
-    
-    if (isNaN(num)) {
-        // Fallback for cases with mixed text: just strip everything but digits and dots
-        const numericOnly = value.replace(/[^0-9.]/g, '');
-        num = parseFloat(numericOnly);
+    // Extract only numbers
+    const numericPart = value.replace(/[^0-9]/g, '');
+    if (!numericPart) {
+        // If not a number but has text, just prepend R if needed
+        if (value && !value.startsWith('R ')) {
+            updateItem(id, field, `R ${value}`);
+        }
+        return;
     }
 
-    if (isNaN(num)) return value;
-
-    // Phase 1: Round up to the nearest whole integer to strip cents/decimals
-    num = Math.ceil(num);
+    let num = parseInt(numericPart);
     
-    // Phase 2: Apply the "round up to nearest 10" rule
-    // This handles the user examples: 299 -> 300, 20999 -> 21000
+    // Auto round up logic: round to the nearest 10 if not already a multiple of 10
+    // This handles the user examples: 799 -> 800, 4499 -> 4500
     if (num % 10 !== 0) {
         num = Math.ceil(num / 10) * 10;
     }
     
-    // Format back with R and grouping using space as thousands separator
-    return `R ${num.toLocaleString().replace(/,/g, ' ')}`;
-  };
-
-  const handlePriceBlur = (id: string, field: 'normalPrice' | 'promoPrice', value: string) => {
-    if (!value) return;
-    const formatted = smartFormatPrice(value);
+    // Format back with R and grouping
+    const formatted = `R ${num.toLocaleString()}`;
     updateItem(id, field, formatted);
   };
 
@@ -1060,15 +1044,24 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
         const dataRows = hasHeader ? validRows.slice(1) : validRows;
         
         const newImportedItems: PricelistItem[] = dataRows.map(row => {
+            // Apply R and rounding to imported prices too
             const rawNormal = String(row[2] || '').trim();
             const rawPromo = String(row[3] || '').trim();
             
+            const formatImported = (val: string) => {
+                const numeric = val.replace(/[^0-9]/g, '');
+                if (!numeric) return val;
+                let n = parseInt(numeric);
+                if (n % 10 !== 0) n = Math.ceil(n / 10) * 10;
+                return `R ${n.toLocaleString()}`;
+            };
+
             return {
                 id: generateId('imp'),
                 sku: String(row[0] || '').trim().toUpperCase(),
                 description: String(row[1] || '').trim(),
-                normalPrice: smartFormatPrice(rawNormal),
-                promoPrice: rawPromo ? smartFormatPrice(rawPromo) : ''
+                normalPrice: formatImported(rawNormal),
+                promoPrice: rawPromo ? formatImported(rawPromo) : ''
             };
         });
 
@@ -1140,7 +1133,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
           <div className="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center gap-3">
               <Info size={18} className="text-blue-500 shrink-0" />
               <p className="text-[10px] text-blue-800 font-bold uppercase leading-tight">
-                  Price Logic: .00 decimals are automatically removed and prices round up to the nearest 10 (e.g. 299 → 300, 20999 → 21000).
+                  Price Tip: Typing a number will auto-add 'R' and round up to the nearest 10 (e.g. 799 → 800) when you finish editing the cell.
               </p>
           </div>
 
@@ -1148,9 +1141,9 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             <thead className="bg-slate-50 sticky top-0 z-10">
               <tr>
                 <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">SKU</th>
-                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">DESCRIPTION</th>
-                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">NORMAL</th>
-                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">PROMO</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Description</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Normal Price</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Promo Price</th>
                 <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 w-10 text-center">Action</th>
               </tr>
             </thead>
@@ -2557,1042 +2550,843 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
              const url = await processAsset(fileObj, parts.slice(3).join('_'));
              if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
                  product.imageUrl = url;
-             } else if (lowerFile.includes('gallery')) {
+             } else {
                  product.galleryUrls = [...(product.galleryUrls || []), url];
              }
         }
         // Handle Videos
-        else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm')) {
+        else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
             const url = await processAsset(fileObj, parts.slice(3).join('_'));
             product.videoUrls = [...(product.videoUrls || []), url];
         }
-        // Handle PDFs (Manuals)
+        // Handle Manuals
         else if (lowerFile.endsWith('.pdf')) {
-            const url = await processAsset(fileObj, parts.slice(3).join('_'));
-            const title = fileName.split('/').pop()?.replace('.pdf', '') || 'User Manual';
-            product.manuals = [...(product.manuals || []), {
-                id: generateId('man'),
-                title: title.charAt(0).toUpperCase() + title.slice(1),
-                images: [],
-                pdfUrl: url
-            }];
+             const url = await processAsset(fileObj, parts.slice(3).join('_'));
+             product.manuals?.push({
+                 id: generateId('man'),
+                 title: fileName.replace('.pdf', '').replace(/_/g, ' '),
+                 images: [],
+                 pdfUrl: url,
+                 thumbnailUrl: '' 
+             });
         }
     }
-    
+
     return Object.values(newBrands);
 };
 
-  if (!currentUser) return <Auth admins={localData?.admins || []} onLogin={setCurrentUser} />;
+  if (!localData) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /> Loading...</div>;
+  if (!currentUser) return <Auth admins={localData.admins || []} onLogin={setCurrentUser} />;
+
+  const brands = Array.isArray(localData.brands) 
+      ? [...localData.brands].sort((a, b) => a.name.localeCompare(b.name)) 
+      : [];
+
+  const tvBrands = Array.isArray(localData.tv?.brands)
+      ? [...localData.tv!.brands].sort((a, b) => a.name.localeCompare(b.name))
+      : [];
+
+  // Filter Logic for History
+  const archivedBrands = (localData.archive?.brands || []).filter(b => 
+      b.name.toLowerCase().includes(historySearch.toLowerCase()) || 
+      b.id.toLowerCase().includes(historySearch.toLowerCase())
+  );
+  
+  const archivedCatalogues = (localData.archive?.catalogues || []).filter(c => 
+      c.title.toLowerCase().includes(historySearch.toLowerCase())
+  );
+
+  const archivedGenericItems = (localData.archive?.deletedItems || []).filter(i =>
+      i.name.toLowerCase().includes(historySearch.toLowerCase())
+  );
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden font-sans text-slate-900">
-      
-      {/* GLOBAL SIDEBAR */}
-      <aside className="w-20 md:w-64 bg-slate-900 text-white flex flex-col shrink-0 transition-all duration-300 z-50">
-        <div className="p-4 md:p-6 mb-6">
-           <div className="flex items-center gap-4">
-              <div className="bg-blue-600 p-2 rounded-xl shadow-lg shrink-0">
-                 <ShieldCheck size={24} />
-              </div>
-              <div className="hidden md:block overflow-hidden">
-                 <h2 className="font-black uppercase tracking-tight truncate">Admin Hub</h2>
-                 <p className="text-[9px] text-blue-400 font-black uppercase tracking-[0.2em]">Kiosk Pro v2.8</p>
-              </div>
-           </div>
-        </div>
+    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
+        <header className="bg-slate-900 text-white shrink-0 shadow-xl z-20">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+                 <div className="flex items-center gap-2">
+                     <Settings className="text-blue-500" size={24} />
+                     <div><h1 className="text-lg font-black uppercase tracking-widest leading-none">Admin Hub</h1></div>
+                 </div>
+                 
+                 <div className="flex items-center gap-4">
+                     <div className="text-xs font-bold text-slate-400 uppercase hidden md:block">
+                         Hello, {currentUser.name}
+                     </div>
+                     <button 
+                         onClick={handleGlobalSave}
+                         disabled={!hasUnsavedChanges}
+                         className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${
+                             hasUnsavedChanges 
+                             ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse' 
+                             : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                         }`}
+                     >
+                         <SaveAll size={16} />
+                         {hasUnsavedChanges ? 'Save Changes' : 'Saved'}
+                     </button>
+                 </div>
 
-        <nav className="flex-1 space-y-1 px-3">
-          {availableTabs.map((tab) => (
-            <button 
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setSelectedBrand(null); setSelectedCategory(null); }}
-              className={`w-full text-left p-3 md:px-4 md:py-3 rounded-xl flex items-center gap-4 transition-all duration-200 group ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
-            >
-              <tab.icon size={20} className={`shrink-0 ${activeTab === tab.id ? 'scale-110' : 'opacity-70 group-hover:opacity-100'}`} />
-              <span className="hidden md:block font-bold text-xs uppercase tracking-wider">{tab.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="p-4 border-t border-white/5 space-y-2">
-            <div className="hidden md:flex items-center gap-3 px-2 py-3 bg-white/5 rounded-2xl mb-4">
-                <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                    <UserCog size={16} />
-                </div>
-                <div className="min-w-0">
-                    <div className="text-[10px] font-black uppercase text-white truncate">{currentUser.name}</div>
-                    <div className="text-[8px] font-bold uppercase text-slate-500">Connected Admin</div>
-                </div>
+                 <div className="flex items-center gap-3">
+                     <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>
+                         {isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}
+                         <span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span>
+                     </div>
+                     <button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button>
+                     <button onClick={() => setCurrentUser(null)} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2">
+                        <LogOut size={16} />
+                        <span className="text-[10px] font-bold uppercase hidden md:inline">Logout</span>
+                     </button>
+                 </div>
             </div>
-            <button onClick={() => window.location.href = '/'} className="w-full p-3 rounded-xl flex items-center gap-4 text-slate-400 hover:text-white transition-all group">
-               <Eye size={20} className="shrink-0" />
-               <span className="hidden md:block font-bold text-xs uppercase">Live Kiosk</span>
-            </button>
-            <button onClick={() => setCurrentUser(null)} className="w-full p-3 rounded-xl flex items-center gap-4 text-red-400 hover:bg-red-500/10 transition-all group">
-               <Power size={20} className="shrink-0" />
-               <span className="hidden md:block font-bold text-xs uppercase">Logout</span>
-            </button>
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col min-w-0 bg-slate-100 relative">
-        
-        {/* HEADER BAR */}
-        <header className="h-16 md:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 shadow-sm z-40">
-           <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
-               <h2 className="text-sm md:text-xl font-black uppercase text-slate-900 tracking-tight whitespace-nowrap">
-                  {availableTabs.find(t => t.id === activeTab)?.label} Control
-               </h2>
-               <div className={`hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border ${isCloudConnected ? 'bg-green-50 text-green-600 border-green-200' : 'bg-orange-50 text-orange-600 border-orange-200'} animate-fade-in`}>
-                   <div className={`w-1.5 h-1.5 rounded-full ${isCloudConnected ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`}></div>
-                   <span className="text-[9px] font-black uppercase tracking-widest">{isCloudConnected ? 'Cloud Sync Active' : 'Cloud Offline'}</span>
-               </div>
-           </div>
-           
-           <div className="flex items-center gap-2 md:gap-4">
-               {hasUnsavedChanges && (
-                   <div className="flex items-center gap-2 animate-pulse pr-2 md:pr-4 border-r border-slate-200 mr-2 md:mr-4">
-                       <AlertCircle size={16} className="text-orange-500" />
-                       <span className="text-[10px] font-black uppercase text-orange-600 hidden md:inline">Unsaved Changes</span>
-                   </div>
-               )}
-               <button onClick={onRefresh} className="p-2 md:p-3 text-slate-400 hover:bg-slate-100 hover:text-blue-600 rounded-xl transition-all" title="Refresh from Cloud">
-                  <RotateCcw size={20} />
-               </button>
-               <button 
-                  onClick={handleGlobalSave} 
-                  disabled={!hasUnsavedChanges}
-                  className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20 active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
-               >
-                  <Save size={18} />
-                  <span className="hidden md:inline">Save To Cloud</span>
-               </button>
-           </div>
+            <div className="flex overflow-x-auto no-scrollbar">
+                {availableTabs.map(tab => (
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 min-w-[100px] py-4 text-center text-xs font-black uppercase tracking-wider border-b-4 transition-all ${activeTab === tab.id ? 'border-blue-500 text-white bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>{tab.label}</button>
+                ))}
+            </div>
         </header>
 
-        {/* CONTENT VIEWPORT */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative">
-          
-          {activeTab === 'inventory' && (
-            <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
-                {/* Inventory Context Breadcrumb */}
-                <div className="flex items-center gap-2 mb-6">
-                    <button onClick={() => { setSelectedBrand(null); setSelectedCategory(null); }} className={`px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${!selectedBrand ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200'}`}>All Brands</button>
-                    {selectedBrand && (
-                        <>
-                            <ChevronRight size={14} className="text-slate-300" />
-                            <button onClick={() => setSelectedCategory(null)} className={`px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${selectedBrand && !selectedCategory ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200'}`}>{selectedBrand.name}</button>
-                        </>
-                    )}
-                    {selectedCategory && (
-                        <>
-                            <ChevronRight size={14} className="text-slate-300" />
-                            <div className="px-4 py-2 rounded-xl bg-slate-900 text-white shadow-md font-black uppercase text-[10px] tracking-widest">{selectedCategory.name}</div>
-                        </>
-                    )}
-                </div>
+        {activeTab === 'marketing' && (
+            <div className="bg-white border-b border-slate-200 flex overflow-x-auto no-scrollbar shadow-sm z-10 shrink-0">
+                <button onClick={() => setActiveSubTab('hero')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'hero' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Hero Banner</button>
+                <button onClick={() => setActiveSubTab('ads')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'ads' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Ad Zones</button>
+                <button onClick={() => setActiveSubTab('catalogues')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'catalogues' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Pamphlets</button>
+            </div>
+        )}
 
-                {!selectedBrand ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        <button 
-                            onClick={() => {
-                                const name = prompt("New Brand Name:");
-                                if(name) handleLocalUpdate({ ...localData!, brands: [...localData!.brands, { id: generateId('b'), name, categories: [] }] });
-                            }}
-                            className="bg-white border-2 border-dashed border-slate-300 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all group aspect-square"
-                        >
-                            <Plus size={48} className="mb-4 group-hover:scale-110 transition-transform" />
-                            <span className="font-black uppercase tracking-widest text-sm">Add New Brand</span>
-                        </button>
+        <main className="flex-1 overflow-y-auto p-2 md:p-8 relative pb-40 md:pb-8">
+            {/* Guide Tab */}
+            {activeTab === 'guide' && <SystemDocumentation />}
 
-                        {localData?.brands.map(brand => (
-                            <div key={brand.id} className="group bg-white rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden flex flex-col p-4">
-                                <div className="aspect-square bg-slate-50 rounded-[2rem] flex items-center justify-center mb-4 relative overflow-hidden">
-                                    {brand.logoUrl ? (
-                                        <img src={brand.logoUrl} className="max-w-[70%] max-h-[70%] object-contain" alt="" />
-                                    ) : (
-                                        <span className="text-6xl font-black text-slate-200">{brand.name.charAt(0)}</span>
-                                    )}
-                                    <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-4">
-                                        <button onClick={() => setSelectedBrand(brand)} className="bg-white text-slate-900 p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-xl">Manage Brand</button>
-                                    </div>
-                                </div>
-                                <div className="px-4 flex justify-between items-center">
-                                    <div>
-                                        <h3 className="font-black text-lg text-slate-900 uppercase leading-none mb-1">{brand.name}</h3>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{brand.categories.length} Categories</p>
-                                    </div>
-                                    <button 
-                                        onClick={() => {
-                                            if(confirm(`Delete ${brand.name}? This will move the entire brand to the History archive.`)) {
-                                                const newArchive = addToArchive('other', `Brand: ${brand.name}`, brand);
-                                                handleLocalUpdate({ ...localData!, brands: localData!.brands.filter(b => b.id !== brand.id), archive: newArchive });
-                                            }
-                                        }}
-                                        className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                    >
-                                        <Trash2 size={20} />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : !selectedCategory ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in">
-                        <button 
-                            onClick={() => {
-                                const name = prompt("New Category Name:");
-                                if(name) {
-                                    const updatedBrands = localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, categories: [...b.categories, { id: generateId('c'), name, icon: 'Box', products: [] }] } : b);
-                                    handleLocalUpdate({ ...localData!, brands: updatedBrands });
-                                }
-                            }}
-                            className="bg-white border-2 border-dashed border-slate-300 rounded-[2rem] p-6 flex flex-col items-center justify-center text-slate-400 hover:border-purple-500 hover:text-purple-500 hover:bg-purple-50 transition-all group aspect-square"
-                        >
-                            <Plus size={32} className="mb-2" />
-                            <span className="font-black uppercase tracking-widest text-xs">New Category</span>
-                        </button>
+            {/* Inventory Tab */}
+            {activeTab === 'inventory' && (
+                !selectedBrand ? (
+                   <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 animate-fade-in">
+                       <button onClick={() => { const name = prompt("Brand Name:"); if(name) handleLocalUpdate({ ...localData, brands: [...brands, { id: generateId('b'), name, categories: [] }] }) }} className="bg-white border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-4 md:p-8 text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-all group min-h-[120px] md:min-h-[200px]">
+                           <Plus size={24} className="mb-2" /><span className="font-bold uppercase text-[10px] md:text-xs tracking-wider text-center">Add Brand</span>
+                       </button>
+                       {brands.map(brand => (
+                           <div key={brand.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all group relative flex flex-col h-full">
+                               <div className="flex-1 bg-slate-50 flex items-center justify-center p-2 relative aspect-square">
+                                   {brand.logoUrl ? <img src={brand.logoUrl} className="max-h-full max-w-full object-contain" /> : <span className="text-4xl font-black text-slate-200">{brand.name.charAt(0)}</span>}
+                                   <button onClick={(e) => { e.stopPropagation(); if(confirm("Move to archive?")) { const now = new Date().toISOString(); handleLocalUpdate({...localData, brands: brands.filter(b=>b.id!==brand.id), archive: {...localData.archive!, brands: [...(localData.archive?.brands||[]), brand], deletedAt: {...localData.archive?.deletedAt, [brand.id]: now} }}); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12}/></button>
+                               </div>
+                               <div className="p-2 md:p-4">
+                                   <h3 className="font-black text-slate-900 text-xs md:text-lg uppercase tracking-tight mb-1 truncate">{brand.name}</h3>
+                                   <p className="text-[10px] md:text-xs text-slate-500 font-bold mb-2 md:mb-4">{brand.categories.length} Categories</p>
+                                   <button onClick={() => setSelectedBrand(brand)} className="w-full bg-slate-900 text-white py-1.5 md:py-2 rounded-lg font-bold text-[10px] md:text-xs uppercase hover:bg-blue-600 transition-colors">Manage</button>
+                               </div>
+                           </div>
+                       ))}
+                   </div>
+               ) : !selectedCategory ? (
+                   <div className="animate-fade-in">
+                       <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-xl md:text-2xl font-black uppercase text-slate-900 flex-1">{selectedBrand.name}</h2><FileUpload label="Brand Logo" currentUrl={selectedBrand.logoUrl} onUpload={(url: any) => { const updated = {...selectedBrand, logoUrl: url}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }} /></div>
+                       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+                           <button onClick={() => { const name = prompt("Category Name:"); if(name) { const updated = {...selectedBrand, categories: [...selectedBrand.categories, { id: generateId('c'), name, icon: 'Box', products: [] }]}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); } }} className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-4 text-slate-400 hover:border-blue-500 hover:text-blue-500 aspect-square"><Plus size={24} /><span className="font-bold text-[10px] uppercase mt-2 text-center">New Category</span></button>
+                           {selectedBrand.categories.map(cat => (
+                               <button key={cat.id} onClick={() => setSelectedCategory(cat)} className="bg-white p-2 md:p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md text-left group relative aspect-square flex flex-col justify-center">
+                                   <Box size={20} className="mb-2 md:mb-4 text-slate-400 mx-auto md:mx-0" />
+                                   <h3 className="font-black text-slate-900 uppercase text-[10px] md:text-sm text-center md:text-left truncate w-full">{cat.name}</h3>
+                                   <p className="text-[9px] md:text-xs text-slate-500 font-bold text-center md:text-left">{cat.products.length} Products</p>
+                                   <div onClick={(e)=>{e.stopPropagation(); const newName = prompt("Rename Category:", cat.name); if(newName && newName.trim() !== "") { const updated = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === cat.id ? {...c, name: newName.trim()} : c)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-8 md:top-2 md:right-8 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-500 rounded transition-all"><Edit2 size={12}/></div>
+                                   <div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ const updated={...selectedBrand, categories: selectedBrand.categories.filter(c=>c.id!==cat.id)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-1 md:top-2 md:right-2 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded"><Trash2 size={12}/></div>
+                                </button>
+                            ))}
+                       </div>
+                       <div className="mt-8 border-t border-slate-200 pt-8"><h3 className="font-bold text-slate-900 uppercase text-sm mb-4">Brand Catalogues</h3><CatalogueManager catalogues={localData.catalogues?.filter(c => c.brandId === selectedBrand.id) || []} brandId={selectedBrand.id} onSave={(c) => { const otherCatalogues = (localData.catalogues || []).filter(cat => cat.brandId !== selectedBrand.id); handleLocalUpdate({ ...localData, catalogues: [...otherCatalogues, ...c] }); }} /></div>
+                   </div>
+               ) : (
+                   <div className="animate-fade-in h-full flex flex-col">
+                       <div className="flex items-center gap-4 mb-6 shrink-0"><button onClick={() => setSelectedCategory(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-lg md:text-2xl font-black uppercase text-slate-900 flex-1 truncate">{selectedCategory.name}</h2><button onClick={() => setEditingProduct({ id: generateId('p'), name: '', description: '', specs: {}, features: [], dimensions: [], imageUrl: '' } as any)} className="bg-blue-600 text-white px-3 py-2 md:px-4 rounded-lg font-bold uppercase text-[10px] md:text-xs flex items-center gap-2 shrink-0"><Plus size={14} /> Add</button></div>
+                       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 overflow-y-auto pb-20">
+                           {selectedCategory.products.map(product => (
+                               <div key={product.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col group hover:shadow-lg transition-all">
+                                   <div className="aspect-square bg-slate-50 relative flex items-center justify-center p-2 md:p-4">
+                                       {product.imageUrl ? <img src={product.imageUrl} className="max-w-full max-h-full object-contain" /> : <Box size={24} className="text-slate-300" />}
+                                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                                           <div className="flex gap-2">
+                                                <button onClick={() => setEditingProduct(product)} className="p-1.5 md:p-2 bg-white text-blue-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50">Edit</button>
+                                                <button onClick={() => setMovingProduct(product)} className="p-1.5 md:p-2 bg-white text-orange-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-orange-50" title="Move Category">Move</button>
+                                           </div>
+                                           <button onClick={() => { 
+                                               if(confirm(`Delete product "${product.name}"?`)) { 
+                                                   const updatedCat = {...selectedCategory, products: selectedCategory.products.filter(p => p.id !== product.id)}; 
+                                                   const updatedBrand = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c)}; 
+                                                   
+                                                   // Add to archive
+                                                   const newArchive = addToArchive('product', product.name, product);
+                                                   
+                                                   handleLocalUpdate({...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b), archive: newArchive}); 
+                                               } 
+                                           }} className="p-1.5 md:p-2 bg-white text-red-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-red-50 w-[80%]">Delete</button>
+                                       </div>
+                                   </div>
+                                   <div className="p-2 md:p-4">
+                                       <h4 className="font-bold text-slate-900 text-[10px] md:text-sm truncate uppercase">{product.name}</h4>
+                                       <p className="text-[9px] md:text-xs text-slate-500 font-mono truncate">{product.sku || 'No SKU'}</p>
+                                   </div>
+                               </div>
+                            ))}
+                       </div>
+                   </div>
+               )
+            )}
 
-                        {selectedBrand.categories.map(cat => (
-                            <div key={cat.id} className="group bg-white rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all overflow-hidden p-4 flex flex-col">
-                                <div className="aspect-square bg-slate-50 rounded-[1.5rem] flex items-center justify-center mb-4 relative group">
-                                    <FolderOpen size={48} className="text-slate-200 group-hover:text-blue-200 transition-colors" />
-                                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
-                                         <button onClick={() => setSelectedCategory(cat)} className="bg-white text-slate-900 px-6 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl">Manage Models</button>
-                                    </div>
-                                </div>
-                                <div className="px-2 flex justify-between items-center">
-                                    <div>
-                                        <h3 className="font-bold text-slate-900 uppercase tracking-tight">{cat.name}</h3>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase">{cat.products.length} Products</p>
-                                    </div>
-                                    <button 
-                                        onClick={() => {
-                                            if(confirm(`Delete ${cat.name}?`)) {
-                                                const updatedBrands = localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, categories: b.categories.filter(c => c.id !== cat.id) } : b);
-                                                handleLocalUpdate({ ...localData!, brands: updatedBrands });
-                                            }
-                                        }}
-                                        className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-                                    ><Trash2 size={18}/></button>
-                                </div>
-                            </div>
-                        ))}
-                        
-                        {/* Brand Settings Section in Categories View */}
-                        <div className="col-span-full mt-12 bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
-                             <h4 className="font-black uppercase text-slate-400 text-xs tracking-[0.2em] mb-8 pb-4 border-b border-slate-100">Brand Identity Settings</h4>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                <div className="space-y-6">
-                                    <InputField label="Official Brand Name" val={selectedBrand.name} onChange={(e:any) => {
-                                        const val = e.target.value;
-                                        handleLocalUpdate({ ...localData!, brands: localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, name: val } : b) });
-                                    }} />
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex-1">
-                                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 ml-1">Primary Theme Color</label>
-                                            <div className="flex gap-4">
-                                                <input type="color" value={selectedBrand.themeColor || '#2563eb'} onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    handleLocalUpdate({ ...localData!, brands: localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, themeColor: val } : b) });
-                                                }} className="w-16 h-12 rounded-lg cursor-pointer bg-white border border-slate-200 p-1" />
-                                                <input type="text" value={selectedBrand.themeColor || '#2563eb'} onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    handleLocalUpdate({ ...localData!, brands: localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, themeColor: val } : b) });
-                                                }} className="flex-1 p-3 border border-slate-300 rounded-xl font-mono text-sm uppercase" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <FileUpload 
-                                        label="Brand Official Logo" 
-                                        currentUrl={selectedBrand.logoUrl} 
-                                        onUpload={(url: any) => handleLocalUpdate({ ...localData!, brands: localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, logoUrl: url } : b) })} 
-                                    />
-                                    <div className="mt-6">
-                                        <CatalogueManager 
-                                            catalogues={localData?.catalogues?.filter(c => c.brandId === selectedBrand.id) || []} 
-                                            brandId={selectedBrand.id}
-                                            onSave={(newList) => {
-                                                const otherCatalogues = localData?.catalogues?.filter(c => c.brandId !== selectedBrand.id) || [];
-                                                handleLocalUpdate({ ...localData!, catalogues: [...otherCatalogues, ...newList] });
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                             </div>
+            {activeTab === 'pricelists' && (
+                <PricelistManager 
+                    pricelists={localData.pricelists || []} 
+                    pricelistBrands={localData.pricelistBrands || []}
+                    onSavePricelists={(p) => handleLocalUpdate({ ...localData, pricelists: p })}
+                    onSaveBrands={(b) => handleLocalUpdate({ ...localData, pricelistBrands: b })}
+                    onDeletePricelist={(id) => {
+                        const toDelete = localData.pricelists?.find(p => p.id === id);
+                        if (toDelete) {
+                            const newArchive = addToArchive('pricelist', toDelete.title, toDelete);
+                            handleLocalUpdate({ ...localData, pricelists: localData.pricelists?.filter(p => p.id !== id), archive: newArchive });
+                        }
+                    }}
+                />
+            )}
+            
+            {activeTab === 'tv' && (
+                !selectedTVBrand ? (
+                    <div className="animate-fade-in max-w-6xl mx-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-black text-slate-900 uppercase">TV Video Management</h2>
                         </div>
-                    </div>
-                ) : (
-                    <div className="space-y-6 animate-fade-in">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                            <button 
-                                onClick={() => setEditingProduct({ id: generateId('p'), name: '', description: '', specs: {}, features: [], dimensions: [], imageUrl: '' })}
-                                className="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-6 flex flex-col items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all group aspect-square"
-                            >
-                                <Plus size={32} className="mb-2" />
-                                <span className="font-black uppercase tracking-widest text-[10px]">Add Product</span>
+                        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            <button onClick={() => { const name = prompt("Brand Name:"); if(name) { const newBrand = { id: generateId('tvb'), name, models: [] }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: [...(localData.tv?.brands || []), newBrand] } as TVConfig }); }}} className="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center p-4 min-h-[160px] text-indigo-400 hover:border-indigo-500 hover:text-indigo-600 transition-all group">
+                                <Plus size={32} className="mb-2" /><span className="font-bold uppercase text-xs tracking-wider text-center">Add TV Brand</span>
                             </button>
-
-                            {selectedCategory.products.map(product => (
-                                <div key={product.id} className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl transition-all overflow-hidden flex flex-col">
-                                    <div className="aspect-square bg-white relative p-4 flex items-center justify-center group">
-                                        {product.imageUrl ? <img src={product.imageUrl} className="max-w-full max-h-full object-contain" /> : <Box className="text-slate-100" size={64}/>}
-                                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2 p-4 justify-center">
-                                             <button onClick={() => setEditingProduct(product)} className="w-full bg-white text-slate-900 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-blue-600 hover:text-white transition-all"><Edit2 size={12}/> Edit Product</button>
-                                             <button onClick={() => setMovingProduct(product)} className="w-full bg-slate-800 text-white py-2 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-purple-600 transition-all"><Move size={12}/> Move</button>
-                                        </div>
+                            {tvBrands.map(brand => (
+                                <div key={brand.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-lg transition-all relative">
+                                    <div className="flex-1 bg-slate-50 flex items-center justify-center p-4 aspect-square">
+                                        {brand.logoUrl ? <img src={brand.logoUrl} className="max-w-full max-h-full object-contain" /> : <Tv size={32} className="text-slate-300" />}
                                     </div>
-                                    <div className="p-4 bg-slate-50/50 flex-1 flex flex-col justify-between">
-                                        <h4 className="font-bold text-slate-900 uppercase text-xs leading-tight mb-2 line-clamp-2">{product.name}</h4>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest">{product.sku || 'No SKU'}</span>
-                                            <button 
-                                                onClick={() => {
-                                                    if(confirm(`Move ${product.name} to archive?`)) {
-                                                        const newArchive = addToArchive('product', product.name, product);
-                                                        const updatedBrands = localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, categories: b.categories.map(c => c.id === selectedCategory.id ? { ...c, products: c.products.filter(p => p.id !== product.id) } : c) } : b);
-                                                        handleLocalUpdate({ ...localData!, brands: updatedBrands, archive: newArchive });
-                                                    }
-                                                }}
-                                                className="text-slate-300 hover:text-red-500 transition-colors"
-                                            ><Trash2 size={16}/></button>
-                                        </div>
+                                    <div className="p-4 bg-white border-t border-slate-100">
+                                        <h3 className="font-black text-slate-900 text-sm uppercase truncate mb-1">{brand.name}</h3>
+                                        <p className="text-xs text-slate-500 font-bold">{brand.models?.length || 0} Models</p>
                                     </div>
+                                    <button onClick={(e) => { e.stopPropagation(); if(confirm("Delete TV Brand?")) { handleLocalUpdate({...localData, tv: { ...localData.tv, brands: tvBrands.filter(b => b.id !== brand.id) } as TVConfig }); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity z-20"><Trash2 size={14}/></button>
+                                    <button onClick={() => setSelectedTVBrand(brand)} className="absolute inset-0 w-full h-full opacity-0 z-10" />
                                 </div>
                             ))}
                         </div>
                     </div>
-                )}
-            </div>
-          )}
-
-          {activeTab === 'marketing' && (
-            <div className="max-w-4xl mx-auto space-y-12 animate-fade-in">
-                {/* Hero Section Config */}
-                <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
-                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 flex items-center gap-3">
-                        <LayoutTemplate className="text-blue-600" /> Hero Branding
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                        <div className="space-y-6">
-                            <InputField label="Headline Title" val={localData?.hero.title} onChange={(e:any) => handleLocalUpdate({ ...localData!, hero: { ...localData!.hero, title: e.target.value } })} />
-                            <InputField label="Subtitle Text" isArea val={localData?.hero.subtitle} onChange={(e:any) => handleLocalUpdate({ ...localData!, hero: { ...localData!.hero, subtitle: e.target.value } })} />
-                            <InputField label="Website URL" val={localData?.hero.websiteUrl} onChange={(e:any) => handleLocalUpdate({ ...localData!, hero: { ...localData!.hero, websiteUrl: e.target.value } })} />
-                        </div>
-                        <div className="space-y-6">
-                            <FileUpload label="Background Banner Image" currentUrl={localData?.hero.backgroundImageUrl} onUpload={(url: any) => handleLocalUpdate({ ...localData!, hero: { ...localData!.hero, backgroundImageUrl: url } })} />
-                            <FileUpload label="Secondary Logo Overlay" currentUrl={localData?.hero.logoUrl} onUpload={(url: any) => handleLocalUpdate({ ...localData!, hero: { ...localData!.hero, logoUrl: url } })} />
+                ) : (
+                    <div className="animate-fade-in max-w-5xl mx-auto">
+                        <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedTVBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50"><ArrowLeft size={20} /></button><h2 className="text-2xl font-black uppercase text-slate-900 flex-1">{selectedTVBrand.name} <span className="text-slate-400 font-bold ml-2 text-lg">TV Config</span></h2></div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="space-y-6">
+                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                    <h4 className="font-bold text-slate-900 uppercase text-xs mb-4">Brand Identity</h4>
+                                    <div className="space-y-4">
+                                        <InputField label="Brand Name" val={selectedTVBrand.name} onChange={(e: any) => { const updated = { ...selectedTVBrand, name: e.target.value }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); }} />
+                                        <FileUpload label="Brand Logo" currentUrl={selectedTVBrand.logoUrl} onUpload={(url: any) => { const updated = { ...selectedTVBrand, logoUrl: url }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); }} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="md:col-span-2">
+                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                    <div className="flex justify-between items-center mb-6"><h4 className="font-bold text-slate-900 uppercase text-xs">TV Models</h4><button onClick={() => setEditingTVModel({ id: generateId('tvm'), name: '', videoUrls: [] })} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase flex items-center gap-1"><Plus size={12} /> Add Model</button></div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {(selectedTVBrand.models || []).map((model) => (
+                                            <div key={model.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden group">
+                                                <div className="p-4 flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shrink-0 border border-slate-200">{model.imageUrl ? <img src={model.imageUrl} className="w-full h-full object-cover rounded-lg" /> : <Monitor size={20} className="text-slate-300" />}</div>
+                                                    <div className="flex-1 min-w-0"><div className="font-bold text-slate-900 text-sm truncate">{model.name}</div><div className="text-[10px] font-bold text-slate-500 uppercase">{model.videoUrls?.length || 0} Videos</div></div>
+                                                </div>
+                                                <div className="flex border-t border-slate-200 divide-x divide-slate-200">
+                                                    <button onClick={() => setEditingTVModel(model)} className="flex-1 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-50 transition-colors">Edit / Videos</button>
+                                                    <button onClick={() => { if (confirm("Delete this model?")) { const updated = { ...selectedTVBrand, models: selectedTVBrand.models.filter(m => m.id !== model.id) }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); } }} className="flex-1 py-2 text-[10px] font-bold uppercase text-red-500 hover:bg-red-50 transition-colors">Delete</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )
+            )}
 
-                {/* Ad Zones Manager */}
-                <div className="bg-slate-900 text-white rounded-[3rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-12 opacity-10"><Megaphone size={200} /></div>
-                    <div className="relative z-10">
-                        <h3 className="text-xl font-black uppercase tracking-tight mb-8">Advertisement Placements</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {activeTab === 'marketing' && (
+                <div className="max-w-5xl mx-auto">
+                    {activeSubTab === 'catalogues' && (
+                        <CatalogueManager catalogues={(localData.catalogues || []).filter(c => !c.brandId)} onSave={(c) => { const brandCatalogues = (localData.catalogues || []).filter(c => c.brandId); handleLocalUpdate({ ...localData, catalogues: [...brandCatalogues, ...c] }); }} />
+                    )}
+                    {activeSubTab === 'hero' && (
+                        <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <InputField label="Title" val={localData.hero.title} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, title: e.target.value}})} />
+                                    <InputField label="Subtitle" val={localData.hero.subtitle} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, subtitle: e.target.value}})} />
+                                    <InputField label="Website URL" val={localData.hero.websiteUrl || ''} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, websiteUrl: e.target.value}})} placeholder="https://example.com" />
+                                </div>
+                                <div className="space-y-4">
+                                    <FileUpload label="Background Image" currentUrl={localData.hero.backgroundImageUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, backgroundImageUrl: url}})} />
+                                    <FileUpload label="Brand Logo" currentUrl={localData.hero.logoUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, logoUrl: url}})} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeSubTab === 'ads' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideLeftVertical', 'screensaver'].map(zone => (
-                                <div key={zone} className="bg-white/5 border border-white/10 rounded-3xl p-6">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h4 className="font-bold text-xs uppercase tracking-widest text-blue-400">{zone.replace(/([A-Z])/g, ' $1').trim()}</h4>
-                                        <span className="text-[10px] font-black uppercase bg-white/10 px-2 py-1 rounded">{(localData?.ads as any)[zone].length} Assets</span>
-                                    </div>
-                                    <FileUpload 
-                                        label="Add New Media" 
-                                        accept="image/*,video/*" 
-                                        allowMultiple={true}
-                                        onUpload={(urls: any, type: any) => {
-                                            const newAds = Array.isArray(urls) ? urls.map(u => ({ id: generateId('ad'), type, url: u, dateAdded: new Date().toISOString() })) : [{ id: generateId('ad'), type, url: urls, dateAdded: new Date().toISOString() }];
-                                            const currentAds = (localData?.ads as any)[zone] || [];
-                                            handleLocalUpdate({ ...localData!, ads: { ...localData!.ads, [zone]: [...currentAds, ...newAds] } });
-                                        }} 
-                                    />
-                                    <div className="grid grid-cols-3 gap-3 mt-4">
-                                        {(localData?.ads as any)[zone].map((ad: AdItem) => (
-                                            <div key={ad.id} className="relative group aspect-square bg-black rounded-xl overflow-hidden shadow-lg">
-                                                {ad.type === 'video' ? <video src={ad.url} className="w-full h-full object-cover opacity-60" muted /> : <img src={ad.url} className="w-full h-full object-cover" />}
-                                                <button 
-                                                    onClick={() => {
-                                                        const updatedZone = (localData?.ads as any)[zone].filter((a: AdItem) => a.id !== ad.id);
-                                                        handleLocalUpdate({ ...localData!, ads: { ...localData!.ads, [zone]: updatedZone } });
-                                                    }}
-                                                    className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                                ><Trash2 size={12}/></button>
+                                <div key={zone} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                    <h4 className="font-bold uppercase text-xs mb-1">{zone.replace('home', '')}</h4>
+                                    <p className="text-[10px] text-slate-400 mb-4 uppercase font-bold tracking-wide">{zone.includes('Side') ? 'Size: 1080x1920 (Portrait)' : zone.includes('screensaver') ? 'Mixed Media' : 'Size: 1920x1080 (Landscape)'}</p>
+                                    <FileUpload label="Upload Media" accept="image/*,video/*" allowMultiple onUpload={(urls:any, type:any) => { const newAds = (Array.isArray(urls)?urls:[urls]).map(u=>({id:generateId('ad'), type, url:u, dateAdded: new Date().toISOString()})); handleLocalUpdate({...localData, ads: {...localData.ads, [zone]: [...((localData.ads as any)[zone] || []), ...newAds]} as any}); }} />
+                                    <div className="grid grid-cols-3 gap-2 mt-4">
+                                        {((localData.ads as any)[zone] || []).map((ad: any, idx: number) => (
+                                            <div key={ad.id} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                                                {ad.type === 'video' ? <video src={ad.url} className="w-full h-full object-cover opacity-60" /> : <img src={ad.url} alt="Ad" className="w-full h-full object-cover" />}
+                                                <button onClick={() => { const currentAds = (localData.ads as any)[zone]; const newAdsList = currentAds.filter((_: any, i: number) => i !== idx); handleLocalUpdate({ ...localData, ads: { ...localData.ads, [zone]: newAdsList } as any }); }} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"><Trash2 size={10} /></button>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
-                </div>
-
-                {/* Global Pamphlets */}
-                <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
-                    <CatalogueManager 
-                        catalogues={localData?.catalogues?.filter(c => !c.brandId) || []} 
-                        onSave={(newList) => {
-                            const brandCatalogues = localData?.catalogues?.filter(c => c.brandId) || [];
-                            handleLocalUpdate({ ...localData!, catalogues: [...brandCatalogues, ...newList] });
-                        }}
-                    />
-                </div>
-            </div>
-          )}
-
-          {activeTab === 'pricelists' && (
-              <PricelistManager 
-                pricelists={localData?.pricelists || []} 
-                pricelistBrands={localData?.pricelistBrands || []}
-                onSavePricelists={(newList) => handleLocalUpdate({ ...localData!, pricelists: newList })}
-                onSaveBrands={(newBrands) => handleLocalUpdate({ ...localData!, pricelistBrands: newBrands })}
-                onDeletePricelist={(id) => {
-                    const pl = localData?.pricelists?.find(p => p.id === id);
-                    if(pl) {
-                        const newArchive = addToArchive('pricelist', `Pricelist: ${pl.title}`, pl);
-                        handleLocalUpdate({ ...localData!, pricelists: localData!.pricelists!.filter(p => p.id !== id), archive: newArchive });
-                    }
-                }}
-              />
-          )}
-
-          {activeTab === 'tv' && (
-              <div className="max-w-7xl mx-auto animate-fade-in flex flex-col md:flex-row gap-8 h-[calc(100vh-140px)]">
-                  {/* Left Column: TV Brand Management */}
-                  <div className="w-full md:w-1/3 h-1/2 md:h-full flex flex-col bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden shrink-0">
-                       <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
-                           <h2 className="font-black text-slate-900 uppercase text-sm">TV Display Channels</h2>
-                           <button onClick={() => {
-                               const name = prompt("Brand Channel Name:");
-                               if(name) handleLocalUpdate({ ...localData!, tv: { brands: [...(localData!.tv?.brands || []), { id: generateId('tvb'), name, models: [] }] } });
-                           }} className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-[10px] uppercase flex items-center gap-1">
-                              <Plus size={14} /> Add Channel
-                           </button>
-                       </div>
-                       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                           {(localData?.tv?.brands || []).map(brand => (
-                               <div 
-                                  key={brand.id} 
-                                  onClick={() => setSelectedTVBrand(brand)}
-                                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative group ${selectedTVBrand?.id === brand.id ? 'bg-blue-50 border-blue-600 shadow-md scale-[1.02]' : 'bg-white border-slate-100 hover:border-blue-200'}`}
-                               >
-                                   <div className="flex items-center gap-4">
-                                       <div className="w-12 h-12 bg-white rounded-xl border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
-                                           {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <Tv size={24} className="text-slate-300" />}
-                                       </div>
-                                       <div className="flex-1 min-w-0">
-                                           <div className="font-black text-slate-900 uppercase text-xs truncate">{brand.name}</div>
-                                           <div className="text-[10px] font-bold text-slate-400 uppercase">{(brand.models || []).length} Models</div>
-                                       </div>
-                                   </div>
-                                   {selectedTVBrand?.id === brand.id && (
-                                       <div className="mt-4 pt-4 border-t border-slate-200/50 space-y-4" onClick={e => e.stopPropagation()}>
-                                           <InputField label="Rename Channel" val={brand.name} onChange={(e:any) => handleLocalUpdate({ ...localData!, tv: { brands: localData!.tv!.brands.map(b => b.id === brand.id ? { ...b, name: e.target.value } : b) } })} />
-                                           <FileUpload 
-                                                label="Channel Logo" 
-                                                currentUrl={brand.logoUrl} 
-                                                onUpload={(url: any) => handleLocalUpdate({ ...localData!, tv: { brands: localData!.tv!.brands.map(b => b.id === brand.id ? { ...b, logoUrl: url } : b) } })} 
-                                           />
-                                           <button 
-                                                onClick={() => {
-                                                    if(confirm("Delete this entire brand channel?")) {
-                                                        handleLocalUpdate({ ...localData!, tv: { brands: localData!.tv!.brands.filter(b => b.id !== brand.id) } });
-                                                        setSelectedTVBrand(null);
-                                                    }
-                                                }}
-                                                className="w-full text-center text-[10px] text-red-500 font-black uppercase hover:bg-red-50 py-2 rounded-lg"
-                                           >Delete Channel</button>
-                                       </div>
-                                   )}
-                               </div>
-                           ))}
-                       </div>
-                  </div>
-
-                  {/* Right Column: Models for Selected Brand */}
-                  <div className="flex-1 h-1/2 md:h-full bg-slate-50 border border-slate-200 rounded-3xl p-6 flex flex-col shadow-inner min-h-0">
-                      {!selectedTVBrand ? (
-                          <div className="flex-1 flex flex-col items-center justify-center text-slate-300 gap-4">
-                              <Tv size={80} className="opacity-10" />
-                              <p className="font-black uppercase tracking-widest text-xs opacity-40">Select a Channel to Manage Models</p>
-                          </div>
-                      ) : (
-                          <div className="flex-1 flex flex-col animate-fade-in overflow-hidden">
-                              <div className="flex justify-between items-center mb-8 shrink-0">
-                                  <h3 className="font-black text-slate-900 uppercase text-lg flex items-center gap-3">
-                                      {selectedTVBrand.name} <span className="text-slate-300">/</span> Models
-                                  </h3>
-                                  <button onClick={() => setEditingTVModel({ id: generateId('tvm'), name: 'New Model', videoUrls: [] })} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs uppercase shadow-xl hover:bg-blue-600 transition-all flex items-center gap-2">
-                                      <Plus size={18} /> Add Model
-                                  </button>
-                              </div>
-                              
-                              <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 content-start pr-2 pb-10">
-                                  {selectedTVBrand.models?.map(model => (
-                                      <div key={model.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group">
-                                          <div className="aspect-video bg-slate-900 relative flex items-center justify-center p-2 overflow-hidden">
-                                              {model.imageUrl ? <img src={model.imageUrl} className="w-full h-full object-cover rounded-xl" /> : <Tv className="text-white/10" size={64}/>}
-                                              <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-4">
-                                                  <button onClick={() => setEditingTVModel(model)} className="bg-white text-slate-900 px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 hover:text-white transition-all">Edit Videos</button>
-                                              </div>
-                                          </div>
-                                          <div className="p-5 flex justify-between items-center">
-                                              <div>
-                                                  <h4 className="font-black text-slate-900 uppercase text-sm leading-tight">{model.name}</h4>
-                                                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{model.videoUrls?.length || 0} Loop Videos</p>
-                                              </div>
-                                              <button 
-                                                  onClick={() => {
-                                                      if(confirm(`Delete model ${model.name}?`)) {
-                                                          const updatedBrands = localData!.tv!.brands.map(b => b.id === selectedTVBrand.id ? { ...b, models: b.models.filter(m => m.id !== model.id) } : b);
-                                                          handleLocalUpdate({ ...localData!, tv: { brands: updatedBrands } });
-                                                      }
-                                                  }}
-                                                  className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-                                              ><Trash2 size={20}/></button>
-                                          </div>
-                                      </div>
-                                  ))}
-                                  {(!selectedTVBrand.models || selectedTVBrand.models.length === 0) && (
-                                      <div className="col-span-full py-20 text-center text-slate-400 font-black uppercase text-xs italic opacity-40">No models for this brand yet.</div>
-                                  )}
-                              </div>
-                          </div>
-                      )}
-                  </div>
-              </div>
-          )}
-
-          {activeTab === 'screensaver' && (
-              <div className="max-w-4xl mx-auto space-y-12 animate-fade-in">
-                  <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
-                      <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 flex items-center gap-3">
-                          <Monitor className="text-blue-600" /> Timing & Display
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                          <div className="space-y-6">
-                              <InputField label="Idle Timeout (Seconds)" val={localData?.screensaverSettings?.idleTimeout} type="number" onChange={(e:any) => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, idleTimeout: parseInt(e.target.value) } })} />
-                              <InputField label="Slide Duration (Seconds)" val={localData?.screensaverSettings?.imageDuration} type="number" onChange={(e:any) => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, imageDuration: parseInt(e.target.value) } })} />
-                              
-                              <div className="p-4 bg-slate-50 rounded-2xl space-y-4">
-                                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Display Style</label>
-                                  <div className="flex gap-2">
-                                      <button onClick={() => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, displayStyle: 'contain' } })} className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] transition-all border-2 ${localData?.screensaverSettings?.displayStyle === 'contain' ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400'}`}>Contain</button>
-                                      <button onClick={() => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, displayStyle: 'cover' } })} className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] transition-all border-2 ${localData?.screensaverSettings?.displayStyle === 'cover' ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400'}`}>Full Cover</button>
-                                  </div>
-                              </div>
-                          </div>
-                          
-                          <div className="space-y-4">
-                              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-4">Content Switches</label>
-                              {[
-                                  { key: 'muteVideos', label: 'Mute Videos', icon: <VolumeX size={16}/> },
-                                  { key: 'showProductImages', label: 'Show Product Photos', icon: <ImageIcon size={16}/> },
-                                  { key: 'showProductVideos', label: 'Show Product Videos', icon: <Video size={16}/> },
-                                  { key: 'showPamphlets', label: 'Show Pamphlet Covers', icon: <BookOpen size={16}/> },
-                                  { key: 'showCustomAds', label: 'Show Custom Ads', icon: <Megaphone size={16}/> },
-                                  { key: 'showInfoOverlay', label: 'Show Information Text', icon: <Info size={16}/> }
-                              ].map((item: any) => (
-                                  <button 
-                                    key={item.key}
-                                    onClick={() => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, [item.key]: !(localData!.screensaverSettings as any)[item.key] } })}
-                                    className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${ (localData!.screensaverSettings as any)[item.key] ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 opacity-60' }`}
-                                  >
-                                      <div className="flex items-center gap-3">
-                                          <span className={(localData!.screensaverSettings as any)[item.key] ? 'text-blue-600' : 'text-slate-400'}>{item.icon}</span>
-                                          <span className="font-bold text-xs uppercase">{item.label}</span>
-                                      </div>
-                                      {(localData!.screensaverSettings as any)[item.key] ? <ToggleRight className="text-blue-600" /> : <ToggleLeft className="text-slate-300" />}
-                                  </button>
-                              ))}
-                          </div>
-                      </div>
-                  </div>
-
-                  <div className="bg-slate-900 text-white rounded-[3rem] p-8 md:p-12 shadow-2xl border border-white/5 overflow-hidden relative">
-                       <div className="absolute top-0 right-0 p-12 opacity-5"><Moon size={160} /></div>
-                       <div className="relative z-10">
-                           <h3 className="text-xl font-black uppercase tracking-tight mb-8 flex items-center gap-3">
-                               <Clock className="text-blue-400" /> Auto-Sleep Mode
-                           </h3>
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                <div className="space-y-6">
-                                    <div className="flex items-center justify-between p-6 bg-white/5 border border-white/10 rounded-3xl">
-                                        <div>
-                                            <div className="font-black uppercase text-xs">Enable Sleep Hours</div>
-                                            <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">Turns screen black outside business hours</p>
-                                        </div>
-                                        <button 
-                                            onClick={() => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, enableSleepMode: !localData!.screensaverSettings?.enableSleepMode } })}
-                                            className={`p-2 transition-all ${localData?.screensaverSettings?.enableSleepMode ? 'text-green-400' : 'text-slate-600'}`}
-                                        >
-                                            {localData?.screensaverSettings?.enableSleepMode ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className={`space-y-6 transition-all duration-500 ${localData?.screensaverSettings?.enableSleepMode ? 'opacity-100 scale-100' : 'opacity-20 scale-95 pointer-events-none'}`}>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Active Start</label>
-                                            <input type="time" value={localData?.screensaverSettings?.activeHoursStart || '08:00'} onChange={(e) => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, activeHoursStart: e.target.value } })} className="w-full bg-white/10 border border-white/10 p-4 rounded-2xl text-xl font-black text-center text-white" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Active End</label>
-                                            <input type="time" value={localData?.screensaverSettings?.activeHoursEnd || '20:00'} onChange={(e) => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, activeHoursEnd: e.target.value } })} className="w-full bg-white/10 border border-white/10 p-4 rounded-2xl text-xl font-black text-center text-white" />
-                                        </div>
-                                    </div>
-                                </div>
-                           </div>
-                       </div>
-                  </div>
-              </div>
-          )}
-
-          {activeTab === 'fleet' && (
-            <div className="max-w-6xl mx-auto animate-fade-in">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {localData?.fleet?.sort((a,b) => b.status.localeCompare(a.status)).map((kiosk) => {
-                        const isOnline = (new Date().getTime() - new Date(kiosk.last_seen).getTime()) < 120000;
-                        return (
-                            <div key={kiosk.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group transition-all hover:shadow-xl">
-                                <div className="p-6 border-b border-slate-50 flex justify-between items-start">
-                                    <div className="flex gap-4">
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${kiosk.deviceType === 'tv' ? 'bg-indigo-50 text-indigo-600' : kiosk.deviceType === 'mobile' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
-                                            {kiosk.deviceType === 'tv' ? <Tv size={24} /> : kiosk.deviceType === 'mobile' ? <Smartphone size={24} /> : <Tablet size={24} />}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-black text-slate-900 uppercase tracking-tight truncate max-w-[150px]">{kiosk.name}</h3>
-                                            <div className="flex items-center gap-1.5 mt-1">
-                                                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div>
-                                                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{isOnline ? 'Online Now' : 'Offline'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => setEditingKiosk(kiosk)} className="p-2 text-slate-300 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Edit2 size={16}/></button>
-                                </div>
-                                <div className="p-6 space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                                            <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Zone / Area</span>
-                                            <span className="block text-xs font-bold text-slate-700 truncate">{kiosk.assignedZone || 'Unassigned'}</span>
-                                        </div>
-                                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                                            <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Last Sync</span>
-                                            <span className="block text-xs font-bold text-slate-700">{formatRelativeTime(kiosk.last_seen)}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 px-1">
-                                        <div className="flex items-center gap-1"><Wifi size={12}/> {kiosk.wifiStrength}%</div>
-                                        <div className="flex items-center gap-1"><Cpu size={12}/> v{kiosk.version}</div>
-                                    </div>
-                                </div>
-                                <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
-                                    <button 
-                                        onClick={async () => {
-                                            if(confirm(`Request remote system restart for ${kiosk.name}?`)) {
-                                                await supabase.from('kiosks').update({ restart_requested: true }).eq('id', kiosk.id);
-                                                alert("Command queued. Device will reboot on next heartbeat (max 60s).");
-                                            }
-                                        }}
-                                        className="flex-1 py-2 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all active:scale-95"
-                                    ><RotateCcw size={14}/> Reboot</button>
-                                    <button 
-                                        onClick={() => removeFleetMember(kiosk.id)}
-                                        className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-                                    ><Trash2 size={16}/></button>
-                                </div>
-                            </div>
-                        )
-                    })}
-                    {(!localData?.fleet || localData.fleet.length === 0) && (
-                        <div className="col-span-full py-20 text-center flex flex-col items-center justify-center text-slate-300 gap-4 border-4 border-dashed border-slate-200 rounded-[3rem]">
-                            <Tablet size={64} className="opacity-20" />
-                            <div>
-                                <p className="font-black uppercase tracking-widest text-lg opacity-40">No Devices Connected</p>
-                                <p className="text-xs font-bold opacity-30 mt-1 uppercase tracking-widest">Connect a tablet and complete setup to monitor fleet</p>
-                            </div>
-                        </div>
                     )}
                 </div>
-            </div>
-          )}
+            )}
+            
+            {activeTab === 'fleet' && (
+                <div className="animate-fade-in max-w-6xl mx-auto pb-24">
+                   <div className="flex items-center justify-between mb-8">
+                       <h2 className="text-2xl font-black text-slate-900 uppercase">Device Fleet</h2>
+                       <div className="bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm text-xs font-bold text-slate-500">
+                           Total Devices: {localData.fleet?.length || 0}
+                       </div>
+                   </div>
 
-          {activeTab === 'history' && (
-              <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
-                  <div className="flex flex-col md:flex-row justify-between gap-4">
+                   {/* Device Categories Loop */}
+                   {['kiosk', 'mobile', 'tv'].map((type) => {
+                       // Filter devices for this category
+                       // Default undefined deviceType to 'kiosk' for legacy compatibility
+                       const devices = localData.fleet?.filter(k => 
+                           k.deviceType === type || (type === 'kiosk' && !k.deviceType)
+                       ) || [];
+
+                       if (devices.length === 0) return null;
+
+                       // Config for Section Header
+                       const config = {
+                           kiosk: { label: 'Interactive Kiosks', icon: <Tablet size={20} className="text-blue-600" />, color: 'blue' },
+                           mobile: { label: 'Mobile Handhelds', icon: <Smartphone size={20} className="text-purple-600" />, color: 'purple' },
+                           tv: { label: 'TV Displays', icon: <Tv size={20} className="text-indigo-600" />, color: 'indigo' }
+                       }[type as 'kiosk' | 'mobile' | 'tv'];
+
+                       return (
+                           <div key={type} className="mb-10 last:mb-0">
+                               <div className="flex items-center gap-3 mb-4 border-b border-slate-200 pb-2">
+                                   <div className={`p-2 rounded-lg bg-${config.color}-50`}>
+                                       {config.icon}
+                                   </div>
+                                   <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{config.label}</h3>
+                                   <span className="ml-auto text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-full border border-slate-200">
+                                       {devices.length} Devices
+                                   </span>
+                               </div>
+
+                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                   {devices.map(kiosk => {
+                                       const isOnline = (new Date().getTime() - new Date(kiosk.last_seen).getTime()) < 350000;
+                                       return (
+                                           <div key={kiosk.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-lg transition-all duration-300">
+                                               {/* Card Header */}
+                                               <div className="p-4 border-b border-slate-100 bg-slate-50/30 flex justify-between items-start">
+                                                   <div className="flex-1 min-w-0 pr-2">
+                                                       <div className="flex items-start gap-2 mb-1">
+                                                           <div className="mt-0.5 shrink-0">
+                                                               {type === 'kiosk' && <Tablet size={14} className="text-blue-500"/>}
+                                                               {type === 'mobile' && <Smartphone size={14} className="text-purple-500"/>}
+                                                               {type === 'tv' && <Tv size={14} className="text-indigo-500"/>}
+                                                           </div>
+                                                           <h4 className="font-bold text-slate-900 uppercase text-sm leading-tight break-words" title={kiosk.name}>
+                                                               {kiosk.name}
+                                                           </h4>
+                                                       </div>
+                                                       <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+                                                            <span>ID: {kiosk.id}</span>
+                                                       </div>
+                                                   </div>
+                                                   <div className={`shrink-0 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border flex items-center gap-1.5 ${isOnline ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                                       <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                                       {isOnline ? 'Online' : 'Offline'}
+                                                   </div>
+                                               </div>
+                                               
+                                               {/* Card Body */}
+                                               <div className="p-4 flex-1">
+                                                   <div className="flex justify-between items-center text-xs mb-3">
+                                                       <span className="text-slate-400 font-bold uppercase text-[10px]">Zone</span>
+                                                       <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                                           {kiosk.assignedZone || 'Unassigned'}
+                                                       </span>
+                                                   </div>
+                                                   <div className="flex justify-between items-center text-xs">
+                                                       <span className="text-slate-400 font-bold uppercase text-[10px]">IP / Net</span>
+                                                       <span className="font-mono text-slate-500 text-[10px] flex items-center gap-1">
+                                                           <Signal size={10} /> {kiosk.ipAddress || 'Unknown'}
+                                                       </span>
+                                                   </div>
+                                               </div>
+
+                                               {/* Card Footer (Actions) */}
+                                               <div className="bg-slate-50 p-2 border-t border-slate-100 flex gap-2">
+                                                   <button 
+                                                       onClick={() => setEditingKiosk(kiosk)} 
+                                                       className="flex-1 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:shadow-sm transition-all text-[10px] font-bold uppercase flex items-center justify-center gap-1.5"
+                                                   >
+                                                       <Edit2 size={12}/> Edit
+                                                   </button>
+                                                   
+                                                   {supabase && (
+                                                       <button 
+                                                           onClick={async () => { if(confirm("Restart Device?")) await supabase.from('kiosks').update({restart_requested: true}).eq('id', kiosk.id); }} 
+                                                           className="flex-1 py-2 bg-white text-orange-600 rounded-lg border border-slate-200 hover:border-orange-300 hover:bg-orange-50 hover:shadow-sm transition-all text-[10px] font-bold uppercase flex items-center justify-center gap-1.5" 
+                                                           title="Restart Device"
+                                                       >
+                                                           <Power size={12}/> Restart
+                                                       </button>
+                                                   )}
+                                                   
+                                                   <button 
+                                                       onClick={() => removeFleetMember(kiosk.id)} 
+                                                       className="w-10 py-2 bg-white text-red-500 rounded-lg border border-slate-200 hover:border-red-300 hover:bg-red-50 hover:shadow-sm transition-all flex items-center justify-center" 
+                                                       title="Remove Device"
+                                                   >
+                                                       <Trash2 size={12}/>
+                                                   </button>
+                                               </div>
+                                           </div>
+                                       );
+                                   })}
+                               </div>
+                           </div>
+                       );
+                   })}
+                   
+                   {localData.fleet?.length === 0 && (
+                       <div className="p-16 text-center text-slate-400 font-bold uppercase text-xs border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50 flex flex-col items-center gap-4">
+                           <Tablet size={48} className="opacity-20" />
+                           <div>No devices registered in fleet</div>
+                       </div>
+                   )}
+                </div>
+            )}
+            
+            {activeTab === 'screensaver' && (
+                <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-20">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Clock size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Timing & Schedule</h3></div>
+                             <div className="grid grid-cols-2 gap-4 mb-6"><InputField label="Idle Wait (sec)" val={localData.screensaverSettings?.idleTimeout||60} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, idleTimeout: parseInt(e.target.value)}})} /><InputField label="Slide Duration (sec)" val={localData.screensaverSettings?.imageDuration||8} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, imageDuration: parseInt(e.target.value)}})} /></div>
+                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><div className="flex justify-between items-center mb-4"><label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Active Hours (Sleep Mode)</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, enableSleepMode: !localData.screensaverSettings?.enableSleepMode}})} className={`w-8 h-4 rounded-full transition-colors relative ${localData.screensaverSettings?.enableSleepMode ? 'bg-green-500' : 'bg-slate-300'}`}><div className={`w-2 h-2 bg-white rounded-full absolute top-1 transition-all ${localData.screensaverSettings?.enableSleepMode ? 'left-5' : 'left-1'}`}></div></button></div><div className={`grid grid-cols-2 gap-4 transition-opacity ${localData.screensaverSettings?.enableSleepMode ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}><div><label className="block text-[10px] font-bold text-slate-400 mb-1">Start Time</label><input type="time" value={localData.screensaverSettings?.activeHoursStart || '08:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursStart: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div><div><label className="block text-[10px] font-bold text-slate-400 mb-1">End Time</label><input type="time" value={localData.screensaverSettings?.activeHoursEnd || '20:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursEnd: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div></div></div>
+                         </div>
+                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Content & Behavior</h3></div>
+                             <div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}})} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div>
+                         </div>
+                     </div>
+                </div>
+            )}
+            
+            {activeTab === 'history' && (
+               <div className="max-w-6xl mx-auto space-y-6">
+                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                       <h2 className="text-2xl font-black text-slate-900 uppercase">Archive Management</h2>
                        <div className="flex gap-2">
-                           {['deletedItems', 'brands', 'catalogues'].map(tab => (
-                               <button 
-                                  key={tab} 
-                                  onClick={() => setHistoryTab(tab as any)}
-                                  className={`px-6 py-3 rounded-2xl font-black uppercase text-xs tracking-widest transition-all ${historyTab === tab ? 'bg-slate-900 text-white shadow-xl' : 'bg-white text-slate-400 border border-slate-200'}`}
-                               >
-                                  {tab === 'deletedItems' ? 'Recycle Bin' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                               </button>
-                           ))}
+                            <button 
+                                onClick={() => { if(confirm("Permanently clear ALL archived history?")) handleLocalUpdate({...localData, archive: { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }}) }} 
+                                className="text-red-500 font-bold uppercase text-xs flex items-center gap-2 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2 rounded-lg transition-colors"
+                            >
+                                <Trash2 size={14}/> Wipe History
+                            </button>
                        </div>
-                       <div className="relative flex-1 max-w-sm">
-                           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                           <input 
-                              type="text" 
-                              placeholder="Search history..." 
-                              value={historySearch}
-                              onChange={(e) => setHistorySearch(e.target.value)}
-                              className="w-full pl-12 pr-6 py-3 bg-white border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:border-blue-500 shadow-sm"
-                           />
-                       </div>
-                  </div>
+                   </div>
 
-                  <div className="bg-white rounded-[3rem] shadow-sm border border-slate-200 overflow-hidden min-h-[500px]">
-                      {historyTab === 'deletedItems' && (
-                          <div className="divide-y divide-slate-100">
-                             {(localData?.archive?.deletedItems || [])
-                                .filter(item => !historySearch || item.name.toLowerCase().includes(historySearch.toLowerCase()))
-                                .map(item => (
-                                <div key={item.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-center gap-6">
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${item.type === 'product' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
-                                            {item.type === 'product' ? <Box size={24}/> : <FolderOpen size={24}/>}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-black text-slate-900 uppercase">{item.name}</h4>
-                                            <div className="flex items-center gap-3 mt-1">
-                                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{item.type}</span>
-                                                <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">Deleted {formatRelativeTime(item.deletedAt)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => {
-                                                if(item.type === 'product') {
-                                                    const prod = item.data as Product;
-                                                    setEditingProduct(prod); // Let them edit then save to correct cat
-                                                } else if(item.type === 'device') {
-                                                    if(confirm("Restore this device to live fleet?")) {
-                                                        const registry = item.data as KioskRegistry;
-                                                        updateFleetMember(registry);
-                                                        const newDeleted = (localData?.archive?.deletedItems || []).filter(i => i.id !== item.id);
-                                                        handleLocalUpdate({ ...localData!, archive: { ...localData!.archive!, deletedItems: newDeleted } });
-                                                    }
-                                                } else if(item.type === 'pricelist') {
-                                                    if(confirm("Restore this pricelist?")) {
-                                                        const pl = item.data as Pricelist;
-                                                        handleLocalUpdate({ 
-                                                            ...localData!, 
-                                                            pricelists: [...(localData!.pricelists || []), pl],
-                                                            archive: { ...localData!.archive!, deletedItems: localData!.archive!.deletedItems!.filter(i => i.id !== item.id) }
-                                                        });
-                                                    }
-                                                }
-                                            }}
-                                            className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2"
-                                        ><RefreshCw size={14}/> Restore</button>
-                                        <button 
-                                            onClick={() => {
-                                                if(confirm("Permanently purge this item? This cannot be undone.")) {
-                                                    const newDeleted = (localData?.archive?.deletedItems || []).filter(i => i.id !== item.id);
-                                                    handleLocalUpdate({ ...localData!, archive: { ...localData!.archive!, deletedItems: newDeleted } });
-                                                }
-                                            }}
-                                            className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                                        ><Trash2 size={20}/></button>
-                                    </div>
-                                </div>
-                             ))}
-                             {(localData?.archive?.deletedItems || []).length === 0 && (
-                                 <div className="py-40 text-center flex flex-col items-center justify-center text-slate-300 gap-4">
-                                     <History size={64} className="opacity-10" />
-                                     <p className="font-black uppercase tracking-[0.2em] text-sm opacity-30">Archive history is clean</p>
-                                 </div>
-                             )}
-                          </div>
-                      )}
-
-                      {historyTab === 'brands' && (
-                          <div className="divide-y divide-slate-100">
-                             {(localData?.archive?.brands || []).map(brand => (
-                                <div key={brand.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
-                                            {brand.logoUrl ? <img src={brand.logoUrl} className="max-w-[70%] max-h-[70%] object-contain" /> : <FolderOpen size={24} className="text-slate-300" />}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-black text-slate-900 uppercase">{brand.name}</h4>
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{brand.categories.length} Categories</span>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => restoreBrand(brand)} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"><RefreshCw size={14}/> Restore Brand</button>
-                                </div>
-                             ))}
-                             {(localData?.archive?.brands || []).length === 0 && (
-                                <div className="py-40 text-center text-slate-300 font-black uppercase tracking-widest text-xs italic opacity-30">No Archived Brands</div>
-                             )}
-                          </div>
-                      )}
-
-                      {historyTab === 'catalogues' && (
-                          <div className="divide-y divide-slate-100">
-                             {(localData?.archive?.catalogues || []).map(cat => (
-                                <div key={cat.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-12 h-16 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
-                                            {cat.thumbnailUrl || (cat.pages && cat.pages[0]) ? <img src={cat.thumbnailUrl || cat.pages[0]} className="w-full h-full object-cover" /> : <BookOpen size={24} className="text-slate-300" />}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-black text-slate-900 uppercase">{cat.title}</h4>
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{cat.year || 'No Date'}</span>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => restoreCatalogue(cat)} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"><RefreshCw size={14}/> Restore</button>
-                                </div>
-                             ))}
-                             {(localData?.archive?.catalogues || []).length === 0 && (
-                                <div className="py-40 text-center text-slate-300 font-black uppercase tracking-widest text-xs italic opacity-30">No Expired Catalogues</div>
-                             )}
-                          </div>
-                      )}
-                  </div>
-              </div>
-          )}
-
-          {activeTab === 'settings' && (
-              <div className="max-w-4xl mx-auto space-y-12 animate-fade-in">
-                  
-                  {/* System Administration (Admins) */}
-                  <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
-                      <div className="flex justify-between items-center mb-10 pb-4 border-b border-slate-100">
-                           <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
-                               <ShieldCheck className="text-blue-600" /> Administrative Access
-                           </h3>
-                      </div>
-                      <AdminManager 
-                        admins={localData?.admins || []} 
-                        currentUser={currentUser}
-                        onUpdate={(newAdmins) => handleLocalUpdate({ ...localData!, admins: newAdmins })} 
-                      />
-                  </div>
-
-                  {/* Icon & Identity Config */}
-                  <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
-                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 flex items-center gap-3">
-                        <ImageIcon className="text-blue-600" /> Application Identity
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                        <FileUpload 
-                            label="Kiosk (PWA) Launcher Icon" 
-                            currentUrl={localData?.appConfig?.kioskIconUrl} 
-                            onUpload={(url: any) => handleLocalUpdate({ ...localData!, appConfig: { ...localData!.appConfig, kioskIconUrl: url } })} 
-                        />
-                        <FileUpload 
-                            label="Admin Hub Launcher Icon" 
-                            currentUrl={localData?.appConfig?.adminIconUrl} 
-                            onUpload={(url: any) => handleLocalUpdate({ ...localData!, appConfig: { ...localData!.appConfig, adminIconUrl: url } })} 
-                        />
-                        <FileUpload 
-                            label="Master Company Branding Logo" 
-                            currentUrl={localData?.companyLogoUrl} 
-                            onUpload={(url: any) => handleLocalUpdate({ ...localData!, companyLogoUrl: url })} 
-                        />
-                        <div className="space-y-4">
-                            <InputField 
-                                label="Global Setup Activation PIN" 
-                                val={localData?.systemSettings?.setupPin} 
-                                onChange={(e:any) => handleLocalUpdate({ ...localData!, systemSettings: { ...localData!.systemSettings, setupPin: e.target.value } })} 
-                                placeholder="####"
-                            />
-                            <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl text-[10px] text-orange-800 font-bold uppercase leading-relaxed">
-                                This PIN is required when provisioning new tablets in-store. Keep it secure.
-                            </div>
-                        </div>
-                    </div>
-                  </div>
-
-                  {/* Backup & Tools */}
-                  <div className="bg-slate-900 text-white rounded-[3rem] p-8 md:p-12 shadow-2xl border border-white/5 relative overflow-hidden">
-                       <div className="absolute top-0 left-0 p-12 opacity-5"><HardDrive size={160} /></div>
-                       <div className="relative z-10">
-                           <h3 className="text-xl font-black uppercase tracking-tight mb-10 flex items-center gap-3">
-                               <Database className="text-blue-400" /> Data Maintenance Tools
-                           </h3>
-                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-white/5 border border-white/10 p-6 rounded-3xl group">
-                                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Download size={24}/></div>
-                                    <h4 className="font-black text-sm uppercase mb-2">Export Backup</h4>
-                                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed mb-6">Generates a full JSZip archive of your inventory, branding, assets, and settings.</p>
-                                    <button 
-                                        onClick={async () => {
-                                            if(!localData) return;
-                                            setExportProcessing(true);
-                                            try { await downloadZip(localData); } catch(e) { alert("Export error"); }
-                                            finally { setExportProcessing(false); }
-                                        }}
-                                        disabled={exportProcessing}
-                                        className="w-full py-3 bg-white text-slate-900 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-blue-500 hover:text-white transition-all shadow-lg active:scale-95 disabled:opacity-50"
-                                    >
-                                        {exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <SaveAll size={16}/>}
-                                        Full System ZIP
-                                    </button>
-                                </div>
-
-                                <div className="bg-white/5 border border-white/10 p-6 rounded-3xl group">
-                                    <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Upload size={24}/></div>
-                                    <h4 className="font-black text-sm uppercase mb-2">Inventory Import</h4>
-                                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed mb-6">Mass-upload new Brands and Products via ZIP. Cloud storage will be used for assets.</p>
-                                    <label className={`w-full py-3 bg-white text-slate-900 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-purple-600 hover:text-white transition-all shadow-lg active:scale-95 cursor-pointer ${importProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
-                                        {importProcessing ? <Loader2 size={16} className="animate-spin" /> : <FileInput size={16}/>}
-                                        {importProcessing ? 'Importing...' : 'Select ZIP Bundle'}
-                                        <input 
-                                            type="file" 
-                                            className="hidden" 
-                                            accept=".zip" 
-                                            disabled={importProcessing}
-                                            onChange={async (e) => {
-                                                const file = e.target.files?.[0];
-                                                if(file) {
-                                                    setImportProcessing(true);
-                                                    try {
-                                                        const brands = await importZip(file, setImportProgress);
-                                                        const userConfirmed = confirm(`Parsed ${brands.length} Brands with ${brands.reduce((acc, b) => acc + b.categories.reduce((cAcc, cat) => cAcc + cat.products.length, 0), 0)} Products.\n\nMerge with existing inventory?`);
-                                                        if(userConfirmed) {
-                                                            handleLocalUpdate({ ...localData!, brands: [...localData!.brands, ...brands] });
-                                                            alert("Inventory successfully updated.");
-                                                        }
-                                                    } catch(err) {
-                                                        alert("Import failed. Ensure ZIP follows correct structure.");
-                                                    } finally {
-                                                        setImportProcessing(false);
-                                                        setImportProgress('');
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                    </label>
-                                    {importProcessing && <div className="mt-4 text-[9px] font-bold text-purple-400 uppercase text-center animate-pulse">{importProgress || 'Parsing Archive...'}</div>}
-                                </div>
-
-                                <div className="bg-red-900/20 border border-red-500/20 p-6 rounded-3xl group">
-                                    <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><RotateCcw size={24}/></div>
-                                    <h4 className="font-black text-sm text-red-400 uppercase mb-2">Factory Reset</h4>
-                                    <p className="text-[10px] text-red-300/40 font-medium leading-relaxed mb-6">Destructive action. Wipes all data and restores the original system demo content.</p>
-                                    <button 
-                                        onClick={async () => {
-                                            if(confirm("CRITICAL WARNING: This will permanently delete your entire store configuration. Continue?") && confirm("Final Confirmation: Erase everything?")) {
-                                                const newData = await resetStoreData();
-                                                onUpdateData(newData);
-                                                window.location.reload();
-                                            }
-                                        }}
-                                        className="w-full py-3 bg-red-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-red-700 transition-all shadow-lg active:scale-95 shadow-red-900/20"
-                                    ><Power size={16}/> Wipe Database</button>
-                                </div>
+                   <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm min-h-[500px] flex flex-col">
+                       {/* Toolbar */}
+                       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between gap-4">
+                           <div className="flex items-center gap-2 bg-slate-200/50 p-1 rounded-lg self-start overflow-x-auto max-w-full">
+                               <button onClick={() => setHistoryTab('deletedItems')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'deletedItems' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>All Items</button>
+                               <button onClick={() => setHistoryTab('brands')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'brands' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Deleted Brands</button>
+                               <button onClick={() => setHistoryTab('catalogues')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'catalogues' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Deleted Pamphlets</button>
+                           </div>
+                           <div className="relative">
+                               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                               <input 
+                                  type="text" 
+                                  placeholder="Search Archives..." 
+                                  className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold w-full md:w-64 focus:border-blue-500 outline-none"
+                                  value={historySearch}
+                                  onChange={(e) => setHistorySearch(e.target.value)}
+                               />
                            </div>
                        </div>
-                  </div>
 
-                  <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
-                       <div className="flex justify-between items-center mb-10 pb-4 border-b border-slate-100">
-                           <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
-                               <Info className="text-blue-600" /> About Us Content
-                           </h3>
-                      </div>
-                      <div className="space-y-6">
-                           <InputField label="About Page Headline" val={localData?.about?.title} onChange={(e:any) => handleLocalUpdate({...localData!, about: { ...localData!.about, title: e.target.value }})} />
-                           <InputField label="Corporate Story / Narrative" isArea val={localData?.about?.text} onChange={(e:any) => handleLocalUpdate({...localData!, about: { ...localData!.about, text: e.target.value }})} />
-                           <FileUpload label="Voice Guide / Background Audio" accept="audio/*" icon={<Music/>} currentUrl={localData?.about?.audioUrl} onUpload={(url: any) => handleLocalUpdate({...localData!, about: { ...localData!.about, audioUrl: url }})} />
-                      </div>
-                  </div>
-              </div>
-          )}
+                       {/* List Content */}
+                       <div className="flex-1 overflow-y-auto">
+                           {historyTab === 'deletedItems' ? (
+                               archivedGenericItems.length === 0 ? (
+                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                                       <Archive size={48} className="mb-4 opacity-20" />
+                                       <span className="text-xs font-bold uppercase tracking-widest">No Deleted Items Found</span>
+                                   </div>
+                               ) : (
+                                   <table className="w-full text-left">
+                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                           <tr>
+                                               <th className="px-6 py-3">Type</th>
+                                               <th className="px-6 py-3">Name</th>
+                                               <th className="px-6 py-3">Deleted Date</th>
+                                               <th className="px-6 py-3 text-right">Data</th>
+                                           </tr>
+                                       </thead>
+                                       <tbody className="divide-y divide-slate-100 text-sm">
+                                           {archivedGenericItems.map(item => (
+                                               <tr key={item.id} className="hover:bg-slate-50 group">
+                                                   <td className="px-6 py-4">
+                                                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                                                           item.type === 'product' ? 'bg-blue-50 text-blue-700' :
+                                                           item.type === 'pricelist' ? 'bg-green-50 text-green-700' :
+                                                           item.type === 'device' ? 'bg-purple-50 text-purple-700' :
+                                                           'bg-slate-100 text-slate-600'
+                                                       }`}>
+                                                           {item.type}
+                                                       </span>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <div className="font-bold text-slate-900">{item.name}</div>
+                                                       <div className="text-[10px] text-slate-400 font-mono">{item.id}</div>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <div className="text-xs font-bold text-slate-600">
+                                                           {formatRelativeTime(item.deletedAt)}
+                                                       </div>
+                                                       <div className="text-[10px] text-slate-400">
+                                                           {new Date(item.deletedAt).toLocaleTimeString()}
+                                                       </div>
+                                                   </td>
+                                                   <td className="px-6 py-4 text-right">
+                                                       <button 
+                                                            onClick={() => {
+                                                                const json = JSON.stringify(item.data, null, 2);
+                                                                const blob = new Blob([json], {type: "application/json"});
+                                                                const url = URL.createObjectURL(blob);
+                                                                const a = document.createElement('a');
+                                                                a.href = url;
+                                                                a.download = `${item.name}-recovered.json`;
+                                                                a.click();
+                                                            }}
+                                                            className="text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase inline-flex items-center gap-1 transition-colors border border-slate-200"
+                                                       >
+                                                           <Download size={12} /> JSON
+                                                       </button>
+                                                   </td>
+                                               </tr>
+                                           ))}
+                                       </tbody>
+                                   </table>
+                               )
+                           ) : historyTab === 'brands' ? (
+                               archivedBrands.length === 0 ? (
+                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                                       <Archive size={48} className="mb-4 opacity-20" />
+                                       <span className="text-xs font-bold uppercase tracking-widest">No Archived Brands Found</span>
+                                   </div>
+                               ) : (
+                                   <table className="w-full text-left">
+                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                           <tr>
+                                               <th className="px-6 py-3">Brand Name</th>
+                                               <th className="px-6 py-3">Metadata</th>
+                                               <th className="px-6 py-3">Deleted Date</th>
+                                               <th className="px-6 py-3 text-right">Actions</th>
+                                           </tr>
+                                       </thead>
+                                       <tbody className="divide-y divide-slate-100 text-sm">
+                                           {archivedBrands.map(b => (
+                                               <tr key={b.id} className="hover:bg-slate-50 group">
+                                                   <td className="px-6 py-4">
+                                                       <div className="font-bold text-slate-900">{b.name}</div>
+                                                       <div className="text-[10px] text-slate-400 font-mono">{b.id}</div>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
+                                                           <Box size={12} /> {b.categories.length} Categories
+                                                       </div>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <div className="text-xs font-bold text-slate-600">
+                                                           {localData.archive?.deletedAt?.[b.id] ? formatRelativeTime(localData.archive.deletedAt[b.id]) : 'Unknown'}
+                                                       </div>
+                                                       <div className="text-[10px] text-slate-400">
+                                                           {localData.archive?.deletedAt?.[b.id] ? new Date(localData.archive.deletedAt[b.id]).toLocaleTimeString() : ''}
+                                                       </div>
+                                                   </td>
+                                                   <td className="px-6 py-4 text-right">
+                                                       <button onClick={() => restoreBrand(b)} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold uppercase inline-flex items-center gap-1 transition-colors">
+                                                           <RotateCcw size={14} /> Restore
+                                                       </button>
+                                                   </td>
+                                               </tr>
+                                           ))}
+                                       </tbody>
+                                   </table>
+                               )
+                           ) : (
+                               archivedCatalogues.length === 0 ? (
+                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                                       <Archive size={48} className="mb-4 opacity-20" />
+                                       <span className="text-xs font-bold uppercase tracking-widest">No Archived Pamphlets Found</span>
+                                   </div>
+                               ) : (
+                                   <table className="w-full text-left">
+                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                           <tr>
+                                               <th className="px-6 py-3">Title</th>
+                                               <th className="px-6 py-3">Type</th>
+                                               <th className="px-6 py-3">Expiration Info</th>
+                                               <th className="px-6 py-3 text-right">Actions</th>
+                                           </tr>
+                                       </thead>
+                                       <tbody className="divide-y divide-slate-100 text-sm">
+                                           {archivedCatalogues.map(c => (
+                                               <tr key={c.id} className="hover:bg-slate-50 group">
+                                                   <td className="px-6 py-4">
+                                                       <div className="font-bold text-slate-900">{c.title}</div>
+                                                       <div className="text-[10px] text-slate-400 font-mono">{c.id}</div>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${c.brandId ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
+                                                           {c.brandId ? 'Brand Catalogue' : 'Global Pamphlet'}
+                                                       </span>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <div className="text-xs font-bold text-slate-600">
+                                                           {c.endDate ? `Expired: ${new Date(c.endDate).toLocaleDateString()}` : 'Manual Delete'}
+                                                       </div>
+                                                       <div className="text-[10px] text-slate-400">
+                                                           Deleted: {localData.archive?.deletedAt?.[c.id] ? formatRelativeTime(localData.archive.deletedAt[c.id]) : 'N/A'}
+                                                       </div>
+                                                   </td>
+                                                   <td className="px-6 py-4 text-right">
+                                                       <button onClick={() => restoreCatalogue(c)} className="text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg text-xs font-bold uppercase inline-flex items-center gap-1 transition-colors">
+                                                           <RotateCcw size={14} /> Restore
+                                                       </button>
+                                                   </td>
+                                               </tr>
+                                           ))}
+                                       </tbody>
+                                   </table>
+                               )
+                           )}
+                       </div>
+                   </div>
+               </div>
+            )}
 
-          {activeTab === 'guide' && (
-              <SystemDocumentation />
-          )}
+            {activeTab === 'settings' && (
+               <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
+                   
+                   {/* BRANDING SECTION */}
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
+                           <ImageIcon size={20} className="text-blue-500" /> System Branding
+                       </h3>
+                       <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                           <FileUpload 
+                               label="Main Company Logo (PDFs & Header)" 
+                               currentUrl={localData.companyLogoUrl} 
+                               onUpload={(url: string) => handleLocalUpdate({...localData, companyLogoUrl: url})} 
+                           />
+                           <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                               This logo is used at the top of the Kiosk App and as the primary branding on all exported PDF Pricelists.
+                           </p>
+                       </div>
+                   </div>
 
-        </div>
-      </main>
+                   {/* GLOBAL SYSTEM PIN */}
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
+                           <Lock size={20} className="text-red-500" /> Device Setup Security
+                       </h3>
+                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center gap-4">
+                           <div className="flex-1">
+                               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Global Setup PIN</label>
+                               <input 
+                                   type="text" 
+                                   value={localData.systemSettings?.setupPin || '0000'} 
+                                   onChange={(e) => handleLocalUpdate({
+                                       ...localData,
+                                       systemSettings: { ...localData.systemSettings, setupPin: e.target.value }
+                                   })}
+                                   className="w-full md:w-64 p-3 border border-slate-300 rounded-xl bg-white font-mono font-bold text-lg tracking-widest text-center"
+                                   placeholder="0000"
+                                   maxLength={8}
+                               />
+                               <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                                   This PIN is required on all new devices (Kiosk, Mobile, TV) to complete the setup process. Default: 0000.
+                               </p>
+                           </div>
+                           <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100 text-yellow-800 text-xs max-w-xs">
+                               <strong>Security Note:</strong> Changing this PIN will require all future device setups to use the new code. Existing active devices are not affected.
+                           </div>
+                       </div>
+                   </div>
 
-      {/* GLOBAL OVERLAYS / MODALS */}
-      {editingProduct && (
-          <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-0 md:p-12 animate-fade-in backdrop-blur-md">
-              <div className="w-full h-full max-w-6xl overflow-hidden shadow-2xl relative">
-                  <ProductEditor 
-                    product={editingProduct} 
-                    onSave={(updated) => {
-                        let updatedBrands = localData!.brands.map(b => {
-                            if (b.id === selectedBrand!.id) {
-                                return {
-                                    ...b,
-                                    categories: b.categories.map(c => {
-                                        if (c.id === selectedCategory!.id) {
-                                            const exists = c.products.find(p => p.id === updated.id);
-                                            return {
-                                                ...c,
-                                                products: exists ? c.products.map(p => p.id === updated.id ? updated : p) : [...c.products, updated]
-                                            };
-                                        }
-                                        return c;
-                                    })
-                                };
-                            }
-                            return b;
-                        });
-                        handleLocalUpdate({ ...localData!, brands: updatedBrands });
-                        setEditingProduct(null);
-                    }}
-                    onCancel={() => setEditingProduct(null)} 
-                  />
-              </div>
-          </div>
-      )}
+                   {/* ZIP BACKUP SECTION */}
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                       <div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500 pointer-events-none"><Database size={120} /></div>
+                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> System Data & Backup</h3>
+                       
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                           <div className="space-y-4">
+                               <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-xs">
+                                   <strong>Export System Backup:</strong> Downloads a full archive including Inventory, Marketing, TV Config, Fleet logs, and History.
+                                   <div className="mt-2 text-blue-600 font-bold">Use this to edit offline or migrate data.</div>
+                               </div>
+                               <button 
+                                   onClick={async () => {
+                                       setExportProcessing(true);
+                                       try {
+                                           await downloadZip(localData);
+                                       } catch (e) {
+                                           console.error(e);
+                                           alert("Export Failed: " + (e as Error).message);
+                                       } finally {
+                                           setExportProcessing(false);
+                                       }
+                                   }}
+                                   disabled={exportProcessing}
+                                   className={`w-full py-4 ${exportProcessing ? 'bg-blue-800 cursor-wait' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25`}
+                               >
+                                   {exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+                                   {exportProcessing ? 'Packaging All Assets...' : 'Download Full System Backup (.zip)'}
+                               </button>
+                           </div>
 
-      {movingProduct && selectedBrand && selectedCategory && (
-          <MoveProductModal 
-            product={movingProduct} 
-            allBrands={localData?.brands || []} 
-            currentBrandId={selectedBrand.id} 
-            currentCategoryId={selectedCategory.id} 
-            onClose={() => setMovingProduct(null)}
-            onMove={handleMoveProduct}
-          />
-      )}
+                           <div className="space-y-4">
+                               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-xs">
+                                   <strong>Import Structure:</strong> Upload a ZIP file to auto-populate the system.
+                                   <ul className="list-disc pl-4 mt-2 space-y-1 text-[10px] text-slate-500 font-bold">
+                                       <li>Folder Structure: <code>Brand/Category/Product/</code></li>
+                                       <li>Place images (.jpg/.png) & manuals (.pdf) inside product folders.</li>
+                                       <li>Images & PDFs are uploaded to Cloud Storage sequentially.</li>
+                                   </ul>
+                               </div>
+                               <label className={`w-full py-4 ${importProcessing ? 'bg-slate-300 cursor-wait' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl relative overflow-hidden`}>
+                                   {importProcessing ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16} />} 
+                                   <span className="relative z-10">{importProcessing ? importProgress || 'Processing...' : 'Import Data from ZIP'}</span>
+                                   <input 
+                                     type="file" 
+                                     accept=".zip" 
+                                     className="hidden" 
+                                     disabled={importProcessing}
+                                     onChange={async (e) => {
+                                         if(e.target.files && e.target.files[0]) {
+                                             if(confirm("This will merge imported data into your current inventory. Continue?")) {
+                                                 setImportProcessing(true);
+                                                 setImportProgress('Initializing...');
+                                                 try {
+                                                     const newBrands = await importZip(e.target.files[0], (msg) => setImportProgress(msg));
+                                                     // Merge Logic: Add new brands, or merge categories if brand exists
+                                                     let mergedBrands = [...localData.brands];
+                                                     
+                                                     newBrands.forEach(nb => {
+                                                         const existingBrandIndex = mergedBrands.findIndex(b => b.name === nb.name);
+                                                         if (existingBrandIndex > -1) {
+                                                             // Merge Brand Assets if present
+                                                             if (nb.logoUrl) {
+                                                                 mergedBrands[existingBrandIndex].logoUrl = nb.logoUrl;
+                                                             }
+                                                             if (nb.themeColor) {
+                                                                 mergedBrands[existingBrandIndex].themeColor = nb.themeColor;
+                                                             }
 
-      {editingTVModel && selectedTVBrand && (
-          <TVModelEditor 
-              model={editingTVModel} 
-              onSave={(updated) => {
-                  const updatedBrands = localData!.tv!.brands.map(b => {
-                      if (b.id === selectedTVBrand.id) {
-                          const exists = b.models.find(m => m.id === updated.id);
-                          return {
-                              ...b,
-                              models: exists ? b.models.map(m => m.id === updated.id ? updated : m) : [...b.models, updated]
-                          };
-                      }
-                      return b;
-                  });
-                  handleLocalUpdate({ ...localData!, tv: { brands: updatedBrands } });
-                  setEditingTVModel(null);
-              }}
-              onClose={() => setEditingTVModel(null)}
-          />
-      )}
+                                                             // Merge Categories
+                                                             nb.categories.forEach(nc => {
+                                                                 const existingCatIndex = mergedBrands[existingBrandIndex].categories.findIndex(c => c.name === nc.name);
+                                                                 if (existingCatIndex > -1) {
+                                                                     // Merge Products
+                                                                     const existingProducts = mergedBrands[existingBrandIndex].categories[existingCatIndex].products;
+                                                                     // Add only new products based on name
+                                                                     const uniqueNewProducts = nc.products.filter(np => !existingProducts.find(ep => ep.name === np.name));
+                                                                     mergedBrands[existingBrandIndex].categories[existingCatIndex].products = [...existingProducts, ...uniqueNewProducts];
+                                                                 } else {
+                                                                     mergedBrands[existingBrandIndex].categories.push(nc);
+                                                                 }
+                                                             });
+                                                         } else {
+                                                             mergedBrands.push(nb);
+                                                         }
+                                                     });
+                                                     
+                                                     handleLocalUpdate({ ...localData, brands: mergedBrands });
+                                                     alert(`Import Successful! Processed ${newBrands.length} brands.`);
+                                                 } catch(err) {
+                                                     console.error(err);
+                                                     alert("Failed to read ZIP file. Ensure structure is correct.");
+                                                 } finally {
+                                                     setImportProcessing(false);
+                                                     setImportProgress('');
+                                                 }
+                                             }
+                                         }
+                                     }}
+                                   />
+                               </label>
+                           </div>
+                       </div>
+                   </div>
 
-      {editingKiosk && (
-          <KioskEditorModal 
-            kiosk={editingKiosk} 
-            onSave={(updated) => {
-                updateFleetMember(updated);
-                setEditingKiosk(null);
-            }} 
-            onClose={() => setEditingKiosk(null)} 
-          />
-      )}
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><UserCog size={20} className="text-blue-500"/> Admin Access Control</h3><AdminManager admins={localData.admins || []} onUpdate={(admins) => handleLocalUpdate({ ...localData, admins })} currentUser={currentUser} /></div>
+
+                   <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg text-white">
+                        <div className="flex items-center gap-3 mb-6"><CloudLightning size={24} className="text-yellow-400" /><h3 className="font-black uppercase text-sm tracking-wider">System Operations</h3></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <button onClick={() => setShowGuide(true)} className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors border border-slate-600"><BookOpen size={24} className="text-blue-400"/><div className="text-left"><div className="font-bold text-sm">Setup Guide</div><div className="text-[10px] text-slate-400 font-mono uppercase">Docs & Scripts</div></div></button>
+                             <button onClick={async () => { if(confirm("WARNING: This will wipe ALL local data and reset to defaults. Continue?")) { const d = await resetStoreData(); setLocalData(d); window.location.reload(); } }} className="p-4 bg-red-900/30 hover:bg-red-900/50 rounded-xl flex items-center gap-3 transition-colors border border-red-900/50 text-red-300"><AlertCircle size={24} /><div className="text-left"><div className="font-bold text-sm">Factory Reset</div><div className="text-[10px] text-red-400 font-mono uppercase">Clear Local Data</div></div></button>
+                        </div>
+                   </div>
+               </div>
+            )}
+        </main>
+
+        {editingProduct && (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in">
+                <ProductEditor product={editingProduct} onSave={(p) => { 
+                    if (!selectedBrand || !selectedCategory) return;
+                    if (p.sku && checkSkuDuplicate(p.sku, p.id)) { alert(`SKU "${p.sku}" is already used by another product.`); return; }
+                    const isNew = !selectedCategory.products.find(x => x.id === p.id);
+                    const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x);
+                    const updatedCat = { ...selectedCategory, products: newProducts };
+                    const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) };
+                    handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b) });
+                    setEditingProduct(null);
+                }} onCancel={() => setEditingProduct(null)} />
+            </div>
+        )}
+
+        {movingProduct && (
+            <MoveProductModal product={movingProduct} allBrands={brands} currentBrandId={selectedBrand?.id || ''} currentCategoryId={selectedCategory?.id || ''} onClose={() => setMovingProduct(null)} onMove={(product, targetBrand, targetCategory) => handleMoveProduct(product, targetBrand, targetCategory)} />
+        )}
+
+        {editingKiosk && (
+            <KioskEditorModal kiosk={editingKiosk} onSave={(k) => { updateFleetMember(k); setEditingKiosk(null); }} onClose={() => setEditingKiosk(null)} />
+        )}
+        
+        {editingTVModel && (
+            <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updatedTVBrand : b) } as TVConfig }); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />
+        )}
+        
+        {showGuide && <SetupGuide onClose={() => setShowGuide(false)} />}
+        
     </div>
   );
 };
