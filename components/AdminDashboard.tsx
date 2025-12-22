@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -976,6 +975,32 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
     setItems(items.map(item => item.id === id ? { ...item, [field]: val } : item));
   };
 
+  const handlePriceBlur = (id: string, field: 'normalPrice' | 'promoPrice', value: string) => {
+    if (!value) return;
+    
+    // Extract only numbers
+    const numericPart = value.replace(/[^0-9]/g, '');
+    if (!numericPart) {
+        // If not a number but has text, just prepend R if needed
+        if (value && !value.startsWith('R ')) {
+            updateItem(id, field, `R ${value}`);
+        }
+        return;
+    }
+
+    let num = parseInt(numericPart);
+    
+    // Auto round up logic: round to the nearest 10 if not already a multiple of 10
+    // This handles the user examples: 799 -> 800, 4499 -> 4500
+    if (num % 10 !== 0) {
+        num = Math.ceil(num / 10) * 10;
+    }
+    
+    // Format back with R and grouping
+    const formatted = `R ${num.toLocaleString()}`;
+    updateItem(id, field, formatted);
+  };
+
   const removeItem = (id: string) => {
     setItems(items.filter(item => item.id !== id));
   };
@@ -1018,13 +1043,27 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
 
         const dataRows = hasHeader ? validRows.slice(1) : validRows;
         
-        const newItems: PricelistItem[] = dataRows.map(row => ({
-            id: generateId('imp'),
-            sku: String(row[0] || '').trim().toUpperCase(),
-            description: String(row[1] || '').trim(),
-            normalPrice: String(row[2] || '').trim(),
-            promoPrice: String(row[3] || '').trim()
-        }));
+        const newItems: PricelistItem[] = dataRows.map(row => {
+            // Apply R and rounding to imported prices too
+            const rawNormal = String(row[2] || '').trim();
+            const rawPromo = String(row[3] || '').trim();
+            
+            const formatImported = (val: string) => {
+                const numeric = val.replace(/[^0-9]/g, '');
+                if (!numeric) return val;
+                let n = parseInt(numeric);
+                if (n % 10 !== 0) n = Math.ceil(n / 10) * 10;
+                return `R ${n.toLocaleString()}`;
+            };
+
+            return {
+                id: generateId('imp'),
+                sku: String(row[0] || '').trim().toUpperCase(),
+                description: String(row[1] || '').trim(),
+                normalPrice: formatImported(rawNormal),
+                promoPrice: rawPromo ? formatImported(rawPromo) : ''
+            };
+        });
 
         if (newItems.length > 0) {
             const message = `Successfully parsed ${newItems.length} items. \n\nReplace current list or Append?`;
@@ -1072,7 +1111,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
           <div className="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center gap-3">
               <Info size={18} className="text-blue-500 shrink-0" />
               <p className="text-[10px] text-blue-800 font-bold uppercase leading-tight">
-                  Import Tip: Use columns in this order: SKU, Description, Normal Price, Promo Price. Supports .xlsx, .xls and .csv.
+                  Price Tip: Typing a number will auto-add 'R' and round up to the nearest 10 (e.g. 799 → 800) when you finish editing the cell.
               </p>
           </div>
 
@@ -1091,8 +1130,8 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="p-2"><input value={item.sku} onChange={(e) => updateItem(item.id, 'sku', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="SKU-123" /></td>
                   <td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none text-sm" placeholder="Product details..." /></td>
-                  <td className="p-2"><input value={item.normalPrice} onChange={(e) => updateItem(item.id, 'normalPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-black text-sm" placeholder="R 999" /></td>
-                  <td className="p-2"><input value={item.promoPrice} onChange={(e) => updateItem(item.id, 'promoPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-red-500 outline-none font-black text-sm text-red-600" placeholder="R 799" /></td>
+                  <td className="p-2"><input value={item.normalPrice} onBlur={(e) => handlePriceBlur(item.id, 'normalPrice', e.target.value)} onChange={(e) => updateItem(item.id, 'normalPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-black text-sm" placeholder="R 999" /></td>
+                  <td className="p-2"><input value={item.promoPrice} onBlur={(e) => handlePriceBlur(item.id, 'promoPrice', e.target.value)} onChange={(e) => updateItem(item.id, 'promoPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-red-500 outline-none font-black text-sm text-red-600" placeholder="R 799" /></td>
                   <td className="p-2 text-center">
                     <button onClick={() => removeItem(item.id)} className="p-2 text-red-400 hover:text-red-600 transition-colors"><Trash2 size={16}/></button>
                   </td>
