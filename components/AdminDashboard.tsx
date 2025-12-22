@@ -790,25 +790,202 @@ const PricelistManager = ({ pricelists, pricelistBrands, onSavePricelists, onSav
 };
 
 const ProductEditor = ({ product, onSave, onCancel }: { product: Product, onSave: (p: Product) => void, onCancel: () => void }) => {
-    const [draft, setDraft] = useState<Product>({ ...product, dimensions: Array.isArray(product.dimensions) ? product.dimensions : (product.dimensions ? [{label: "Device", ...(product.dimensions as any)}] : []), videoUrls: product.videoUrls || (product.videoUrl ? [product.videoUrl] : []), manuals: product.manuals || [], dateAdded: product.dateAdded || new Date().toISOString() });
-    const [newFeature, setNewFeature] = useState(''); const [newBoxItem, setNewBoxItem] = useState(''); const [newSpecKey, setNewSpecKey] = useState(''); const [newSpecValue, setNewSpecValue] = useState('');
+    const [draft, setDraft] = useState<Product>({ 
+      ...product, 
+      dimensions: Array.isArray(product.dimensions) ? product.dimensions : (product.dimensions ? [{label: "Device", ...(product.dimensions as any)}] : []), 
+      videoUrls: product.videoUrls || (product.videoUrl ? [product.videoUrl] : []), 
+      manuals: product.manuals || [], 
+      dateAdded: product.dateAdded || new Date().toISOString(),
+      boxContents: product.boxContents || [],
+      specs: product.specs || {}
+    });
+    
+    const [newFeature, setNewFeature] = useState(''); 
+    const [newBoxItem, setNewBoxItem] = useState(''); 
+    const [newSpecKey, setNewSpecKey] = useState(''); 
+    const [newSpecValue, setNewSpecValue] = useState('');
+    const [newVideoUrl, setNewVideoUrl] = useState('');
+
     const addFeature = () => { if (newFeature.trim()) { setDraft({ ...draft, features: [...draft.features, newFeature.trim()] }); setNewFeature(''); } };
     const addBoxItem = () => { if(newBoxItem.trim()) { setDraft({ ...draft, boxContents: [...(draft.boxContents || []), newBoxItem.trim()] }); setNewBoxItem(''); } };
     const addSpec = () => { if (newSpecKey.trim() && newSpecValue.trim()) { setDraft({ ...draft, specs: { ...draft.specs, [newSpecKey.trim()]: newSpecValue.trim() } }); setNewSpecKey(''); setNewSpecValue(''); } };
+    const removeSpec = (key: string) => { const newSpecs = { ...draft.specs }; delete newSpecs[key]; setDraft({ ...draft, specs: newSpecs }); };
+    
     const addDimensionSet = () => setDraft({ ...draft, dimensions: [...draft.dimensions, { label: "New Set", width: "", height: "", depth: "", weight: "" }] });
     const updateDimension = (index: number, field: keyof DimensionSet, value: string) => { const newDims = [...draft.dimensions]; newDims[index] = { ...newDims[index], [field]: value }; setDraft({ ...draft, dimensions: newDims }); };
     const removeDimension = (index: number) => setDraft({ ...draft, dimensions: draft.dimensions.filter((_, i) => i !== index) });
+    
     const addManual = () => setDraft({ ...draft, manuals: [...(draft.manuals || []), { id: generateId('man'), title: "New Manual", images: [], pdfUrl: '', thumbnailUrl: '' }] });
     const removeManual = (id: string) => setDraft({ ...draft, manuals: (draft.manuals || []).filter(m => m.id !== id) });
     const updateManual = (id: string, updates: Partial<Manual>) => setDraft({ ...draft, manuals: (draft.manuals || []).map(m => m.id === id ? { ...m, ...updates } : m) });
+
     return (
-        <div className="flex flex-col h-full bg-white rounded-2xl overflow-hidden shadow-2xl">
-            <div className="bg-slate-900 text-white p-4 flex justify-between items-center shrink-0"><h3 className="font-bold uppercase tracking-wide">Edit: {draft.name || 'New Product'}</h3><button onClick={onCancel} className="text-slate-400 hover:text-white"><X size={24} /></button></div>
-            <div className="flex-1 overflow-y-auto p-8 pb-20"><div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-4"><InputField label="Name" val={draft.name} onChange={(e: any) => setDraft({ ...draft, name: e.target.value })} /><InputField label="SKU" val={draft.sku || ''} onChange={(e: any) => setDraft({ ...draft, sku: e.target.value })} /><InputField label="Description" isArea val={draft.description} onChange={(e: any) => setDraft({ ...draft, description: e.target.value })} /><InputField label="Warranty" isArea val={draft.terms || ''} onChange={(e: any) => setDraft({ ...draft, terms: e.target.value })} /><div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><div className="flex justify-between items-center mb-4"><label className="text-[10px] font-black text-slate-500 uppercase">Dimensions</label><button onClick={addDimensionSet} className="text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-bold uppercase"><Plus size={10}/> Add</button></div>{draft.dimensions.map((dim, idx) => (<div key={idx} className="mb-4 bg-white p-3 rounded-lg border border-slate-200 relative"><button onClick={() => removeDimension(idx)} className="absolute top-2 right-2 text-red-400"><Trash2 size={12}/></button><input value={dim.label || ''} onChange={(e) => updateDimension(idx, 'label', e.target.value)} placeholder="Label" className="w-full text-xs font-black uppercase mb-2 border-b border-transparent focus:border-blue-500 outline-none" /><div className="grid grid-cols-2 gap-2"><InputField label="Height" val={dim.height} onChange={(e:any) => updateDimension(idx, 'height', e.target.value)} half /><InputField label="Width" val={dim.width} onChange={(e:any) => updateDimension(idx, 'width', e.target.value)} half /></div></div>))}</div></div><div className="space-y-4"><FileUpload label="Main Image" currentUrl={draft.imageUrl} onUpload={(url: any) => setDraft({ ...draft, imageUrl: url as string })} /><div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Gallery</label><FileUpload label="Add" allowMultiple onUpload={(urls: any) => setDraft(prev => ({ ...prev, galleryUrls: [...(prev.galleryUrls || []), ...(Array.isArray(urls)?urls:[urls])] }))} /></div><div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><label className="block text-[10px] font-black text-slate-500 uppercase mb-2">Features</label><div className="flex gap-2 mb-2"><input value={newFeature} onChange={(e) => setNewFeature(e.target.value)} className="flex-1 p-2 border rounded-lg text-sm" placeholder="Add..." onKeyDown={(e) => e.key === 'Enter' && addFeature()} /><button onClick={addFeature} className="p-2 bg-blue-600 text-white rounded-lg"><Plus size={16} /></button></div><ul className="space-y-1">{draft.features.map((f, i) => (<li key={i} className="flex justify-between bg-white p-2 rounded border border-slate-100 text-xs font-bold text-slate-700">{f}<button onClick={() => setDraft({...draft, features: draft.features.filter((_, ix) => ix !== i)})} className="text-red-400"><Trash2 size={12}/></button></li>))}</ul></div></div></div></div>
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-4 shrink-0"><button onClick={onCancel} className="px-6 py-3 font-bold text-slate-500 uppercase text-xs">Cancel</button><button onClick={() => onSave(draft)} className="px-6 py-3 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg">Confirm</button></div>
+        <div className="flex flex-col h-full bg-white rounded-2xl overflow-hidden shadow-2xl w-full max-w-6xl">
+            <div className="bg-slate-900 text-white p-4 flex justify-between items-center shrink-0">
+                <h3 className="font-bold uppercase tracking-wide">Product Forge: {draft.name || 'Unidentified Item'}</h3>
+                <button onClick={onCancel} className="text-slate-400 hover:text-white p-2 transition-colors"><X size={24} /></button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-12 pb-32">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    {/* Column 1: Core Details */}
+                    <div className="space-y-6">
+                        <SectionHeader icon={<Info size={16}/>}>General Information</SectionHeader>
+                        <InputField label="Product Name" val={draft.name} onChange={(e: any) => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. iPhone 15 Pro Max" />
+                        <InputField label="SKU Code" val={draft.sku || ''} onChange={(e: any) => setDraft({ ...draft, sku: e.target.value })} placeholder="e.g. APL-IP15-PM-256" />
+                        <InputField label="Marketing Description" isArea val={draft.description} onChange={(e: any) => setDraft({ ...draft, description: e.target.value })} placeholder="Compelling sales copy..." />
+                        <InputField label="Warranty & Terms" isArea val={draft.terms || ''} onChange={(e: any) => setDraft({ ...draft, terms: e.target.value })} placeholder="Warranty details, T&Cs..." />
+
+                        <SectionHeader icon={<Ruler size={16}/>}>Physical Dimensions</SectionHeader>
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Measurement Sets</p>
+                                <button onClick={addDimensionSet} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase flex items-center gap-1 shadow-md hover:bg-blue-500"><Plus size={14}/> Add Set</button>
+                            </div>
+                            {draft.dimensions.map((dim, idx) => (
+                                <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 relative shadow-sm">
+                                    <button onClick={() => removeDimension(idx)} className="absolute top-3 right-3 text-red-400 hover:text-red-600 p-1"><Trash2 size={16}/></button>
+                                    <div className="mb-4">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">Label (e.g. Device, Box)</label>
+                                        <input value={dim.label || ''} onChange={(e) => updateDimension(idx, 'label', e.target.value)} placeholder="Device" className="w-full text-xs font-black uppercase border-b-2 border-slate-100 focus:border-blue-500 outline-none pb-1" />
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <InputField label="Height" val={dim.height} onChange={(e:any) => updateDimension(idx, 'height', e.target.value)} placeholder="150mm" />
+                                        <InputField label="Width" val={dim.width} onChange={(e:any) => updateDimension(idx, 'width', e.target.value)} placeholder="70mm" />
+                                        <InputField label="Depth" val={dim.depth} onChange={(e:any) => updateDimension(idx, 'depth', e.target.value)} placeholder="8mm" />
+                                        <InputField label="Weight" val={dim.weight} onChange={(e:any) => updateDimension(idx, 'weight', e.target.value)} placeholder="200g" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Column 2: Media & Lists */}
+                    <div className="space-y-6">
+                        <SectionHeader icon={<ImageIcon size={16}/>}>Visual Assets</SectionHeader>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FileUpload label="Master Image" currentUrl={draft.imageUrl} onUpload={(url: any) => setDraft({ ...draft, imageUrl: url as string })} />
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase">Gallery Extension</label>
+                                <FileUpload label="Append Multi" allowMultiple onUpload={(urls: any) => setDraft(prev => ({ ...prev, galleryUrls: [...(prev.galleryUrls || []), ...(Array.isArray(urls)?urls:[urls])] }))} />
+                            </div>
+                        </div>
+                        {draft.galleryUrls && draft.galleryUrls.length > 0 && (
+                            <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                {draft.galleryUrls.map((url, i) => (
+                                    <div key={i} className="w-12 h-12 relative rounded border bg-white p-1">
+                                        <img src={url} className="w-full h-full object-contain" />
+                                        <button onClick={() => setDraft({ ...draft, galleryUrls: draft.galleryUrls!.filter((_, idx) => idx !== i) })} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 shadow-sm"><X size={8}/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <SectionHeader icon={<Video size={16}/>}>Video Resources</SectionHeader>
+                        <div className="space-y-3">
+                            <div className="flex gap-2">
+                                <input value={newVideoUrl} onChange={(e) => setNewVideoUrl(e.target.value)} placeholder="Paste MP4 URL..." className="flex-1 p-3 bg-slate-50 border rounded-xl text-xs font-mono" />
+                                <button onClick={() => { if(newVideoUrl) { setDraft({...draft, videoUrls: [...(draft.videoUrls || []), newVideoUrl]}); setNewVideoUrl(''); } }} className="bg-blue-600 text-white p-3 rounded-xl"><Plus size={18}/></button>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                {(draft.videoUrls || []).map((url, i) => (
+                                    <div key={i} className="flex items-center justify-between p-2 bg-slate-50 border rounded-lg text-[10px] font-mono group">
+                                        <span className="truncate flex-1 pr-4">{url}</span>
+                                        <button onClick={() => setDraft({ ...draft, videoUrls: draft.videoUrls!.filter((_, idx) => idx !== i) })} className="text-red-400 group-hover:text-red-600"><Trash2 size={12}/></button>
+                                    </div>
+                                ))}
+                            </div>
+                            <FileUpload label="Direct Upload" accept="video/*" onUpload={(url: any) => setDraft(prev => ({ ...prev, videoUrls: [...(prev.videoUrls || []), url] }))} />
+                        </div>
+
+                        <SectionHeader icon={<Layers size={16}/>}>Technical Specs</SectionHeader>
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4">
+                            <div className="flex gap-2">
+                                <input value={newSpecKey} onChange={(e) => setNewSpecKey(e.target.value)} className="w-1/3 p-2 bg-white border rounded-lg text-xs font-bold uppercase" placeholder="Key (e.g. CPU)" />
+                                <input value={newSpecValue} onChange={(e) => setNewSpecValue(e.target.value)} className="flex-1 p-2 bg-white border rounded-lg text-xs" placeholder="Value (e.g. M3 Max)" />
+                                <button onClick={addSpec} className="p-2 bg-slate-900 text-white rounded-lg"><Plus size={16}/></button>
+                            </div>
+                            <div className="space-y-2">
+                                {Object.entries(draft.specs).map(([k, v]) => (
+                                    <div key={k} className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-200 text-[11px] group">
+                                        <div className="flex gap-2"><span className="font-black text-slate-400 uppercase">{k}:</span><span className="font-bold text-slate-800">{v}</span></div>
+                                        <button onClick={() => removeSpec(k)} className="text-red-300 group-hover:text-red-500"><Trash2 size={14}/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom Full-Width Sections */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="space-y-4">
+                        <SectionHeader icon={<Check size={16}/>}>Feature Bulletpoints</SectionHeader>
+                        <div className="flex gap-2 mb-2">
+                            <input value={newFeature} onChange={(e) => setNewFeature(e.target.value)} className="flex-1 p-3 bg-slate-50 border rounded-xl text-sm" placeholder="Key feature..." onKeyDown={(e) => e.key === 'Enter' && addFeature()} />
+                            <button onClick={addFeature} className="p-3 bg-blue-600 text-white rounded-xl shadow-md"><Plus size={20} /></button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            {draft.features.map((f, i) => (
+                                <div key={i} className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 group">
+                                    <span className="text-xs font-bold text-slate-700">{f}</span>
+                                    <button onClick={() => setDraft({...draft, features: draft.features.filter((_, ix) => ix !== i)})} className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <SectionHeader icon={<Package size={16}/>}>Box Contents</SectionHeader>
+                        <div className="flex gap-2 mb-2">
+                            <input value={newBoxItem} onChange={(e) => setNewBoxItem(e.target.value)} className="flex-1 p-3 bg-slate-50 border rounded-xl text-sm" placeholder="Item in box..." onKeyDown={(e) => e.key === 'Enter' && addBoxItem()} />
+                            <button onClick={addBoxItem} className="p-3 bg-orange-500 text-white rounded-xl shadow-md"><Plus size={20} /></button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            {(draft.boxContents || []).map((f, i) => (
+                                <div key={i} className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 group">
+                                    <span className="text-xs font-bold text-slate-700">{f}</span>
+                                    <button onClick={() => setDraft({...draft, boxContents: draft.boxContents!.filter((_, ix) => ix !== i)})} className="text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <SectionHeader icon={<BookOpen size={16}/>}>Product Documentation</SectionHeader>
+                    <div className="flex justify-end"><button onClick={addManual} className="bg-slate-900 text-white px-4 py-2 rounded-xl font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><Plus size={16}/> New Manual</button></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {(draft.manuals || []).map(man => (
+                            <div key={man.id} className="bg-white border-2 border-slate-100 rounded-2xl p-4 flex flex-col gap-3 relative shadow-sm">
+                                <button onClick={() => removeManual(man.id)} className="absolute top-2 right-2 text-red-400 hover:text-red-600"><Trash2 size={16}/></button>
+                                <input value={man.title} onChange={(e) => updateManual(man.id, { title: e.target.value })} className="font-black text-slate-900 border-b border-transparent focus:border-blue-500 outline-none uppercase text-xs pb-1 pr-8" placeholder="Manual Name" />
+                                <div className="grid grid-cols-2 gap-2">
+                                    <FileUpload label="Thumbnail" currentUrl={man.thumbnailUrl} onUpload={(url: any) => updateManual(man.id, { thumbnailUrl: url })} />
+                                    <FileUpload label="PDF / Doc" accept="application/pdf" icon={<FileText/>} currentUrl={man.pdfUrl} onUpload={(url: any) => updateManual(man.id, { pdfUrl: url })} />
+                                </div>
+                                <FileUpload label="Gallery Pages (Multi)" allowMultiple onUpload={(urls: any) => updateManual(man.id, { images: [...(man.images || []), ...(Array.isArray(urls)?urls:[urls])] })} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+            
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end items-center gap-4 shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+                <div className="mr-auto text-[10px] font-mono text-slate-400 uppercase tracking-widest">Last Modified: {new Date().toLocaleDateString()}</div>
+                <button onClick={onCancel} className="px-8 py-4 font-black text-slate-500 uppercase text-xs tracking-widest transition-colors hover:text-slate-800">Abort Changes</button>
+                <button onClick={() => onSave(draft)} className="px-10 py-4 bg-blue-600 text-white font-black uppercase text-xs tracking-[0.2em] rounded-2xl shadow-xl shadow-blue-900/20 hover:bg-blue-500 transition-all hover:scale-105 active:scale-95">Deploy to Fleet</button>
+            </div>
         </div>
     );
 };
+
+const SectionHeader = ({ children, icon }: any) => (
+    <div className="flex items-center gap-3 border-b-2 border-slate-100 pb-2 mb-4">
+        <div className="text-blue-600">{icon}</div>
+        <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">{children}</h4>
+    </div>
+);
 
 const KioskEditorModal = ({ kiosk, onSave, onClose }: { kiosk: KioskRegistry, onSave: (k: KioskRegistry) => void, onClose: () => void }) => {
     const [draft, setDraft] = useState({ ...kiosk });
@@ -872,21 +1049,69 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [importProcessing, setImportProcessing] = useState(false);
   const [importProgress, setImportProgress] = useState<string>('');
   const [exportProcessing, setExportProcessing] = useState(false);
+  
   const availableTabs = [{ id: 'inventory', label: 'Inventory', icon: Box }, { id: 'marketing', label: 'Marketing', icon: Megaphone }, { id: 'pricelists', label: 'Pricelists', icon: RIcon }, { id: 'tv', label: 'TV', icon: Tv }, { id: 'screensaver', label: 'Screensaver', icon: Monitor }, { id: 'fleet', label: 'Fleet', icon: Tablet }, { id: 'history', label: 'History', icon: History }, { id: 'settings', label: 'Settings', icon: Settings }, { id: 'guide', label: 'System Guide', icon: BookOpen }].filter(tab => tab.id === 'guide' || currentUser?.permissions[tab.id as keyof AdminPermissions]);
+  
   useEffect(() => { if (currentUser && availableTabs.length > 0 && !availableTabs.find(t => t.id === activeTab)) setActiveTab(availableTabs[0].id); }, [currentUser]);
   useEffect(() => { checkCloudConnection().then(setIsCloudConnected); const interval = setInterval(() => checkCloudConnection().then(setIsCloudConnected), 30000); return () => clearInterval(interval); }, []);
   useEffect(() => { if (!hasUnsavedChanges && storeData) setLocalData(storeData); }, [storeData]);
   useEffect(() => { const handleBeforeUnload = (e: BeforeUnloadEvent) => { if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; } }; window.addEventListener('beforeunload', handleBeforeUnload); return () => window.removeEventListener('beforeunload', handleBeforeUnload); }, [hasUnsavedChanges]);
-  const handleLocalUpdate = (newData: StoreData) => { setLocalData(newData); setHasUnsavedChanges(true); if (selectedBrand) { const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id); if (updatedBrand) setSelectedBrand(updatedBrand); } if (selectedCategory && selectedBrand) { const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id); const updatedCat = updatedBrand?.categories.find(c => c.id === selectedCategory.id); if (updatedCat) setSelectedCategory(updatedCat); } if (selectedTVBrand && newData.tv) { const updatedTVBrand = newData.tv.brands.find(b => b.id === selectedTVBrand.id); if (updatedTVBrand) setSelectedTVBrand(updatedTVBrand); } };
-  const checkSkuDuplicate = (sku: string, currentId: string) => { if (!sku || !localData) return false; for (const b of localData.brands) { for (const c of b.categories) { for (const p of c.products) { if (p.sku && p.sku.toLowerCase() === sku.toLowerCase() && p.id !== currentId) return true; } } } return false; };
+  
+  const handleLocalUpdate = (newData: StoreData) => { 
+    setLocalData(newData); 
+    setHasUnsavedChanges(true); 
+    if (selectedBrand) { 
+        const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id); 
+        if (updatedBrand) setSelectedBrand(updatedBrand); 
+    } 
+    if (selectedCategory && selectedBrand) { 
+        const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id); 
+        const updatedCat = updatedBrand?.categories.find(c => c.id === selectedCategory.id); 
+        if (updatedCat) setSelectedCategory(updatedCat); 
+    } 
+    if (selectedTVBrand && newData.tv) { 
+        const updatedTVBrand = newData.tv.brands.find(b => b.id === selectedTVBrand.id); 
+        if (updatedTVBrand) setSelectedTVBrand(updatedTVBrand); 
+    } 
+  };
+
   const handleGlobalSave = () => { if (localData) { onUpdateData(localData); setHasUnsavedChanges(false); } };
-  const updateFleetMember = async (kiosk: KioskRegistry) => { if(supabase) { await supabase.from('kiosks').upsert({ id: kiosk.id, name: kiosk.name, device_type: kiosk.deviceType, assigned_zone: kiosk.assignedZone }); onRefresh(); } };
-  const removeFleetMember = async (id: string) => { const kiosk = localData?.fleet?.find(f => f.id === id); if(!kiosk) return; if(confirm(`Archive and remove device "${kiosk.name}"?`) && supabase) { const newArchive = addToArchive('device', kiosk.name, kiosk); const updatedData = { ...localData!, archive: newArchive }; await supabase.from('kiosks').delete().eq('id', id); onUpdateData(updatedData); onRefresh(); } };
-  const addToArchive = (type: 'product' | 'pricelist' | 'tv_model' | 'device' | 'other', name: string, data: any) => { if (!localData) return; const now = new Date().toISOString(); const newItem = { id: generateId('arch'), type, name, data, deletedAt: now }; const currentArchive = localData.archive || { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }; return { ...currentArchive, deletedItems: [newItem, ...(currentArchive.deletedItems || [])] }; };
-  const restoreBrand = (b: Brand) => { if(!localData) return; const newArchiveBrands = localData.archive?.brands.filter(x => x.id !== b.id) || []; const newBrands = [...localData.brands, b]; handleLocalUpdate({ ...localData, brands: newBrands, archive: { ...localData.archive!, brands: newArchiveBrands } }); };
-  const restoreCatalogue = (c: Catalogue) => { if(!localData) return; const newArchiveCats = localData.archive?.catalogues.filter(x => x.id !== c.id) || []; const newCats = [...(localData.catalogues || []), c]; handleLocalUpdate({ ...localData, catalogues: newCats, archive: { ...localData.archive!, catalogues: newArchiveCats } }); };
-  const handleMoveProduct = (product: Product, targetBrandId: string, targetCategoryId: string) => { if (!localData || !selectedBrand || !selectedCategory) return; const updatedSourceCat = { ...selectedCategory, products: selectedCategory.products.filter(p => p.id !== product.id) }; let newBrands = localData.brands.map(b => { if (b.id === selectedBrand.id) return { ...b, categories: b.categories.map(c => c.id === selectedCategory.id ? updatedSourceCat : c) }; return b; }); newBrands = newBrands.map(b => { if (b.id === targetBrandId) return { ...b, categories: b.categories.map(c => c.id === targetCategoryId ? { ...c, products: [...c.products, product] } : c) }; return b; }); handleLocalUpdate({ ...localData, brands: newBrands }); setMovingProduct(null); };
-  const formatRelativeTime = (isoString: string) => { if (!isoString) return 'Unknown'; const date = new Date(isoString); const now = new Date(); const diffDays = Math.floor(Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)); if (diffDays === 0) return 'Today'; if (diffDays === 1) return 'Yesterday'; if (diffDays < 7) return `${diffDays} days ago`; return date.toLocaleDateString(); };
+  
+  const addToArchive = (type: 'product' | 'pricelist' | 'tv_model' | 'device' | 'other', name: string, data: any) => { 
+    if (!localData) return; 
+    const now = new Date().toISOString(); 
+    const newItem = { id: generateId('arch'), type, name, data, deletedAt: now }; 
+    const currentArchive = localData.archive || { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }; 
+    return { ...currentArchive, deletedItems: [newItem, ...(currentArchive.deletedItems || [])] }; 
+  };
+
+  const handleDeleteProduct = (product: Product) => {
+    if (!confirm(`Delete ${product.name}? This will move it to archive.`)) return;
+    if (!selectedCategory || !selectedBrand || !localData) return;
+    
+    const updatedCat = { ...selectedCategory, products: selectedCategory.products.filter(p => p.id !== product.id) };
+    const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === selectedCategory.id ? updatedCat : c) };
+    const newBrands = localData.brands.map(b => b.id === selectedBrand.id ? updatedBrand : b);
+    
+    const newArchive = addToArchive('product', product.name, product);
+    handleLocalUpdate({ ...localData, brands: newBrands, archive: newArchive });
+  };
+
+  const handleMoveProduct = (product: Product, targetBrandId: string, targetCategoryId: string) => { 
+    if (!localData || !selectedBrand || !selectedCategory) return; 
+    const updatedSourceCat = { ...selectedCategory, products: selectedCategory.products.filter(p => p.id !== product.id) }; 
+    let newBrands = localData.brands.map(b => { 
+        if (b.id === selectedBrand.id) return { ...b, categories: b.categories.map(c => c.id === selectedCategory.id ? updatedSourceCat : c) }; 
+        return b; 
+    }); 
+    newBrands = newBrands.map(b => { 
+        if (b.id === targetBrandId) return { ...b, categories: b.categories.map(c => c.id === targetCategoryId ? { ...c, products: [...c.products, product] } : c) }; 
+        return b; 
+    }); 
+    handleLocalUpdate({ ...localData, brands: newBrands }); 
+    setMovingProduct(null); 
+  };
+
   const importZip = async (file: File, onProgress?: (msg: string) => void): Promise<Brand[]> => {
     const zip = new JSZip(); const loadedZip = await zip.loadAsync(file); const newBrands: Record<string, Brand> = {};
     const getCleanPath = (filename: string) => filename.replace(/\\/g, '/');
@@ -910,34 +1135,144 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
         else if (lowerF.endsWith('.mp4')) prod.videoUrls?.push(await processAsset(loadedZip.files[rawPath], fileName));
     }
     return Object.values(newBrands);
-};
+  };
 
   if (!localData) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!currentUser) return <Auth admins={localData.admins || []} onLogin={setCurrentUser} />;
+  
   const brands = Array.isArray(localData.brands) ? [...localData.brands].sort((a, b) => a.name.localeCompare(b.name)) : [];
-  const tvBrands = Array.isArray(localData.tv?.brands) ? [...localData.tv!.brands].sort((a, b) => a.name.localeCompare(b.name)) : [];
-  const archivedBrands = (localData.archive?.brands || []).filter(b => b.name.toLowerCase().includes(historySearch.toLowerCase()));
-  const archivedGenericItems = (localData.archive?.deletedItems || []).filter(i => i.name.toLowerCase().includes(historySearch.toLowerCase()));
 
   return (
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
         <header className="bg-slate-900 text-white shrink-0 shadow-xl z-20">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
                  <div className="flex items-center gap-2"><Settings className="text-blue-500" size={24} /><div><h1 className="text-lg font-black uppercase tracking-widest leading-none">Admin Hub</h1></div></div>
-                 <div className="flex items-center gap-4"><button onClick={handleGlobalSave} disabled={!hasUnsavedChanges} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}><SaveAll size={16} />{hasUnsavedChanges ? 'Save Changes' : 'Saved'}</button></div>
-                 <div className="flex items-center gap-3"><div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>{isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}<span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span></div><button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button><button onClick={() => setCurrentUser(null)} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2"><LogOut size={16} /></button></div>
+                 <div className="flex items-center gap-4">
+                    <button onClick={handleGlobalSave} disabled={!hasUnsavedChanges} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}>
+                        <SaveAll size={16} />{hasUnsavedChanges ? 'Save Changes' : 'Saved'}
+                    </button>
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>
+                        {isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}
+                        <span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span>
+                    </div>
+                    <button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button>
+                    <button onClick={() => setCurrentUser(null)} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2"><LogOut size={16} /></button>
+                 </div>
             </div>
             <div className="flex overflow-x-auto no-scrollbar">{availableTabs.map(tab => (<button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-[100px] py-4 text-center text-xs font-black uppercase tracking-wider border-b-4 transition-all ${activeTab === tab.id ? 'border-blue-500 text-white bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>{tab.label}</button>))}</div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-2 md:p-8 relative pb-40 md:pb-8">
             {activeTab === 'guide' && <SystemDocumentation />}
-            {activeTab === 'inventory' && (!selectedBrand ? (<div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">{brands.map(brand => (<div key={brand.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all flex flex-col h-full"><div className="flex-1 bg-slate-50 flex items-center justify-center p-2 relative aspect-square">{brand.logoUrl ? <img src={brand.logoUrl} className="max-h-full max-w-full object-contain" /> : <span className="text-4xl font-black text-slate-200">{brand.name.charAt(0)}</span>}</div><div className="p-2 md:p-4"><h3 className="font-black text-slate-900 text-xs md:text-lg uppercase tracking-tight truncate mb-1">{brand.name}</h3><button onClick={() => setSelectedBrand(brand)} className="w-full bg-slate-900 text-white py-1.5 md:py-2 rounded-lg font-bold text-[10px] md:text-xs uppercase hover:bg-blue-600 transition-colors">Manage</button></div></div>))}</div>) : !selectedCategory ? (<div><div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-xl md:text-2xl font-black uppercase text-slate-900">{selectedBrand.name}</h2></div><div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">{selectedBrand.categories.map(cat => (<button key={cat.id} onClick={() => setSelectedCategory(cat)} className="bg-white p-2 md:p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md text-left aspect-square flex flex-col justify-center"><Box size={20} className="mb-2 text-slate-400 mx-auto md:mx-0" /><h3 className="font-black text-slate-900 uppercase text-[10px] md:text-sm text-center md:text-left truncate w-full">{cat.name}</h3></button>))}</div></div>) : (<div className="h-full flex flex-col"><div className="flex items-center gap-4 mb-6 shrink-0"><button onClick={() => setSelectedCategory(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-lg md:text-2xl font-black uppercase text-slate-900 flex-1 truncate">{selectedCategory.name}</h2></div><div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 overflow-y-auto pb-20">{selectedCategory.products.map(product => (<div key={product.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col group hover:shadow-lg transition-all"><div className="aspect-square bg-slate-50 relative flex items-center justify-center p-2 md:p-4">{product.imageUrl ? <img src={product.imageUrl} className="max-w-full max-h-full object-contain" /> : <Box size={24} className="text-slate-300" />}<div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2"><button onClick={() => setEditingProduct(product)} className="p-1.5 md:p-2 bg-white text-blue-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50">Edit</button></div></div><div className="p-2 md:p-4"><h4 className="font-bold text-slate-900 text-[10px] md:text-sm truncate uppercase">{product.name}</h4></div></div>))}</div></div>))}
+            
+            {activeTab === 'inventory' && (!selectedBrand ? (
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 animate-fade-in">
+                    {brands.map(brand => (
+                        <div key={brand.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all flex flex-col h-full group">
+                            <div className="flex-1 bg-slate-50 flex items-center justify-center p-6 relative aspect-square">
+                                {brand.logoUrl ? <img src={brand.logoUrl} className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform" /> : <span className="text-4xl font-black text-slate-200">{brand.name.charAt(0)}</span>}
+                            </div>
+                            <div className="p-4 border-t border-slate-50">
+                                <h3 className="font-black text-slate-900 text-sm md:text-base uppercase tracking-tight truncate mb-3">{brand.name}</h3>
+                                <button onClick={() => setSelectedBrand(brand)} className="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold text-[10px] md:text-xs uppercase hover:bg-blue-600 transition-colors shadow-lg">Manage Brand</button>
+                            </div>
+                        </div>
+                    ))}
+                    <button onClick={() => { const name = prompt("Brand Name?"); if(name) handleLocalUpdate({...localData, brands: [...localData.brands, {id: generateId('b'), name, categories: []}]}); }} className="bg-white border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-500 transition-all gap-2">
+                        <Plus size={32} />
+                        <span className="font-black uppercase text-xs">New Brand</span>
+                    </button>
+                </div>
+            ) : !selectedCategory ? (
+                <div className="animate-fade-in">
+                    <div className="flex items-center gap-4 mb-8">
+                        <button onClick={() => setSelectedBrand(null)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 shadow-sm"><ArrowLeft size={20} /></button>
+                        <div>
+                            <h2 className="text-2xl md:text-3xl font-black uppercase text-slate-900">{selectedBrand.name}</h2>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select Product Category</p>
+                        </div>
+                        <button onClick={() => { const name = prompt("Category Name?"); if(name) { const newCat = {id: generateId('c'), name, products: [], icon: 'Box'}; handleLocalUpdate({...localData, brands: localData.brands.map(b => b.id === selectedBrand.id ? {...b, categories: [...b.categories, newCat]} : b)}); }}} className="ml-auto bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2"><Plus size={16}/> New Category</button>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {selectedBrand.categories.map(cat => (
+                            <button key={cat.id} onClick={() => setSelectedCategory(cat)} className="group bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-500 transition-all text-left flex flex-col items-center justify-center text-center gap-4 aspect-square">
+                                <div className="p-4 bg-slate-50 text-slate-400 rounded-full group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors border border-slate-100"><Box size={24} /></div>
+                                <h3 className="font-black text-slate-900 uppercase text-xs md:text-sm truncate w-full">{cat.name}</h3>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">{cat.products.length} Items</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <div className="h-full flex flex-col animate-fade-in">
+                    <div className="flex items-center gap-4 mb-8 shrink-0">
+                        <button onClick={() => setSelectedCategory(null)} className="p-3 bg-white border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 shadow-sm"><ArrowLeft size={20} /></button>
+                        <div>
+                            <h2 className="text-2xl md:text-3xl font-black uppercase text-slate-900">{selectedCategory.name}</h2>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedBrand.name} Inventory</p>
+                        </div>
+                        <button onClick={() => setEditingProduct({ id: generateId('p'), name: '', description: '', specs: {}, features: [], dimensions: [], imageUrl: '', dateAdded: new Date().toISOString() })} className="ml-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-black uppercase text-xs flex items-center gap-2 shadow-lg shadow-blue-900/20 hover:bg-blue-500"><Plus size={16}/> Add Product</button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 overflow-y-auto pb-40 pr-2">
+                        {selectedCategory.products.map(product => (
+                            <div key={product.id} className="bg-white rounded-3xl border border-slate-200 overflow-hidden flex flex-col group hover:shadow-2xl transition-all h-full">
+                                <div className="aspect-square bg-white relative flex items-center justify-center p-6">
+                                    {product.imageUrl ? <img src={product.imageUrl} className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-500" /> : <Box size={40} className="text-slate-100" />}
+                                    <div className="absolute inset-0 bg-slate-900/80 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-3 p-6">
+                                        <button onClick={() => setEditingProduct(product)} className="w-full py-3 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 hover:bg-blue-500 shadow-xl"><Edit2 size={14}/> Edit Item</button>
+                                        <button onClick={() => setMovingProduct(product)} className="w-full py-3 bg-white text-slate-900 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 hover:bg-slate-100 shadow-xl"><Move size={14}/> Relocate</button>
+                                        <button onClick={() => handleDeleteProduct(product)} className="w-full py-3 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 transition-colors"><Trash2 size={14}/> Delete</button>
+                                    </div>
+                                </div>
+                                <div className="p-4 flex-1 flex flex-col border-t border-slate-50">
+                                    <h4 className="font-black text-slate-900 text-sm mb-1 uppercase tracking-tight line-clamp-2">{product.name}</h4>
+                                    <div className="mt-auto flex justify-between items-center pt-2">
+                                        <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">{product.sku || 'No SKU'}</span>
+                                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+
             {activeTab === 'pricelists' && (<PricelistManager pricelists={localData.pricelists || []} pricelistBrands={localData.pricelistBrands || []} onSavePricelists={(p) => handleLocalUpdate({ ...localData, pricelists: p })} onSaveBrands={(b) => handleLocalUpdate({ ...localData, pricelistBrands: b })} onDeletePricelist={(id) => { const toDelete = localData.pricelists?.find(p => p.id === id); if (toDelete) { const newArchive = addToArchive('pricelist', toDelete.title, toDelete); handleLocalUpdate({ ...localData, pricelists: localData.pricelists?.filter(p => p.id !== id), archive: newArchive }); } }} />)}
+            
             {activeTab === 'settings' && (<div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20"><div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden"><div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500 pointer-events-none"><Database size={120} /></div><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> System Data & Backup</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10"><div className="space-y-4"><div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-xs"><strong>Export System Backup:</strong> Downloads full archive.</div><button onClick={async () => { setExportProcessing(true); try { await downloadZip(localData); } catch (e) { alert("Export Failed"); } finally { setExportProcessing(false); } }} disabled={exportProcessing} className={`w-full py-4 ${exportProcessing ? 'bg-blue-800 cursor-wait' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg`}>{exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}{exportProcessing ? 'Packaging...' : 'Download Full Backup (.zip)'}</button></div><div className="space-y-4"><div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-xs"><strong>Import Structure:</strong> Brand/Category/Product/</div><label className={`w-full py-4 ${importProcessing ? 'bg-slate-300 cursor-wait' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg relative overflow-hidden`}>{importProcessing ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16} />}<span className="relative z-10">{importProcessing ? importProgress || 'Processing...' : 'Import Data from ZIP'}</span><input type="file" accept=".zip" className="hidden" disabled={importProcessing} onChange={async (e) => { if(e.target.files && e.target.files[0]) { setImportProcessing(true); try { const newBrands = await importZip(e.target.files[0], (msg) => setImportProgress(msg)); let mergedBrands = [...localData.brands]; newBrands.forEach(nb => { const ex = mergedBrands.findIndex(b => b.name === nb.name); if (ex > -1) { nb.categories.forEach(nc => { const excat = mergedBrands[ex].categories.findIndex(c => c.name === nc.name); if (excat > -1) { const exp = mergedBrands[ex].categories[excat].products; const unique = nc.products.filter(np => !exp.find(ep => ep.name === np.name)); mergedBrands[ex].categories[excat].products = [...exp, ...unique]; } else { mergedBrands[ex].categories.push(nc); } }); } else mergedBrands.push(nb); }); handleLocalUpdate({ ...localData, brands: mergedBrands }); alert(`Import Successful!`); } catch(err) { alert("Import Failed."); } finally { setImportProcessing(false); setImportProgress(''); } } }} /></label></div></div></div></div>)}
         </main>
 
-        {editingProduct && (<div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in"><ProductEditor product={editingProduct} onSave={(p) => { if (!selectedBrand || !selectedCategory) return; const isNew = !selectedCategory.products.find(x => x.id === p.id); const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x); const updatedCat = { ...selectedCategory, products: newProducts }; const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) }; handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b) }); setEditingProduct(null); }} onCancel={() => setEditingProduct(null)} /></div>)}
+        {editingProduct && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md p-4 md:p-8 flex items-center justify-center animate-fade-in">
+                <ProductEditor 
+                    product={editingProduct} 
+                    onSave={(p) => { 
+                        if (!selectedBrand || !selectedCategory) return; 
+                        const isNew = !selectedCategory.products.find(x => x.id === p.id); 
+                        const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x); 
+                        const updatedCat = { ...selectedCategory, products: newProducts }; 
+                        const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) }; 
+                        handleLocalUpdate({ ...localData, brands: localData.brands.map(b => b.id === updatedBrand.id ? updatedBrand : b) }); 
+                        setEditingProduct(null); 
+                    }} 
+                    onCancel={() => setEditingProduct(null)} 
+                />
+            </div>
+        )}
+
+        {movingProduct && selectedBrand && selectedCategory && (
+            <MoveProductModal 
+                product={movingProduct} 
+                allBrands={localData.brands} 
+                currentBrandId={selectedBrand.id} 
+                currentCategoryId={selectedCategory.id} 
+                onClose={() => setMovingProduct(null)} 
+                onMove={handleMoveProduct} 
+            />
+        )}
+        
         {showGuide && <SetupGuide onClose={() => setShowGuide(false)} />}
     </div>
   );
