@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Fix for ESM import in some environments where the module is wrapped in 'default'
@@ -116,8 +116,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
             renderScale = Math.min(scaleX, scaleY, 2.0); // Don't auto-fit beyond 200% zoom
         }
 
-        // CRITICAL FIX: Ensure sharp rendering by multiplying by devicePixelRatio
-        // AND rendering at the ACTUAL zoom scale requested.
+        // Sharp rendering by multiplying by devicePixelRatio
         const dpr = window.devicePixelRatio || 1;
         const viewport = page.getViewport({ scale: renderScale }); 
         
@@ -125,15 +124,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
         const context = canvas.getContext('2d');
         
         if (context) {
-            // Buffer size = visual size * DPR
             canvas.width = Math.floor(viewport.width * dpr);
             canvas.height = Math.floor(viewport.height * dpr);
             
-            // Visual size = unscaled size * scale
             canvas.style.width = Math.floor(viewport.width) + "px";
             canvas.style.height = Math.floor(viewport.height) + "px";
 
-            // Apply transform for DPR scaling
             const transform = [dpr, 0, 0, dpr, 0, 0];
             const renderContext = { 
                 canvasContext: context, 
@@ -161,29 +157,60 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
 
   const handleZoomIn = () => setScale(prev => {
       const current = prev <= 0 ? (canvasRef.current?.clientWidth || 0) / (pdf ? 1000 : 1) : prev;
-      return Math.min(5.0, (current || 1) * 1.5); // 50% increments for noticeable clarity jumps
+      return Math.min(5.0, (current || 1) * 1.5);
   });
   
   const handleZoomOut = () => setScale(prev => prev > 0 ? Math.max(0.2, prev / 1.5) : 0);
   const handleFit = () => setScale(0);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0 || !containerRef.current || scale <= 0) return;
+  // DRAG LOGIC (Unified Mouse & Touch)
+  const onStart = (clientX: number, clientY: number) => {
+    if (!containerRef.current || scale <= 0) return;
     setIsDragging(true);
-    setStartPos({ x: e.pageX, y: e.pageY });
-    setScrollPos({ left: containerRef.current.scrollLeft, top: containerRef.current.scrollTop });
+    setStartPos({ x: clientX, y: clientY });
+    setScrollPos({ 
+      left: containerRef.current.scrollLeft, 
+      top: containerRef.current.scrollTop 
+    });
+  };
+
+  const onMove = (clientX: number, clientY: number) => {
+    if (!isDragging || !containerRef.current) return;
+    const dx = clientX - startPos.x;
+    const dy = clientY - startPos.y;
+    containerRef.current.scrollLeft = scrollPos.left - dx;
+    containerRef.current.scrollTop = scrollPos.top - dy;
+  };
+
+  const onEnd = () => setIsDragging(false);
+
+  // Mouse Event Handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    onStart(e.pageX, e.pageY);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !containerRef.current) return;
+    if (!isDragging) return;
     e.preventDefault();
-    const x = e.pageX - startPos.x;
-    const y = e.pageY - startPos.y;
-    containerRef.current.scrollLeft = scrollPos.left - x;
-    containerRef.current.scrollTop = scrollPos.top - y;
+    onMove(e.pageX, e.pageY);
   };
 
-  const handleMouseUp = () => setIsDragging(false);
+  // Touch Event Handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    onStart(e.touches[0].pageX, e.touches[0].pageY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    // We only prevent default if we're actually dragging a zoomed image
+    // to allow scrolling the page/modal if scale is fit-to-screen
+    if (scale > 0) {
+      e.preventDefault();
+    }
+    onMove(e.touches[0].pageX, e.touches[0].pageY);
+  };
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex flex-col animate-fade-in" onClick={onClose}>
@@ -205,12 +232,15 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
 
        <div 
          ref={containerRef}
-         className={`flex-1 w-full h-full bg-slate-950/20 relative flex items-center justify-center overflow-auto ${isDragging ? 'cursor-grabbing' : scale > 0 ? 'cursor-grab' : 'cursor-default'}`} 
+         className={`flex-1 w-full h-full bg-slate-950/20 relative overflow-auto touch-none ${isDragging ? 'cursor-grabbing' : scale > 0 ? 'cursor-grab' : 'cursor-default'}`} 
          onClick={e => e.stopPropagation()}
          onMouseDown={handleMouseDown}
          onMouseMove={handleMouseMove}
-         onMouseUp={handleMouseUp}
-         onMouseLeave={handleMouseUp}
+         onMouseUp={onEnd}
+         onMouseLeave={onEnd}
+         onTouchStart={handleTouchStart}
+         onTouchMove={handleTouchMove}
+         onTouchEnd={onEnd}
        >
           {loading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
@@ -225,8 +255,17 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
                   <button onClick={onClose} className="bg-white text-slate-900 px-8 py-3 rounded-xl font-bold uppercase text-xs">Close Viewer</button>
               </div>
           )}
-          <div className={`relative shadow-2xl transition-opacity duration-500 ${loading ? 'opacity-0' : 'opacity-100'}`}>
-               <canvas ref={canvasRef} className="bg-white rounded shadow-inner" />
+          
+          {/* Centering Wrapper: min-w-full ensures the container is at least as large as the parent for flex centering */}
+          <div className="min-w-full min-h-full flex items-center justify-center p-8 md:p-12 pointer-events-none">
+             <div className={`relative shadow-2xl transition-opacity duration-500 pointer-events-auto ${loading ? 'opacity-0' : 'opacity-100'}`}>
+                  <canvas ref={canvasRef} className="bg-white rounded shadow-inner" />
+                  {scale > 1.2 && !isDragging && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
+                        <Grip size={64} className="text-black" />
+                    </div>
+                  )}
+             </div>
           </div>
        </div>
        
