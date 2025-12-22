@@ -3,13 +3,14 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Sparkles
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Sparkles, Printer
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
 import { uploadFileToStorage, supabase, checkCloudConnection } from '../services/kioskService';
 import SetupGuide from './SetupGuide';
 import JSZip from 'jszip';
+import * as XLSX from 'xlsx';
 
 const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -644,7 +645,7 @@ const downloadZip = async (storeData: StoreData) => {
         // Ads
         const adsFolder = mktFolder.folder("Ads");
         if (adsFolder && storeData.ads) {
-            for (const zone of ['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideLeftVertical', 'screensaver']) {
+            for (const zone of ['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideVertical', 'screensaver']) {
                 const zoneFolder = adsFolder.folder(zone);
                 const ads = (storeData.ads as any)[zone] || [];
                 for(let i=0; i<ads.length; i++) {
@@ -984,50 +985,64 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
     if (!file) return;
 
     setIsImporting(true);
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-        const text = event.target?.result as string;
-        try {
-            // Simple CSV/TSV Parser (Handles Excel CSV exports)
-            const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-            const newItems: PricelistItem[] = [];
-            
-            // Skip header if it looks like one (contains sku/desc/price)
-            const firstLine = lines[0].toLowerCase();
-            const startIdx = (firstLine.includes('sku') || firstLine.includes('desc') || firstLine.includes('price')) ? 1 : 0;
+    try {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert to 2D array for easy mapping
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-            for (let i = startIdx; i < lines.length; i++) {
-                // Split by comma or tab
-                const parts = lines[i].split(/[,	]/).map(p => p.trim().replace(/^["']|["']$/g, ''));
-                if (parts.length >= 2) {
-                    newItems.push({
-                        id: generateId('imp'),
-                        sku: parts[0] || '',
-                        description: parts[1] || '',
-                        normalPrice: parts[2] || '',
-                        promoPrice: parts[3] || ''
-                    });
-                }
-            }
-
-            if (newItems.length > 0) {
-                if (confirm(`Detected ${newItems.length} items. Overwrite current list?`)) {
-                    setItems(newItems);
-                } else if (confirm(`Append ${newItems.length} items to existing list?`)) {
-                    setItems([...items, ...newItems]);
-                }
-            } else {
-                alert("Could not parse any valid items from the file. Ensure columns are: SKU, Description, Normal Price, Promo Price.");
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Error parsing file. Please use a standard CSV or Excel-compatible text file.");
-        } finally {
-            setIsImporting(false);
-            e.target.value = ''; // Reset input
+        if (jsonData.length === 0) {
+            alert("The selected file appears to be empty.");
+            return;
         }
-    };
-    reader.readAsText(file);
+
+        // Filter out completely empty rows
+        const validRows = jsonData.filter(row => 
+            row && row.length > 0 && row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '')
+        );
+
+        if (validRows.length === 0) {
+            alert("No data rows found in the file.");
+            return;
+        }
+
+        // Detect if first row is a header
+        const firstRow = validRows[0].map(c => String(c).toLowerCase());
+        const hasHeader = firstRow.some(c => 
+            c.includes('sku') || c.includes('code') || c.includes('desc') || 
+            c.includes('price') || c.includes('name') || c.includes('product')
+        );
+
+        const dataRows = hasHeader ? validRows.slice(1) : validRows;
+        
+        const newItems: PricelistItem[] = dataRows.map(row => ({
+            id: generateId('imp'),
+            sku: String(row[0] || '').trim().toUpperCase(),
+            description: String(row[1] || '').trim(),
+            normalPrice: String(row[2] || '').trim(),
+            promoPrice: String(row[3] || '').trim()
+        }));
+
+        if (newItems.length > 0) {
+            const message = `Successfully parsed ${newItems.length} items. \n\nReplace current list or Append?`;
+            if (confirm(message)) {
+                setItems(newItems);
+            } else if (confirm("Append items instead?")) {
+                setItems([...items, ...newItems]);
+            }
+        } else {
+            alert("Could not extract any valid items. Ensure the sheet follows the format: SKU, Description, Normal Price, Promo Price.");
+        }
+    } catch (err) {
+        console.error("Spreadsheet Import Error:", err);
+        alert("Error parsing file. Ensure it is a valid .xlsx or .csv file.");
+    } finally {
+        setIsImporting(false);
+        e.target.value = ''; // Reset input for re-upload if needed
+    }
   };
 
   return (
@@ -1044,7 +1059,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             <label className="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg cursor-pointer">
               {isImporting ? <Loader2 size={16} className="animate-spin" /> : <FileInput size={16} />}
               Import Excel/CSV
-              <input type="file" className="hidden" accept=".csv,.tsv,.txt,.xlsx" onChange={handleSpreadsheetImport} disabled={isImporting} />
+              <input type="file" className="hidden" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={handleSpreadsheetImport} disabled={isImporting} />
             </label>
             <button onClick={addItem} className="bg-green-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-green-700 transition-colors shadow-lg shadow-green-900/10">
               <Plus size={16} /> Add Row
@@ -1057,7 +1072,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
           <div className="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center gap-3">
               <Info size={18} className="text-blue-500 shrink-0" />
               <p className="text-[10px] text-blue-800 font-bold uppercase leading-tight">
-                  Import Tip: Use a spreadsheet with 4 columns: SKU, Description, Normal Price, Promo Price. Save as CSV for best results.
+                  Import Tip: Use columns in this order: SKU, Description, Normal Price, Promo Price. Supports .xlsx, .xls and .csv.
               </p>
           </div>
 
@@ -3118,6 +3133,38 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
             {activeTab === 'settings' && (
                <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
                    
+                   {/* PRICELIST BRANDING */}
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                       <div className="absolute top-0 right-0 p-8 opacity-5 text-green-600 pointer-events-none"><Printer size={120} /></div>
+                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
+                           <RIcon size={20} className="text-green-600" /> Pricelist Branding
+                       </h3>
+                       <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 relative z-10">
+                           <div className="flex flex-col md:flex-row gap-8">
+                               <div className="flex-1">
+                                   <FileUpload 
+                                       label="Pricelist Company Logo" 
+                                       currentUrl={localData.appConfig?.pricelistCompanyLogoUrl} 
+                                       onUpload={(url: any) => handleLocalUpdate({
+                                           ...localData,
+                                           appConfig: { ...localData.appConfig, pricelistCompanyLogoUrl: url }
+                                       })} 
+                                   />
+                                   <p className="text-[10px] text-slate-400 mt-2 font-medium leading-relaxed uppercase">
+                                       This logo appears in the top-right of manual pricelist PDFs. If left blank, the system defaults to your main hero logo.
+                                   </p>
+                               </div>
+                               <div className="w-full md:w-64 p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-4 text-center">
+                                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logo Placement Logic</div>
+                                   <div className="grid grid-cols-2 gap-2 w-full">
+                                        <div className="p-2 border border-blue-100 bg-blue-50 rounded text-[8px] font-bold text-blue-600 uppercase">Left: Brand Logo (Auto)</div>
+                                        <div className="p-2 border border-green-100 bg-green-50 rounded text-[8px] font-bold text-green-600 uppercase">Right: This Logo</div>
+                                   </div>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
+
                    {/* GLOBAL SYSTEM PIN */}
                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                        <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
