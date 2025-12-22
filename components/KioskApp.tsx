@@ -183,7 +183,7 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
     );
 };
 
-const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: { pricelist: Pricelist, onClose: () => void, companyLogo?: string, brandLogo?: string }) => {
+const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, brandName }: { pricelist: Pricelist, onClose: () => void, companyLogo?: string, brandLogo?: string, brandName?: string }) => {
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
   const [zoom, setZoom] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
@@ -259,85 +259,112 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
+        
         const [brandImg, companyImg] = await Promise.all([
             brandLogo ? loadImage(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImage(companyLogo) : Promise.resolve(null)
         ]);
+
         const drawHeader = (pageNum: number) => {
             let topY = 15;
+            
+            // Brand Logo / Name on Left
             if (brandImg) {
                 const ratio = brandImg.width / brandImg.height;
-                const h = 18; const w = h * ratio;
+                const h = 20; const w = h * ratio;
                 doc.addImage(brandImg, 'PNG', margin, topY, w, h);
+            } else if (brandName) {
+                doc.setTextColor(30, 41, 59); doc.setFontSize(28); doc.setFont('helvetica', 'black');
+                doc.text(brandName.toUpperCase(), margin, topY + 15);
             }
+
+            // Company Logo on Far Right
             if (companyImg) {
                 const ratio = companyImg.width / companyImg.height;
-                const h = 14; const w = h * ratio;
-                doc.addImage(companyImg, 'PNG', pageWidth - margin - w, topY + 2, w, h);
+                const h = 12; const w = h * ratio;
+                doc.addImage(companyImg, 'PNG', pageWidth - margin - w, topY, w, h);
             }
-            doc.setTextColor(30, 41, 59); doc.setFontSize(24); doc.setFont('helvetica', 'bold');
-            doc.text("Official Price List", margin, topY + 30);
-            doc.setTextColor(37, 99, 235); doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-            doc.text(pricelist.title.toUpperCase(), margin, topY + 38);
-            const boxW = 40; const boxH = 8; const boxX = pageWidth - margin - boxW; const boxY = topY + 30;
+
+            // Subtitle logic (Price List)
+            doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
+            doc.text("PRICE LIST", margin, topY + 28);
+            
+            doc.setTextColor(148, 163, 184); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+            doc.text("NEW PRICELIST", margin, topY + 34);
+
+            // Month Year Badge on Right
+            const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
             doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
-            doc.setTextColor(255, 255, 255); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
-            doc.text(`${pricelist.month} ${pricelist.year}`.toUpperCase(), boxX + (boxW/2), boxY + 5.5, { align: 'center' });
-            doc.setTextColor(148, 163, 184); doc.setFontSize(6);
-            doc.text(`REF: ${pricelist.id.substring(0,8).toUpperCase()}`, boxX + boxW, boxY + 12, { align: 'right' });
-            doc.setDrawColor(30, 41, 59); doc.setLineWidth(0.5);
-            doc.line(margin, topY + 45, pageWidth - margin, topY + 45);
-            return topY + 55;
+            doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+            doc.text(`${pricelist.month} ${pricelist.year}`.toUpperCase(), boxX + (boxW/2), boxY + 6, { align: 'center' });
+            
+            doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+            doc.text(`DOCUMENT REF: ${pricelist.id.substring(0,10).toUpperCase()}`, boxX + boxW, boxY + 14, { align: 'right' });
+
+            doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3);
+            doc.line(margin, topY + 42, pageWidth - margin, topY + 42);
+            
+            return topY + 52;
         };
+
         const drawTableHeaders = (startY: number) => {
-            doc.setFillColor(241, 245, 249); doc.rect(margin, startY - 6, pageWidth - (margin * 2), 10, 'F');
-            doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1); doc.rect(margin, startY - 6, pageWidth - (margin * 2), 10, 'S');
-            doc.setTextColor(100, 116, 139); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
-            doc.text("CODE", margin + 3, startY); doc.text("PRODUCT DESCRIPTION", margin + 40, startY);
-            doc.text("NORMAL", pageWidth - margin - 35, startY, { align: 'right' });
+            doc.setFillColor(241, 245, 249); doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
+            doc.setTextColor(30, 41, 59); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+            doc.text("CODE", margin + 3, startY); doc.text("PRODUCT DESCRIPTION", margin + 45, startY);
+            doc.text("NORMAL", pageWidth - margin - 40, startY, { align: 'right' });
             doc.text("OFFER", pageWidth - margin - 5, startY, { align: 'right' });
             return startY + 8;
         };
+
         let currentY = drawHeader(1);
         currentY = drawTableHeaders(currentY);
+        
         const items = pricelist.items || [];
-        const rowHeight = 8; const footerMargin = 20;
+        const rowHeight = 9; const footerMargin = 20;
+
         items.forEach((item, index) => {
             if (currentY + rowHeight > pageHeight - footerMargin) {
                 doc.addPage();
                 currentY = drawHeader(doc.internal.getNumberOfPages());
                 currentY = drawTableHeaders(currentY);
             }
+            
             if (index % 2 !== 0) {
-                doc.setFillColor(248, 250, 252); doc.rect(margin, currentY - 5.5, pageWidth - (margin * 2), rowHeight, 'F');
+                doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
             }
-            doc.setDrawColor(241, 245, 249); doc.line(margin, currentY + 2.5, pageWidth - margin, currentY + 2.5);
-            doc.setFont('courier', 'bold'); doc.setFontSize(7.5); doc.setTextColor(30, 41, 59);
-            doc.text(item.sku || 'N/A', margin + 3, currentY);
-            doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
-            const desc = item.description.length > 60 ? item.description.substring(0, 57) + "..." : item.description;
-            doc.text(desc.toUpperCase(), margin + 40, currentY);
-            doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(item.promoPrice ? 100 : 30);
-            doc.text(item.normalPrice || 'POA', pageWidth - margin - 35, currentY, { align: 'right' });
+
+            doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+            doc.text(item.sku || 'POA', margin + 3, currentY);
+            
+            doc.setFont('helvetica', 'bold');
+            const desc = item.description.length > 55 ? item.description.substring(0, 52) + "..." : item.description;
+            doc.text(desc.toUpperCase(), margin + 45, currentY);
+            
+            // Prices - Never cross out
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+            doc.text(item.normalPrice || 'POA', pageWidth - margin - 40, currentY, { align: 'right' });
+            
             if (item.promoPrice) {
-                doc.setTextColor(220, 38, 38); doc.setFont('helvetica', 'bold');
+                doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'bold');
                 doc.text(item.promoPrice, pageWidth - margin - 5, currentY, { align: 'right' });
             } else {
                 doc.setTextColor(30, 41, 59);
                 doc.text(item.normalPrice || '—', pageWidth - margin - 5, currentY, { align: 'right' });
             }
+            
             currentY += rowHeight;
         });
+
         const totalPages = doc.internal.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
             doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-            doc.text(`Official Kiosk Pro Document • Generated ${new Date().toLocaleDateString()}`, margin, pageHeight - 10);
+            doc.text(`Kiosk Pro Smart Retail Solution • ${new Date().toLocaleDateString()}`, margin, pageHeight - 10);
         }
-        doc.save(`${pricelist.title.replace(/\s+/g, '_')}.pdf`);
+        doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
     } catch (err) {
         console.error("PDF Export failed", err);
-        alert("Failed to generate PDF. Use the 'Print' button as a fallback.");
+        alert("Unable to generate PDF. Check browser permissions.");
     } finally {
         setIsExporting(false);
     }
@@ -439,23 +466,27 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
         </div>
 
         <div className="hidden print-only w-full px-10 pt-10 pb-6">
-            <div className="flex justify-between items-end mb-10">
+            <div className="flex justify-between items-start mb-10">
                 <div className="flex flex-col gap-6">
-                    {brandLogo && <img src={brandLogo} alt="Brand" className="h-20 object-contain self-start" />}
+                    {brandLogo ? (
+                        <img src={brandLogo} alt="Brand" className="h-20 object-contain self-start" />
+                    ) : brandName ? (
+                        <h2 className="text-6xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2>
+                    ) : null}
                     <div>
-                        <h1 className="text-5xl font-black uppercase tracking-tighter text-slate-900 leading-none">Price List</h1>
-                        <p className="text-xl font-bold text-blue-600 uppercase tracking-[0.2em] mt-3">{pricelist.title}</p>
+                        <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mt-4">Price List</h1>
+                        <p className="text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">New Pricelist</p>
                     </div>
                 </div>
-                <div className="flex flex-col items-end gap-4 text-right">
-                    {companyLogo && <img src={companyLogo} alt="Company" className="h-16 object-contain" />}
+                <div className="flex flex-col items-end gap-6 text-right">
+                    {companyLogo && <img src={companyLogo} alt="Company" className="h-14 object-contain" />}
                     <div>
-                        <div className="bg-slate-900 text-white px-4 py-1 rounded text-sm font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-3">Document REF: {pricelist.id.substring(0,8).toUpperCase()}</p>
+                        <div className="bg-slate-900 text-white px-6 py-2 rounded-xl text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p>
                     </div>
                 </div>
             </div>
-            <div className="h-2 bg-slate-900 w-full rounded-full mb-10"></div>
+            <div className="h-1 bg-slate-200 w-full rounded-full mb-10"></div>
         </div>
 
         <div 
@@ -481,10 +512,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
                   <tr className="print:bg-[#f1f5f9]">
-                      <th className="p-3 md:p-5 text-[10px] md:text-sm font-black uppercase tracking-tight border border-slate-300 w-24 md:w-40 print:border-slate-400 print:text-black">CODE</th>
-                      <th className="p-3 md:p-5 text-[10px] md:text-sm font-black uppercase tracking-tight border border-slate-300 print:border-slate-400 print:text-black">PRODUCT DESCRIPTION</th>
-                      <th className="p-3 md:p-5 text-[10px] md:text-sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">NORMAL</th>
-                      <th className="p-3 md:p-5 text-[10px] md:text-sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">OFFER</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 w-24 md:w-40 print:border-slate-400 print:text-black">CODE</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 print:border-slate-400 print:text-black">PRODUCT DESCRIPTION</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">NORMAL</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">OFFER</th>
                   </tr>
                   </thead>
                   <tbody className="print:table-row-group">
@@ -501,7 +532,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
                           </span>
                       </td>
                       <td className="p-3 md:p-4 text-right border border-slate-200 print:border-slate-300">
-                          <span className={`font-bold text-xs md:text-sm ${item.promoPrice ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                          <span className={`font-bold text-xs md:text-sm ${item.promoPrice ? 'text-slate-400' : 'text-slate-900'}`}>
                           {item.normalPrice || 'POA'}
                           </span>
                       </td>
@@ -531,7 +562,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo }: {
 
         <div className="p-4 md:p-5 bg-slate-50 border-t border-slate-100 flex justify-between items-center shrink-0 print:hidden z-10">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Items: {(pricelist.items || []).length}</span>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Generated Document • VAT Included</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Official Kiosk Pro Document • VAT Incl.</p>
         </div>
         <div className="hidden print-only text-center py-6 text-[10pt] text-slate-400 font-bold uppercase">Generated from Kiosk Pro System • Standard Retail Terms Apply</div>
       </div>
@@ -696,7 +727,10 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   if (!storeData) return null;
   if (!isSetup) return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
   if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} />;
-  const getActiveBrandLogo = () => viewingManualList ? pricelistBrands.find(b => b.id === viewingManualList.brandId)?.logoUrl : undefined;
+  
+  const activePricelistBrand = viewingManualList ? pricelistBrands.find(b => b.id === viewingManualList.brandId) : undefined;
+  const getActiveBrandLogo = () => activePricelistBrand?.logoUrl;
+  const getActiveBrandName = () => activePricelistBrand?.name;
 
   return (
     <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full">
@@ -732,6 +766,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
             onClose={() => setViewingManualList(null)} 
             companyLogo={storeData.hero.logoUrl || storeData.companyLogoUrl}
             brandLogo={getActiveBrandLogo()}
+            brandName={getActiveBrandName()}
           />
        )}
     </div>
