@@ -237,9 +237,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const handleDragEnd = () => setIsDragging(false);
   const handlePrint = () => window.print();
 
-  /**
-   * Enhanced image loading with explicit CORS handling
-   */
   const loadImage = async (url: string): Promise<{ img: HTMLImageElement, format: string, dataUrl: string } | null> => {
     if (!url) return null;
     try {
@@ -283,24 +280,19 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
         
-        // Load Assets
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImage(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImage(companyLogo) : Promise.resolve(null)
         ]);
 
-        const drawHeader = (pageNum: number) => {
+        const drawHeader = () => {
             let topY = 15;
-            
-            // Store Logo on Left
             if (companyAsset) {
                 const ratio = companyAsset.img.width / companyAsset.img.height;
                 const h = 10; 
                 const w = h * ratio;
                 doc.addImage(companyAsset.img, companyAsset.format, margin, topY, w, h);
             }
-
-            // Brand Logo on Right
             if (brandAsset) {
                 const ratio = brandAsset.img.width / brandAsset.img.height;
                 const h = 18; 
@@ -310,27 +302,18 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.setTextColor(30, 41, 59); doc.setFontSize(22); doc.setFont('helvetica', 'black');
                 doc.text(brandName.toUpperCase(), pageWidth - margin, topY + 12, { align: 'right' });
             }
-
-            // Title section
             doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
             doc.text("PRICE LIST", margin, topY + 28);
-            
             doc.setTextColor(148, 163, 184); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
             doc.text("NEW PRICELIST", margin, topY + 34);
-
-            // Date Box (Matching Print View)
             const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
             doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
             doc.text(`${pricelist.month} ${pricelist.year}`.toUpperCase(), boxX + (boxW/2), boxY + 6, { align: 'center' });
-            
             doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
             doc.text(`DOCUMENT REF: ${pricelist.id.substring(0,10).toUpperCase()}`, boxX + boxW, boxY + 14, { align: 'right' });
-
-            // Separator line
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3);
             doc.line(margin, topY + 42, pageWidth - margin, topY + 42);
-            
             return topY + 52;
         };
 
@@ -343,63 +326,45 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             return startY + 8;
         };
 
-        let currentY = drawHeader(1);
+        let currentY = drawHeader();
         currentY = drawTableHeaders(currentY);
         
         const items = pricelist.items || [];
         const rowHeight = 9; 
-        const footerMargin = 25; // Increased from 20 to 25 to prevent last row clipping
+        const footerMargin = 25;
 
         items.forEach((item, index) => {
-            // Check if current row + height will exceed the safe printable area
             if (currentY + rowHeight > pageHeight - footerMargin) {
                 doc.addPage();
-                currentY = drawHeader(doc.internal.getNumberOfPages());
+                currentY = drawHeader();
                 currentY = drawTableHeaders(currentY);
             }
-            
-            // Zebra striping
             if (index % 2 !== 0) {
                 doc.setFillColor(248, 250, 252); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
             }
-
-            // Borders
             doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.1);
             doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'S');
-
-            // Cell Data
             doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
             doc.text(item.sku || 'POA', margin + 3, currentY);
-            
             doc.setFont('helvetica', 'bold');
             const desc = item.description.length > 55 ? item.description.substring(0, 52) + "..." : item.description;
             doc.text(desc.toUpperCase(), margin + 45, currentY);
-            
-            // Normal Price logic (Greyed if promo exists)
             if (item.promoPrice) {
-                doc.setTextColor(148, 163, 184); // slate-400
-                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(148, 163, 184); doc.setFont('helvetica', 'bold');
             } else {
-                doc.setTextColor(0, 0, 0);
-                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold');
             }
             doc.text(item.normalPrice || 'POA', pageWidth - margin - 40, currentY, { align: 'right' });
-            
-            // Promo Price logic (Red if promo exists)
             if (item.promoPrice) {
-                doc.setTextColor(220, 38, 38); // red-600
-                doc.setFont('helvetica', 'black');
+                doc.setTextColor(220, 38, 38); doc.setFont('helvetica', 'black');
                 doc.text(item.promoPrice, pageWidth - margin - 5, currentY, { align: 'right' });
             } else {
-                doc.setTextColor(0, 0, 0);
-                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold');
                 doc.text(item.normalPrice || '—', pageWidth - margin - 5, currentY, { align: 'right' });
             }
-            
             currentY += rowHeight;
         });
 
-        // Add page numbers
         const totalPages = doc.internal.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
@@ -428,18 +393,18 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           .print-hidden { display: none !important; }
           .print-only { display: block !important; }
           #root, .relative, .viewer-container, .table-scroll { display: block !important; position: static !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
-          .viewer-container { box-shadow: none !important; border: none !important; }
-          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; margin-bottom: 25mm !important; } /* Added margin buffer */
+          .viewer-container { box-shadow: none !important; border: none !important; width: 100% !important; max-width: none !important; height: auto !important; }
+          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; margin-bottom: 25mm !important; }
           .spreadsheet-table thead { display: table-header-group !important; }
           .spreadsheet-table tr { page-break-inside: avoid !important; }
-          .spreadsheet-table th { position: static !important; background: #f1f5f9 !important; color: #000 !important; border: 1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 10pt !important; }
-          .spreadsheet-table td { border: 0.5pt solid #e2e8f0 !important; color: #000 !important; padding: 8pt !important; font-size: 10pt !important; }
+          .spreadsheet-table th { position: static !important; background: #f1f5f9 !important; color: #000 !important; border: 0.1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 9pt !important; }
+          .spreadsheet-table td { border: 0.1pt solid #e2e8f0 !important; color: #000 !important; padding: 8pt !important; font-size: 8pt !important; }
           .excel-row:nth-child(even) { background-color: #f8fafc !important; }
+          .footer-print { position: fixed; bottom: 5mm; left: 10mm; right: 10mm; text-align: center; font-size: 7pt; color: #94a3b8; display: block !important; }
         }
-        .spreadsheet-table { border-collapse: separate; border-spacing: 0; }
-        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; }
+        .spreadsheet-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #f1f5f9; color: #000; font-weight: 900; }
         .excel-row:nth-child(even) { background-color: #f8fafc; }
-        .excel-row:hover { background-color: #f1f5f9; }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
       `}</style>
 
@@ -502,68 +467,66 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
-                  <tr className="hidden print:table-row border-none">
+                  <tr className="border-none">
                       <th colSpan={4} className="p-0 border-none bg-white">
-                          <div className="w-full px-10 pt-10 pb-6 text-left">
-                              <div className="flex justify-between items-start mb-10">
-                                  <div className="flex flex-col gap-6">
-                                      {/* Store Logo on Left */}
-                                      {companyLogo && <img src={companyLogo} alt="Store" className="h-10 object-contain self-start" />}
+                          <div className="w-full px-4 md:px-10 pt-6 md:pt-10 pb-6 text-left">
+                              <div className="flex justify-between items-start mb-6 md:mb-10">
+                                  <div className="flex flex-col gap-4 md:gap-6">
+                                      {companyLogo && <img src={companyLogo} alt="Store" className="h-6 md:h-10 object-contain self-start" />}
                                       <div>
-                                          <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Price List</h1>
-                                          <p className="text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">New Pricelist</p>
+                                          <h1 className="text-xl md:text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Price List</h1>
+                                          <p className="text-xs md:text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 md:mt-3">New Pricelist</p>
                                       </div>
                                   </div>
-                                  <div className="flex flex-col items-end gap-6 text-right">
-                                      {/* Brand Logo on Right */}
+                                  <div className="flex flex-col items-end gap-4 md:gap-6 text-right">
                                       {brandLogo ? (
-                                          <img src={brandLogo} alt="Brand" className="h-16 object-contain" />
+                                          <img src={brandLogo} alt="Brand" className="h-8 md:h-16 object-contain" />
                                       ) : brandName ? (
-                                          <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2>
+                                          <h2 className="text-xl md:text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2>
                                       ) : null}
                                       <div>
-                                          <div className="bg-slate-900 text-white px-6 py-2 rounded-xl text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
-                                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p>
+                                          <div className="bg-slate-900 text-white px-3 py-1.5 md:px-6 md:py-2 rounded-lg md:rounded-xl text-[10px] md:text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
+                                          <p className="text-[7px] md:text-[10px] font-bold text-slate-400 uppercase mt-2 md:mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p>
                                       </div>
                                   </div>
                               </div>
-                              <div className="h-1 bg-slate-200 w-full rounded-full mb-10"></div>
+                              <div className="h-0.5 md:h-1 bg-slate-200 w-full rounded-full mb-6 md:mb-10"></div>
                           </div>
                       </th>
                   </tr>
                   
-                  <tr className="print:bg-[#f1f5f9]">
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 w-24 md:w-40 print:border-slate-400 print:text-black">SKU</th>
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 print:border-slate-400 print:text-black">DESCRIPTION</th>
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">NORMAL</th>
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">PROMO</th>
+                  <tr className="bg-slate-100/80 print:bg-[#f1f5f9]">
+                      <th className="p-2 md:p-5 text-[8px] md:text-sm font-black uppercase tracking-tight border border-slate-200 w-20 md:w-40 print:border-slate-400 print:text-black">SKU</th>
+                      <th className="p-2 md:p-5 text-[8px] md:text-sm font-black uppercase tracking-tight border border-slate-200 print:border-slate-400 print:text-black">DESCRIPTION</th>
+                      <th className="p-2 md:p-5 text-[8px] md:text-sm font-black uppercase tracking-tight border border-slate-200 text-right w-20 md:w-32 print:border-slate-400 print:text-black">NORMAL</th>
+                      <th className="p-2 md:p-5 text-[8px] md:text-sm font-black uppercase tracking-tight border border-slate-200 text-right w-20 md:w-32 print:border-slate-400 print:text-black">PROMO</th>
                   </tr>
                   </thead>
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
                       <tr key={item.id} className="excel-row transition-colors group">
-                      <td className="p-3 md:p-4 border border-slate-200 print:border-slate-300">
-                          <span className="sku-font font-bold text-xs md:text-sm text-slate-900 uppercase">
+                      <td className="p-2 md:p-4 border border-slate-100 print:border-slate-300">
+                          <span className="sku-font font-bold text-[8px] md:text-sm text-slate-900 uppercase">
                           {item.sku || 'N/A'}
                           </span>
                       </td>
-                      <td className="p-3 md:p-4 border border-slate-200 print:border-slate-300">
-                          <span className="font-bold text-slate-900 text-xs md:text-sm uppercase tracking-tight group-hover:text-blue-600 transition-colors">
+                      <td className="p-2 md:p-4 border border-slate-100 print:border-slate-300">
+                          <span className="font-bold text-slate-900 text-[8px] md:text-sm uppercase tracking-tight group-hover:text-blue-600 transition-colors">
                               {item.description}
                           </span>
                       </td>
-                      <td className="p-3 md:p-4 text-right border border-slate-200 print:border-slate-300">
-                          <span className={`font-bold text-xs md:text-sm ${item.promoPrice ? 'text-slate-400' : 'text-slate-900'}`}>
+                      <td className="p-2 md:p-4 text-right border border-slate-100 print:border-slate-300">
+                          <span className={`font-bold text-[8px] md:text-sm ${item.promoPrice ? 'text-slate-400' : 'text-slate-900'}`}>
                           {item.normalPrice || 'POA'}
                           </span>
                       </td>
-                      <td className="p-3 md:p-4 text-right border border-slate-200 print:border-slate-300 bg-slate-50/10">
+                      <td className="p-2 md:p-4 text-right border border-slate-100 print:border-slate-300">
                           {item.promoPrice ? (
-                          <span className="font-black text-xs md:text-base text-red-600 tracking-tighter">
+                          <span className="font-black text-[9px] md:text-base text-red-600 tracking-tighter">
                               {item.promoPrice}
                           </span>
                           ) : (
-                          <span className="font-bold text-xs md:text-sm text-slate-900">
+                          <span className="font-bold text-[8px] md:text-sm text-slate-900">
                               {item.normalPrice || '—'}
                           </span>
                           )}
@@ -572,11 +535,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   ))}
                   </tbody>
               </table>
-              {zoom > 1.2 && !isDragging && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
-                    <Grip size={120} className="text-black" />
-                </div>
-              )}
+              <div className="hidden print-only footer-print">
+                  Kiosk Pro Smart Retail Solution • Page 1 of 1 • {new Date().toLocaleDateString()}
+              </div>
             </div>
           </div>
         </div>
