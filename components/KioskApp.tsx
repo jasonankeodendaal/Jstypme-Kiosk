@@ -235,54 +235,56 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   };
 
   const handleDragEnd = () => setIsDragging(false);
-  const handlePrint = () => window.print();
 
-  // Optimized Image Loader for jsPDF with robust CORS handling and base64 fallback
+  // Robust Image Loader using Canvas Normalization to bypass CORS and format issues for jsPDF
   const loadImageForPDF = async (url: string): Promise<{ imgData: string, format: string, width: number, height: number } | null> => {
     if (!url) return null;
     
-    try {
-        // Use Fetch to get the data directly, bypassing many standard <img> tag CORS quirks
-        const response = await fetch(url, { mode: 'cors' });
-        if (!response.ok) throw new Error("Network response error");
+    return new Promise((resolve) => {
+        const img = new Image();
+        // Allow cross-origin requests for the PDF generator
+        img.setAttribute('crossOrigin', 'anonymous');
         
-        const blob = await response.blob();
-        const mimeType = blob.type;
-        const format = mimeType.includes('png') ? 'PNG' : mimeType.includes('webp') ? 'WEBP' : 'JPEG';
+        img.onload = () => {
+            try {
+                // Create an offline canvas to normalize the image
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                
+                if (!ctx) {
+                    resolve(null);
+                    return;
+                }
+                
+                // Draw image to canvas to bake it into a local format
+                ctx.drawImage(img, 0, 0);
+                
+                // Export as standard PNG (widely supported by jsPDF)
+                const dataUrl = canvas.toDataURL('image/png');
+                
+                resolve({ 
+                    imgData: dataUrl, 
+                    format: 'PNG', 
+                    width: img.width, 
+                    height: img.height 
+                });
+            } catch (err) {
+                console.error("Canvas conversion failed for PDF asset", err);
+                resolve(null);
+            }
+        };
         
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64data = reader.result as string;
-                const tempImg = new Image();
-                tempImg.onload = () => {
-                    resolve({ 
-                        imgData: base64data, 
-                        format, 
-                        width: tempImg.width, 
-                        height: tempImg.height 
-                    });
-                };
-                tempImg.onerror = () => resolve(null);
-                tempImg.src = base64data;
-            };
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(blob);
-        });
-    } catch (e) {
-        console.warn(`PDF Image Fetch Failed for: ${url}. Attempting standard Image load...`, e);
-        // Fallback to basic Image object if fetch fails (e.g. some CDNs without CORS)
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.onload = () => {
-                const format = url.toLowerCase().includes('.png') ? 'PNG' : 'JPEG';
-                resolve({ imgData: url, format, width: img.width, height: img.height });
-            };
-            img.onerror = () => resolve(null);
-            img.src = url;
-        });
-    }
+        img.onerror = () => {
+            console.error("Image failed to load for PDF:", url);
+            resolve(null);
+        };
+
+        // Cache-busting parameter to bypass some rigid CDN caching that blocks CORS headers
+        const cacheBuster = url.includes('?') ? '&cb=' : '?cb=';
+        img.src = url.startsWith('data:') ? url : `${url}${cacheBuster}${Date.now()}`;
+    });
   };
 
   const handleExportPDF = async (e: React.MouseEvent) => {
@@ -294,6 +296,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
         
+        // Fetch all assets concurrently with normalization
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImageForPDF(companyLogo) : Promise.resolve(null)
@@ -302,18 +305,19 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const drawHeader = (pageNum: number) => {
             let topY = 15;
             
-            // Brand Logo / Name on Left
+            // Draw Brand Logo (Left)
             if (brandAsset) {
                 const ratio = brandAsset.width / brandAsset.height;
                 const h = 20; 
                 const w = h * ratio;
+                // Add baked image data
                 doc.addImage(brandAsset.imgData, brandAsset.format, margin, topY, w, h);
             } else if (brandName) {
                 doc.setTextColor(30, 41, 59); doc.setFontSize(28); doc.setFont('helvetica', 'black');
                 doc.text(brandName.toUpperCase(), margin, topY + 15);
             }
 
-            // Company Logo on Far Right
+            // Draw Company Logo (Far Right)
             if (companyAsset) {
                 const ratio = companyAsset.width / companyAsset.height;
                 const h = 12; 
@@ -456,12 +460,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 <button onClick={handleZoomIn} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={18}/></button>
              </div>
              <div className="flex gap-2">
-                <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-2 bg-white text-slate-900 px-4 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50 transition-all active:scale-95 group disabled:opacity-50">
-                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} className="text-blue-600" />}
+                <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs md:text-sm uppercase shadow-lg hover:bg-blue-600 transition-all active:scale-95 group disabled:opacity-50 min-w-[160px] justify-center">
+                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={18} className="text-blue-400 group-hover:text-white" />}
                     <span>{isExporting ? 'Generating...' : 'Save as PDF'}</span>
-                </button>
-                <button onClick={handlePrint} className="hidden md:flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-lg hover:bg-slate-700 transition-all group">
-                    <Printer size={16} /> <span>Print</span>
                 </button>
              </div>
              <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20}/></button>
