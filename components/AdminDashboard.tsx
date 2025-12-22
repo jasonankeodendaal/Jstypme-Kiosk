@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -252,7 +253,7 @@ const SystemDocumentation = () => {
                                 </div>
 
                                 {/* Flow 2 */}
-                                <div className="hidden md:block flex-1 h-0.5 bg-white/10 relative mx-4">
+                                <div className="hidden md:block flex-1 h-1 bg-white/10 relative mx-4">
                                     <div className="absolute inset-0 bg-purple-500 data-packet" style={{animationDelay: '1s'}}></div>
                                 </div>
 
@@ -260,10 +261,10 @@ const SystemDocumentation = () => {
                                 <div className="flex flex-col items-center gap-3">
                                     <div className="w-20 h-20 bg-white/5 rounded-2xl border-2 border-purple-500/30 flex items-center justify-center">
                                         <div className="grid grid-cols-2 gap-1 scale-75">
-                                            <FileText size={16} className="text-red-400" />
-                                            <Smartphone size={16} className="text-purple-400" />
-                                            <Tv size={16} className="text-purple-400" />
-                                            <Globe size={16} className="text-blue-400" />
+                                            <FileText size={20} className="text-red-400" />
+                                            <Smartphone size={20} className="text-purple-400" />
+                                            <Tv size={20} className="text-purple-400" />
+                                            <Globe size={20} className="text-blue-400" />
                                         </div>
                                     </div>
                                     <span className="text-[10px] font-black uppercase text-white tracking-widest">Multi-Channel</span>
@@ -644,7 +645,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
   const addItem = () => { setItems([...items, { id: generateId('item'), sku: '', description: '', normalPrice: '', promoPrice: '' }]); };
   const updateItem = (id: string, field: keyof PricelistItem, val: string) => { setItems(items.map(item => item.id === id ? { ...item, [field]: val } : item)); };
   const handlePriceBlur = (id: string, field: 'normalPrice' | 'promoPrice', value: string) => {
-    if (!value) return;
+    if (!value || value.trim() === '') return;
     const numericPart = value.replace(/[^0-9]/g, '');
     if (!numericPart) { if (value && !value.startsWith('R ')) updateItem(id, field, `R ${value}`); return; }
     let num = parseInt(numericPart);
@@ -666,11 +667,36 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
         const firstRow = validRows[0].map(c => String(c).toLowerCase());
         const hasHeader = firstRow.some(c => c.includes('sku') || c.includes('code') || c.includes('desc') || c.includes('price'));
         const dataRows = hasHeader ? validRows.slice(1) : validRows;
+        
         const newItems: PricelistItem[] = dataRows.map(row => {
-            const formatImported = (val: string) => { const numeric = val.replace(/[^0-9]/g, ''); if (!numeric) return val; let n = parseInt(numeric); if (n % 10 !== 0) n = Math.ceil(n / 10) * 10; return `R ${n.toLocaleString()}`; };
-            return { id: generateId('imp'), sku: String(row[0] || '').trim().toUpperCase(), description: String(row[1] || '').trim(), normalPrice: formatImported(String(row[2] || '').trim()), promoPrice: row[3] ? formatImported(String(row[3]).trim()) : '' };
+            const formatImported = (val: string) => { 
+                if (!val || val.trim() === '') return ''; 
+                const numeric = val.replace(/[^0-9]/g, ''); 
+                if (!numeric) return val; 
+                let n = parseInt(numeric); 
+                if (n % 10 !== 0) n = Math.ceil(n / 10) * 10; 
+                return `R ${n.toLocaleString()}`; 
+            };
+            return { 
+                id: generateId('imp'), 
+                sku: String(row[0] || '').trim().toUpperCase(), 
+                description: String(row[1] || '').trim(), 
+                normalPrice: formatImported(String(row[2] || '').trim()), 
+                promoPrice: row[3] ? formatImported(String(row[3]).trim()) : '' 
+            };
         });
-        if (newItems.length > 0) { if (confirm(`Parsed ${newItems.length} items. Replace current list?`)) setItems(newItems); else if (confirm("Append?")) setItems([...items, ...newItems]); }
+
+        if (newItems.length > 0) {
+            if (items.length === 0) {
+                setItems(newItems);
+            } else {
+                if (confirm(`Import successful! ${newItems.length} items found.\n\nClick OK to REPLACE ALL existing items.\nClick CANCEL to APPEND these items to the current list.`)) {
+                    setItems(newItems);
+                } else {
+                    setItems([...items, ...newItems]);
+                }
+            }
+        }
     } catch (err) { alert("Import error."); } finally { setIsImporting(false); e.target.value = ''; }
   };
 
@@ -901,7 +927,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                  <div className="flex items-center gap-4"><button onClick={handleGlobalSave} disabled={!hasUnsavedChanges} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}><SaveAll size={16} />{hasUnsavedChanges ? 'Save Changes' : 'Saved'}</button></div>
                  <div className="flex items-center gap-3"><div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>{isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}<span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span></div><button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button><button onClick={() => setCurrentUser(null)} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2"><LogOut size={16} /></button></div>
             </div>
-            <div className="flex overflow-x-auto no-scrollbar">{availableTabs.map(tab => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 min-w-[100px] py-4 text-center text-xs font-black uppercase tracking-wider border-b-4 transition-all ${activeTab === tab.id ? 'border-blue-500 text-white bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>{tab.label}</button>))}</div>
+            <div className="flex overflow-x-auto no-scrollbar">{availableTabs.map(tab => (<button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-[100px] py-4 text-center text-xs font-black uppercase tracking-wider border-b-4 transition-all ${activeTab === tab.id ? 'border-blue-500 text-white bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>{tab.label}</button>))}</div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-2 md:p-8 relative pb-40 md:pb-8">
