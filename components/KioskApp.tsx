@@ -236,32 +236,23 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const handleDragEnd = () => setIsDragging(false);
 
-  // Robust Image Loader using Canvas Normalization to bypass CORS and format issues for jsPDF
+  // High-reliability Image Loader using Canvas for PDF compatibility
   const loadImageForPDF = async (url: string): Promise<{ imgData: string, format: string, width: number, height: number } | null> => {
     if (!url) return null;
     
     return new Promise((resolve) => {
         const img = new Image();
-        // Allow cross-origin requests for the PDF generator
-        img.setAttribute('crossOrigin', 'anonymous');
+        img.crossOrigin = "anonymous"; // Essential for CORS
         
         img.onload = () => {
             try {
-                // Create an offline canvas to normalize the image
                 const canvas = document.createElement('canvas');
                 canvas.width = img.width;
                 canvas.height = img.height;
                 const ctx = canvas.getContext('2d');
+                if (!ctx) { resolve(null); return; }
                 
-                if (!ctx) {
-                    resolve(null);
-                    return;
-                }
-                
-                // Draw image to canvas to bake it into a local format
                 ctx.drawImage(img, 0, 0);
-                
-                // Export as standard PNG (widely supported by jsPDF)
                 const dataUrl = canvas.toDataURL('image/png');
                 
                 resolve({ 
@@ -271,19 +262,18 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                     height: img.height 
                 });
             } catch (err) {
-                console.error("Canvas conversion failed for PDF asset", err);
+                console.error("PDF Image processing failed", err);
                 resolve(null);
             }
         };
         
         img.onerror = () => {
-            console.error("Image failed to load for PDF:", url);
+            console.warn("Failed to load image for PDF:", url);
             resolve(null);
         };
 
-        // Cache-busting parameter to bypass some rigid CDN caching that blocks CORS headers
-        const cacheBuster = url.includes('?') ? '&cb=' : '?cb=';
-        img.src = url.startsWith('data:') ? url : `${url}${cacheBuster}${Date.now()}`;
+        // Do not add cache-busters as they can sometimes invalidate CORS headers on specific servers
+        img.src = url;
     });
   };
 
@@ -296,7 +286,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
         
-        // Fetch all assets concurrently with normalization
+        // Concurrently load logos
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImageForPDF(companyLogo) : Promise.resolve(null)
@@ -305,19 +295,18 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const drawHeader = (pageNum: number) => {
             let topY = 15;
             
-            // Draw Brand Logo (Left)
+            // Brand Logo (Left)
             if (brandAsset) {
                 const ratio = brandAsset.width / brandAsset.height;
                 const h = 20; 
                 const w = h * ratio;
-                // Add baked image data
                 doc.addImage(brandAsset.imgData, brandAsset.format, margin, topY, w, h);
             } else if (brandName) {
                 doc.setTextColor(30, 41, 59); doc.setFontSize(28); doc.setFont('helvetica', 'black');
                 doc.text(brandName.toUpperCase(), margin, topY + 15);
             }
 
-            // Draw Company Logo (Far Right)
+            // Company Logo (Far Right)
             if (companyAsset) {
                 const ratio = companyAsset.width / companyAsset.height;
                 const h = 12; 
@@ -401,7 +390,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
     } catch (err) {
         console.error("PDF Export failed", err);
-        alert("Unable to generate PDF. Check browser permissions or network connectivity.");
+        alert("Unable to generate PDF. Verify company/brand logos in settings.");
     } finally {
         setIsExporting(false);
     }
@@ -785,7 +774,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
           <ManualPricelistViewer 
             pricelist={viewingManualList} 
             onClose={() => setViewingManualList(null)} 
-            companyLogo={storeData.hero.logoUrl || storeData.companyLogoUrl}
+            companyLogo={storeData.companyLogoUrl || storeData.hero.logoUrl}
             brandLogo={activePricelistBrand?.logoUrl}
             brandName={activePricelistBrand?.name}
           />
