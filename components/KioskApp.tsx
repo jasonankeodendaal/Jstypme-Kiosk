@@ -337,9 +337,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const drawTableHeaders = (startY: number) => {
             doc.setFillColor(241, 245, 249); doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
             doc.setTextColor(30, 41, 59); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-            doc.text("CODE", margin + 3, startY); doc.text("PRODUCT DESCRIPTION", margin + 45, startY);
+            doc.text("SKU", margin + 3, startY); doc.text("DESCRIPTION", margin + 45, startY);
             doc.text("NORMAL", pageWidth - margin - 40, startY, { align: 'right' });
-            doc.text("OFFER", pageWidth - margin - 5, startY, { align: 'right' });
+            doc.text("PROMO", pageWidth - margin - 5, startY, { align: 'right' });
             return startY + 8;
         };
 
@@ -509,10 +509,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   </tr>
                   
                   <tr className="print:bg-[#f1f5f9]">
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 w-24 md:w-40 print:border-slate-400 print:text-black">CODE</th>
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 print:border-slate-400 print:text-black">PRODUCT DESCRIPTION</th>
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">NORMAL</th>
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">OFFER</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 w-24 md:w-40 print:border-slate-400 print:text-black">SKU</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 print:border-slate-400 print:text-black">Description</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">Normal</th>
+                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">Promo</th>
                   </tr>
                   </thead>
                   <tbody className="print:table-row-group">
