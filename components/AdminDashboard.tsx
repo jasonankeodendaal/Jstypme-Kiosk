@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Sparkles, Printer
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Sparkles
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
@@ -645,7 +645,7 @@ const downloadZip = async (storeData: StoreData) => {
         // Ads
         const adsFolder = mktFolder.folder("Ads");
         if (adsFolder && storeData.ads) {
-            for (const zone of ['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideVertical', 'screensaver']) {
+            for (const zone of ['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideLeftVertical', 'screensaver']) {
                 const zoneFolder = adsFolder.folder(zone);
                 const ads = (storeData.ads as any)[zone] || [];
                 for(let i=0; i<ads.length; i++) {
@@ -3133,38 +3133,6 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
             {activeTab === 'settings' && (
                <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
                    
-                   {/* PRICELIST BRANDING */}
-                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                       <div className="absolute top-0 right-0 p-8 opacity-5 text-green-600 pointer-events-none"><Printer size={120} /></div>
-                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
-                           <RIcon size={20} className="text-green-600" /> Pricelist Branding
-                       </h3>
-                       <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 relative z-10">
-                           <div className="flex flex-col md:flex-row gap-8">
-                               <div className="flex-1">
-                                   <FileUpload 
-                                       label="Pricelist Company Logo" 
-                                       currentUrl={localData.appConfig?.pricelistCompanyLogoUrl} 
-                                       onUpload={(url: any) => handleLocalUpdate({
-                                           ...localData,
-                                           appConfig: { ...localData.appConfig, pricelistCompanyLogoUrl: url }
-                                       })} 
-                                   />
-                                   <p className="text-[10px] text-slate-400 mt-2 font-medium leading-relaxed uppercase">
-                                       This logo appears in the top-right of manual pricelist PDFs. If left blank, the system defaults to your main hero logo.
-                                   </p>
-                               </div>
-                               <div className="w-full md:w-64 p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-4 text-center">
-                                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logo Placement Logic</div>
-                                   <div className="grid grid-cols-2 gap-2 w-full">
-                                        <div className="p-2 border border-blue-100 bg-blue-50 rounded text-[8px] font-bold text-blue-600 uppercase">Left: Brand Logo (Auto)</div>
-                                        <div className="p-2 border border-green-100 bg-green-50 rounded text-[8px] font-bold text-green-600 uppercase">Right: This Logo</div>
-                                   </div>
-                               </div>
-                           </div>
-                       </div>
-                   </div>
-
                    {/* GLOBAL SYSTEM PIN */}
                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                        <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">

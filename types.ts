@@ -193,7 +193,6 @@ export interface AboutConfig {
 export interface AppConfig {
     kioskIconUrl?: string;
     adminIconUrl?: string;
-    pricelistCompanyLogoUrl?: string;
 }
 
 export interface SystemSettings {
