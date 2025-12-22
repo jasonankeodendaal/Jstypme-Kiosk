@@ -2556,3 +2556,1045 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
         else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
              const url = await processAsset(fileObj, parts.slice(3).join('_'));
              if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
+                 product.imageUrl = url;
+             } else if (lowerFile.includes('gallery')) {
+                 product.galleryUrls = [...(product.galleryUrls || []), url];
+             }
+        }
+        // Handle Videos
+        else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm')) {
+            const url = await processAsset(fileObj, parts.slice(3).join('_'));
+            product.videoUrls = [...(product.videoUrls || []), url];
+        }
+        // Handle PDFs (Manuals)
+        else if (lowerFile.endsWith('.pdf')) {
+            const url = await processAsset(fileObj, parts.slice(3).join('_'));
+            const title = fileName.split('/').pop()?.replace('.pdf', '') || 'User Manual';
+            product.manuals = [...(product.manuals || []), {
+                id: generateId('man'),
+                title: title.charAt(0).toUpperCase() + title.slice(1),
+                images: [],
+                pdfUrl: url
+            }];
+        }
+    }
+    
+    return Object.values(newBrands);
+};
+
+  if (!currentUser) return <Auth admins={localData?.admins || []} onLogin={setCurrentUser} />;
+
+  return (
+    <div className="flex h-screen bg-slate-100 overflow-hidden font-sans text-slate-900">
+      
+      {/* GLOBAL SIDEBAR */}
+      <aside className="w-20 md:w-64 bg-slate-900 text-white flex flex-col shrink-0 transition-all duration-300 z-50">
+        <div className="p-4 md:p-6 mb-6">
+           <div className="flex items-center gap-4">
+              <div className="bg-blue-600 p-2 rounded-xl shadow-lg shrink-0">
+                 <ShieldCheck size={24} />
+              </div>
+              <div className="hidden md:block overflow-hidden">
+                 <h2 className="font-black uppercase tracking-tight truncate">Admin Hub</h2>
+                 <p className="text-[9px] text-blue-400 font-black uppercase tracking-[0.2em]">Kiosk Pro v2.8</p>
+              </div>
+           </div>
+        </div>
+
+        <nav className="flex-1 space-y-1 px-3">
+          {availableTabs.map((tab) => (
+            <button 
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSelectedBrand(null); setSelectedCategory(null); }}
+              className={`w-full text-left p-3 md:px-4 md:py-3 rounded-xl flex items-center gap-4 transition-all duration-200 group ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+            >
+              <tab.icon size={20} className={`shrink-0 ${activeTab === tab.id ? 'scale-110' : 'opacity-70 group-hover:opacity-100'}`} />
+              <span className="hidden md:block font-bold text-xs uppercase tracking-wider">{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-white/5 space-y-2">
+            <div className="hidden md:flex items-center gap-3 px-2 py-3 bg-white/5 rounded-2xl mb-4">
+                <div className="w-8 h-8 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                    <UserCog size={16} />
+                </div>
+                <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase text-white truncate">{currentUser.name}</div>
+                    <div className="text-[8px] font-bold uppercase text-slate-500">Connected Admin</div>
+                </div>
+            </div>
+            <button onClick={() => window.location.href = '/'} className="w-full p-3 rounded-xl flex items-center gap-4 text-slate-400 hover:text-white transition-all group">
+               <Eye size={20} className="shrink-0" />
+               <span className="hidden md:block font-bold text-xs uppercase">Live Kiosk</span>
+            </button>
+            <button onClick={() => setCurrentUser(null)} className="w-full p-3 rounded-xl flex items-center gap-4 text-red-400 hover:bg-red-500/10 transition-all group">
+               <Power size={20} className="shrink-0" />
+               <span className="hidden md:block font-bold text-xs uppercase">Logout</span>
+            </button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 flex flex-col min-w-0 bg-slate-100 relative">
+        
+        {/* HEADER BAR */}
+        <header className="h-16 md:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 shadow-sm z-40">
+           <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
+               <h2 className="text-sm md:text-xl font-black uppercase text-slate-900 tracking-tight whitespace-nowrap">
+                  {availableTabs.find(t => t.id === activeTab)?.label} Control
+               </h2>
+               <div className={`hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border ${isCloudConnected ? 'bg-green-50 text-green-600 border-green-200' : 'bg-orange-50 text-orange-600 border-orange-200'} animate-fade-in`}>
+                   <div className={`w-1.5 h-1.5 rounded-full ${isCloudConnected ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`}></div>
+                   <span className="text-[9px] font-black uppercase tracking-widest">{isCloudConnected ? 'Cloud Sync Active' : 'Cloud Offline'}</span>
+               </div>
+           </div>
+           
+           <div className="flex items-center gap-2 md:gap-4">
+               {hasUnsavedChanges && (
+                   <div className="flex items-center gap-2 animate-pulse pr-2 md:pr-4 border-r border-slate-200 mr-2 md:mr-4">
+                       <AlertCircle size={16} className="text-orange-500" />
+                       <span className="text-[10px] font-black uppercase text-orange-600 hidden md:inline">Unsaved Changes</span>
+                   </div>
+               )}
+               <button onClick={onRefresh} className="p-2 md:p-3 text-slate-400 hover:bg-slate-100 hover:text-blue-600 rounded-xl transition-all" title="Refresh from Cloud">
+                  <RotateCcw size={20} />
+               </button>
+               <button 
+                  onClick={handleGlobalSave} 
+                  disabled={!hasUnsavedChanges}
+                  className={`flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20 active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+               >
+                  <Save size={18} />
+                  <span className="hidden md:inline">Save To Cloud</span>
+               </button>
+           </div>
+        </header>
+
+        {/* CONTENT VIEWPORT */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 relative">
+          
+          {activeTab === 'inventory' && (
+            <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+                {/* Inventory Context Breadcrumb */}
+                <div className="flex items-center gap-2 mb-6">
+                    <button onClick={() => { setSelectedBrand(null); setSelectedCategory(null); }} className={`px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${!selectedBrand ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200'}`}>All Brands</button>
+                    {selectedBrand && (
+                        <>
+                            <ChevronRight size={14} className="text-slate-300" />
+                            <button onClick={() => setSelectedCategory(null)} className={`px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all ${selectedBrand && !selectedCategory ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200'}`}>{selectedBrand.name}</button>
+                        </>
+                    )}
+                    {selectedCategory && (
+                        <>
+                            <ChevronRight size={14} className="text-slate-300" />
+                            <div className="px-4 py-2 rounded-xl bg-slate-900 text-white shadow-md font-black uppercase text-[10px] tracking-widest">{selectedCategory.name}</div>
+                        </>
+                    )}
+                </div>
+
+                {!selectedBrand ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <button 
+                            onClick={() => {
+                                const name = prompt("New Brand Name:");
+                                if(name) handleLocalUpdate({ ...localData!, brands: [...localData!.brands, { id: generateId('b'), name, categories: [] }] });
+                            }}
+                            className="bg-white border-2 border-dashed border-slate-300 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all group aspect-square"
+                        >
+                            <Plus size={48} className="mb-4 group-hover:scale-110 transition-transform" />
+                            <span className="font-black uppercase tracking-widest text-sm">Add New Brand</span>
+                        </button>
+
+                        {localData?.brands.map(brand => (
+                            <div key={brand.id} className="group bg-white rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden flex flex-col p-4">
+                                <div className="aspect-square bg-slate-50 rounded-[2rem] flex items-center justify-center mb-4 relative overflow-hidden">
+                                    {brand.logoUrl ? (
+                                        <img src={brand.logoUrl} className="max-w-[70%] max-h-[70%] object-contain" alt="" />
+                                    ) : (
+                                        <span className="text-6xl font-black text-slate-200">{brand.name.charAt(0)}</span>
+                                    )}
+                                    <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-4">
+                                        <button onClick={() => setSelectedBrand(brand)} className="bg-white text-slate-900 p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-xl">Manage Brand</button>
+                                    </div>
+                                </div>
+                                <div className="px-4 flex justify-between items-center">
+                                    <div>
+                                        <h3 className="font-black text-lg text-slate-900 uppercase leading-none mb-1">{brand.name}</h3>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{brand.categories.length} Categories</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            if(confirm(`Delete ${brand.name}? This will move the entire brand to the History archive.`)) {
+                                                const newArchive = addToArchive('other', `Brand: ${brand.name}`, brand);
+                                                handleLocalUpdate({ ...localData!, brands: localData!.brands.filter(b => b.id !== brand.id), archive: newArchive });
+                                            }
+                                        }}
+                                        className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                    >
+                                        <Trash2 size={20} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : !selectedCategory ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in">
+                        <button 
+                            onClick={() => {
+                                const name = prompt("New Category Name:");
+                                if(name) {
+                                    const updatedBrands = localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, categories: [...b.categories, { id: generateId('c'), name, icon: 'Box', products: [] }] } : b);
+                                    handleLocalUpdate({ ...localData!, brands: updatedBrands });
+                                }
+                            }}
+                            className="bg-white border-2 border-dashed border-slate-300 rounded-[2rem] p-6 flex flex-col items-center justify-center text-slate-400 hover:border-purple-500 hover:text-purple-500 hover:bg-purple-50 transition-all group aspect-square"
+                        >
+                            <Plus size={32} className="mb-2" />
+                            <span className="font-black uppercase tracking-widest text-xs">New Category</span>
+                        </button>
+
+                        {selectedBrand.categories.map(cat => (
+                            <div key={cat.id} className="group bg-white rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all overflow-hidden p-4 flex flex-col">
+                                <div className="aspect-square bg-slate-50 rounded-[1.5rem] flex items-center justify-center mb-4 relative group">
+                                    <FolderOpen size={48} className="text-slate-200 group-hover:text-blue-200 transition-colors" />
+                                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
+                                         <button onClick={() => setSelectedCategory(cat)} className="bg-white text-slate-900 px-6 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl">Manage Models</button>
+                                    </div>
+                                </div>
+                                <div className="px-2 flex justify-between items-center">
+                                    <div>
+                                        <h3 className="font-bold text-slate-900 uppercase tracking-tight">{cat.name}</h3>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase">{cat.products.length} Products</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            if(confirm(`Delete ${cat.name}?`)) {
+                                                const updatedBrands = localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, categories: b.categories.filter(c => c.id !== cat.id) } : b);
+                                                handleLocalUpdate({ ...localData!, brands: updatedBrands });
+                                            }
+                                        }}
+                                        className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                                    ><Trash2 size={18}/></button>
+                                </div>
+                            </div>
+                        ))}
+                        
+                        {/* Brand Settings Section in Categories View */}
+                        <div className="col-span-full mt-12 bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+                             <h4 className="font-black uppercase text-slate-400 text-xs tracking-[0.2em] mb-8 pb-4 border-b border-slate-100">Brand Identity Settings</h4>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                <div className="space-y-6">
+                                    <InputField label="Official Brand Name" val={selectedBrand.name} onChange={(e:any) => {
+                                        const val = e.target.value;
+                                        handleLocalUpdate({ ...localData!, brands: localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, name: val } : b) });
+                                    }} />
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex-1">
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 ml-1">Primary Theme Color</label>
+                                            <div className="flex gap-4">
+                                                <input type="color" value={selectedBrand.themeColor || '#2563eb'} onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    handleLocalUpdate({ ...localData!, brands: localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, themeColor: val } : b) });
+                                                }} className="w-16 h-12 rounded-lg cursor-pointer bg-white border border-slate-200 p-1" />
+                                                <input type="text" value={selectedBrand.themeColor || '#2563eb'} onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    handleLocalUpdate({ ...localData!, brands: localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, themeColor: val } : b) });
+                                                }} className="flex-1 p-3 border border-slate-300 rounded-xl font-mono text-sm uppercase" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <FileUpload 
+                                        label="Brand Official Logo" 
+                                        currentUrl={selectedBrand.logoUrl} 
+                                        onUpload={(url: any) => handleLocalUpdate({ ...localData!, brands: localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, logoUrl: url } : b) })} 
+                                    />
+                                    <div className="mt-6">
+                                        <CatalogueManager 
+                                            catalogues={localData?.catalogues?.filter(c => c.brandId === selectedBrand.id) || []} 
+                                            brandId={selectedBrand.id}
+                                            onSave={(newList) => {
+                                                const otherCatalogues = localData?.catalogues?.filter(c => c.brandId !== selectedBrand.id) || [];
+                                                handleLocalUpdate({ ...localData!, catalogues: [...otherCatalogues, ...newList] });
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-6 animate-fade-in">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                            <button 
+                                onClick={() => setEditingProduct({ id: generateId('p'), name: '', description: '', specs: {}, features: [], dimensions: [], imageUrl: '' })}
+                                className="bg-white border-2 border-dashed border-slate-300 rounded-3xl p-6 flex flex-col items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all group aspect-square"
+                            >
+                                <Plus size={32} className="mb-2" />
+                                <span className="font-black uppercase tracking-widest text-[10px]">Add Product</span>
+                            </button>
+
+                            {selectedCategory.products.map(product => (
+                                <div key={product.id} className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl transition-all overflow-hidden flex flex-col">
+                                    <div className="aspect-square bg-white relative p-4 flex items-center justify-center group">
+                                        {product.imageUrl ? <img src={product.imageUrl} className="max-w-full max-h-full object-contain" /> : <Box className="text-slate-100" size={64}/>}
+                                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2 p-4 justify-center">
+                                             <button onClick={() => setEditingProduct(product)} className="w-full bg-white text-slate-900 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-blue-600 hover:text-white transition-all"><Edit2 size={12}/> Edit Product</button>
+                                             <button onClick={() => setMovingProduct(product)} className="w-full bg-slate-800 text-white py-2 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-purple-600 transition-all"><Move size={12}/> Move</button>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 bg-slate-50/50 flex-1 flex flex-col justify-between">
+                                        <h4 className="font-bold text-slate-900 uppercase text-xs leading-tight mb-2 line-clamp-2">{product.name}</h4>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest">{product.sku || 'No SKU'}</span>
+                                            <button 
+                                                onClick={() => {
+                                                    if(confirm(`Move ${product.name} to archive?`)) {
+                                                        const newArchive = addToArchive('product', product.name, product);
+                                                        const updatedBrands = localData!.brands.map(b => b.id === selectedBrand.id ? { ...b, categories: b.categories.map(c => c.id === selectedCategory.id ? { ...c, products: c.products.filter(p => p.id !== product.id) } : c) } : b);
+                                                        handleLocalUpdate({ ...localData!, brands: updatedBrands, archive: newArchive });
+                                                    }
+                                                }}
+                                                className="text-slate-300 hover:text-red-500 transition-colors"
+                                            ><Trash2 size={16}/></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+          )}
+
+          {activeTab === 'marketing' && (
+            <div className="max-w-4xl mx-auto space-y-12 animate-fade-in">
+                {/* Hero Section Config */}
+                <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
+                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 flex items-center gap-3">
+                        <LayoutTemplate className="text-blue-600" /> Hero Branding
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                        <div className="space-y-6">
+                            <InputField label="Headline Title" val={localData?.hero.title} onChange={(e:any) => handleLocalUpdate({ ...localData!, hero: { ...localData!.hero, title: e.target.value } })} />
+                            <InputField label="Subtitle Text" isArea val={localData?.hero.subtitle} onChange={(e:any) => handleLocalUpdate({ ...localData!, hero: { ...localData!.hero, subtitle: e.target.value } })} />
+                            <InputField label="Website URL" val={localData?.hero.websiteUrl} onChange={(e:any) => handleLocalUpdate({ ...localData!, hero: { ...localData!.hero, websiteUrl: e.target.value } })} />
+                        </div>
+                        <div className="space-y-6">
+                            <FileUpload label="Background Banner Image" currentUrl={localData?.hero.backgroundImageUrl} onUpload={(url: any) => handleLocalUpdate({ ...localData!, hero: { ...localData!.hero, backgroundImageUrl: url } })} />
+                            <FileUpload label="Secondary Logo Overlay" currentUrl={localData?.hero.logoUrl} onUpload={(url: any) => handleLocalUpdate({ ...localData!, hero: { ...localData!.hero, logoUrl: url } })} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Ad Zones Manager */}
+                <div className="bg-slate-900 text-white rounded-[3rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-12 opacity-10"><Megaphone size={200} /></div>
+                    <div className="relative z-10">
+                        <h3 className="text-xl font-black uppercase tracking-tight mb-8">Advertisement Placements</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideLeftVertical', 'screensaver'].map(zone => (
+                                <div key={zone} className="bg-white/5 border border-white/10 rounded-3xl p-6">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h4 className="font-bold text-xs uppercase tracking-widest text-blue-400">{zone.replace(/([A-Z])/g, ' $1').trim()}</h4>
+                                        <span className="text-[10px] font-black uppercase bg-white/10 px-2 py-1 rounded">{(localData?.ads as any)[zone].length} Assets</span>
+                                    </div>
+                                    <FileUpload 
+                                        label="Add New Media" 
+                                        accept="image/*,video/*" 
+                                        allowMultiple={true}
+                                        onUpload={(urls: any, type: any) => {
+                                            const newAds = Array.isArray(urls) ? urls.map(u => ({ id: generateId('ad'), type, url: u, dateAdded: new Date().toISOString() })) : [{ id: generateId('ad'), type, url: urls, dateAdded: new Date().toISOString() }];
+                                            const currentAds = (localData?.ads as any)[zone] || [];
+                                            handleLocalUpdate({ ...localData!, ads: { ...localData!.ads, [zone]: [...currentAds, ...newAds] } });
+                                        }} 
+                                    />
+                                    <div className="grid grid-cols-3 gap-3 mt-4">
+                                        {(localData?.ads as any)[zone].map((ad: AdItem) => (
+                                            <div key={ad.id} className="relative group aspect-square bg-black rounded-xl overflow-hidden shadow-lg">
+                                                {ad.type === 'video' ? <video src={ad.url} className="w-full h-full object-cover opacity-60" muted /> : <img src={ad.url} className="w-full h-full object-cover" />}
+                                                <button 
+                                                    onClick={() => {
+                                                        const updatedZone = (localData?.ads as any)[zone].filter((a: AdItem) => a.id !== ad.id);
+                                                        handleLocalUpdate({ ...localData!, ads: { ...localData!.ads, [zone]: updatedZone } });
+                                                    }}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                                ><Trash2 size={12}/></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Global Pamphlets */}
+                <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
+                    <CatalogueManager 
+                        catalogues={localData?.catalogues?.filter(c => !c.brandId) || []} 
+                        onSave={(newList) => {
+                            const brandCatalogues = localData?.catalogues?.filter(c => c.brandId) || [];
+                            handleLocalUpdate({ ...localData!, catalogues: [...brandCatalogues, ...newList] });
+                        }}
+                    />
+                </div>
+            </div>
+          )}
+
+          {activeTab === 'pricelists' && (
+              <PricelistManager 
+                pricelists={localData?.pricelists || []} 
+                pricelistBrands={localData?.pricelistBrands || []}
+                onSavePricelists={(newList) => handleLocalUpdate({ ...localData!, pricelists: newList })}
+                onSaveBrands={(newBrands) => handleLocalUpdate({ ...localData!, pricelistBrands: newBrands })}
+                onDeletePricelist={(id) => {
+                    const pl = localData?.pricelists?.find(p => p.id === id);
+                    if(pl) {
+                        const newArchive = addToArchive('pricelist', `Pricelist: ${pl.title}`, pl);
+                        handleLocalUpdate({ ...localData!, pricelists: localData!.pricelists!.filter(p => p.id !== id), archive: newArchive });
+                    }
+                }}
+              />
+          )}
+
+          {activeTab === 'tv' && (
+              <div className="max-w-7xl mx-auto animate-fade-in flex flex-col md:flex-row gap-8 h-[calc(100vh-140px)]">
+                  {/* Left Column: TV Brand Management */}
+                  <div className="w-full md:w-1/3 h-1/2 md:h-full flex flex-col bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden shrink-0">
+                       <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
+                           <h2 className="font-black text-slate-900 uppercase text-sm">TV Display Channels</h2>
+                           <button onClick={() => {
+                               const name = prompt("Brand Channel Name:");
+                               if(name) handleLocalUpdate({ ...localData!, tv: { brands: [...(localData!.tv?.brands || []), { id: generateId('tvb'), name, models: [] }] } });
+                           }} className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-[10px] uppercase flex items-center gap-1">
+                              <Plus size={14} /> Add Channel
+                           </button>
+                       </div>
+                       <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                           {(localData?.tv?.brands || []).map(brand => (
+                               <div 
+                                  key={brand.id} 
+                                  onClick={() => setSelectedTVBrand(brand)}
+                                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative group ${selectedTVBrand?.id === brand.id ? 'bg-blue-50 border-blue-600 shadow-md scale-[1.02]' : 'bg-white border-slate-100 hover:border-blue-200'}`}
+                               >
+                                   <div className="flex items-center gap-4">
+                                       <div className="w-12 h-12 bg-white rounded-xl border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
+                                           {brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <Tv size={24} className="text-slate-300" />}
+                                       </div>
+                                       <div className="flex-1 min-w-0">
+                                           <div className="font-black text-slate-900 uppercase text-xs truncate">{brand.name}</div>
+                                           <div className="text-[10px] font-bold text-slate-400 uppercase">{(brand.models || []).length} Models</div>
+                                       </div>
+                                   </div>
+                                   {selectedTVBrand?.id === brand.id && (
+                                       <div className="mt-4 pt-4 border-t border-slate-200/50 space-y-4" onClick={e => e.stopPropagation()}>
+                                           <InputField label="Rename Channel" val={brand.name} onChange={(e:any) => handleLocalUpdate({ ...localData!, tv: { brands: localData!.tv!.brands.map(b => b.id === brand.id ? { ...b, name: e.target.value } : b) } })} />
+                                           <FileUpload 
+                                                label="Channel Logo" 
+                                                currentUrl={brand.logoUrl} 
+                                                onUpload={(url: any) => handleLocalUpdate({ ...localData!, tv: { brands: localData!.tv!.brands.map(b => b.id === brand.id ? { ...b, logoUrl: url } : b) } })} 
+                                           />
+                                           <button 
+                                                onClick={() => {
+                                                    if(confirm("Delete this entire brand channel?")) {
+                                                        handleLocalUpdate({ ...localData!, tv: { brands: localData!.tv!.brands.filter(b => b.id !== brand.id) } });
+                                                        setSelectedTVBrand(null);
+                                                    }
+                                                }}
+                                                className="w-full text-center text-[10px] text-red-500 font-black uppercase hover:bg-red-50 py-2 rounded-lg"
+                                           >Delete Channel</button>
+                                       </div>
+                                   )}
+                               </div>
+                           ))}
+                       </div>
+                  </div>
+
+                  {/* Right Column: Models for Selected Brand */}
+                  <div className="flex-1 h-1/2 md:h-full bg-slate-50 border border-slate-200 rounded-3xl p-6 flex flex-col shadow-inner min-h-0">
+                      {!selectedTVBrand ? (
+                          <div className="flex-1 flex flex-col items-center justify-center text-slate-300 gap-4">
+                              <Tv size={80} className="opacity-10" />
+                              <p className="font-black uppercase tracking-widest text-xs opacity-40">Select a Channel to Manage Models</p>
+                          </div>
+                      ) : (
+                          <div className="flex-1 flex flex-col animate-fade-in overflow-hidden">
+                              <div className="flex justify-between items-center mb-8 shrink-0">
+                                  <h3 className="font-black text-slate-900 uppercase text-lg flex items-center gap-3">
+                                      {selectedTVBrand.name} <span className="text-slate-300">/</span> Models
+                                  </h3>
+                                  <button onClick={() => setEditingTVModel({ id: generateId('tvm'), name: 'New Model', videoUrls: [] })} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs uppercase shadow-xl hover:bg-blue-600 transition-all flex items-center gap-2">
+                                      <Plus size={18} /> Add Model
+                                  </button>
+                              </div>
+                              
+                              <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 content-start pr-2 pb-10">
+                                  {selectedTVBrand.models?.map(model => (
+                                      <div key={model.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group">
+                                          <div className="aspect-video bg-slate-900 relative flex items-center justify-center p-2 overflow-hidden">
+                                              {model.imageUrl ? <img src={model.imageUrl} className="w-full h-full object-cover rounded-xl" /> : <Tv className="text-white/10" size={64}/>}
+                                              <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-4">
+                                                  <button onClick={() => setEditingTVModel(model)} className="bg-white text-slate-900 px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 hover:text-white transition-all">Edit Videos</button>
+                                              </div>
+                                          </div>
+                                          <div className="p-5 flex justify-between items-center">
+                                              <div>
+                                                  <h4 className="font-black text-slate-900 uppercase text-sm leading-tight">{model.name}</h4>
+                                                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">{model.videoUrls?.length || 0} Loop Videos</p>
+                                              </div>
+                                              <button 
+                                                  onClick={() => {
+                                                      if(confirm(`Delete model ${model.name}?`)) {
+                                                          const updatedBrands = localData!.tv!.brands.map(b => b.id === selectedTVBrand.id ? { ...b, models: b.models.filter(m => m.id !== model.id) } : b);
+                                                          handleLocalUpdate({ ...localData!, tv: { brands: updatedBrands } });
+                                                      }
+                                                  }}
+                                                  className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                                              ><Trash2 size={20}/></button>
+                                          </div>
+                                      </div>
+                                  ))}
+                                  {(!selectedTVBrand.models || selectedTVBrand.models.length === 0) && (
+                                      <div className="col-span-full py-20 text-center text-slate-400 font-black uppercase text-xs italic opacity-40">No models for this brand yet.</div>
+                                  )}
+                              </div>
+                          </div>
+                      )}
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'screensaver' && (
+              <div className="max-w-4xl mx-auto space-y-12 animate-fade-in">
+                  <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
+                      <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 flex items-center gap-3">
+                          <Monitor className="text-blue-600" /> Timing & Display
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                          <div className="space-y-6">
+                              <InputField label="Idle Timeout (Seconds)" val={localData?.screensaverSettings?.idleTimeout} type="number" onChange={(e:any) => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, idleTimeout: parseInt(e.target.value) } })} />
+                              <InputField label="Slide Duration (Seconds)" val={localData?.screensaverSettings?.imageDuration} type="number" onChange={(e:any) => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, imageDuration: parseInt(e.target.value) } })} />
+                              
+                              <div className="p-4 bg-slate-50 rounded-2xl space-y-4">
+                                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Display Style</label>
+                                  <div className="flex gap-2">
+                                      <button onClick={() => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, displayStyle: 'contain' } })} className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] transition-all border-2 ${localData?.screensaverSettings?.displayStyle === 'contain' ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400'}`}>Contain</button>
+                                      <button onClick={() => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, displayStyle: 'cover' } })} className={`flex-1 py-3 rounded-xl font-black uppercase text-[10px] transition-all border-2 ${localData?.screensaverSettings?.displayStyle === 'cover' ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400'}`}>Full Cover</button>
+                                  </div>
+                              </div>
+                          </div>
+                          
+                          <div className="space-y-4">
+                              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-4">Content Switches</label>
+                              {[
+                                  { key: 'muteVideos', label: 'Mute Videos', icon: <VolumeX size={16}/> },
+                                  { key: 'showProductImages', label: 'Show Product Photos', icon: <ImageIcon size={16}/> },
+                                  { key: 'showProductVideos', label: 'Show Product Videos', icon: <Video size={16}/> },
+                                  { key: 'showPamphlets', label: 'Show Pamphlet Covers', icon: <BookOpen size={16}/> },
+                                  { key: 'showCustomAds', label: 'Show Custom Ads', icon: <Megaphone size={16}/> },
+                                  { key: 'showInfoOverlay', label: 'Show Information Text', icon: <Info size={16}/> }
+                              ].map((item: any) => (
+                                  <button 
+                                    key={item.key}
+                                    onClick={() => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, [item.key]: !(localData!.screensaverSettings as any)[item.key] } })}
+                                    className={`w-full p-4 rounded-2xl flex items-center justify-between transition-all border ${ (localData!.screensaverSettings as any)[item.key] ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200 opacity-60' }`}
+                                  >
+                                      <div className="flex items-center gap-3">
+                                          <span className={(localData!.screensaverSettings as any)[item.key] ? 'text-blue-600' : 'text-slate-400'}>{item.icon}</span>
+                                          <span className="font-bold text-xs uppercase">{item.label}</span>
+                                      </div>
+                                      {(localData!.screensaverSettings as any)[item.key] ? <ToggleRight className="text-blue-600" /> : <ToggleLeft className="text-slate-300" />}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                  </div>
+
+                  <div className="bg-slate-900 text-white rounded-[3rem] p-8 md:p-12 shadow-2xl border border-white/5 overflow-hidden relative">
+                       <div className="absolute top-0 right-0 p-12 opacity-5"><Moon size={160} /></div>
+                       <div className="relative z-10">
+                           <h3 className="text-xl font-black uppercase tracking-tight mb-8 flex items-center gap-3">
+                               <Clock className="text-blue-400" /> Auto-Sleep Mode
+                           </h3>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between p-6 bg-white/5 border border-white/10 rounded-3xl">
+                                        <div>
+                                            <div className="font-black uppercase text-xs">Enable Sleep Hours</div>
+                                            <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">Turns screen black outside business hours</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, enableSleepMode: !localData!.screensaverSettings?.enableSleepMode } })}
+                                            className={`p-2 transition-all ${localData?.screensaverSettings?.enableSleepMode ? 'text-green-400' : 'text-slate-600'}`}
+                                        >
+                                            {localData?.screensaverSettings?.enableSleepMode ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className={`space-y-6 transition-all duration-500 ${localData?.screensaverSettings?.enableSleepMode ? 'opacity-100 scale-100' : 'opacity-20 scale-95 pointer-events-none'}`}>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Active Start</label>
+                                            <input type="time" value={localData?.screensaverSettings?.activeHoursStart || '08:00'} onChange={(e) => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, activeHoursStart: e.target.value } })} className="w-full bg-white/10 border border-white/10 p-4 rounded-2xl text-xl font-black text-center text-white" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Active End</label>
+                                            <input type="time" value={localData?.screensaverSettings?.activeHoursEnd || '20:00'} onChange={(e) => handleLocalUpdate({ ...localData!, screensaverSettings: { ...localData!.screensaverSettings!, activeHoursEnd: e.target.value } })} className="w-full bg-white/10 border border-white/10 p-4 rounded-2xl text-xl font-black text-center text-white" />
+                                        </div>
+                                    </div>
+                                </div>
+                           </div>
+                       </div>
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'fleet' && (
+            <div className="max-w-6xl mx-auto animate-fade-in">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {localData?.fleet?.sort((a,b) => b.status.localeCompare(a.status)).map((kiosk) => {
+                        const isOnline = (new Date().getTime() - new Date(kiosk.last_seen).getTime()) < 120000;
+                        return (
+                            <div key={kiosk.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group transition-all hover:shadow-xl">
+                                <div className="p-6 border-b border-slate-50 flex justify-between items-start">
+                                    <div className="flex gap-4">
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${kiosk.deviceType === 'tv' ? 'bg-indigo-50 text-indigo-600' : kiosk.deviceType === 'mobile' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
+                                            {kiosk.deviceType === 'tv' ? <Tv size={24} /> : kiosk.deviceType === 'mobile' ? <Smartphone size={24} /> : <Tablet size={24} />}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-slate-900 uppercase tracking-tight truncate max-w-[150px]">{kiosk.name}</h3>
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                                                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{isOnline ? 'Online Now' : 'Offline'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setEditingKiosk(kiosk)} className="p-2 text-slate-300 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Edit2 size={16}/></button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                            <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Zone / Area</span>
+                                            <span className="block text-xs font-bold text-slate-700 truncate">{kiosk.assignedZone || 'Unassigned'}</span>
+                                        </div>
+                                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                            <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Last Sync</span>
+                                            <span className="block text-xs font-bold text-slate-700">{formatRelativeTime(kiosk.last_seen)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 px-1">
+                                        <div className="flex items-center gap-1"><Wifi size={12}/> {kiosk.wifiStrength}%</div>
+                                        <div className="flex items-center gap-1"><Cpu size={12}/> v{kiosk.version}</div>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
+                                    <button 
+                                        onClick={async () => {
+                                            if(confirm(`Request remote system restart for ${kiosk.name}?`)) {
+                                                await supabase.from('kiosks').update({ restart_requested: true }).eq('id', kiosk.id);
+                                                alert("Command queued. Device will reboot on next heartbeat (max 60s).");
+                                            }
+                                        }}
+                                        className="flex-1 py-2 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-black transition-all active:scale-95"
+                                    ><RotateCcw size={14}/> Reboot</button>
+                                    <button 
+                                        onClick={() => removeFleetMember(kiosk.id)}
+                                        className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                                    ><Trash2 size={16}/></button>
+                                </div>
+                            </div>
+                        )
+                    })}
+                    {(!localData?.fleet || localData.fleet.length === 0) && (
+                        <div className="col-span-full py-20 text-center flex flex-col items-center justify-center text-slate-300 gap-4 border-4 border-dashed border-slate-200 rounded-[3rem]">
+                            <Tablet size={64} className="opacity-20" />
+                            <div>
+                                <p className="font-black uppercase tracking-widest text-lg opacity-40">No Devices Connected</p>
+                                <p className="text-xs font-bold opacity-30 mt-1 uppercase tracking-widest">Connect a tablet and complete setup to monitor fleet</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+              <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
+                  <div className="flex flex-col md:flex-row justify-between gap-4">
+                       <div className="flex gap-2">
+                           {['deletedItems', 'brands', 'catalogues'].map(tab => (
+                               <button 
+                                  key={tab} 
+                                  onClick={() => setHistoryTab(tab as any)}
+                                  className={`px-6 py-3 rounded-2xl font-black uppercase text-xs tracking-widest transition-all ${historyTab === tab ? 'bg-slate-900 text-white shadow-xl' : 'bg-white text-slate-400 border border-slate-200'}`}
+                               >
+                                  {tab === 'deletedItems' ? 'Recycle Bin' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                               </button>
+                           ))}
+                       </div>
+                       <div className="relative flex-1 max-w-sm">
+                           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                           <input 
+                              type="text" 
+                              placeholder="Search history..." 
+                              value={historySearch}
+                              onChange={(e) => setHistorySearch(e.target.value)}
+                              className="w-full pl-12 pr-6 py-3 bg-white border border-slate-200 rounded-2xl font-bold text-sm outline-none focus:border-blue-500 shadow-sm"
+                           />
+                       </div>
+                  </div>
+
+                  <div className="bg-white rounded-[3rem] shadow-sm border border-slate-200 overflow-hidden min-h-[500px]">
+                      {historyTab === 'deletedItems' && (
+                          <div className="divide-y divide-slate-100">
+                             {(localData?.archive?.deletedItems || [])
+                                .filter(item => !historySearch || item.name.toLowerCase().includes(historySearch.toLowerCase()))
+                                .map(item => (
+                                <div key={item.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                                    <div className="flex items-center gap-6">
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${item.type === 'product' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+                                            {item.type === 'product' ? <Box size={24}/> : <FolderOpen size={24}/>}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-slate-900 uppercase">{item.name}</h4>
+                                            <div className="flex items-center gap-3 mt-1">
+                                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{item.type}</span>
+                                                <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase">Deleted {formatRelativeTime(item.deletedAt)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => {
+                                                if(item.type === 'product') {
+                                                    const prod = item.data as Product;
+                                                    setEditingProduct(prod); // Let them edit then save to correct cat
+                                                } else if(item.type === 'device') {
+                                                    if(confirm("Restore this device to live fleet?")) {
+                                                        const registry = item.data as KioskRegistry;
+                                                        updateFleetMember(registry);
+                                                        const newDeleted = (localData?.archive?.deletedItems || []).filter(i => i.id !== item.id);
+                                                        handleLocalUpdate({ ...localData!, archive: { ...localData!.archive!, deletedItems: newDeleted } });
+                                                    }
+                                                } else if(item.type === 'pricelist') {
+                                                    if(confirm("Restore this pricelist?")) {
+                                                        const pl = item.data as Pricelist;
+                                                        handleLocalUpdate({ 
+                                                            ...localData!, 
+                                                            pricelists: [...(localData!.pricelists || []), pl],
+                                                            archive: { ...localData!.archive!, deletedItems: localData!.archive!.deletedItems!.filter(i => i.id !== item.id) }
+                                                        });
+                                                    }
+                                                }
+                                            }}
+                                            className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2"
+                                        ><RefreshCw size={14}/> Restore</button>
+                                        <button 
+                                            onClick={() => {
+                                                if(confirm("Permanently purge this item? This cannot be undone.")) {
+                                                    const newDeleted = (localData?.archive?.deletedItems || []).filter(i => i.id !== item.id);
+                                                    handleLocalUpdate({ ...localData!, archive: { ...localData!.archive!, deletedItems: newDeleted } });
+                                                }
+                                            }}
+                                            className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                        ><Trash2 size={20}/></button>
+                                    </div>
+                                </div>
+                             ))}
+                             {(localData?.archive?.deletedItems || []).length === 0 && (
+                                 <div className="py-40 text-center flex flex-col items-center justify-center text-slate-300 gap-4">
+                                     <History size={64} className="opacity-10" />
+                                     <p className="font-black uppercase tracking-[0.2em] text-sm opacity-30">Archive history is clean</p>
+                                 </div>
+                             )}
+                          </div>
+                      )}
+
+                      {historyTab === 'brands' && (
+                          <div className="divide-y divide-slate-100">
+                             {(localData?.archive?.brands || []).map(brand => (
+                                <div key={brand.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
+                                            {brand.logoUrl ? <img src={brand.logoUrl} className="max-w-[70%] max-h-[70%] object-contain" /> : <FolderOpen size={24} className="text-slate-300" />}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-slate-900 uppercase">{brand.name}</h4>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{brand.categories.length} Categories</span>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => restoreBrand(brand)} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"><RefreshCw size={14}/> Restore Brand</button>
+                                </div>
+                             ))}
+                             {(localData?.archive?.brands || []).length === 0 && (
+                                <div className="py-40 text-center text-slate-300 font-black uppercase tracking-widest text-xs italic opacity-30">No Archived Brands</div>
+                             )}
+                          </div>
+                      )}
+
+                      {historyTab === 'catalogues' && (
+                          <div className="divide-y divide-slate-100">
+                             {(localData?.archive?.catalogues || []).map(cat => (
+                                <div key={cat.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-12 h-16 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
+                                            {cat.thumbnailUrl || (cat.pages && cat.pages[0]) ? <img src={cat.thumbnailUrl || cat.pages[0]} className="w-full h-full object-cover" /> : <BookOpen size={24} className="text-slate-300" />}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-slate-900 uppercase">{cat.title}</h4>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{cat.year || 'No Date'}</span>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => restoreCatalogue(cat)} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"><RefreshCw size={14}/> Restore</button>
+                                </div>
+                             ))}
+                             {(localData?.archive?.catalogues || []).length === 0 && (
+                                <div className="py-40 text-center text-slate-300 font-black uppercase tracking-widest text-xs italic opacity-30">No Expired Catalogues</div>
+                             )}
+                          </div>
+                      )}
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'settings' && (
+              <div className="max-w-4xl mx-auto space-y-12 animate-fade-in">
+                  
+                  {/* System Administration (Admins) */}
+                  <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
+                      <div className="flex justify-between items-center mb-10 pb-4 border-b border-slate-100">
+                           <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                               <ShieldCheck className="text-blue-600" /> Administrative Access
+                           </h3>
+                      </div>
+                      <AdminManager 
+                        admins={localData?.admins || []} 
+                        currentUser={currentUser}
+                        onUpdate={(newAdmins) => handleLocalUpdate({ ...localData!, admins: newAdmins })} 
+                      />
+                  </div>
+
+                  {/* Icon & Identity Config */}
+                  <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
+                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 flex items-center gap-3">
+                        <ImageIcon className="text-blue-600" /> Application Identity
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                        <FileUpload 
+                            label="Kiosk (PWA) Launcher Icon" 
+                            currentUrl={localData?.appConfig?.kioskIconUrl} 
+                            onUpload={(url: any) => handleLocalUpdate({ ...localData!, appConfig: { ...localData!.appConfig, kioskIconUrl: url } })} 
+                        />
+                        <FileUpload 
+                            label="Admin Hub Launcher Icon" 
+                            currentUrl={localData?.appConfig?.adminIconUrl} 
+                            onUpload={(url: any) => handleLocalUpdate({ ...localData!, appConfig: { ...localData!.appConfig, adminIconUrl: url } })} 
+                        />
+                        <FileUpload 
+                            label="Master Company Branding Logo" 
+                            currentUrl={localData?.companyLogoUrl} 
+                            onUpload={(url: any) => handleLocalUpdate({ ...localData!, companyLogoUrl: url })} 
+                        />
+                        <div className="space-y-4">
+                            <InputField 
+                                label="Global Setup Activation PIN" 
+                                val={localData?.systemSettings?.setupPin} 
+                                onChange={(e:any) => handleLocalUpdate({ ...localData!, systemSettings: { ...localData!.systemSettings, setupPin: e.target.value } })} 
+                                placeholder="####"
+                            />
+                            <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl text-[10px] text-orange-800 font-bold uppercase leading-relaxed">
+                                This PIN is required when provisioning new tablets in-store. Keep it secure.
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+
+                  {/* Backup & Tools */}
+                  <div className="bg-slate-900 text-white rounded-[3rem] p-8 md:p-12 shadow-2xl border border-white/5 relative overflow-hidden">
+                       <div className="absolute top-0 left-0 p-12 opacity-5"><HardDrive size={160} /></div>
+                       <div className="relative z-10">
+                           <h3 className="text-xl font-black uppercase tracking-tight mb-10 flex items-center gap-3">
+                               <Database className="text-blue-400" /> Data Maintenance Tools
+                           </h3>
+                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white/5 border border-white/10 p-6 rounded-3xl group">
+                                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Download size={24}/></div>
+                                    <h4 className="font-black text-sm uppercase mb-2">Export Backup</h4>
+                                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed mb-6">Generates a full JSZip archive of your inventory, branding, assets, and settings.</p>
+                                    <button 
+                                        onClick={async () => {
+                                            if(!localData) return;
+                                            setExportProcessing(true);
+                                            try { await downloadZip(localData); } catch(e) { alert("Export error"); }
+                                            finally { setExportProcessing(false); }
+                                        }}
+                                        disabled={exportProcessing}
+                                        className="w-full py-3 bg-white text-slate-900 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-blue-500 hover:text-white transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                                    >
+                                        {exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <SaveAll size={16}/>}
+                                        Full System ZIP
+                                    </button>
+                                </div>
+
+                                <div className="bg-white/5 border border-white/10 p-6 rounded-3xl group">
+                                    <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Upload size={24}/></div>
+                                    <h4 className="font-black text-sm uppercase mb-2">Inventory Import</h4>
+                                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed mb-6">Mass-upload new Brands and Products via ZIP. Cloud storage will be used for assets.</p>
+                                    <label className={`w-full py-3 bg-white text-slate-900 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-purple-600 hover:text-white transition-all shadow-lg active:scale-95 cursor-pointer ${importProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
+                                        {importProcessing ? <Loader2 size={16} className="animate-spin" /> : <FileInput size={16}/>}
+                                        {importProcessing ? 'Importing...' : 'Select ZIP Bundle'}
+                                        <input 
+                                            type="file" 
+                                            className="hidden" 
+                                            accept=".zip" 
+                                            disabled={importProcessing}
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if(file) {
+                                                    setImportProcessing(true);
+                                                    try {
+                                                        const brands = await importZip(file, setImportProgress);
+                                                        const userConfirmed = confirm(`Parsed ${brands.length} Brands with ${brands.reduce((acc, b) => acc + b.categories.reduce((cAcc, cat) => cAcc + cat.products.length, 0), 0)} Products.\n\nMerge with existing inventory?`);
+                                                        if(userConfirmed) {
+                                                            handleLocalUpdate({ ...localData!, brands: [...localData!.brands, ...brands] });
+                                                            alert("Inventory successfully updated.");
+                                                        }
+                                                    } catch(err) {
+                                                        alert("Import failed. Ensure ZIP follows correct structure.");
+                                                    } finally {
+                                                        setImportProcessing(false);
+                                                        setImportProgress('');
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                    {importProcessing && <div className="mt-4 text-[9px] font-bold text-purple-400 uppercase text-center animate-pulse">{importProgress || 'Parsing Archive...'}</div>}
+                                </div>
+
+                                <div className="bg-red-900/20 border border-red-500/20 p-6 rounded-3xl group">
+                                    <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><RotateCcw size={24}/></div>
+                                    <h4 className="font-black text-sm text-red-400 uppercase mb-2">Factory Reset</h4>
+                                    <p className="text-[10px] text-red-300/40 font-medium leading-relaxed mb-6">Destructive action. Wipes all data and restores the original system demo content.</p>
+                                    <button 
+                                        onClick={async () => {
+                                            if(confirm("CRITICAL WARNING: This will permanently delete your entire store configuration. Continue?") && confirm("Final Confirmation: Erase everything?")) {
+                                                const newData = await resetStoreData();
+                                                onUpdateData(newData);
+                                                window.location.reload();
+                                            }
+                                        }}
+                                        className="w-full py-3 bg-red-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-red-700 transition-all shadow-lg active:scale-95 shadow-red-900/20"
+                                    ><Power size={16}/> Wipe Database</button>
+                                </div>
+                           </div>
+                       </div>
+                  </div>
+
+                  <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-sm border border-slate-200">
+                       <div className="flex justify-between items-center mb-10 pb-4 border-b border-slate-100">
+                           <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                               <Info className="text-blue-600" /> About Us Content
+                           </h3>
+                      </div>
+                      <div className="space-y-6">
+                           <InputField label="About Page Headline" val={localData?.about?.title} onChange={(e:any) => handleLocalUpdate({...localData!, about: { ...localData!.about, title: e.target.value }})} />
+                           <InputField label="Corporate Story / Narrative" isArea val={localData?.about?.text} onChange={(e:any) => handleLocalUpdate({...localData!, about: { ...localData!.about, text: e.target.value }})} />
+                           <FileUpload label="Voice Guide / Background Audio" accept="audio/*" icon={<Music/>} currentUrl={localData?.about?.audioUrl} onUpload={(url: any) => handleLocalUpdate({...localData!, about: { ...localData!.about, audioUrl: url }})} />
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'guide' && (
+              <SystemDocumentation />
+          )}
+
+        </div>
+      </main>
+
+      {/* GLOBAL OVERLAYS / MODALS */}
+      {editingProduct && (
+          <div className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-0 md:p-12 animate-fade-in backdrop-blur-md">
+              <div className="w-full h-full max-w-6xl overflow-hidden shadow-2xl relative">
+                  <ProductEditor 
+                    product={editingProduct} 
+                    onSave={(updated) => {
+                        let updatedBrands = localData!.brands.map(b => {
+                            if (b.id === selectedBrand!.id) {
+                                return {
+                                    ...b,
+                                    categories: b.categories.map(c => {
+                                        if (c.id === selectedCategory!.id) {
+                                            const exists = c.products.find(p => p.id === updated.id);
+                                            return {
+                                                ...c,
+                                                products: exists ? c.products.map(p => p.id === updated.id ? updated : p) : [...c.products, updated]
+                                            };
+                                        }
+                                        return c;
+                                    })
+                                };
+                            }
+                            return b;
+                        });
+                        handleLocalUpdate({ ...localData!, brands: updatedBrands });
+                        setEditingProduct(null);
+                    }}
+                    onCancel={() => setEditingProduct(null)} 
+                  />
+              </div>
+          </div>
+      )}
+
+      {movingProduct && selectedBrand && selectedCategory && (
+          <MoveProductModal 
+            product={movingProduct} 
+            allBrands={localData?.brands || []} 
+            currentBrandId={selectedBrand.id} 
+            currentCategoryId={selectedCategory.id} 
+            onClose={() => setMovingProduct(null)}
+            onMove={handleMoveProduct}
+          />
+      )}
+
+      {editingTVModel && selectedTVBrand && (
+          <TVModelEditor 
+              model={editingTVModel} 
+              onSave={(updated) => {
+                  const updatedBrands = localData!.tv!.brands.map(b => {
+                      if (b.id === selectedTVBrand.id) {
+                          const exists = b.models.find(m => m.id === updated.id);
+                          return {
+                              ...b,
+                              models: exists ? b.models.map(m => m.id === updated.id ? updated : m) : [...b.models, updated]
+                          };
+                      }
+                      return b;
+                  });
+                  handleLocalUpdate({ ...localData!, tv: { brands: updatedBrands } });
+                  setEditingTVModel(null);
+              }}
+              onClose={() => setEditingTVModel(null)}
+          />
+      )}
+
+      {editingKiosk && (
+          <KioskEditorModal 
+            kiosk={editingKiosk} 
+            onSave={(updated) => {
+                updateFleetMember(updated);
+                setEditingKiosk(null);
+            }} 
+            onClose={() => setEditingKiosk(null)} 
+          />
+      )}
+    </div>
+  );
+};
+
+export default AdminDashboard;
