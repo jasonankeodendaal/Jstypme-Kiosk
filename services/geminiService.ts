@@ -528,6 +528,9 @@ const DEFAULT_DATA: StoreData = {
     title: "Future Retail Experience",
     subtitle: "Discover the latest in Tech, Fashion, and Lifestyle.",
     backgroundImageUrl: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop",
+    assets: [
+      { id: 'h-1', type: 'image', url: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop" }
+    ],
     logoUrl: "https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png",
     websiteUrl: "https://jstyp.me"
   },
@@ -597,7 +600,22 @@ const migrateData = (data: any): StoreData => {
     if (!data.pricelists || !Array.isArray(data.pricelists)) data.pricelists = [];
     if (!data.pricelistBrands || !Array.isArray(data.pricelistBrands)) data.pricelistBrands = [];
     if (!data.fleet || !Array.isArray(data.fleet)) data.fleet = [];
-    if (!data.hero) data.hero = { ...DEFAULT_DATA.hero };
+    
+    // Migrate Hero
+    if (!data.hero) {
+        data.hero = { ...DEFAULT_DATA.hero };
+    } else {
+        if (!data.hero.assets) {
+            data.hero.assets = [];
+            if (data.hero.backgroundImageUrl) {
+                data.hero.assets.push({ id: 'legacy-hero', type: 'image', url: data.hero.backgroundImageUrl });
+            }
+        }
+        if (data.hero.assets.length === 0 && DEFAULT_DATA.hero.assets) {
+            data.hero.assets = [...DEFAULT_DATA.hero.assets];
+        }
+    }
+
     if (!data.ads) {
         data.ads = { ...DEFAULT_DATA.ads };
     } else {

@@ -73,10 +73,17 @@ export interface TVConfig {
   brands: TVBrand[];
 }
 
+export interface HeroAsset {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+}
+
 export interface HeroConfig {
   title: string;
   subtitle: string;
-  backgroundImageUrl?: string;
+  backgroundImageUrl?: string; // Legacy
+  assets?: HeroAsset[]; // Multi-upload support
   logoUrl?: string;
   websiteUrl?: string;
 }
