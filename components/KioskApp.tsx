@@ -347,9 +347,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         currentY = drawTableHeaders(currentY);
         
         const items = pricelist.items || [];
-        const rowHeight = 9; const footerMargin = 20;
+        const rowHeight = 9; 
+        const footerMargin = 25; // Increased from 20 to 25 to prevent last row clipping
 
         items.forEach((item, index) => {
+            // Check if current row + height will exceed the safe printable area
             if (currentY + rowHeight > pageHeight - footerMargin) {
                 doc.addPage();
                 currentY = drawHeader(doc.internal.getNumberOfPages());
@@ -421,13 +423,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block overflow-hidden print:overflow-visible" onClick={onClose}>
       <style>{`
         @media print {
-          @page { size: portrait; margin: 5mm; }
+          @page { size: portrait; margin: 10mm; }
           body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0 !important; padding: 0 !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
           .print-hidden { display: none !important; }
           .print-only { display: block !important; }
           #root, .relative, .viewer-container, .table-scroll { display: block !important; position: static !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
           .viewer-container { box-shadow: none !important; border: none !important; }
-          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
+          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; margin-bottom: 25mm !important; } /* Added margin buffer */
           .spreadsheet-table thead { display: table-header-group !important; }
           .spreadsheet-table tr { page-break-inside: avoid !important; }
           .spreadsheet-table th { position: static !important; background: #f1f5f9 !important; color: #000 !important; border: 1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 10pt !important; }
