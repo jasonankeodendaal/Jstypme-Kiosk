@@ -237,24 +237,52 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const handleDragEnd = () => setIsDragging(false);
   const handlePrint = () => window.print();
 
-  const loadImage = (url: string): Promise<{ img: HTMLImageElement, format: string } | null> => {
-    return new Promise((resolve) => {
-        if (!url) return resolve(null);
-        const img = new Image();
-        // Crucial for PDF generation: enable CORS for external images
-        img.crossOrigin = "anonymous";
+  // Optimized Image Loader for jsPDF with robust CORS handling and base64 fallback
+  const loadImageForPDF = async (url: string): Promise<{ imgData: string, format: string, width: number, height: number } | null> => {
+    if (!url) return null;
+    
+    try {
+        // Use Fetch to get the data directly, bypassing many standard <img> tag CORS quirks
+        const response = await fetch(url, { mode: 'cors' });
+        if (!response.ok) throw new Error("Network response error");
         
-        img.onload = () => {
-            // Determine format for jsPDF optimization
-            const format = url.toLowerCase().includes('.png') || url.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-            resolve({ img, format });
-        };
-        img.onerror = () => {
-            console.error(`Failed to load PDF asset: ${url}`);
-            resolve(null);
-        };
-        img.src = url;
-    });
+        const blob = await response.blob();
+        const mimeType = blob.type;
+        const format = mimeType.includes('png') ? 'PNG' : mimeType.includes('webp') ? 'WEBP' : 'JPEG';
+        
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64data = reader.result as string;
+                const tempImg = new Image();
+                tempImg.onload = () => {
+                    resolve({ 
+                        imgData: base64data, 
+                        format, 
+                        width: tempImg.width, 
+                        height: tempImg.height 
+                    });
+                };
+                tempImg.onerror = () => resolve(null);
+                tempImg.src = base64data;
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+        });
+    } catch (e) {
+        console.warn(`PDF Image Fetch Failed for: ${url}. Attempting standard Image load...`, e);
+        // Fallback to basic Image object if fetch fails (e.g. some CDNs without CORS)
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => {
+                const format = url.toLowerCase().includes('.png') ? 'PNG' : 'JPEG';
+                resolve({ imgData: url, format, width: img.width, height: img.height });
+            };
+            img.onerror = () => resolve(null);
+            img.src = url;
+        });
+    }
   };
 
   const handleExportPDF = async (e: React.MouseEvent) => {
@@ -267,8 +295,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const margin = 15;
         
         const [brandAsset, companyAsset] = await Promise.all([
-            brandLogo ? loadImage(brandLogo) : Promise.resolve(null),
-            companyLogo ? loadImage(companyLogo) : Promise.resolve(null)
+            brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
+            companyLogo ? loadImageForPDF(companyLogo) : Promise.resolve(null)
         ]);
 
         const drawHeader = (pageNum: number) => {
@@ -276,10 +304,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             
             // Brand Logo / Name on Left
             if (brandAsset) {
-                const ratio = brandAsset.img.width / brandAsset.img.height;
+                const ratio = brandAsset.width / brandAsset.height;
                 const h = 20; 
                 const w = h * ratio;
-                doc.addImage(brandAsset.img, brandAsset.format, margin, topY, w, h);
+                doc.addImage(brandAsset.imgData, brandAsset.format, margin, topY, w, h);
             } else if (brandName) {
                 doc.setTextColor(30, 41, 59); doc.setFontSize(28); doc.setFont('helvetica', 'black');
                 doc.text(brandName.toUpperCase(), margin, topY + 15);
@@ -287,10 +315,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
             // Company Logo on Far Right
             if (companyAsset) {
-                const ratio = companyAsset.img.width / companyAsset.img.height;
+                const ratio = companyAsset.width / companyAsset.height;
                 const h = 12; 
                 const w = h * ratio;
-                doc.addImage(companyAsset.img, companyAsset.format, pageWidth - margin - w, topY, w, h);
+                doc.addImage(companyAsset.imgData, companyAsset.format, pageWidth - margin - w, topY, w, h);
             }
 
             doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
@@ -708,14 +736,22 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const toggleCompareProduct = (product: Product) => setCompareProductIds(prev => prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5));
   const productsToCompare = useMemo(() => allProductsFlat.filter(p => compareProductIds.includes(p.id)), [allProductsFlat, compareProductIds]);
 
+  // Enhanced Brand/Logo lookup for Manual Pricelist
+  const activePricelistBrand = useMemo(() => {
+      if (!viewingManualList) return undefined;
+      // 1. Search in Dedicated Pricelist Brands
+      let found: any = pricelistBrands.find(b => b.id === viewingManualList.brandId);
+      // 2. Fallback to Inventory Brands if mismatch occurred during association
+      if (!found && storeData?.brands) {
+          found = storeData.brands.find(b => b.id === viewingManualList.brandId);
+      }
+      return found;
+  }, [viewingManualList, pricelistBrands, storeData?.brands]);
+
   if (!storeData) return null;
   if (!isSetup) return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
   if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} />;
   
-  const activePricelistBrand = viewingManualList ? pricelistBrands.find(b => b.id === viewingManualList.brandId) : undefined;
-  const getActiveBrandLogo = () => activePricelistBrand?.logoUrl;
-  const getActiveBrandName = () => activePricelistBrand?.name;
-
   return (
     <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full">
        {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProductsFlat} ads={storeData.ads?.screensaver || []} pamphlets={storeData.catalogues || []} onWake={resetIdleTimer} settings={storeData.screensaverSettings} />}
@@ -749,8 +785,8 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
             pricelist={viewingManualList} 
             onClose={() => setViewingManualList(null)} 
             companyLogo={storeData.hero.logoUrl || storeData.companyLogoUrl}
-            brandLogo={getActiveBrandLogo()}
-            brandName={getActiveBrandName()}
+            brandLogo={activePricelistBrand?.logoUrl}
+            brandName={activePricelistBrand?.name}
           />
        )}
     </div>
