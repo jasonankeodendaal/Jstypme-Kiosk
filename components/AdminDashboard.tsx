@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Sparkles
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Sparkles, FileSpreadsheet, ArrowRight
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
@@ -25,10 +25,19 @@ const RIcon = (props: any) => (
 // --- SYSTEM DOCUMENTATION COMPONENT ---
 const SystemDocumentation = () => {
     const [activeSection, setActiveSection] = useState('architecture');
+    const [roundDemoValue, setRoundDemoValue] = useState(799);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setRoundDemoValue(prev => prev === 799 ? 4449 : prev === 4449 ? 122 : 799);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
 
     const sections = [
         { id: 'architecture', label: 'Core Architecture', icon: <Network size={16} /> },
         { id: 'inventory', label: 'Inventory Logic', icon: <Box size={16}/> },
+        { id: 'pricelists', label: 'Pricelist Engine', icon: <Table size={16}/> },
         { id: 'screensaver', label: 'Screensaver Automation', icon: <Zap size={16}/> },
         { id: 'fleet', label: 'Fleet & Telemetry', icon: <Activity size={16}/> },
         { id: 'tv', label: 'TV Mode Logic', icon: <Tv size={16}/> },
@@ -65,6 +74,17 @@ const SystemDocumentation = () => {
                 .film-strip {
                     animation: scroll-film 10s linear infinite;
                 }
+                @keyframes data-flow {
+                  0% { transform: translateX(0); opacity: 0; }
+                  50% { opacity: 1; }
+                  100% { transform: translateX(120px); opacity: 0; }
+                }
+                .data-packet { animation: data-flow 2s infinite linear; }
+                @keyframes subtle-bounce {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-5px); }
+                }
+                .animate-float-small { animation: subtle-bounce 3s ease-in-out infinite; }
             `}</style>
 
             {/* Sidebar */}
@@ -290,6 +310,102 @@ const SystemDocumentation = () => {
   ]
 }`}
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'pricelists' && (
+                    <div className="space-y-8 max-w-4xl mx-auto">
+                        <div className="border-b border-slate-100 pb-6">
+                            <h2 className="text-3xl font-black text-slate-900 mb-2 flex items-center gap-3">
+                                <Table className="text-orange-600" size={32} /> Pricelist Intelligence Engine
+                            </h2>
+                            <p className="text-slate-500 font-medium">Automated Ingestion, Pricing Normalization, and Real-Time Distribution.</p>
+                        </div>
+
+                        {/* Animated Workflow Illustration */}
+                        <div className="bg-slate-900 rounded-[3rem] p-8 md:p-12 mb-12 shadow-2xl relative overflow-hidden">
+                            <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+                            
+                            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
+                                <div className="flex flex-col items-center gap-4 group">
+                                    <div className="w-24 h-24 bg-white/5 rounded-3xl border-2 border-green-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(34,197,94,0.2)] animate-float-small">
+                                        <FileSpreadsheet size={40} className="text-green-400" />
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-white font-black uppercase text-[10px] tracking-widest">Ingestion</div>
+                                        <div className="text-green-500/60 text-[9px] font-mono">XLSX / CSV</div>
+                                    </div>
+                                </div>
+
+                                <div className="hidden md:block flex-1 h-1 bg-white/5 relative mx-2 overflow-hidden rounded-full">
+                                    <div className="absolute inset-0 bg-blue-500 data-packet"></div>
+                                </div>
+
+                                <div className="flex flex-col items-center gap-4 group">
+                                    <div className="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.4)] relative">
+                                        <div className="absolute inset-0 radar-ring border-2 border-blue-400 rounded-3xl"></div>
+                                        <RefreshCw size={40} className="text-white animate-spin" style={{ animationDuration: '3s' }} />
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-white font-black uppercase text-[10px] tracking-widest">Normalization</div>
+                                        <div className="text-blue-400 text-[9px] font-mono">Auto-Rounding</div>
+                                    </div>
+                                </div>
+
+                                <div className="hidden md:block flex-1 h-1 bg-white/5 relative mx-2 overflow-hidden rounded-full">
+                                    <div className="absolute inset-0 bg-purple-500 data-packet" style={{animationDelay: '1s'}}></div>
+                                </div>
+
+                                <div className="flex flex-col items-center gap-4 group">
+                                    <div className="w-24 h-24 bg-white/5 rounded-3xl border-2 border-purple-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.2)]">
+                                        <div className="grid grid-cols-2 gap-1 scale-75">
+                                            <Smartphone size={20} className="text-purple-400" />
+                                            <Tablet size={20} className="text-purple-400" />
+                                            <Tv size={20} className="text-purple-400" />
+                                            <FileText size={20} className="text-red-400" />
+                                        </div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-white font-black uppercase text-[10px] tracking-widest">Deployment</div>
+                                        <div className="text-purple-400 text-[9px] font-mono">Fleet & PDF</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                             <div className="space-y-4">
+                                <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2"><Sparkles size={18} className="text-orange-500"/> Pricing Strategy</h3>
+                                <p className="text-sm text-slate-600 leading-relaxed">
+                                    Messy inputs like <code>799</code> or <code>4449</code> are automatically sanitized:
+                                </p>
+                                <div className="bg-slate-900 p-4 rounded-xl space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-[10px] font-mono text-slate-500 uppercase w-12">Input</div>
+                                        <div className="text-xs font-mono text-red-400 line-through">R {roundDemoValue}</div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-[10px] font-mono text-slate-500 uppercase w-12">Logic</div>
+                                        <div className="text-xs font-mono text-green-400 font-black animate-pulse">R {Math.ceil(roundDemoValue/10)*10}</div>
+                                    </div>
+                                </div>
+                             </div>
+
+                             <div className="space-y-4">
+                                <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2"><FileSpreadsheet size={18} className="text-green-600"/> Smart Ingestion</h3>
+                                <p className="text-sm text-slate-600 leading-relaxed">
+                                    The XLSX parser automatically detects column headers regardless of their position in the spreadsheet.
+                                </p>
+                                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase mb-2">Detected Schema</div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['SKU', 'Description', 'Normal Price', 'Promo Price'].map(tag => (
+                                            <span key={tag} className="px-2 py-1 bg-white border border-slate-200 rounded text-[10px] font-bold text-slate-600">{tag}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                             </div>
                         </div>
                     </div>
                 )}
@@ -1034,23 +1150,31 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             return;
         }
 
-        // Detect if first row is a header
-        const firstRow = validRows[0].map(c => String(c).toLowerCase());
-        const hasHeader = firstRow.some(c => 
-            c.includes('sku') || c.includes('code') || c.includes('desc') || 
-            c.includes('price') || c.includes('name') || c.includes('product')
-        );
+        // --- ENHANCED HEADER DETECTION ---
+        const firstRow = validRows[0].map(c => String(c || '').toLowerCase().trim());
+        const findIdx = (keywords: string[]) => firstRow.findIndex(h => keywords.some(k => h.includes(k)));
 
+        const skuIdx = findIdx(['sku', 'code', 'part', 'model']);
+        const descIdx = findIdx(['desc', 'name', 'product', 'item', 'title']);
+        const normalIdx = findIdx(['normal', 'retail', 'price', 'standard', 'cost']);
+        const promoIdx = findIdx(['promo', 'special', 'sale', 'discount', 'deal']);
+
+        // Heuristic to check if first row is actually a header row
+        const hasHeader = skuIdx !== -1 || descIdx !== -1 || normalIdx !== -1;
+        
         const dataRows = hasHeader ? validRows.slice(1) : validRows;
         
+        // Default indices if headers not found
+        const sIdx = skuIdx !== -1 ? skuIdx : 0;
+        const dIdx = descIdx !== -1 ? descIdx : 1;
+        const nIdx = normalIdx !== -1 ? normalIdx : 2;
+        const pIdx = promoIdx !== -1 ? promoIdx : 3;
+
         const newImportedItems: PricelistItem[] = dataRows.map(row => {
-            // Apply R and rounding to imported prices too
-            const rawNormal = String(row[2] || '').trim();
-            const rawPromo = String(row[3] || '').trim();
-            
             const formatImported = (val: string) => {
-                const numeric = val.replace(/[^0-9]/g, '');
-                if (!numeric) return val;
+                if (!val) return '';
+                const numeric = String(val).replace(/[^0-9]/g, '');
+                if (!numeric) return String(val);
                 let n = parseInt(numeric);
                 if (n % 10 !== 0) n = Math.ceil(n / 10) * 10;
                 return `R ${n.toLocaleString()}`;
@@ -1058,10 +1182,10 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
 
             return {
                 id: generateId('imp'),
-                sku: String(row[0] || '').trim().toUpperCase(),
-                description: String(row[1] || '').trim(),
-                normalPrice: formatImported(rawNormal),
-                promoPrice: rawPromo ? formatImported(rawPromo) : ''
+                sku: String(row[sIdx] || '').trim().toUpperCase(),
+                description: String(row[dIdx] || '').trim(),
+                normalPrice: formatImported(row[nIdx]),
+                promoPrice: row[pIdx] ? formatImported(row[pIdx]) : ''
             };
         });
 
@@ -2762,7 +2886,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                             {tvBrands.map(brand => (
                                 <div key={brand.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-lg transition-all relative">
                                     <div className="flex-1 bg-slate-50 flex items-center justify-center p-4 aspect-square">
-                                        {brand.logoUrl ? <img src={brand.logoUrl} className="max-w-full max-h-full object-contain" /> : <Tv size={32} className="text-slate-300" />}
+                                        {brand.logoUrl ? <img src={brand.logoUrl} className="max-full max-h-full object-contain" /> : <Tv size={32} className="text-slate-300" />}
                                     </div>
                                     <div className="p-4 bg-white border-t border-slate-100">
                                         <h3 className="font-black text-slate-900 text-sm uppercase truncate mb-1">{brand.name}</h3>

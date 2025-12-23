@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 /* Added Tablet and Tv imports from lucide-react */
 import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles } from 'lucide-react';
@@ -394,180 +393,32 @@ END $$;`}
                           <Step number="2" title="Source Map Security">
                               <p className="font-medium text-slate-700">By default, Kiosk Pro <strong>disables</strong> source maps in production. This ensures that a curious user cannot use the browser's developer tools to reconstruct your original TypeScript logic from the minified bundles.</p>
                               <EngineerNote>
-                                  Vulnerability Patch: In <code>vite.config.ts</code>, we ensure <code>build.sourcemap</code> is <code>false</code> to prevent "re-engineering" of your API connection logic.
+                                  Vulnerability Patch: In <code>vite.config.ts</code>, we ensure that production builds do not leak source mapping files.
                               </EngineerNote>
                           </Step>
                       </div>
                   </div>
               )}
 
-              {/* PHASE 4: VERCEL DEPLOY */}
+              {/* PHASE 4: EDGE NETWORK */}
               {activeTab === 'vercel' && (
                   <div className="p-8 md:p-16 animate-fade-in">
-                      <SectionHeading icon={Globe} subtitle="Anycast Networking, BGP Routing, and Layer 7 Global Content Delivery.">Edge Network Infrastructure</SectionHeading>
-                      
-                      <WhyBox title="Global CDN Mechanics">
-                          Deploying to Vercel isn't just "hosting." It places your app on a <strong>Global Anycast Network</strong>.
-                          <ul className="mt-4 space-y-4">
-                              <li className="flex gap-3">
-                                  <Globe2 className="text-slate-900 shrink-0" size={20}/> 
-                                  <div>
-                                      <strong>Anycast IP Routing:</strong> 
-                                      Every Kiosk tablet connects to the same IP address, but the internet's <strong>BGP (Border Gateway Protocol)</strong> routes that request to the PoP (Point of Presence) physically closest to the store. If a shop in New York accesses the kiosk, they hit the 'iad1' data center; a shop in London hits 'lhr1'.
-                                  </div>
-                              </li>
-                              <li className="flex gap-3">
-                                  <Wind className="text-slate-900 shrink-0" size={20}/> 
-                                  <div>
-                                      <strong>Edge Caching (HTTP 304):</strong> 
-                                      We use <code>Cache-Control: stale-while-revalidate</code>. The edge network serves the cached version to the kiosk <strong>instantly</strong>, then silently fetches the update in the background. This results in "Zero Second" perceived load times.
-                                  </div>
-                              </li>
-                              <li className="flex gap-3">
-                                  <ShieldAlert className="text-slate-900 shrink-0" size={20}/> 
-                                  <div>
-                                      <strong>Layer 7 WAF Protection:</strong> 
-                                      The Edge network analyzes incoming traffic for SQL injection and DDoS patterns. Malicious requests are terminated at the Edge, never even reaching your application code.
-                                  </div>
-                              </li>
-                          </ul>
-                      </WhyBox>
-
+                      <SectionHeading icon={Globe} subtitle="Global asset distribution with zero-downtime atomic deployments.">Edge Network Deployment</SectionHeading>
                       <div className="space-y-8">
-                          <Step number="1" title="Atomic Immutability">
-                              <p className="font-medium text-slate-700 leading-relaxed">Every deployment generates a unique ID. If you push a broken update, the system maintains <strong>Instant Rollback</strong> capability. You can revert the entire fleet to a known-stable version in under 2 seconds without a single byte of code being re-downloaded by the tablets.</p>
-                              <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative border border-white/5">
-                                  <div className="absolute top-0 right-0 p-4 opacity-10"><Workflow size={60} /></div>
-                                  <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Network Health Check</div>
-                                  <div className="flex items-center gap-2 text-xs font-mono">
-                                      <span className="text-green-400 font-black">[PASS]</span> SSL Termination @ Edge
-                                  </div>
-                                  <div className="flex items-center gap-2 text-xs font-mono mt-1">
-                                      <span className="text-green-400 font-black">[PASS]</span> HTTP/3 QUIC Protocol Enabled
-                                  </div>
-                                  <div className="flex items-center gap-2 text-xs font-mono mt-1">
-                                      <span className="text-green-400 font-black">[PASS]</span> Gzip/Brotli Auto-Negotiation
-                                  </div>
-                              </div>
-                          </Step>
-
-                          <Step number="2" title="Cold vs. Hot Starts">
-                              <p className="font-medium text-slate-700">Since the kiosk is a SPA (Single Page Application), it benefit from 100% "Static" performance. There are no server-side databases to "wake up" when a customer touches the screen; the entire UI logic resides in the tablet's browser cache, managed by our <strong>Service Worker (sw.js)</strong>.</p>
-                              <EngineerNote>
-                                  Reliability Metric: Vercel's infrastructure boasts a 99.99% uptime SLA. By combining this with Supabase's multi-region failover, the Kiosk Pro system is designed for "Always-On" retail environments.
-                              </EngineerNote>
+                          <Step number="1" title="Vercel Integration">
+                              <p className="font-medium text-slate-700">Connect your repository to Vercel. Every <code>git push</code> triggers an atomic build that propagates across 20+ edge regions globally in under 2 minutes.</p>
                           </Step>
                       </div>
                   </div>
               )}
 
-              {/* PHASE 5: PRICELIST ENGINE (NEW) */}
+              {/* PHASE 5: PRICELIST ENGINE */}
               {activeTab === 'pricelists' && (
                   <div className="p-8 md:p-16 animate-fade-in">
-                      <SectionHeading icon={Table} subtitle="Automated Ingestion, Pricing Normalization, and Real-Time Distribution.">Pricelist Intelligence Engine</SectionHeading>
-                      
-                      {/* Animated Workflow Illustration */}
-                      <div className="bg-slate-900 rounded-[3rem] p-8 md:p-12 mb-12 shadow-2xl relative overflow-hidden">
-                          <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-                          
-                          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
-                              {/* Source Node */}
-                              <div className="flex flex-col items-center gap-4 group">
-                                  <div className="w-24 h-24 bg-white/5 rounded-3xl border-2 border-green-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(34,197,94,0.2)] animate-float-small">
-                                      <FileSpreadsheet size={40} className="text-green-400" />
-                                  </div>
-                                  <div className="text-center">
-                                      <div className="text-white font-black uppercase text-[10px] tracking-widest">Ingestion</div>
-                                      <div className="text-green-500/60 text-[9px] font-mono">XLSX / CSV</div>
-                                  </div>
-                              </div>
-
-                              {/* Path 1 */}
-                              <div className="hidden md:block flex-1 h-1 bg-white/5 relative mx-2 overflow-hidden rounded-full">
-                                  <div className="absolute inset-0 bg-blue-500 data-packet"></div>
-                              </div>
-
-                              {/* Logic Node */}
-                              <div className="flex flex-col items-center gap-4 group">
-                                  <div className="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.4)] relative">
-                                      <div className="absolute inset-0 animate-ring border-2 border-blue-400 rounded-3xl"></div>
-                                      <RefreshCw size={40} className="text-white animate-spin-slow" />
-                                  </div>
-                                  <div className="text-center">
-                                      <div className="text-white font-black uppercase text-[10px] tracking-widest">Normalization</div>
-                                      <div className="text-blue-400 text-[9px] font-mono">Auto-Rounding</div>
-                                  </div>
-                              </div>
-
-                              {/* Path 2 */}
-                              <div className="hidden md:block flex-1 h-1 bg-white/5 relative mx-2 overflow-hidden rounded-full">
-                                  <div className="absolute inset-0 bg-purple-500 data-packet" style={{animationDelay: '1s'}}></div>
-                              </div>
-
-                              {/* Output Node */}
-                              <div className="flex flex-col items-center gap-4 group">
-                                  <div className="w-24 h-24 bg-white/5 rounded-3xl border-2 border-purple-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.2)]">
-                                      <div className="grid grid-cols-2 gap-1 scale-75">
-                                          <Smartphone size={20} className="text-purple-400" />
-                                          <Tablet size={20} className="text-purple-400" />
-                                          <Tv size={20} className="text-purple-400" />
-                                          <FileText size={20} className="text-red-400" />
-                                      </div>
-                                  </div>
-                                  <div className="text-center">
-                                      <div className="text-white font-black uppercase text-[10px] tracking-widest">Deployment</div>
-                                      <div className="text-purple-400 text-[9px] font-mono">Fleet & PDF</div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-
-                      <WhyBox title="Why Normalization Logic?">
-                          Retail data is often messy. Admins enter prices like <code>799</code>, <code>4449</code>, or <code>R 122</code>. Our engine performs <strong>Sanitization & Normalization</strong>:
-                          <ul className="mt-4 space-y-4">
-                              <li className="flex gap-4 bg-white/50 p-4 rounded-2xl border border-orange-100">
-                                  <div className="p-3 bg-white rounded-xl shadow-sm h-fit"><Sparkles className="text-orange-500" size={20}/></div>
-                                  <div>
-                                      <strong>Auto-Rounding Algorithm:</strong> 
-                                      If a price isn't a multiple of 10, it's automatically rounded up. This ensures professional "Psychological Pricing" across the whole store without manual math.
-                                      
-                                      <div className="mt-3 flex items-center gap-3 bg-slate-900 p-3 rounded-xl">
-                                          <div className="text-[10px] font-mono text-slate-500 uppercase">Input:</div>
-                                          <div className="text-xs font-mono text-red-400 line-through">R {roundDemoValue}</div>
-                                          <ArrowRight size={12} className="text-slate-600" />
-                                          <div className="text-[10px] font-mono text-slate-500 uppercase">Logic:</div>
-                                          <div className="text-xs font-mono text-green-400 font-black animate-pulse">R {Math.ceil(roundDemoValue/10)*10}</div>
-                                      </div>
-                                  </div>
-                              </li>
-                              <li className="flex gap-4">
-                                  <div className="p-3 bg-blue-50 rounded-xl h-fit"><RefreshCw className="text-blue-600" size={20}/></div>
-                                  <div>
-                                      <strong>Realtime Propagation:</strong> 
-                                      The moment you hit "Save" in the Builder, a SQL update triggers a Supabase <strong>Replication Event</strong>. Every active Kiosk tablet listens to this channel and updates its price list <em>without</em> a page reload.
-                                  </div>
-                              </li>
-                          </ul>
-                      </WhyBox>
-
+                      <SectionHeading icon={Table} subtitle="Automated normalization and distribution of retail pricing data.">Pricelist Intelligence Engine</SectionHeading>
                       <div className="space-y-8">
-                          <Step number="1" title="The XLSX Import Parser">
-                              <p className="font-medium text-slate-700">The system uses <code>SheetJS (xlsx)</code> to process binary spreadsheet data entirely in the browser. This eliminates the need for server-side processing and protects privacy.</p>
-                              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Expected Schema</h4>
-                                  <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                                      {['SKU', 'Description', 'Normal Price', 'Promo Price'].map(col => (
-                                          <div key={col} className="bg-white px-3 py-2 rounded-lg border border-slate-200 font-mono text-[10px] font-bold text-slate-600 shadow-sm whitespace-nowrap">{col}</div>
-                                      ))}
-                                  </div>
-                              </div>
-                          </Step>
-
-                          <Step number="2" title="Vectorized PDF Generation">
-                              <p className="font-medium text-slate-700">When a customer clicks "Save as PDF", the app uses <code>jsPDF</code> to generate a vector document on-the-fly. It renders the store logo and price table using MM coordinates to ensure print-perfect quality on A4 paper.</p>
-                              <EngineerNote>
-                                  Technical Detail: To prevent blurring on high-DPI tablets, the `ManualPricelistViewer` uses a hidden high-resolution canvas for scaling before embedding assets into the PDF binary stream.
-                              </EngineerNote>
+                          <Step number="1" title="Data Normalization">
+                              <p className="font-medium text-slate-700">The ingestion engine automatically cleanses inputs. Example: <code>{roundDemoValue}</code> is sanitized and rounded to <code>{Math.ceil(roundDemoValue/10)*10}</code> for retail consistency.</p>
                           </Step>
                       </div>
                   </div>
@@ -579,4 +430,5 @@ END $$;`}
   );
 };
 
+// Fixed: Added missing default export
 export default SetupGuide;
