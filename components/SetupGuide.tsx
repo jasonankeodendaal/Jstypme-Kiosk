@@ -145,12 +145,125 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
         <div className="flex-1 overflow-y-auto bg-slate-50/70 p-4 md:p-12 scroll-smooth">
            <div className="max-w-4xl mx-auto bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden min-h-full pb-32">
               
-              {/* PHASE 1-3 (Condensed for brevity in this response) */}
-              {activeTab === 'supabase' && <div className="p-8 md:p-16 animate-fade-in"><SectionHeading icon={Database} subtitle="Provisioning the cloud backbone.">Supabase Infrastructure</SectionHeading><WhyBox>See previous version for full SQL scripts and RLS policies.</WhyBox></div>}
-              {activeTab === 'local' && <div className="p-8 md:p-16 animate-fade-in"><SectionHeading icon={Server} subtitle="Establishing the engineering workspace.">PC Hub Configuration</SectionHeading></div>}
-              {activeTab === 'build' && <div className="p-8 md:p-16 animate-fade-in"><SectionHeading icon={Hammer} subtitle="Advanced Tree-Shaking and Minification.">Asset Pipeline</SectionHeading></div>}
+              {/* PHASE 1: SUPABASE */}
+              {activeTab === 'supabase' && (
+                <div className="p-8 md:p-16 animate-fade-in">
+                    <SectionHeading icon={Database} subtitle="Provisioning the cloud backbone for global sync.">Supabase Infrastructure</SectionHeading>
+                    <WhyBox title="Relational Integrity">
+                        The system uses Supabase to bridge the gap between static APK deployments and dynamic retail environments. The `JSONB` format for `store_config` allows for schema flexibility without downtime.
+                    </WhyBox>
 
-              {/* PHASE 4: EDGE NETWORK - EXPANDED */}
+                    <Step number="1" title="Database Schema Migration">
+                        <p>Execute the following SQL in your Supabase Dashboard SQL Editor to create the core tables and enable Row Level Security.</p>
+                        <CodeBlock 
+                          id="sql-schema"
+                          label="Core SQL Schema"
+                          code={`-- 1. Create Config Table
+CREATE TABLE IF NOT EXISTS public.store_config (
+    id bigint primary key default 1,
+    data jsonb not null default '{}'::jsonb,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 2. Create Kiosks Table for Telemetry
+CREATE TABLE IF NOT EXISTS public.kiosks (
+    id text primary key,
+    name text not null,
+    device_type text default 'kiosk',
+    status text default 'online',
+    last_seen timestamp with time zone default now(),
+    wifi_strength int,
+    ip_address text,
+    version text,
+    location_description text,
+    assigned_zone text,
+    notes text,
+    restart_requested boolean default false
+);
+
+-- 3. Enable RLS
+ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
+
+-- 4. Simple Public Policies (Adjust for enterprise production)
+CREATE POLICY "Public Read Access" ON public.store_config FOR SELECT USING (true);
+CREATE POLICY "Public Update Access" ON public.store_config FOR UPDATE USING (true);
+CREATE POLICY "Public Kiosk Access" ON public.kiosks FOR ALL USING (true);`}
+                        />
+                    </Step>
+
+                    <Step number="2" title="Storage Bucket Config">
+                        <p>Create a public bucket named <code>kiosk-media</code> to host high-resolution product images and video loops.</p>
+                        <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600">
+                            <li>Go to <strong>Storage</strong> &rarr; <strong>New Bucket</strong>.</li>
+                            <li>Name: <code>kiosk-media</code></li>
+                            <li>Public: <strong>ON</strong></li>
+                        </ul>
+                    </Step>
+                </div>
+              )}
+
+              {/* PHASE 2: LOCAL DEV */}
+              {activeTab === 'local' && (
+                <div className="p-8 md:p-16 animate-fade-in">
+                    <SectionHeading icon={Server} subtitle="Establishing the engineering workspace for local iteration.">PC Hub Configuration</SectionHeading>
+                    
+                    <Step number="1" title="Environment Variables">
+                        <p>Create a <code>.env.local</code> file in the project root. This is required for Vite to communicate with your cloud backend.</p>
+                        <CodeBlock 
+                            id="env-vars"
+                            label=".env.local Template"
+                            code={`VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
+                        />
+                    </Step>
+
+                    <Step number="2" title="Dependency Manifest">
+                        <p>The kiosk utilizes several heavy libraries for PDF rendering and asset bundling. Run the following command to ensure a complete local environment.</p>
+                        <CodeBlock 
+                            id="npm-install"
+                            label="Shell Command"
+                            code={`npm install lucide-react @supabase/supabase-js jszip pdfjs-dist jspdf xlsx`}
+                        />
+                        <EngineerNote>
+                            Ensure Node.js version is 18.x or higher to support the ESM modules used in the build process.
+                        </EngineerNote>
+                    </Step>
+                </div>
+              )}
+
+              {/* PHASE 3: ASSET PIPELINE */}
+              {activeTab === 'build' && (
+                <div className="p-8 md:p-16 animate-fade-in">
+                    <SectionHeading icon={Hammer} subtitle="Advanced Tree-Shaking and high-performance bundling logic.">Asset Pipeline</SectionHeading>
+                    
+                    <WhyBox title="Payload Optimization">
+                        Because tablets often have limited RAM, we implement strict **Code Splitting**. This ensures the customer-facing UI doesn't load the heavy Admin logic until required.
+                    </WhyBox>
+
+                    <Step number="1" title="Vite Chunking Strategy">
+                        <p>Our <code>vite.config.ts</code> uses Rollup manual chunks to isolate vendor code. This improves long-term caching behavior.</p>
+                        <CodeBlock 
+                            id="vite-config"
+                            label="vite.config.ts Excerpt"
+                            code={`output: {
+  manualChunks(id) {
+    if (id.includes('pdfjs-dist')) return 'pdf-core';
+    if (id.includes('@supabase')) return 'cloud-client';
+    if (id.includes('lucide-react')) return 'ui-icons';
+  }
+}`}
+                        />
+                    </Step>
+
+                    <Step number="2" title="Build Command">
+                        <p>Generate the production-ready static assets.</p>
+                        <CodeBlock id="npm-build" label="Build Script" code={`npm run build`} />
+                    </Step>
+                </div>
+              )}
+
+              {/* PHASE 4: EDGE NETWORK */}
               {activeTab === 'vercel' && (
                   <div className="p-8 md:p-16 animate-fade-in">
                       <SectionHeading icon={Globe} subtitle="Global asset distribution with zero-downtime atomic deployments.">Edge Network Infrastructure</SectionHeading>
@@ -233,7 +346,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                   </div>
               )}
 
-              {/* PHASE 5: PRICELIST ENGINE - EXPANDED */}
+              {/* PHASE 5: PRICELIST ENGINE */}
               {activeTab === 'pricelists' && (
                   <div className="p-8 md:p-16 animate-fade-in">
                       <SectionHeading icon={Table} subtitle="Automated normalization, fuzzy header mapping, and real-time distribution.">Pricelist Intelligence Engine</SectionHeading>
