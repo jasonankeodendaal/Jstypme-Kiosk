@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward } from 'lucide-react';
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward, ArrowUpRight, Search } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
@@ -381,28 +381,65 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
                       </div>
 
                       <div className="space-y-12">
-                          <Step number="1" title="Spreadsheet Ingestion">
-                              <p>The system uses the <code>xlsx</code> library to parse binary spreadsheet data directly in the browser. It maps columns based on common retail keywords like 'SKU', 'Retail', and 'Promo'.</p>
-                          </Step>
-                          <Step number="2" title="Price Normalization Logic">
-                              <WhyBox title="Cognitive Pricing Optimization" variant="orange">
-                                  To maintain a premium look, prices are rounded up to the nearest whole number. Additionally, if a price ends in '9', it is pushed to the next round number (e.g., 799 becomes 800) to prevent 'discount store' aesthetics.
-                              </WhyBox>
-                              <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
-                                  <div className="flex items-center gap-4 mb-4">
-                                      <div className="text-[10px] font-mono text-slate-500 uppercase w-20">Current</div>
-                                      <div className="text-lg font-mono text-red-400 line-through">R {roundDemoValue}</div>
+                          <Step number="1" title="Fuzzy Mapping Registry">
+                              <p className="text-sm font-medium text-slate-600">The XLSX ingestion engine utilizes a fuzzy header mapping registry to automatically identify data columns regardless of their original field names:</p>
+                              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                      {[
+                                          { f: 'SKU', k: 'sku, code, model, part, ref, article', i: <Binary size={14}/> },
+                                          { f: 'Description', k: 'desc, name, product, item, title, label', i: <Search size={14}/> },
+                                          { f: 'Standard Price', k: 'normal, price, cost, msrp, rrp, base', i: <ArrowUpRight size={14}/> },
+                                          { f: 'Promo Price', k: 'promo, special, sale, discount, deal, offer', i: <Sparkles size={14}/> },
+                                      ].map(item => (
+                                          <div key={item.f} className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                                              <div className="text-[10px] font-black text-blue-600 uppercase mb-1 flex items-center gap-1.5">{item.i} {item.f}</div>
+                                              <div className="text-[9px] text-slate-400 font-mono break-words leading-tight">{item.k}</div>
+                                          </div>
+                                      ))}
                                   </div>
-                                  <div className="flex items-center gap-4">
-                                      <div className="text-[10px] font-mono text-slate-500 uppercase w-20">Logic</div>
-                                      <div className="text-2xl font-mono text-green-400 font-black animate-pulse">
-                                          R {(() => {
-                                              let n = roundDemoValue;
-                                              if (n % 1 !== 0) n = Math.ceil(n);
-                                              if (Math.floor(n) % 10 === 9) n += 1;
-                                              return n.toLocaleString();
-                                          })()}
+                              </div>
+                          </Step>
+                          
+                          <Step number="2" title="The Cognitive Normalization Pipeline">
+                              <div className="space-y-4">
+                                  <p className="text-sm text-slate-600">Every price point is passed through a 4-stage aesthetic guardrail to ensure premium retail branding:</p>
+                                  <div className="border-l-4 border-orange-500 pl-6 py-2 space-y-6">
+                                      <div>
+                                          <h4 className="text-xs font-black uppercase text-slate-900 mb-1">Stage 1: Sanitization</h4>
+                                          <p className="text-[11px] text-slate-500 leading-relaxed">Regular expression cleaning of currency symbols, whitespace, and legacy comma delimiters.</p>
                                       </div>
+                                      <div>
+                                          <h4 className="text-xs font-black uppercase text-slate-900 mb-1">Stage 2: Heuristic Analysis</h4>
+                                          <p className="text-[11px] text-slate-500 leading-relaxed">Contextual string detection to prevent numeric SKUs from being rounded as currency.</p>
+                                      </div>
+                                      <div>
+                                          <h4 className="text-xs font-black uppercase text-slate-900 mb-1">Stage 3: Ceiling Logic</h4>
+                                          <p className="text-[11px] text-slate-500 leading-relaxed">DECIMAL_UP protocol. Any float fraction (e.g., .95) is immediately rounded to the next full integer.</p>
+                                      </div>
+                                      <div>
+                                          <h4 className="text-xs font-black uppercase text-slate-900 mb-1">Stage 4: Aesthetic Correction</h4>
+                                          <p className="text-[11px] text-slate-500 leading-relaxed">ROUND_OFF_NINES protocol. If a whole number ends in 9 (e.g., 799), it is rounded up to the nearest round integer (800) to maintain a premium non-discount aesthetic.</p>
+                                      </div>
+                                  </div>
+                              </div>
+                          </Step>
+
+                          <Step number="3" title="PDF Synthesis Architecture">
+                              <WhyBox title="Visual Reliability" variant="blue">
+                                  The PDF engine uses a "Render Layers" approach to ensure documents are identical across all devices and printer outputs.
+                              </WhyBox>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                  <div className="bg-slate-900 p-4 rounded-2xl text-center">
+                                      <div className="text-blue-400 font-black text-xl mb-1">L1</div>
+                                      <div className="text-[9px] font-black uppercase text-white">Logo Vectoring</div>
+                                  </div>
+                                  <div className="bg-slate-900 p-4 rounded-2xl text-center">
+                                      <div className="text-blue-400 font-black text-xl mb-1">L2</div>
+                                      <div className="text-[9px] font-black uppercase text-white">Dynamic Geometry</div>
+                                  </div>
+                                  <div className="bg-slate-900 p-4 rounded-2xl text-center">
+                                      <div className="text-blue-400 font-black text-xl mb-1">L3</div>
+                                      <div className="text-[9px] font-black uppercase text-white">Type Scaling</div>
                                   </div>
                               </div>
                           </Step>
@@ -416,5 +453,4 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
   );
 };
 
-// Fixed: Add default export to resolve "no default export" error in AdminDashboard.tsx
 export default SetupGuide;
