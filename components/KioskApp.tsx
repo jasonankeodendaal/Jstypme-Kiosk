@@ -318,7 +318,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.text("PRICE LIST", margin, topY + 28);
             
             doc.setTextColor(148, 163, 184); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-            doc.text("NEW PRICELIST", margin, topY + 34);
+            // Modified: Use actual pricelist title in exported PDF
+            doc.text(pricelist.title.toUpperCase(), margin, topY + 34);
 
             const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
             doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
@@ -492,7 +493,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                                       ) : null}
                                       <div>
                                           <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mt-4">Price List</h1>
-                                          <p className="text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">New Pricelist</p>
+                                          {/* Modified: Use actual pricelist title in print media header */}
+                                          <p className="text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">{pricelist.title}</p>
                                       </div>
                                   </div>
                                   <div className="flex flex-col items-end gap-6 text-right">
