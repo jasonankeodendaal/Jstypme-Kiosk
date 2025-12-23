@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward } from 'lucide-react';
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward, Search, Columns, FileType, FileOutput, Maximize } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
@@ -14,8 +14,13 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
   useEffect(() => {
     if (activeTab === 'pricelists') {
         const interval = setInterval(() => {
-            setRoundDemoValue(prev => prev === 799 ? 4449.99 : prev === 4449.99 ? 122 : 799);
-        }, 3000);
+            setRoundDemoValue(prev => {
+                if (prev === 799) return 4449.99;
+                if (prev === 4449.99) return 122;
+                if (prev === 122) return 89.95;
+                return 799;
+            });
+        }, 2500);
         return () => clearInterval(interval);
     }
   }, [activeTab]);
@@ -333,78 +338,152 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
 }`}
                               />
                           </Step>
-
-                          <Step number="3" title="Advanced Service Worker Caching">
-                              <WhyBox title="Local-First Architectural Guard" variant="blue">
-                                  Our <code>sw.js</code> implements a **Stale-While-Revalidate** strategy for core logic and **Cache-First** for heavy media. This means the kiosk app is essentially "installed" on the browser's disk, requiring the internet only for new product data pulses.
-                              </WhyBox>
-                              <EngineerNote>
-                                  Vercel automatically handles Brotli and Gzip compression. Our build process targets ES2022 to utilize modern browser features (Optional Chaining, Nullish Coalescing) which results in a smaller bundle size compared to transpiling down to ES5.
-                              </EngineerNote>
-                          </Step>
                       </div>
                   </div>
               )}
 
-              {/* PHASE 5: PRICELIST ENGINE */}
+              {/* PHASE 5: PRICELIST ENGINE (EXTENDED) */}
               {activeTab === 'pricelists' && (
                   <div className="p-8 md:p-16 animate-fade-in">
-                      <SectionHeading icon={Table} subtitle="Automated normalization, fuzzy header mapping, and real-time distribution.">Pricelist Intelligence Engine</SectionHeading>
+                      <SectionHeading icon={Table} subtitle="Autonomous ingestion, forensic data cleaning, and high-DPI distribution pipeline.">Pricelist Intelligence Engine</SectionHeading>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                           <div className="bg-orange-50 p-8 rounded-[2.5rem] border border-orange-100 shadow-sm relative overflow-hidden group">
                               <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform"><FileSpreadsheet size={80} /></div>
-                              <h3 className="text-orange-900 font-black uppercase text-xs tracking-widest mb-4">Input Stage</h3>
-                              <p className="text-orange-800/80 text-sm leading-relaxed mb-4">The engine accepts raw <code>.xlsx</code> or <code>.csv</code> exports from any inventory system.</p>
+                              <h3 className="text-orange-900 font-black uppercase text-[10px] tracking-widest mb-4">Input Stage (Forensics)</h3>
+                              <p className="text-orange-800/80 text-sm leading-relaxed mb-4">The engine consumes raw binary stream data from <code>.xlsx</code> or <code>.csv</code> exports.</p>
                               <div className="space-y-2">
                                   <div className="flex justify-between text-[10px] font-mono text-orange-600 bg-white/50 p-2 rounded">
-                                      <span>Raw SKU:</span> <span className="font-bold">"  APL-ip15  "</span>
+                                      <span>Input:</span> <span className="font-bold">"  APL-ip15_PRO  "</span>
                                   </div>
                                   <div className="flex justify-between text-[10px] font-mono text-orange-600 bg-white/50 p-2 rounded">
-                                      <span>Raw Price:</span> <span className="font-bold">"$ 1,299.99"</span>
+                                      <span>Price:</span> <span className="font-bold">"R 1,299.99"</span>
                                   </div>
                               </div>
                           </div>
                           <div className="bg-blue-600 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
                               <div className="absolute top-0 right-0 p-6 opacity-20"><RefreshCw size={80} className="animate-spin-slow" /></div>
-                              <h3 className="text-white font-black uppercase text-xs tracking-widest mb-4">Normalization Stage</h3>
-                              <p className="text-blue-100 text-sm leading-relaxed mb-4">Our sanitization algorithm strips symbols and applies whole-number ceiling rounding.</p>
+                              <h3 className="text-white font-black uppercase text-[10px] tracking-widest mb-4">Normalization Engine</h3>
+                              <p className="text-blue-100 text-sm leading-relaxed mb-4">Our sanitization algorithm enforces strict retail-premium formatting.</p>
                               <div className="space-y-2">
                                   <div className="flex justify-between text-[10px] font-mono text-blue-200 bg-black/20 p-2 rounded">
-                                      <span>Sanitized:</span> <span className="font-bold">"APL-IP15"</span>
+                                      <span>Sanitized:</span> <span className="font-bold">"APL-IP15-PRO"</span>
                                   </div>
                                   <div className="flex justify-between text-[10px] font-mono text-blue-200 bg-black/20 p-2 rounded">
-                                      <span>Normalized:</span> <span className="font-bold">"R 1,300"</span>
+                                      <span>Fixed:</span> <span className="font-bold">"R 1,300"</span>
                                   </div>
                               </div>
                           </div>
                       </div>
 
                       <div className="space-y-12">
-                          <Step number="1" title="Spreadsheet Ingestion">
-                              <p>The system uses the <code>xlsx</code> library to parse binary spreadsheet data directly in the browser. It maps columns based on common retail keywords like 'SKU', 'Retail', and 'Promo'.</p>
-                          </Step>
-                          <Step number="2" title="Price Normalization Logic">
-                              <WhyBox title="Cognitive Pricing Optimization" variant="orange">
-                                  To maintain a premium look, prices are rounded up to the nearest whole number. Additionally, if a price ends in '9', it is pushed to the next round number (e.g., 799 becomes 800) to prevent 'discount store' aesthetics.
-                              </WhyBox>
-                              <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
-                                  <div className="flex items-center gap-4 mb-4">
-                                      <div className="text-[10px] font-mono text-slate-500 uppercase w-20">Current</div>
-                                      <div className="text-lg font-mono text-red-400 line-through">R {roundDemoValue}</div>
+                          <Step number="1" title="Fuzzy Column Mapping Strategy">
+                              <p className="font-medium text-slate-700">The ingestion engine doesn't require fixed templates. It uses a **Weighted Keyword Scorer** to detect headers across any spreadsheet structure.</p>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                      <div className="flex items-center gap-2 mb-3 text-blue-600 font-black uppercase text-[10px] tracking-wider">
+                                          <Search size={14} /> Detection Schema
+                                      </div>
+                                      <div className="space-y-2">
+                                          <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                                              <span className="text-[10px] font-bold text-slate-400">TARGET</span>
+                                              <span className="text-[10px] font-black text-slate-900">KEYWORDS</span>
+                                          </div>
+                                          <div className="flex justify-between items-center py-1">
+                                              <span className="text-xs font-bold text-slate-500">SKU</span>
+                                              <span className="text-[9px] font-mono bg-slate-100 px-1 rounded">sku, part, code, model</span>
+                                          </div>
+                                          <div className="flex justify-between items-center py-1">
+                                              <span className="text-xs font-bold text-slate-500">DESC</span>
+                                              <span className="text-[9px] font-mono bg-slate-100 px-1 rounded">desc, name, title, item</span>
+                                          </div>
+                                          <div className="flex justify-between items-center py-1">
+                                              <span className="text-xs font-bold text-slate-500">NORMAL</span>
+                                              <span className="text-[9px] font-mono bg-slate-100 px-1 rounded">retail, price, cost, std</span>
+                                          </div>
+                                          <div className="flex justify-between items-center py-1">
+                                              <span className="text-xs font-bold text-slate-500">PROMO</span>
+                                              <span className="text-[9px] font-mono bg-slate-100 px-1 rounded">sale, promo, disc, special</span>
+                                          </div>
+                                      </div>
                                   </div>
-                                  <div className="flex items-center gap-4">
-                                      <div className="text-[10px] font-mono text-slate-500 uppercase w-20">Logic</div>
-                                      <div className="text-2xl font-mono text-green-400 font-black animate-pulse">
-                                          R {(() => {
-                                              let n = roundDemoValue;
-                                              if (n % 1 !== 0) n = Math.ceil(n);
-                                              if (Math.floor(n) % 10 === 9) n += 1;
-                                              return n.toLocaleString();
-                                          })()}
+                                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200">
+                                      <div className="flex items-center gap-2 mb-3 text-slate-600 font-black uppercase text-[10px] tracking-wider">
+                                          <FileType size={14} /> Binary Parsing
+                                      </div>
+                                      <p className="text-[11px] leading-relaxed text-slate-600 font-medium">
+                                          Using <code>SheetJS (XLSX)</code>, we extract rows into a normalized 2D matrix. The engine then scans the first 5 rows to establish where the data table actually begins, stripping out marketing headers or redundant top-row logos common in vendor exports.
+                                      </p>
+                                  </div>
+                              </div>
+                          </Step>
+
+                          <Step number="2" title="Price Sanitization Logic">
+                              <WhyBox title="Cognitive Pricing Optimization" variant="orange">
+                                  Retailers avoid "jagged" pricing to maintain a premium aesthetic. Our logic automatically rounds decimals up and pushes "discount 9s" (e.g. 799) to whole round numbers (800) to ensure the table looks organized and upscale.
+                              </WhyBox>
+                              
+                              <div className="bg-slate-900 p-8 rounded-[2rem] border border-slate-800 relative overflow-hidden">
+                                  <div className="absolute top-0 right-0 p-8 opacity-5 text-green-400 rotate-12"><CpuIcon size={120} /></div>
+                                  <div className="relative z-10 space-y-6">
+                                      <div className="flex items-center justify-between gap-4">
+                                          <div className="flex-1">
+                                              <div className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Input Value</div>
+                                              <div className="text-2xl font-mono text-red-400/80 line-through opacity-50 transition-all duration-1000">R {roundDemoValue.toLocaleString()}</div>
+                                          </div>
+                                          <div className="shrink-0 animate-pulse"><ArrowRight className="text-slate-700" size={24} /></div>
+                                          <div className="flex-1 text-right">
+                                              <div className="text-[9px] font-black text-blue-400 uppercase tracking-[0.2em] mb-2">Engine Output</div>
+                                              <div className="text-4xl font-mono text-green-400 font-black tracking-tighter transition-all duration-300">
+                                                  R {(() => {
+                                                      let n = roundDemoValue;
+                                                      if (n % 1 !== 0) n = Math.ceil(n);
+                                                      if (Math.floor(n) % 10 === 9) n += 1;
+                                                      return n.toLocaleString();
+                                                  })()}
+                                              </div>
+                                          </div>
+                                      </div>
+                                      <div className="bg-black/40 rounded-xl p-4 border border-white/5 space-y-2">
+                                          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase">
+                                              <Binary size={12} /> Execution Sequence:
+                                          </div>
+                                          <ol className="text-[11px] font-mono text-slate-300 list-decimal pl-4 space-y-1">
+                                              <li>Strip non-numeric characters: <code>/[^0-9.]/g</code></li>
+                                              <li>Check for Floating Point: <code>if (val % 1 !== 0) val = Math.ceil(val)</code></li>
+                                              <li>Psychological Offset: <code>if (val % 10 === 9) val += 1</code></li>
+                                              <li>Re-format with Currency Grouping: <code>toLocaleString('en-ZA')</code></li>
+                                          </ol>
                                       </div>
                                   </div>
                               </div>
+                          </Step>
+
+                          <Step number="3" title="High-DPI PDF Rendering Pipeline">
+                              <p className="font-medium text-slate-700">The distribution engine generates print-ready 300DPI PDFs directly in the browser using <code>jsPDF</code>. This avoids server-side rendering latency and preserves local data privacy.</p>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                                  <div className="bg-white border border-slate-100 p-4 rounded-xl shadow-sm flex flex-col items-center text-center">
+                                      <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-3"><Maximize size={20} /></div>
+                                      <span className="text-[10px] font-black text-slate-900 uppercase mb-1">Canvas Bridge</span>
+                                      <p className="text-[10px] text-slate-500 leading-tight">Remote images are drawn to a hidden canvas to convert them to PNG stream data for PDF inclusion.</p>
+                                  </div>
+                                  <div className="bg-white border border-slate-100 p-4 rounded-xl shadow-sm flex flex-col items-center text-center">
+                                      <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mb-3"><Columns size={20} /></div>
+                                      <span className="text-[10px] font-black text-slate-900 uppercase mb-1">Pagination Logic</span>
+                                      <p className="text-[10px] text-slate-500 leading-tight">The engine calculates text height in millimeters to determine exactly when to break pages and re-draw headers.</p>
+                                  </div>
+                                  <div className="bg-white border border-slate-100 p-4 rounded-xl shadow-sm flex flex-col items-center text-center">
+                                      <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center mb-3"><FileOutput size={20} /></div>
+                                      <span className="text-[10px] font-black text-slate-900 uppercase mb-1">Atomic Output</span>
+                                      <p className="text-[10px] text-slate-500 leading-tight">The final blob is generated locally as a <code>Uint8Array</code>, ensuring the document is never stored in un-compiled form.</p>
+                                  </div>
+                              </div>
+
+                              <EngineerNote>
+                                 PDF Fonts are set to Helvetica-Standard with variable weighting. Character spacing is adjusted by -0.2mm to maximize description legibility on A4 portrait layouts.
+                              </EngineerNote>
                           </Step>
                       </div>
                   </div>
@@ -416,5 +495,4 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
   );
 };
 
-// Fixed: Add default export to resolve "no default export" error in AdminDashboard.tsx
 export default SetupGuide;
