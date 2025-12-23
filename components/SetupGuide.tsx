@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward } from 'lucide-react';
 
@@ -14,7 +13,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
   useEffect(() => {
     if (activeTab === 'pricelists') {
         const interval = setInterval(() => {
-            setRoundDemoValue(prev => prev === 799 ? 4449 : prev === 4449 ? 122 : 799);
+            setRoundDemoValue(prev => prev === 799 ? 4449.99 : prev === 4449.99 ? 122 : 799);
         }, 3000);
         return () => clearInterval(interval);
     }
@@ -119,7 +118,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
             <nav className="space-y-4">
                 {[
                     { id: 'supabase', label: '1. Supabase Cloud', sub: 'Backend API & RLS', icon: Database, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-600' },
-                    { id: 'local', label: '2. PC Station Hub', sub: 'Development Env', icon: Server, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
+                    { id: 'local', label: '2. PC Hub', sub: 'Development Env', icon: Server, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
                     { id: 'build', label: '3. Asset Pipeline', sub: 'Tree-Shaking & Min', icon: Hammer, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
                     { id: 'vercel', label: '4. Edge Network', sub: 'Global CDN Delivery', icon: Globe, color: 'text-slate-900', bg: 'bg-slate-100', border: 'border-slate-900' },
                     { id: 'pricelists', label: '5. Pricelist Engine', sub: 'XLSX & Distribution', icon: Table, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-600' }
@@ -206,7 +205,7 @@ CREATE POLICY "Public Kiosk Access" ON public.kiosks FOR ALL USING (true);`}
               {/* PHASE 2: LOCAL DEV */}
               {activeTab === 'local' && (
                 <div className="p-8 md:p-16 animate-fade-in">
-                    <SectionHeading icon={Server} subtitle="Establishing the engineering workspace for local iteration.">PC Hub Configuration</SectionHeading>
+                    <SectionHeading icon={Server} subtitle="Establishing the engineering workspace for local iteration.">PC Station Hub Configuration</SectionHeading>
                     
                     <Step number="1" title="Environment Variables">
                         <p>Create a <code>.env.local</code> file in the project root. This is required for Vite to communicate with your cloud backend.</p>
@@ -368,13 +367,13 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
                           <div className="bg-blue-600 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
                               <div className="absolute top-0 right-0 p-6 opacity-20"><RefreshCw size={80} className="animate-spin-slow" /></div>
                               <h3 className="text-white font-black uppercase text-xs tracking-widest mb-4">Normalization Stage</h3>
-                              <p className="text-blue-100 text-sm leading-relaxed mb-4">Our sanitization algorithm strips symbols and applies retail rounding rules.</p>
+                              <p className="text-blue-100 text-sm leading-relaxed mb-4">Our sanitization algorithm strips symbols and applies whole-number ceiling rounding.</p>
                               <div className="space-y-2">
                                   <div className="flex justify-between text-[10px] font-mono text-blue-200 bg-black/20 p-2 rounded">
                                       <span>Sanitized:</span> <span className="font-bold">"APL-IP15"</span>
                                   </div>
                                   <div className="flex justify-between text-[10px] font-mono text-blue-200 bg-black/20 p-2 rounded">
-                                      <span>Rounded:</span> <span className="font-bold">"R 1,300"</span>
+                                      <span>Whole:</span> <span className="font-bold">"R 1,300"</span>
                                   </div>
                               </div>
                           </div>
@@ -403,63 +402,22 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
                               </div>
                           </Step>
 
-                          <Step number="2" title="The Retail Rounding Algorithm">
-                              <WhyBox title="Visual Psychology Optimization" variant="orange">
-                                  Retailers often use "Charm Pricing" (e.g., 799). However, when bulk importing, inconsistent trailing digits look unprofessional. Our engine forces a <strong>Base-10 Ceiling</strong>.
+                          <Step number="2" title="The Whole-Number Ceiling Rule">
+                              <WhyBox title="Architectural Rule: No Decimals" variant="orange">
+                                  To maintain clean visual design across all kiosk screens and exported PDFs, the system enforces whole numbers. 
+                                  Input values with decimals (e.g., .99) are rounded <strong>UP</strong> to the nearest whole number.
                               </WhyBox>
                               <CodeBlock 
                                 id="js-logic"
                                 label="Internal Normalization Logic (Simplified)"
                                 code={`function normalizePrice(raw) {
-  // 1. Strip currency and non-numeric chars
-  let num = parseInt(raw.replace(/[^0-9]/g, ''));
-  
-  // 2. Apply Base-10 Rounding (e.g. 799 -> 800)
-  if (num % 10 !== 0) {
-      num = Math.ceil(num / 10) * 10;
-  }
-  
-  // 3. Return formatted Local Currency
-  return \`R \${num.toLocaleString()}\`;
+  // 1. Strip currency and symbols,
+  const numeric = raw.replace(/[^0-9.]/g, '');
+  if (!numeric) return '';
+  // 2. Ceiling round for design consistency
+  return 'R ' + Math.ceil(parseFloat(numeric)).toLocaleString();
 }`}
                               />
-                              <div className="flex items-center gap-6 p-6 bg-slate-900 rounded-3xl text-white">
-                                  <div className="text-center shrink-0">
-                                      <div className="text-[8px] font-black uppercase text-slate-500 mb-1">Input</div>
-                                      <div className="text-xl font-mono text-red-400 line-through">R {roundDemoValue}</div>
-                                  </div>
-                                  <ArrowRight className="text-slate-700" />
-                                  <div className="text-center">
-                                      <div className="text-[8px] font-black uppercase text-slate-500 mb-1">Output</div>
-                                      <div className="text-3xl font-black text-green-400 flex items-center gap-2">
-                                          R {Math.ceil(roundDemoValue/10)*10}
-                                          <Sparkles size={16} className="animate-pulse" />
-                                      </div>
-                                  </div>
-                              </div>
-                          </Step>
-
-                          <Step number="3" title="Sync & Distribution">
-                              <p className="font-medium text-slate-700">
-                                  Once "Saved", the pricelist is compressed into the global <code>JSONB</code> config in Supabase. 
-                              </p>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                  <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm text-center">
-                                      <Database size={24} className="mx-auto text-blue-500 mb-2" />
-                                      <div className="text-[10px] font-black uppercase mb-1">Step 1</div>
-                                      <div className="text-[11px] text-slate-600 font-bold">Config JSON Update</div>
-                                  </div>
-                                  <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm text-center">
-                                      <Wind size={24} className="mx-auto text-purple-500 mb-2" />
-                                      <div className="text-[10px] font-black uppercase mb-1">Step 2</div>
-                                      <div className="text-[11px] text-slate-600 font-bold">Realtime Broadcast</div>
-                                  </div>
-                                  <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm text-center">
-                                      <Smartphone size={24} className="mx-auto text-green-500 mb-2" />
-                                      <div className="text-[10px] font-black uppercase mb-1">Step 3</div>
-                                      <div className="text-[11px] text-slate-600 font-bold">Tablet Refresh</div>
-                                  </div>
-                              </div>
                           </Step>
                       </div>
                   </div>
@@ -471,4 +429,5 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
   );
 };
 
+// Fix: Added default export for SetupGuide
 export default SetupGuide;

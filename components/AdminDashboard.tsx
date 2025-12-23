@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -29,7 +30,7 @@ const SystemDocumentation = () => {
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setRoundDemoValue(prev => prev === 799 ? 4449 : prev === 4449 ? 122 : 799);
+            setRoundDemoValue(prev => prev === 799 ? 4449.99 : prev === 4449.99 ? 122 : 799);
         }, 3000);
         return () => clearInterval(interval);
     }, []);
@@ -349,7 +350,7 @@ const SystemDocumentation = () => {
                                     </div>
                                     <div className="text-center">
                                         <div className="text-white font-black uppercase text-[10px] tracking-widest">Normalization</div>
-                                        <div className="text-blue-400 text-[9px] font-mono">Auto-Rounding</div>
+                                        <div className="text-blue-400 text-[9px] font-mono">Whole Numbers</div>
                                     </div>
                                 </div>
 
@@ -378,7 +379,7 @@ const SystemDocumentation = () => {
                              <div className="space-y-4">
                                 <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2"><Sparkles size={18} className="text-orange-500"/> Pricing Strategy</h3>
                                 <p className="text-sm text-slate-600 leading-relaxed">
-                                    Messy inputs like <code>799</code> or <code>4449</code> are automatically sanitized:
+                                    Decimals are removed via ceiling rounding. Whole numbers are preserved.
                                 </p>
                                 <div className="bg-slate-900 p-4 rounded-xl space-y-3">
                                     <div className="flex items-center gap-3">
@@ -387,7 +388,7 @@ const SystemDocumentation = () => {
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="text-[10px] font-mono text-slate-500 uppercase w-12">Logic</div>
-                                        <div className="text-xs font-mono text-green-400 font-black animate-pulse">R {Math.ceil(roundDemoValue/10)*10}</div>
+                                        <div className="text-xs font-mono text-green-400 font-black animate-pulse">R {Math.ceil(roundDemoValue).toLocaleString()}</div>
                                     </div>
                                 </div>
                              </div>
@@ -624,7 +625,7 @@ const SystemDocumentation = () => {
 
 // Helper Icon for CPU
 const CpuIcon = (props: any) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
 );
 
 // --- ZIP IMPORT/EXPORT UTILS ---
@@ -1094,8 +1095,8 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
   const handlePriceBlur = (id: string, field: 'normalPrice' | 'promoPrice', value: string) => {
     if (!value) return;
     
-    // Extract only numbers
-    const numericPart = value.replace(/[^0-9]/g, '');
+    // Extract numbers and dot for decimals
+    const numericPart = value.replace(/[^0-9.]/g, '');
     if (!numericPart) {
         // If not a number but has text, just prepend R if needed
         if (value && !value.startsWith('R ')) {
@@ -1104,13 +1105,12 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
         return;
     }
 
-    let num = parseInt(numericPart);
+    let num = parseFloat(numericPart);
     
-    // Auto round up logic: round to the nearest 10 if not already a multiple of 10
-    // This handles the user examples: 799 -> 800, 4499 -> 4500
-    if (num % 10 !== 0) {
-        num = Math.ceil(num / 10) * 10;
-    }
+    // Rule: Round up only if decimals exist. Preserve whole numbers like 122.
+    // 129.99 -> 130
+    // 122 -> 122
+    num = Math.ceil(num);
     
     // Format back with R and grouping
     const formatted = `R ${num.toLocaleString()}`;
@@ -1173,10 +1173,10 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
         const newImportedItems: PricelistItem[] = dataRows.map(row => {
             const formatImported = (val: string) => {
                 if (!val) return '';
-                const numeric = String(val).replace(/[^0-9]/g, '');
+                const numeric = String(val).replace(/[^0-9.]/g, '');
                 if (!numeric) return String(val);
-                let n = parseInt(numeric);
-                if (n % 10 !== 0) n = Math.ceil(n / 10) * 10;
+                let n = parseFloat(numeric);
+                n = Math.ceil(n);
                 return `R ${n.toLocaleString()}`;
             };
 
@@ -1257,7 +1257,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
           <div className="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center gap-3">
               <Info size={18} className="text-blue-500 shrink-0" />
               <p className="text-[10px] text-blue-800 font-bold uppercase leading-tight">
-                  Price Tip: Typing a number will auto-add 'R' and round up to the nearest 10 (e.g. 799 → 800) when you finish editing the cell.
+                  Price Tip: Decimals are removed by rounding UP to the next whole number (e.g. 129.99 → 130). Whole numbers like 122 are kept exactly as they are.
               </p>
           </div>
 
@@ -1275,7 +1275,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
               {items.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="p-2"><input value={item.sku} onChange={(e) => updateItem(item.id, 'sku', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="SKU-123" /></td>
-                  <td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none text-sm" placeholder="Product details..." /></td>
+                  <td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="Product details..." /></td>
                   <td className="p-2"><input value={item.normalPrice} onBlur={(e) => handlePriceBlur(item.id, 'normalPrice', e.target.value)} onChange={(e) => updateItem(item.id, 'normalPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-black text-sm" placeholder="R 999" /></td>
                   <td className="p-2"><input value={item.promoPrice} onBlur={(e) => handlePriceBlur(item.id, 'promoPrice', e.target.value)} onChange={(e) => updateItem(item.id, 'promoPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-red-500 outline-none font-black text-sm text-red-600" placeholder="R 799" /></td>
                   <td className="p-2 text-center">
