@@ -242,7 +242,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
     
     return new Promise((resolve) => {
         const img = new Image();
-        img.crossOrigin = "anonymous"; // Essential for CORS
+        img.crossOrigin = "anonymous"; 
         
         img.onload = () => {
             try {
@@ -271,8 +271,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             console.warn("Failed to load image for PDF:", url);
             resolve(null);
         };
-
-        // Do not add cache-busters as they can sometimes invalidate CORS headers on specific servers
         img.src = url;
     });
   };
@@ -286,7 +284,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
         
-        // Concurrently load logos
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImageForPDF(companyLogo) : Promise.resolve(null)
@@ -294,8 +291,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
         const drawHeader = (pageNum: number) => {
             let topY = 15;
-            
-            // Brand Logo (Left)
             if (brandAsset) {
                 const ratio = brandAsset.width / brandAsset.height;
                 const h = 20; 
@@ -306,7 +301,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.text(brandName.toUpperCase(), margin, topY + 15);
             }
 
-            // Company Logo (Far Right)
             if (companyAsset) {
                 const ratio = companyAsset.width / companyAsset.height;
                 const h = 12; 
@@ -317,7 +311,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
             doc.text("PRICE LIST", margin, topY + 28);
             
-            // Modified: Display the pricelist title clearly in the PDF
             doc.setTextColor(30, 41, 59); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
             doc.text(pricelist.title.toUpperCase(), margin, topY + 36);
 
@@ -344,6 +337,16 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             return startY + 8;
         };
 
+        const drawTextShrinkToFit = (text: string, x: number, y: number, maxWidth: number, baseSize: number, align: 'left' | 'right' = 'left') => {
+            let currentSize = baseSize;
+            doc.setFontSize(currentSize);
+            while (doc.getTextWidth(text) > maxWidth && currentSize > 5.5) {
+                currentSize -= 0.5;
+                doc.setFontSize(currentSize);
+            }
+            doc.text(text, x, y, { align });
+        };
+
         let currentY = drawHeader(1);
         currentY = drawTableHeaders(currentY);
         
@@ -361,22 +364,22 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
             }
 
-            doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-            doc.text(item.sku || '', margin + 3, currentY);
+            doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal');
+            drawTextShrinkToFit(item.sku || '', margin + 3, currentY, 38, 8);
             
             doc.setFont('helvetica', 'bold');
-            const desc = item.description.length > 55 ? item.description.substring(0, 52) + "..." : item.description;
-            doc.text(desc.toUpperCase(), margin + 45, currentY);
+            const desc = item.description.toUpperCase();
+            drawTextShrinkToFit(desc, margin + 45, currentY, (pageWidth - margin - 45) - 45, 8.5);
             
             doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-            doc.text(item.normalPrice || '', pageWidth - margin - 40, currentY, { align: 'right' });
+            drawTextShrinkToFit(item.normalPrice || '', pageWidth - margin - 40, currentY, 32, 8, 'right');
             
             if (item.promoPrice) {
                 doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
-                doc.text(item.promoPrice, pageWidth - margin - 5, currentY, { align: 'right' });
+                drawTextShrinkToFit(item.promoPrice, pageWidth - margin - 5, currentY, 32, 10, 'right');
             } else {
                 doc.setTextColor(30, 41, 59);
-                doc.text(item.normalPrice || '', pageWidth - margin - 5, currentY, { align: 'right' });
+                drawTextShrinkToFit(item.normalPrice || '', pageWidth - margin - 5, currentY, 32, 8, 'right');
             }
             
             currentY += rowHeight;
@@ -391,7 +394,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
     } catch (err) {
         console.error("PDF Export failed", err);
-        alert("Unable to generate PDF. Verify company/brand logos in settings.");
+        alert("Unable to generate PDF.");
     } finally {
         setIsExporting(false);
     }
@@ -399,7 +402,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const handleZoomIn = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.min(prev + 0.25, 2.5)); };
   const handleZoomOut = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.max(prev - 0.25, 1)); };
-  const handleResetZoom = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(1); };
 
   return (
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block overflow-hidden print:overflow-visible" onClick={onClose}>
@@ -411,24 +413,25 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           .print-only { display: block !important; }
           #root, .relative, .viewer-container, .table-scroll { display: block !important; position: static !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
           .viewer-container { box-shadow: none !important; border: none !important; }
-          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
+          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
           .spreadsheet-table thead { display: table-header-group !important; }
           .spreadsheet-table tr { page-break-inside: avoid !important; }
           .spreadsheet-table th { position: static !important; background: #71717a !important; color: #fff !important; border: 1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 10pt !important; }
           .spreadsheet-table td { border: 0.5pt solid #e2e8f0 !important; color: #000 !important; padding: 8pt !important; font-size: 10pt !important; }
           .excel-row:nth-child(even) { background-color: #f8fafc !important; }
         }
-        .spreadsheet-table { border-collapse: separate; border-spacing: 0; }
-        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; }
+        .spreadsheet-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; }
         .excel-row:nth-child(even) { background-color: #f8fafc; }
         .excel-row:hover { background-color: #f1f5f9; }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
         .shrink-title { font-size: clamp(0.75rem, 2.5vw, 1.5rem); }
+        .fit-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all; }
+        .sku-cell { word-break: break-all; line-height: 1.1; font-size: clamp(8px, 1.2vw, 14px); }
+        .desc-cell { line-height: 1.2; font-size: clamp(9px, 1.3vw, 15px); }
       `}</style>
 
       <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-[2rem] shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block`} onClick={e => e.stopPropagation()}>
-        
-        {/* Updated Header to match Screenshot */}
         <div className={`print-hidden p-4 md:p-8 text-white flex justify-between items-center shrink-0 z-20 bg-[#c0810d]`}>
           <div className="flex items-center gap-6">
              <div className="flex bg-white/10 p-4 rounded-2xl border border-white/10 shadow-inner">
@@ -516,31 +519,31 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   </tr>
                   
                   <tr className="print:bg-[#71717a] bg-[#71717a]">
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-24 md:w-48 text-white">SKU</th>
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-white">Description</th>
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-right w-24 md:w-40 text-white">Normal</th>
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight text-right w-24 md:w-40 text-white">Promo</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[20%] text-white">SKU</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[50%] text-white">Description</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-right w-[15%] text-white">Normal</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight text-right w-[15%] text-white">Promo</th>
                   </tr>
                   </thead>
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
                       <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
-                      <td className="p-4 md:p-5 border-r border-slate-100">
-                          <span className="sku-font font-bold text-xs md:text-sm text-slate-900 uppercase">
+                      <td className="p-4 md:p-5 border-r border-slate-100 sku-cell">
+                          <span className="sku-font font-bold text-slate-900 uppercase fit-text">
                           {item.sku || ''}
                           </span>
                       </td>
-                      <td className="p-4 md:p-5 border-r border-slate-100">
-                          <span className="font-bold text-slate-900 text-xs md:text-sm uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">
+                      <td className="p-4 md:p-5 border-r border-slate-100 desc-cell">
+                          <span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors fit-text">
                               {item.description}
                           </span>
                       </td>
-                      <td className="p-4 md:p-5 text-right border-r border-slate-100">
+                      <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap">
                           <span className={`font-bold text-xs md:text-sm ${item.promoPrice ? 'text-slate-300' : 'text-slate-900'}`}>
                           {item.normalPrice || ''}
                           </span>
                       </td>
-                      <td className="p-4 md:p-5 text-right bg-slate-50/10">
+                      <td className="p-4 md:p-5 text-right bg-slate-50/10 whitespace-nowrap">
                           {item.promoPrice ? (
                           <span className="font-black text-sm md:text-xl text-[#ef4444] tracking-tighter">
                               {item.promoPrice}
@@ -733,12 +736,9 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const toggleCompareProduct = (product: Product) => setCompareProductIds(prev => prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5));
   const productsToCompare = useMemo(() => allProductsFlat.filter(p => compareProductIds.includes(p.id)), [allProductsFlat, compareProductIds]);
 
-  // Enhanced Brand/Logo lookup for Manual Pricelist
   const activePricelistBrand = useMemo(() => {
       if (!viewingManualList) return undefined;
-      // 1. Search in Dedicated Pricelist Brands
       let found: any = pricelistBrands.find(b => b.id === viewingManualList.brandId);
-      // 2. Fallback to Inventory Brands if mismatch occurred during association
       if (!found && storeData?.brands) {
           found = storeData.brands.find(b => b.id === viewingManualList.brandId);
       }
