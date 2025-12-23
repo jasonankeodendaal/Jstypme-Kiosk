@@ -762,9 +762,35 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        <div className="flex-1 relative flex flex-col min-h-0 print:overflow-visible" style={{ zoom: zoomLevel }}>
          {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={storeData.catalogues || []} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} selectedForCompare={compareProductIds} onToggleCompare={toggleCompareProduct} onStartCompare={() => setShowCompareModal(true)} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} />}
        </div>
-       <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[8px] md:text-[10px] print:hidden">
-          <div className="flex items-center gap-1"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase">{isOnline ? 'Connected' : 'Offline'}</span></div>
-          <div className="flex items-center gap-4">{pricelistBrands.length > 0 && (<button onClick={() => { setSelectedBrandForPricelist(pricelistBrands[0]?.id || null); setShowPricelistModal(true); }} className="bg-blue-600 hover:bg-blue-700 text-white w-5 h-5 rounded flex items-center justify-center shadow-sm active:scale-95 transition-all" title="Pricelists"><RIcon size={10} className="text-white" /></button>)}<button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest"><span>JSTYP</span></button></div>
+       <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[7px] md:text-[10px] print:hidden">
+          <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
+              <div className="flex items-center gap-1 shrink-0">
+                  <div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <span className="font-bold uppercase whitespace-nowrap">{isOnline ? 'Live' : 'Offline'}</span>
+              </div>
+              <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 shrink-0">
+                  <span className="font-black text-slate-300 uppercase hidden md:inline">ID:</span>
+                  <span className="font-mono font-bold text-slate-600">{kioskId}</span>
+              </div>
+              <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 truncate">
+                  <RefreshCw size={8} className="text-slate-300 hidden md:inline" />
+                  <span className="font-bold uppercase text-slate-400">Sync: {lastSyncTime || '--:--'}</span>
+              </div>
+          </div>
+          <div className="flex items-center gap-4 shrink-0 ml-2">
+              {pricelistBrands.length > 0 && (
+                  <button 
+                    onClick={() => { setSelectedBrandForPricelist(pricelistBrands[0]?.id || null); setShowPricelistModal(true); }} 
+                    className="bg-blue-600 hover:bg-blue-700 text-white w-5 h-5 rounded flex items-center justify-center shadow-sm active:scale-95 transition-all" 
+                    title="Pricelists"
+                  >
+                    <RIcon size={10} className="text-white" />
+                  </button>
+              )}
+              <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest text-[8px] md:text-[10px]">
+                  <span>JSTYP</span>
+              </button>
+          </div>
        </footer>
        <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
        {showGlobalSearch && <SearchModal storeData={storeData} onSelectProduct={(p) => { setActiveBrand(storeData.brands.find(b => b.id === (p as any).brandId)!); setActiveCategory(storeData.brands.find(b => b.id === (p as any).brandId)!.categories.find(c => c.id === (p as any).categoryId)!); setActiveProduct(p); }} onClose={() => setShowGlobalSearch(false)} />}
@@ -789,3 +815,5 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     </div>
   );
 };
+
+export default KioskApp;
