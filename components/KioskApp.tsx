@@ -371,14 +371,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             const desc = item.description.toUpperCase();
             drawTextShrinkToFit(desc, margin + 45, currentY, (pageWidth - margin - 45) - 45, 8.5);
             
-            doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+            // USER REQUEST: NORMAL PRICE PRINT BLACK NOT GREY
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
             drawTextShrinkToFit(item.normalPrice || '', pageWidth - margin - 40, currentY, 32, 8, 'right');
             
             if (item.promoPrice) {
                 doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
                 drawTextShrinkToFit(item.promoPrice, pageWidth - margin - 5, currentY, 32, 10, 'right');
             } else {
-                doc.setTextColor(30, 41, 59);
+                doc.setTextColor(0, 0, 0); // Always black if no promo or by request
                 drawTextShrinkToFit(item.normalPrice || '', pageWidth - margin - 5, currentY, 32, 8, 'right');
             }
             
@@ -539,8 +540,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                           </span>
                       </td>
                       <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap">
-                          <span className={`font-bold text-xs md:text-sm ${item.promoPrice ? 'text-slate-300' : 'text-slate-900'}`}>
-                          {item.normalPrice || ''}
+                          {/* USER REQUEST: NORMAL PRICE TEXT BLACK NOT GREY */}
+                          <span className="font-bold text-xs md:text-sm text-slate-900">
+                            {item.normalPrice || ''}
                           </span>
                       </td>
                       <td className="p-4 md:p-5 text-right bg-slate-50/10 whitespace-nowrap">
