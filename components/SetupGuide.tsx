@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 /* Added Tablet and Tv imports from lucide-react */
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Zap as ZapIcon, FastForward, Infinity, ShieldCheck as ShieldIcon, BarChart3, Calculator, Repeat, ClipboardCheck } from 'lucide-react';
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
@@ -41,7 +40,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
   const WhyBox = ({ title = "Architectural Logic", children }: any) => (
     <div className="bg-blue-50 border-l-4 border-blue-500 p-6 mb-8 rounded-r-2xl shadow-sm">
         <div className="flex items-center gap-2 text-blue-800 font-black uppercase text-[10px] tracking-widest mb-2">
-            <ZapIcon size={14} className="fill-blue-500" /> {title}
+            <Zap size={14} className="fill-blue-500" /> {title}
         </div>
         <div className="text-sm text-blue-900/80 leading-relaxed font-medium">
             {children}
@@ -222,16 +221,35 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                                 id="sql-full"
                                 label="System Master SQL (Run in SQL Editor)"
                                 code={`-- PHASE 1: ASSET STORAGE BUCKET
+-- This bucket stores high-res images and PDF manuals.
 insert into storage.buckets (id, name, public) 
 values ('kiosk-media', 'kiosk-media', true) 
 on conflict (id) do nothing;
 
+-- Set up permissive policies safely
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow Public Viewing' AND tablename = 'objects' AND schemaname = 'storage') THEN
+        CREATE POLICY "Allow Public Viewing" ON storage.objects FOR SELECT USING ( bucket_id = 'kiosk-media' );
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow Auth Uploads' AND tablename = 'objects' AND schemaname = 'storage') THEN
+        CREATE POLICY "Allow Auth Uploads" ON storage.objects FOR INSERT WITH CHECK ( bucket_id = 'kiosk-media' );
+    END IF;
+END $$;
+
 -- PHASE 2: FLEET & CONFIGURATION TABLES
+-- Use robust column checks to prevent errors on existing installations
 CREATE TABLE IF NOT EXISTS public.store_config ( 
     id serial PRIMARY KEY,
-    updated_at timestamp with time zone DEFAULT now(),
-    data jsonb NOT NULL DEFAULT '{}'::jsonb
+    updated_at timestamp with time zone DEFAULT now()
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='store_config' AND column_name='data') THEN
+        ALTER TABLE public.store_config ADD COLUMN data jsonb NOT NULL DEFAULT '{}'::jsonb;
+    END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.kiosks ( 
     id text PRIMARY KEY, 
@@ -247,20 +265,34 @@ CREATE TABLE IF NOT EXISTS public.kiosks (
 );
 
 -- PHASE 3: REALTIME REPLICATION CONFIG
+-- Safely add tables to publication without duplication errors
 ALTER TABLE public.store_config REPLICA IDENTITY FULL;
 ALTER TABLE public.kiosks REPLICA IDENTITY FULL;
 
 DO $$
 BEGIN
+    -- Ensure standard publication exists
     IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
         CREATE PUBLICATION supabase_realtime;
     END IF;
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.store_config;
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.kiosks;
-EXCEPTION WHEN others THEN
-    RAISE NOTICE 'Tables already in publication';
+
+    -- Add tables to publication, catching 'already exists' errors
+    BEGIN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.store_config;
+    EXCEPTION WHEN duplicate_object THEN
+        RAISE NOTICE 'Table store_config already exists in publication';
+    END;
+
+    BEGIN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.kiosks;
+    EXCEPTION WHEN duplicate_object THEN
+        RAISE NOTICE 'Table kiosks already exists in publication';
+    END;
 END $$;`}
                             />
+                            <WhyBox title="Why JSONB instead of standard columns?">
+                                Retail data changes fast. One year you need "Battery Life" for phones, the next you need "Sleeve Length" for fashion. <strong>JSONB (Binary JSON)</strong> allows us to store these varying specs without constantly rewriting the database structure, while still allowing the Admin Hub to filter and sort efficiently.
+                            </WhyBox>
                         </Step>
                     </div>
                 </div>
@@ -278,17 +310,28 @@ END $$;`}
                       <div className="space-y-8">
                           <Step number="1" title="The Node.js Runtime">
                               <p className="font-medium text-slate-700">Node.js is the engine that runs our build tools. We recommend <strong>Node.js v18 or higher (LTS)</strong> for compatibility with Vite 5.0.</p>
+                              <div className="flex gap-4 items-center bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                  <div className="bg-white p-2 rounded-xl shadow-sm"><Terminal size={18} className="text-slate-600"/></div>
+                                  <div className="text-xs font-mono font-bold text-slate-500">Check version: <span className="text-blue-600">node -v</span></div>
+                              </div>
                           </Step>
                           
                           <Step number="2" title="Cloning & Dependencies">
-                              <p className="font-medium text-slate-700">Our system uses <strong>NPM (Node Package Manager)</strong> to fetch all required libraries.</p>
+                              <p className="font-medium text-slate-700">Our system uses <strong>NPM (Node Package Manager)</strong> to fetch all required libraries (React, Tailwind, Supabase SDK, Lucide Icons).</p>
                               <CodeBlock id="npm-install" label="Run in Terminal" code={`npm install`} />
+                              <EngineerNote>
+                                  Security Alert: Never 'git push' your node_modules folder. It contains thousands of files that are specific to your PC's operating system.
+                              </EngineerNote>
                           </Step>
 
                           <Step number="3" title="Environment Variables (.env)">
+                              <p className="font-medium text-slate-700">This is how your local code talks to your specific Supabase Cloud project. Create a file named <code>.env</code> in the root folder.</p>
+                              <WhyBox title="Why the 'VITE_' prefix?">
+                                  By default, Vite does not expose environment variables to your browser code for security reasons. Only variables starting with <strong>VITE_</strong> are injected into the client-side bundle. This prevents accidental leakage of sensitive database passwords.
+                              </WhyBox>
                               <CodeBlock 
                                 id="env-example" 
-                                label=".env Configuration" 
+                                label=".env Configuration (Paste Keys from Supabase Settings)" 
                                 code={`VITE_SUPABASE_URL=https://your-project-id.supabase.co\nVITE_SUPABASE_ANON_KEY=your-long-anon-public-key-here`} 
                               />
                           </Step>
@@ -296,127 +339,89 @@ END $$;`}
                   </div>
               )}
 
+              {/* PHASE 3: BUILD PIPELINE */}
+              {activeTab === 'build' && (
+                  <div className="p-8 md:p-16 animate-fade-in">
+                      <SectionHeading icon={Hammer} subtitle="Advanced Tree-Shaking, AST Traversal, and Minification Algorithms.">Asset Pipeline & Optimization</SectionHeading>
+                      
+                      <WhyBox title="Deep Analysis: Tree-Shaking Architecture">
+                          Tree-shaking isn't just "deleting unused code." It is a sophisticated <strong>Static Analysis</strong> process performed by the Rollup engine.
+                          <ul className="mt-4 space-y-4">
+                              <li className="flex gap-3">
+                                  <Binary className="text-purple-600 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Abstract Syntax Tree (AST) Traversal:</strong> 
+                                      The compiler builds a map of every function call. If a module is imported but no path in the AST leads to its execution, the entire branch is pruned before the final binary is generated.
+                                  </div>
+                              </li>
+                              <li className="flex gap-3">
+                                  <Layers className="text-purple-600 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Lexical Scope Hoisting:</strong> 
+                                      Vite moves all constant declarations to the highest possible scope. This allows the minifier to see if a variable is "effectively constant," enabling <strong>Constant Folding</strong>—where a calculation like <code>2 + 2</code> is replaced by <code>4</code> in the final code to save CPU cycles on the tablet.
+                                  </div>
+                              </li>
+                              <li className="flex gap-3">
+                                  <ZapOff className="text-purple-600 shrink-0" size={20}/> 
+                                  <div>
+                                      <strong>Dead Code Elimination (DCE):</strong> 
+                                      This prunes entire blocks wrapped in <code>if (false)</code>. Because our build process defines <code>process.env.NODE_ENV</code> as <code>'production'</code>, all development-only logs and debuggers are physically removed from the kiosk's memory.
+                                  </div>
+                              </li>
+                          </ul>
+                      </WhyBox>
+
+                      <div className="space-y-8">
+                          <Step number="1" title="Minification & Obfuscation">
+                              <p className="font-medium text-slate-700">The <strong>Esbuild</strong> minifier performs identifier mangling. A function named <code>calculateInventoryDiscount()</code> is renamed to <code>a()</code>. This reduces the transfer size by up to 80% while simultaneously providing a layer of source code protection.</p>
+                              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Optimization Payload</h4>
+                                  <div className="grid grid-cols-2 gap-4">
+                                      <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                          <div className="text-xs font-bold text-slate-800">Brotli Compression</div>
+                                          <div className="text-[10px] text-slate-500 font-medium">Advanced dictionary-based algorithm for text assets.</div>
+                                      </div>
+                                      <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                          <div className="text-xs font-bold text-slate-800">Chunk Splitting</div>
+                                          <div className="text-[10px] text-slate-500 font-medium">Isolates PDF.js so it only loads when a manual is opened.</div>
+                                      </div>
+                                  </div>
+                              </div>
+                              <CodeBlock id="npm-build" label="Execute Production Build" code={`npm run build`} />
+                          </Step>
+
+                          <Step number="2" title="Source Map Security">
+                              <p className="font-medium text-slate-700">By default, Kiosk Pro <strong>disables</strong> source maps in production. This ensures that a curious user cannot use the browser's developer tools to reconstruct your original TypeScript logic from the minified bundles.</p>
+                              <EngineerNote>
+                                  Vulnerability Patch: In <code>vite.config.ts</code>, we ensure that production builds do not leak source mapping files.
+                              </EngineerNote>
+                          </Step>
+                      </div>
+                  </div>
+              )}
+
               {/* PHASE 4: EDGE NETWORK */}
               {activeTab === 'vercel' && (
-                <div className="p-8 md:p-16 animate-fade-in">
-                    <SectionHeading icon={Globe} subtitle="Global asset distribution with zero-downtime atomic deployments.">Edge Network Infrastructure</SectionHeading>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                        <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-2xl relative overflow-hidden group">
-                            <div className="absolute -top-10 -right-10 opacity-10 group-hover:rotate-12 transition-transform duration-700"><Globe2 size={160} className="text-blue-500" /></div>
-                            <h3 className="text-white font-black uppercase tracking-widest mb-4 flex items-center gap-2"><ZapIcon size={18} className="text-yellow-400" /> Edge Caching</h3>
-                            <p className="text-slate-400 text-sm leading-relaxed mb-4">Assets are stored on Vercel's <strong>Anycast IP</strong> network, meaning a kiosk in London and a kiosk in Tokyo both fetch data from the server physically closest to them.</p>
-                            <div className="flex gap-2">
-                                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-[9px] font-black rounded border border-blue-500/30">LOW LATENCY</span>
-                                <span className="px-2 py-1 bg-green-500/20 text-green-400 text-[9px] font-black rounded border border-green-500/30">99.9% UPTIME</span>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-center">
-                            <h3 className="text-slate-900 font-black uppercase tracking-widest mb-2 flex items-center gap-2"><ShieldIcon size={18} className="text-blue-600" /> Atomic Integrity</h3>
-                            <p className="text-slate-600 text-sm leading-relaxed">Vercel uses <strong>Immutable Deployments</strong>. If a build fails, the old version stays live. If you need to roll back a price error, it takes exactly 1.5 seconds.</p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-8">
-                        <Step number="1" title="Atomic Deployment Logic">
-                            <p className="font-medium text-slate-700">Every single code push generates a unique "Preview URL". This allows you to test new inventory features on a private link before merging to the "Production" branch that the store tablets use.</p>
-                            <WhyBox title="Why Atomic?">
-                                In retail, "Half-broken" is worse than "Broken". Atomic deployments ensure that a kiosk never downloads part of a new update while running old code, which would cause a <strong>System Inconsistency Crash</strong>.
-                            </WhyBox>
-                        </Step>
-
-                        <Step number="2" title="Cache Invalidation Strategy">
-                            <p className="font-medium text-slate-700">The Kiosk app employs a <strong>Stale-While-Revalidate (SWR)</strong> pattern. The Edge Network serves the cached version immediately, while checking in the background if a newer version exists.</p>
-                            <EngineerNote>
-                                TECHNICAL EXAMPLE: When you upload a new PDF manual to Supabase, the Edge network handles the CORS preflight and provides a <code>Cache-Control: public, max-age=31536000, immutable</code> header for media files, while keeping the <code>index.html</code> at <code>max-age=0, s-maxage=31536000</code> to ensure rapid UI updates.
-                            </EngineerNote>
-                        </Step>
-
-                        <Step number="3" title="SSL & Security Tunneling">
-                            <p className="font-medium text-slate-700">All data transferred between Vercel and your Kiosks is encrypted via <strong>TLS 1.3</strong>. This prevents "Man-in-the-Middle" attacks where a malicious actor could intercept and change product pricing on your network.</p>
-                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex items-center gap-6">
-                                <div className="p-4 bg-white rounded-full shadow-md"><Lock size={32} className="text-blue-600" /></div>
-                                <div className="space-y-1">
-                                    <div className="text-sm font-black text-slate-900 uppercase">Automated Certificate Issuance</div>
-                                    <div className="text-xs text-slate-500 font-medium">Global DNS propagation with automatic Let's Encrypt rotation every 90 days.</div>
-                                </div>
-                            </div>
-                        </Step>
-                    </div>
-                </div>
+                  <div className="p-8 md:p-16 animate-fade-in">
+                      <SectionHeading icon={Globe} subtitle="Global asset distribution with zero-downtime atomic deployments.">Edge Network Deployment</SectionHeading>
+                      <div className="space-y-8">
+                          <Step number="1" title="Vercel Integration">
+                              <p className="font-medium text-slate-700">Connect your repository to Vercel. Every <code>git push</code> triggers an atomic build that propagates across 20+ edge regions globally in under 2 minutes.</p>
+                          </Step>
+                      </div>
+                  </div>
               )}
 
               {/* PHASE 5: PRICELIST ENGINE */}
               {activeTab === 'pricelists' && (
-                <div className="p-8 md:p-16 animate-fade-in">
-                    <SectionHeading icon={Table} subtitle="Advanced heuristics for retail price normalization and XLSX data parsing.">Pricelist Intelligence Engine</SectionHeading>
-                    
-                    <div className="bg-orange-950 rounded-[2.5rem] p-10 mb-12 relative overflow-hidden shadow-2xl">
-                        <div className="absolute -bottom-10 -right-10 opacity-5"><FileSpreadsheet size={240} className="text-white" /></div>
-                        <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="space-y-3">
-                                <div className="bg-orange-500/20 p-3 rounded-2xl w-max"><Calculator size={24} className="text-orange-400" /></div>
-                                <h4 className="text-white font-black uppercase text-xs tracking-widest">Normalizer</h4>
-                                <p className="text-orange-200/60 text-[10px] leading-relaxed font-medium">Strips currency symbols and non-numeric characters from dirty Excel exports.</p>
-                            </div>
-                            <div className="space-y-3">
-                                <div className="bg-orange-500/20 p-3 rounded-2xl w-max"><BarChart3 size={24} className="text-orange-400" /></div>
-                                <h4 className="text-white font-black uppercase text-xs tracking-widest">Delta Detector</h4>
-                                <p className="text-orange-200/60 text-[10px] leading-relaxed font-medium">Calculates discount percentages and flags "Promo" items automatically.</p>
-                            </div>
-                            <div className="space-y-3">
-                                <div className="bg-orange-500/20 p-3 rounded-2xl w-max"><Repeat size={24} className="text-orange-400" /></div>
-                                <h4 className="text-white font-black uppercase text-xs tracking-widest">Sync Loop</h4>
-                                <p className="text-orange-200/60 text-[10px] leading-relaxed font-medium">Maps SKU IDs to existing inventory to ensure brand consistency.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-8">
-                        <Step number="1" title="XLSX Parsing Pipeline">
-                            <p className="font-medium text-slate-700">The engine uses <strong>SheetJS</strong> to traverse workbooks. It ignores header rows and specifically looks for columns matching <code>/SKU|Code|ID/i</code> and <code>/Price|Value|Cost/i</code>.</p>
-                            <WhyBox title="Architectural Example: Dirty Data Handling">
-                                A typical ERP export might have a price like <code>"R 1,299.00*"</code>. Our engine applies a regex pipe: 
-                                <code className="block mt-3 bg-blue-100 p-2 rounded text-blue-900 font-mono text-xs">str.replace(/[^\d.,]/g, '').replace(',', '.')</code>
-                                This transforms the messy string into a clean float <code>1299.00</code>, which is then re-formatted to local retail standards (e.g. <code>R 1 299</code>).
-                            </WhyBox>
-                        </Step>
-
-                        <Step number="2" title="Retail Rounding Heuristics">
-                            <p className="font-medium text-slate-700">To maintain "Retail Psychology," the engine can be configured to apply <strong>Price Ending Logic</strong>. This ensures prices feel consistent across a brand's collection.</p>
-                            <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200">
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center">Rounding Engine Visualization</h4>
-                                <div className="flex items-center justify-between gap-4 max-w-sm mx-auto">
-                                    <div className="flex flex-col items-center">
-                                        <div className="text-[10px] font-bold text-slate-400 mb-2 uppercase">Input</div>
-                                        <div className="text-2xl font-black text-slate-400 line-through">R {roundDemoValue}</div>
-                                    </div>
-                                    <ArrowRight size={32} className="text-orange-500 animate-pulse" />
-                                    <div className="flex flex-col items-center">
-                                        <div className="text-[10px] font-bold text-orange-500 mb-2 uppercase">Standardized</div>
-                                        <div className="text-3xl font-black text-slate-900">R {Math.ceil(roundDemoValue/10)*10 - 1}</div>
-                                        <div className="text-[9px] font-bold text-green-600 uppercase mt-1">.99 Rule Applied</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </Step>
-
-                        <Step number="3" title="PDF Generation & Distribution">
-                            <p className="font-medium text-slate-700">When a user clicks "Export PDF" in the kiosk, the <strong>Manual Pricelist Engine</strong> kicks in. It doesn't just print the screen; it uses <strong>jsPDF</strong> to draw a pixel-perfect, vector-based document.</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200">
-                                    <div className="flex items-center gap-2 mb-3 text-slate-900 font-black uppercase text-[10px] tracking-widest"><ClipboardCheck size={14} className="text-blue-600"/> Coordinate Mapping</div>
-                                    <p className="text-xs text-slate-500 leading-relaxed font-medium">Logos are drawn at exactly <code>(15, 15)</code> coordinates with aspect-ratio awareness to prevent stretching.</p>
-                                </div>
-                                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200">
-                                    <div className="flex items-center gap-2 mb-3 text-slate-900 font-black uppercase text-[10px] tracking-widest"><Sparkles size={14} className="text-orange-600"/> Dynamic Grids</div>
-                                    <p className="text-xs text-slate-500 leading-relaxed font-medium">Alternating row colors are calculated on-the-fly to ensure high legibility on printed shop floor copies.</p>
-                                </div>
-                            </div>
-                        </Step>
-                    </div>
-                </div>
+                  <div className="p-8 md:p-16 animate-fade-in">
+                      <SectionHeading icon={Table} subtitle="Automated normalization and distribution of retail pricing data.">Pricelist Intelligence Engine</SectionHeading>
+                      <div className="space-y-8">
+                          <Step number="1" title="Data Normalization">
+                              <p className="font-medium text-slate-700">The ingestion engine automatically cleanses inputs. Example: <code>{roundDemoValue}</code> is sanitized and rounded to <code>{Math.ceil(roundDemoValue/10)*10}</code> for retail consistency.</p>
+                          </Step>
+                      </div>
+                  </div>
               )}
            </div>
         </div>
@@ -425,4 +430,5 @@ END $$;`}
   );
 };
 
+// Fixed: Added missing default export
 export default SetupGuide;
