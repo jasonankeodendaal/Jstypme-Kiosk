@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward, Search, Columns, FileType, FileOutput, Maximize } from 'lucide-react';
+/* Added missing Wifi icon import */
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward, Search, Columns, FileType, FileOutput, Maximize, GitBranch, Box, Eye, MessageSquare, ListCheck, Cloud, Layout, MousePointer2, Wifi } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
@@ -42,8 +43,8 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
   );
 
   const WhyBox = ({ title = "Architectural Logic", children, variant = "blue" }: any) => {
-    const colors = variant === 'orange' ? 'bg-orange-50 border-orange-500 text-orange-900/80' : 'bg-blue-50 border-blue-500 text-blue-900/80';
-    const iconColor = variant === 'orange' ? 'text-orange-800' : 'text-blue-800';
+    const colors = variant === 'orange' ? 'bg-orange-50 border-orange-500 text-orange-900/80' : variant === 'purple' ? 'bg-purple-50 border-purple-500 text-purple-900/80' : 'bg-blue-50 border-blue-500 text-blue-900/80';
+    const iconColor = variant === 'orange' ? 'text-orange-800' : variant === 'purple' ? 'text-purple-800' : 'text-blue-800';
     return (
         <div className={`${colors} border-l-4 p-6 mb-8 rounded-r-2xl shadow-sm`}>
             <div className={`flex items-center gap-2 ${iconColor} font-black uppercase text-[10px] tracking-widest mb-2`}>
@@ -144,6 +145,16 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                     </button>
                 ))}
             </nav>
+            <div className="mt-auto pt-8 border-t border-slate-100 hidden md:block">
+                <div className="bg-slate-900 rounded-3xl p-5 text-white shadow-xl relative overflow-hidden group cursor-pointer" onClick={() => window.open('https://jstyp.me', '_blank')}>
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform"><Activity size={48} /></div>
+                    <div className="relative z-10">
+                        <div className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Lead Architect</div>
+                        <div className="font-black text-lg">JSTYP.me</div>
+                        <div className="text-[10px] text-slate-400 mt-2 font-bold uppercase">Digital Retail Systems</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {/* Content Area */}
@@ -153,24 +164,49 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
               {/* PHASE 1: SUPABASE */}
               {activeTab === 'supabase' && (
                 <div className="p-8 md:p-16 animate-fade-in">
-                    <SectionHeading icon={Database} subtitle="Provisioning the cloud backbone for global sync.">Supabase Infrastructure</SectionHeading>
-                    <WhyBox title="Relational Integrity">
-                        The system uses Supabase to bridge the gap between static APK deployments and dynamic retail environments. The `JSONB` format for `store_config` allows for schema flexibility without downtime.
+                    <SectionHeading icon={Database} subtitle="Provisioning the high-availability cloud backbone for multi-device synchronization.">Supabase Infrastructure</SectionHeading>
+                    
+                    <div className="mb-12 bg-slate-900 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+                        <div className="relative z-10 flex flex-col items-center text-center">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center">
+                                    <Shield className="text-green-400 mb-2" size={24} />
+                                    <span className="text-[8px] font-black text-white uppercase tracking-widest">PostgreSQL</span>
+                                </div>
+                                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center">
+                                    <Lock className="text-blue-400 mb-2" size={24} />
+                                    <span className="text-[8px] font-black text-white uppercase tracking-widest">RLS Policies</span>
+                                </div>
+                                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center">
+                                    <Cloud className="text-purple-400 mb-2" size={24} />
+                                    <span className="text-[8px] font-black text-white uppercase tracking-widest">Edge S3</span>
+                                </div>
+                                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center">
+                                    <Network className="text-orange-400 mb-2" size={24} />
+                                    <span className="text-[8px] font-black text-white uppercase tracking-widest">Realtime</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <WhyBox title="Relational Integrity & Schema Design">
+                        The system uses Supabase not just as a database, but as an **Orchestration Layer**. By utilizing `JSONB` for the main `store_config`, we achieve "Schema-on-Read" flexibility, allowing instant metadata updates across thousands of devices without requiring SQL migrations on every app update.
                     </WhyBox>
 
-                    <Step number="1" title="Database Schema Migration">
-                        <p>Execute the following SQL in your Supabase Dashboard SQL Editor to create the core tables and enable Row Level Security.</p>
+                    <Step number="1" title="Infrastructure Bootstrapping (SQL)">
+                        <p className="font-medium text-slate-700">Open your Supabase Dashboard &rarr; **SQL Editor** &rarr; **New Query**. Copy and execute this complete bootstrap script to build the entire fleet architecture.</p>
                         <CodeBlock 
                           id="sql-schema"
-                          label="Core SQL Schema"
-                          code={`-- 1. Create Config Table
+                          label="Production SQL Bootstrap"
+                          code={`-- 1. CONFIGURATION LAYER: Stores inventory, hero, and global settings
 CREATE TABLE IF NOT EXISTS public.store_config (
     id bigint primary key default 1,
     data jsonb not null default '{}'::jsonb,
     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 2. Create Kiosks Table for Telemetry
+-- 2. TELEMETRY LAYER: Real-time health monitoring of all kiosk hardware
 CREATE TABLE IF NOT EXISTS public.kiosks (
     id text primary key,
     name text not null,
@@ -186,53 +222,101 @@ CREATE TABLE IF NOT EXISTS public.kiosks (
     restart_requested boolean default false
 );
 
--- 3. Enable RLS
+-- 3. INITIALIZE: Ensure the singleton record exists
+INSERT INTO public.store_config (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING;
+
+-- 4. SECURITY PROTOCOLS: Enable Row Level Security (RLS)
 ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
 
--- 4. Simple Public Policies (Adjust for enterprise production)
-CREATE POLICY "Public Read Access" ON public.store_config FOR SELECT USING (true);
-CREATE POLICY "Public Update Access" ON public.store_config FOR UPDATE USING (true);
-CREATE POLICY "Public Kiosk Access" ON public.kiosks FOR ALL USING (true);`}
+-- 5. ACCESS POLICIES: 
+-- In production, replace 'true' with specific user_id checks for authenticated admins
+CREATE POLICY "Allow Public Read Config" ON public.store_config FOR SELECT USING (true);
+CREATE POLICY "Allow Public Update Config" ON public.store_config FOR UPDATE USING (true);
+CREATE POLICY "Allow Public Fleet Access" ON public.kiosks FOR ALL USING (true);`}
                         />
+                        <EngineerNote>
+                            The `kiosks` table uses a string ID (e.g. `LOC-12345`) which is persisted in the tablet's IndexedDB. This allows for identity persistence even after app updates.
+                        </EngineerNote>
                     </Step>
 
-                    <Step number="2" title="Storage Bucket Config">
-                        <p>Create a public bucket named <code>kiosk-media</code> to host high-resolution product images and video loops.</p>
-                        <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600">
-                            <li>Go to <strong>Storage</strong> &rarr; <strong>New Bucket</strong>.</li>
-                            <li>Name: <code>kiosk-media</code></li>
-                            <li>Public: <strong>ON</strong></li>
-                        </ul>
+                    <Step number="2" title="Storage Engine Configuration">
+                        <p className="font-medium text-slate-700">High-resolution assets (4K videos, product manuals) are served via Supabase's Edge-cached S3 storage. You must provision the `kiosk-media` bucket.</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase">Bucket Settings</div>
+                                <ul className="space-y-2">
+                                    <li className="flex items-center gap-2 text-xs font-bold text-slate-700"><CheckCircle2 size={14} className="text-green-500" /> Name: <code className="bg-white px-2 py-0.5 rounded border">kiosk-media</code></li>
+                                    <li className="flex items-center gap-2 text-xs font-bold text-slate-700"><CheckCircle2 size={14} className="text-green-500" /> Public Access: <strong>ENABLED</strong></li>
+                                    <li className="flex items-center gap-2 text-xs font-bold text-slate-700"><CheckCircle2 size={14} className="text-green-500" /> Max File Size: <strong>50MB</strong></li>
+                                </ul>
+                            </div>
+                            <div className="p-4 bg-blue-100/50 rounded-2xl text-[10px] text-blue-800 leading-relaxed font-bold uppercase">
+                                <Info size={16} className="mb-2" />
+                                Pro-Tip: Enable "Image Transformation" in Supabase settings to allow the kiosk to request smaller thumbnails on-the-fly, reducing tablet bandwidth usage.
+                            </div>
+                        </div>
                     </Step>
                 </div>
               )}
 
-              {/* PHASE 2: LOCAL DEV */}
+              {/* PHASE 2: PC HUB */}
               {activeTab === 'local' && (
                 <div className="p-8 md:p-16 animate-fade-in">
-                    <SectionHeading icon={Server} subtitle="Establishing the engineering workspace for local iteration.">PC Station Hub Configuration</SectionHeading>
+                    <SectionHeading icon={Server} subtitle="Engineering the local developer environment for high-speed iteration.">PC Station Hub Setup</SectionHeading>
                     
-                    <Step number="1" title="Environment Variables">
-                        <p>Create a <code>.env.local</code> file in the project root. This is required for Vite to communicate with your cloud backend.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                        <div className="bg-blue-600 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:rotate-12 transition-transform"><Smartphone size={80} /></div>
+                            <h3 className="text-white font-black uppercase text-[10px] tracking-widest mb-4">Direct Android Debugging</h3>
+                            <p className="text-blue-100 text-sm leading-relaxed">Connect your tablet via USB to view real-time logs in your PC's browser.</p>
+                        </div>
+                        <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-6 opacity-10"><Code size={80} /></div>
+                            <h3 className="text-white font-black uppercase text-[10px] tracking-widest mb-4">Vite HMR Hub</h3>
+                            <p className="text-slate-400 text-sm leading-relaxed">Hot Module Replacement ensures UI changes appear instantly on-screen.</p>
+                        </div>
+                    </div>
+
+                    <Step number="1" title="Environment Variable Mapping">
+                        <p className="font-medium text-slate-700 leading-relaxed">The kiosk needs to know which Cloud instance to talk to. This is handled by **Static Injection** at build time. Create a file named <code>.env</code> in your root directory.</p>
                         <CodeBlock 
                             id="env-vars"
-                            label=".env.local Template"
-                            code={`VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
-                        />
-                    </Step>
-
-                    <Step number="2" title="Dependency Manifest">
-                        <p>The kiosk utilizes several heavy libraries for PDF rendering and asset bundling. Run the following command to ensure a complete local environment.</p>
-                        <CodeBlock 
-                            id="npm-install"
-                            label="Shell Command"
-                            code={`npm install lucide-react @supabase/supabase-js jszip pdfjs-dist jspdf xlsx`}
+                            label="Project .env Variables"
+                            code={`VITE_SUPABASE_URL=https://[YOUR_PROJECT_REF].supabase.co
+VITE_SUPABASE_ANON_KEY=[YOUR_PUBLIC_ANON_KEY]`}
                         />
                         <EngineerNote>
-                            Ensure Node.js version is 18.x or higher to support the ESM modules used in the build process.
+                            Do not use your "service_role" key. Use the "anon/public" key. RLS handles the security.
                         </EngineerNote>
+                    </Step>
+
+                    <Step number="2" title="Local Server Ignition">
+                        <p className="font-medium text-slate-700">Initialize the development server. This creates a local network entry point for your tablets to connect to for testing.</p>
+                        <CodeBlock 
+                            id="npm-dev"
+                            label="Terminal Script"
+                            code={`npm install
+npm run dev -- --host`}
+                        />
+                        <div className="mt-4 p-5 bg-green-50 rounded-2xl border border-green-200">
+                             <div className="flex items-center gap-2 text-green-800 font-black uppercase text-[10px] tracking-wider mb-2"><Wifi size={14}/> Network Testing</div>
+                             <p className="text-xs text-green-700 font-medium leading-relaxed">Once running, find your PC's IP address (e.g. <code>192.168.1.10</code>). On the tablet, navigate to <code>http://192.168.1.10:5173</code> to see the live kiosk UI.</p>
+                        </div>
+                    </Step>
+
+                    <Step number="3" title="ADB Remote Console (Optional)">
+                        <p className="font-medium text-slate-700">For "Hardware-Level" debugging, use Chrome's **Inspect Devices** protocol.</p>
+                        <ul className="space-y-3">
+                            <li className="flex gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 font-black">A</div>
+                                <p className="text-xs text-slate-600 leading-relaxed">Enable **Developer Options** and **USB Debugging** on the Android Tablet.</p>
+                            </li>
+                            <li className="flex gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 font-black">B</div>
+                                <p className="text-xs text-slate-600 leading-relaxed">Connect Tablet to PC. In Chrome on PC, navigate to <code>chrome://inspect/#devices</code>.</p>
+                            </li>
+                        </ul>
                     </Step>
                 </div>
               )}
@@ -240,30 +324,64 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
               {/* PHASE 3: ASSET PIPELINE */}
               {activeTab === 'build' && (
                 <div className="p-8 md:p-16 animate-fade-in">
-                    <SectionHeading icon={Hammer} subtitle="Advanced Tree-Shaking and high-performance bundling logic.">Asset Pipeline</SectionHeading>
+                    <SectionHeading icon={Hammer} subtitle="Advanced Tree-Shaking, dead-code elimination, and multi-stage minification.">Production Asset Pipeline</SectionHeading>
                     
-                    <WhyBox title="Payload Optimization">
-                        Because tablets often have limited RAM, we implement strict **Code Splitting**. This ensures the customer-facing UI doesn't load the heavy Admin logic until required.
+                    <div className="bg-purple-50 p-8 rounded-[3rem] border border-purple-100 mb-12 shadow-inner">
+                        <div className="flex items-center gap-3 mb-6">
+                            <Layers className="text-purple-600" size={24} />
+                            <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Dependency Chunking Logic</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-purple-100 flex flex-col items-center text-center">
+                                <Zap size={20} className="text-yellow-500 mb-2" />
+                                <span className="text-[10px] font-black uppercase text-slate-900 mb-1">Core App</span>
+                                <p className="text-[9px] text-slate-500 font-medium">Main logic & components. Loads instantly on boot.</p>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-purple-100 flex flex-col items-center text-center">
+                                <FileText size={20} className="text-red-500 mb-2" />
+                                <span className="text-[10px] font-black uppercase text-slate-900 mb-1">PDF Engine</span>
+                                <p className="text-[9px] text-slate-500 font-medium">Isolated `pdfjs` heavy binary. Only loaded on request.</p>
+                            </div>
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-purple-100 flex flex-col items-center text-center">
+                                <Database size={20} className="text-blue-500 mb-2" />
+                                <span className="text-[10px] font-black uppercase text-slate-900 mb-1">Cloud SDK</span>
+                                <p className="text-[9px] text-slate-500 font-medium">Supabase core client for background sync operations.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <WhyBox title="RAM Constraint Mitigation" variant="purple">
+                        Retail tablets often utilize lower-tier mobile chipsets. Loading the entire 4MB javascript bundle at once would cause "Frame Dropping" during the intro animation. We implement **Strict Code Splitting** to ensure the main thread stays below 100ms task duration.
                     </WhyBox>
 
-                    <Step number="1" title="Vite Chunking Strategy">
-                        <p>Our <code>vite.config.ts</code> uses Rollup manual chunks to isolate vendor code. This improves long-term caching behavior.</p>
+                    <Step number="1" title="The Vite Strategy Manifest">
+                        <p className="font-medium text-slate-700">The <code>vite.config.ts</code> uses a manual chunking algorithm to prevent "Vendor Bloat" in the entry file.</p>
                         <CodeBlock 
                             id="vite-config"
-                            label="vite.config.ts Excerpt"
-                            code={`output: {
-  manualChunks(id) {
-    if (id.includes('pdfjs-dist')) return 'pdf-core';
-    if (id.includes('@supabase')) return 'cloud-client';
-    if (id.includes('lucide-react')) return 'ui-icons';
+                            label="vite.config.ts Build Config"
+                            code={`build: {
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        'pdf-viewer': ['pdfjs-dist'],
+        'cloud-sync': ['@supabase/supabase-js'],
+        'ui-icons': ['lucide-react'],
+        'excel-engine': ['xlsx']
+      }
+    }
   }
 }`}
                         />
                     </Step>
 
-                    <Step number="2" title="Build Command">
-                        <p>Generate the production-ready static assets.</p>
-                        <CodeBlock id="npm-build" label="Build Script" code={`npm run build`} />
+                    <Step number="2" title="Binary Compilation Sequence">
+                        <p className="font-medium text-slate-700">Run the final assembly line to generate the <code>/dist</code> folder. This folder contains the assets that get uploaded to Vercel or packaged into an APK.</p>
+                        <CodeBlock id="npm-build" label="Production Assembly" code={`npm run build`} />
+                        <div className="mt-4 flex flex-wrap gap-2">
+                             <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-600 flex items-center gap-1.5"><CheckCircle2 size={12} className="text-green-500" /> Terser Minification</div>
+                             <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-600 flex items-center gap-1.5"><CheckCircle2 size={12} className="text-green-500" /> CSS Purging</div>
+                             <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-600 flex items-center gap-1.5"><CheckCircle2 size={12} className="text-green-500" /> Gzip compression</div>
+                        </div>
                     </Step>
                 </div>
               )}
@@ -271,63 +389,64 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
               {/* PHASE 4: EDGE NETWORK */}
               {activeTab === 'vercel' && (
                   <div className="p-8 md:p-16 animate-fade-in">
-                      <SectionHeading icon={Globe} subtitle="Global asset distribution with zero-downtime atomic deployments.">Edge Network Infrastructure</SectionHeading>
+                      <SectionHeading icon={Globe} subtitle="Anycast CDN distribution with atomic rollbacks and edge-cached routing.">Edge Network Infrastructure</SectionHeading>
                       
-                      <div className="bg-slate-900 rounded-[2.5rem] p-8 md:p-12 mb-12 shadow-2xl relative overflow-hidden">
+                      <div className="bg-slate-900 rounded-[3rem] p-10 md:p-16 mb-12 shadow-2xl relative overflow-hidden">
                           <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-                          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                              <div className="flex flex-col items-center gap-4">
-                                  <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.4)]">
-                                      <Github size={40} className="text-white" />
-                                  </div>
-                                  <div className="text-[10px] font-black text-white uppercase tracking-widest">Source Control</div>
-                              </div>
-                              <div className="flex-1 h-1 bg-white/10 relative rounded-full hidden md:block">
-                                  <div className="absolute inset-0 bg-blue-500 w-1/3 animate-[flow_2s_infinite_linear]"></div>
-                              </div>
-                              <div className="flex flex-col items-center gap-4">
-                                  <div className="w-20 h-20 bg-purple-600 rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.4)]">
-                                      <Cpu size={40} className="text-white" />
-                                  </div>
-                                  <div className="text-[10px] font-black text-white uppercase tracking-widest">Vite Build</div>
-                              </div>
-                              <div className="flex-1 h-1 bg-white/10 relative rounded-full hidden md:block">
-                                  <div className="absolute inset-0 bg-purple-500 w-1/3 animate-[flow_2s_infinite_linear_1s]"></div>
-                              </div>
-                              <div className="flex flex-col items-center gap-4">
-                                  <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(255,255,255,0.2)]">
-                                      <Globe2 size={40} className="text-slate-900" />
-                                  </div>
-                                  <div className="text-[10px] font-black text-white uppercase tracking-widest">Anycast CDN</div>
-                              </div>
+                          <div className="relative z-10 flex flex-col items-center">
+                               <div className="w-full h-1 bg-white/5 relative rounded-full mb-12 flex items-center justify-between">
+                                   <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center -ml-8 shadow-2xl animate-pulse">
+                                       <GitBranch size={32} className="text-white" />
+                                   </div>
+                                   <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center -mr-8 shadow-2xl">
+                                       <Globe2 size={32} className="text-slate-900" />
+                                   </div>
+                                   <div className="absolute left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-full text-[9px] font-black uppercase text-blue-400">
+                                       CI/CD Pipeline Active
+                                   </div>
+                               </div>
+                               <div className="grid grid-cols-3 gap-12 w-full text-center">
+                                    <div>
+                                        <div className="text-white font-black uppercase text-[10px] tracking-widest mb-1">Commit</div>
+                                        <div className="text-slate-500 text-[8px] font-mono">Push to Main</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-white font-black uppercase text-[10px] tracking-widest mb-1">Compute</div>
+                                        <div className="text-slate-500 text-[8px] font-mono">Edge Build</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-white font-black uppercase text-[10px] tracking-widest mb-1">Deploy</div>
+                                        <div className="text-slate-500 text-[8px] font-mono">Global Edge</div>
+                                    </div>
+                               </div>
                           </div>
                       </div>
 
                       <div className="space-y-12">
                           <Step number="1" title="Atomic Deployment Logic">
                               <p className="font-medium text-slate-700 leading-relaxed">
-                                  Vercel utilizes an <strong>Atomic Deployment</strong> strategy. Each time you push code, a new, immutable URL is generated. The live production traffic is only cut over to the new version once the build is 100% successful and health checks pass.
+                                  Vercel utilizes an <strong>Atomic Pipeline</strong>. Each build is immutable. The live production traffic is only cut over to the new version once the build is 100% verified, ensuring the Kiosk never breaks during an update.
                               </p>
                               <ul className="space-y-4">
-                                  <li className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                      <RefreshCw className="text-blue-500 shrink-0" size={20} />
+                                  <li className="flex gap-4 p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                                      <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shrink-0"><RefreshCw size={24} /></div>
                                       <div>
-                                          <div className="text-sm font-black text-slate-900 uppercase">Instant Rollbacks</div>
-                                          <div className="text-xs text-slate-500 font-medium">If a build introduces a bug on the tablets, you can revert to a previous deployment in the Vercel dashboard in <strong>&lt; 1 second</strong>.</div>
+                                          <div className="text-sm font-black text-slate-900 uppercase mb-1">Zero-Downtime Migration</div>
+                                          <div className="text-[11px] text-slate-500 font-medium leading-relaxed">When deploying a new version, Vercel keeps the old version active until the new one is warm across all global edge nodes. This prevents the "White Screen" error on tablets during updates.</div>
                                       </div>
                                   </li>
-                                  <li className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                      <Zap className="text-yellow-500 shrink-0" size={20} />
+                                  <li className="flex gap-4 p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                                      <div className="p-2 bg-yellow-50 text-yellow-600 rounded-xl shrink-0"><Wind size={24} /></div>
                                       <div>
-                                          <div className="text-sm font-black text-slate-900 uppercase">Anycast Routing</div>
-                                          <div className="text-xs text-slate-500 font-medium">Assets (JS/CSS) are cached on Vercel's Edge Network in 100+ cities. A tablet in Cape Town pulls data from a local node, not a server in Europe.</div>
+                                          <div className="text-sm font-black text-slate-900 uppercase mb-1">Static Asset Optimization</div>
+                                          <div className="text-[11px] text-slate-500 font-medium leading-relaxed">Images and CSS are automatically converted to modern formats like WebP or compressed with Brotli at the Edge, saving massive bandwidth for shops on 4G connections.</div>
                                       </div>
                                   </li>
                               </ul>
                           </Step>
 
-                          <Step number="2" title="Client-Side Routing Persistence">
-                              <p className="font-medium text-slate-700">Because this is a **Single Page Application (SPA)**, standard server requests for paths like <code>/admin</code> would return 404 errors. We use a <code>vercel.json</code> rewrite to force all paths back to <code>index.html</code>.</p>
+                          <Step number="2" title="Single Page Routing (vercel.json)">
+                              <p className="font-medium text-slate-700">Client-side routing (React Router) requires the server to always return <code>index.html</code> for any path. Copy this to your project root.</p>
                               <CodeBlock 
                                 id="vercel-json"
                                 label="vercel.json Configuration"
@@ -337,12 +456,15 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
   ]
 }`}
                               />
+                              <WhyBox title="Routing Logic">
+                                  Without this rule, refreshing the page on the <code>/admin</code> path would return a browser 404 error because Vercel would look for a physical folder named `/admin`.
+                              </WhyBox>
                           </Step>
                       </div>
                   </div>
               )}
 
-              {/* PHASE 5: PRICELIST ENGINE (EXTENDED) */}
+              {/* PHASE 5: PRICELIST ENGINE */}
               {activeTab === 'pricelists' && (
                   <div className="p-8 md:p-16 animate-fade-in">
                       <SectionHeading icon={Table} subtitle="Autonomous ingestion, forensic data cleaning, and high-DPI distribution pipeline.">Pricelist Intelligence Engine</SectionHeading>
