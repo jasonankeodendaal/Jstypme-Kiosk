@@ -1,6 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward } from 'lucide-react';
+import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward, Wand2, Fingerprint, Search,
+  // Added missing FileInput icon import
+  FileInput
+} from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
@@ -142,273 +145,157 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/70 p-4 md:p-12 scroll-smooth">
+        <div className="flex-1 overflow-y-auto bg-slate-50/70 p-4 md:p-12 scroll-smooth pb-32">
            <div className="max-w-4xl mx-auto bg-white rounded-[3rem] shadow-2xl border border-slate-200 overflow-hidden min-h-full pb-32">
               
-              {/* PHASE 1: SUPABASE */}
+              {/* PHASE 5: PRICELIST ENGINE (DETAILED) */}
+              {activeTab === 'pricelists' && (
+                <div className="p-8 md:p-16 animate-fade-in">
+                    <SectionHeading icon={Table} subtitle="Full breakdown of the high-performance XLSX ingestion and PDF synthesis core.">Pricelist Intelligence Engine</SectionHeading>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                        <div className="bg-orange-50 p-8 rounded-[2.5rem] border border-orange-100 shadow-sm relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform"><FileSpreadsheet size={80} /></div>
+                            <h3 className="text-orange-900 font-black uppercase text-xs tracking-widest mb-4 flex items-center gap-2"><FileInput size={14}/> Input Phase</h3>
+                            <p className="text-orange-800/80 text-sm leading-relaxed mb-4">Accepts raw binary <code>.xlsx</code> data. Uses <code>SheetJS</code> to parse workbooks into 2D JSON arrays in-memory.</p>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-[10px] font-mono text-orange-600 bg-white/50 p-2 rounded">
+                                    <span>Raw Cell:</span> <span className="font-bold">" SKU_100 (Black) "</span>
+                                </div>
+                                <div className="flex justify-between text-[10px] font-mono text-orange-600 bg-white/50 p-2 rounded">
+                                    <span>Price Cell:</span> <span className="font-bold">"$ 1,299.99"</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-blue-600 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-6 opacity-20"><RefreshCw size={80} className="animate-spin-slow" /></div>
+                            <h3 className="text-white font-black uppercase text-xs tracking-widest mb-4 flex items-center gap-2"><Binary size={14}/> Normalization Phase</h3>
+                            <p className="text-blue-100 text-sm leading-relaxed mb-4">Cleanses and rounds data based on retail psychology rules for premium brand consistency.</p>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-[10px] font-mono text-blue-200 bg-black/20 p-2 rounded">
+                                    <span>Sanitized:</span> <span className="font-bold">"SKU_100"</span>
+                                </div>
+                                <div className="flex justify-between text-[10px] font-mono text-blue-200 bg-black/20 p-2 rounded">
+                                    <span>Normalized:</span> <span className="font-bold">"R 1,300"</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-16">
+                        <Step number="1" title="Keyword Discovery (Fuzzy Logic)">
+                            <p className="font-medium text-slate-700 leading-relaxed">
+                                The engine scans the first non-empty row of the spreadsheet to detect the "Header Matrix". It uses a weighted keyword system to map columns regardless of their order.
+                            </p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 my-6">
+                                {[
+                                    { label: 'SKU Map', color: 'blue', keys: ['sku', 'code', 'model', 'part'] },
+                                    { label: 'Desc Map', color: 'purple', keys: ['desc', 'item', 'name', 'title'] },
+                                    { label: 'Retail Map', color: 'green', keys: ['price', 'retail', 'msrp', 'cost'] },
+                                    { label: 'Promo Map', color: 'orange', keys: ['sale', 'promo', 'special', 'deal'] }
+                                ].map(map => (
+                                    <div key={map.label} className={`bg-${map.color}-50 border border-${map.color}-200 p-3 rounded-2xl`}>
+                                        <div className={`text-${map.color}-700 font-black text-[9px] uppercase tracking-wider mb-2`}>{map.label}</div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {map.keys.map(k => <span key={k} className={`bg-white text-${map.color}-600 px-1.5 py-0.5 rounded text-[8px] font-bold border border-${map.color}-100`}>{k}</span>)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <WhyBox title="Architectural Flexibility">
+                                This allows managers to export from any legacy POS or ERP system and import directly without manual column re-ordering.
+                            </WhyBox>
+                        </Step>
+
+                        <Step number="2" title="The Cognitive Pricing Pipeline">
+                            <p className="font-medium text-slate-700">The normalization function (<code>formatImported</code>) applies a strict logic tree to every price cell found.</p>
+                            <CodeBlock 
+                                id="logic-normalization"
+                                label="Normalization Kernel (TypeScript)"
+                                code={`const n = parseFloat(raw.replace(/[^0-9.]/g, ''));
+// 1. Force integer ceiling for clean decimals
+if (n % 1 !== 0) n = Math.ceil(n);
+// 2. Eliminate 'Discount Store' 9-endings
+if (Math.floor(n) % 10 === 9) n += 1; 
+// 3. Apply Locale Formatting
+return \`R \${n.toLocaleString()}\`;`}
+                            />
+                            <div className="bg-slate-900 p-8 rounded-[2rem] border border-slate-800 shadow-inner">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-400"><Wand2 size={20}/></div>
+                                    <div className="text-white font-black uppercase text-xs tracking-widest">Logic Visualizer</div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between group">
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">Malformed Input</div>
+                                        <div className="text-sm font-mono text-red-400 group-hover:scale-105 transition-transform">"$ 4,449.99"</div>
+                                    </div>
+                                    <div className="h-[1px] bg-white/5"></div>
+                                    <div className="flex items-center justify-between group">
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">Sanitized Float</div>
+                                        <div className="text-sm font-mono text-blue-400">4449.99</div>
+                                    </div>
+                                    <div className="h-[1px] bg-white/5"></div>
+                                    <div className="flex items-center justify-between group">
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">Ceiling Apply</div>
+                                        <div className="text-sm font-mono text-blue-400">4450</div>
+                                    </div>
+                                    <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-2xl flex justify-between items-center animate-pulse">
+                                        <div className="text-[10px] font-black text-green-400 uppercase">Final Output</div>
+                                        <div className="text-lg font-black text-green-400 font-mono tracking-tighter">R 4,450</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Step>
+
+                        <Step number="3" title="PDF Synthesis Engine">
+                            <p className="font-medium text-slate-700">The export engine uses <code>jsPDF</code> to build a print-ready vector document. It calculates pagination dynamically.</p>
+                            <ul className="space-y-4">
+                                <li className="flex gap-4 p-5 bg-white rounded-2xl border border-slate-100 shadow-sm group hover:border-red-200 transition-colors">
+                                    <div className="bg-red-50 p-3 rounded-xl text-red-500 group-hover:bg-red-500 group-hover:text-white transition-all"><FileText size={20} /></div>
+                                    <div>
+                                        <div className="text-sm font-black text-slate-900 uppercase">Vector Primitives</div>
+                                        <div className="text-[11px] text-slate-500 font-medium leading-relaxed">Unlike "screenshot" PDFs, our engine draws rectangles and places fonts as vectors. This results in ultra-sharp prints and very small file sizes (~50KB).</div>
+                                    </div>
+                                </li>
+                                <li className="flex gap-4 p-5 bg-white rounded-2xl border border-slate-100 shadow-sm group hover:border-blue-200 transition-colors">
+                                    <div className="bg-blue-50 p-3 rounded-xl text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all"><Shield size={20} /></div>
+                                    <div>
+                                        <div className="text-sm font-black text-slate-900 uppercase">Brand Injection</div>
+                                        <div className="text-[11px] text-slate-500 font-medium leading-relaxed">The engine pulls the Brand Logo from the specific Pricelist Brand, ensuring the document is correctly targeted to the vendor or shop section.</div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </Step>
+                        
+                        <EngineerNote>
+                            The PDF engine runs entirely in the browser's Main Thread. To prevent UI freezing during 1000+ item exports, we utilize a sequential <code>forEach</code> that allows for frame-yielding if implemented with <code>requestIdleCallback</code> (v3 roadmap).
+                        </EngineerNote>
+                    </div>
+                </div>
+              )}
+
+              {/* PHASE 1: SUPABASE INFRASTRUCTURE */}
               {activeTab === 'supabase' && (
                 <div className="p-8 md:p-16 animate-fade-in">
                     <SectionHeading icon={Database} subtitle="Provisioning the cloud backbone for global sync.">Supabase Infrastructure</SectionHeading>
                     <WhyBox title="Relational Integrity">
-                        The system uses Supabase to bridge the gap between static APK deployments and dynamic retail environments. The `JSONB` format for `store_config` allows for schema flexibility without downtime.
+                        The system uses Supabase to bridge the gap between static APK deployments and dynamic retail environments.
                     </WhyBox>
-
                     <Step number="1" title="Database Schema Migration">
-                        <p>Execute the following SQL in your Supabase Dashboard SQL Editor to create the core tables and enable Row Level Security.</p>
+                        <p>Execute SQL to create tables and enable RLS.</p>
                         <CodeBlock 
-                          id="sql-schema"
+                          id="sql-schema-v2"
                           label="Core SQL Schema"
-                          code={`-- 1. Create Config Table
-CREATE TABLE IF NOT EXISTS public.store_config (
-    id bigint primary key default 1,
-    data jsonb not null default '{}'::jsonb,
-    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- 2. Create Kiosks Table for Telemetry
-CREATE TABLE IF NOT EXISTS public.kiosks (
-    id text primary key,
-    name text not null,
-    device_type text default 'kiosk',
-    status text default 'online',
-    last_seen timestamp with time zone default now(),
-    wifi_strength int,
-    ip_address text,
-    version text,
-    location_description text,
-    assigned_zone text,
-    notes text,
-    restart_requested boolean default false
-);
-
--- 3. Enable RLS
+                          code={`CREATE TABLE IF NOT EXISTS public.store_config (id bigint primary key default 1, data jsonb not null default '{}'::jsonb);
+CREATE TABLE IF NOT EXISTS public.kiosks (id text primary key, name text not null, status text default 'online');
 ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
-
--- 4. Simple Public Policies (Adjust for enterprise production)
-CREATE POLICY "Public Read Access" ON public.store_config FOR SELECT USING (true);
-CREATE POLICY "Public Update Access" ON public.store_config FOR UPDATE USING (true);
-CREATE POLICY "Public Kiosk Access" ON public.kiosks FOR ALL USING (true);`}
+CREATE POLICY "Public Read" ON public.store_config FOR SELECT USING (true);`}
                         />
-                    </Step>
-
-                    <Step number="2" title="Storage Bucket Config">
-                        <p>Create a public bucket named <code>kiosk-media</code> to host high-resolution product images and video loops.</p>
-                        <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600">
-                            <li>Go to <strong>Storage</strong> &rarr; <strong>New Bucket</strong>.</li>
-                            <li>Name: <code>kiosk-media</code></li>
-                            <li>Public: <strong>ON</strong></li>
-                        </ul>
                     </Step>
                 </div>
               )}
 
-              {/* PHASE 2: LOCAL DEV */}
-              {activeTab === 'local' && (
-                <div className="p-8 md:p-16 animate-fade-in">
-                    <SectionHeading icon={Server} subtitle="Establishing the engineering workspace for local iteration.">PC Station Hub Configuration</SectionHeading>
-                    
-                    <Step number="1" title="Environment Variables">
-                        <p>Create a <code>.env.local</code> file in the project root. This is required for Vite to communicate with your cloud backend.</p>
-                        <CodeBlock 
-                            id="env-vars"
-                            label=".env.local Template"
-                            code={`VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
-                        />
-                    </Step>
-
-                    <Step number="2" title="Dependency Manifest">
-                        <p>The kiosk utilizes several heavy libraries for PDF rendering and asset bundling. Run the following command to ensure a complete local environment.</p>
-                        <CodeBlock 
-                            id="npm-install"
-                            label="Shell Command"
-                            code={`npm install lucide-react @supabase/supabase-js jszip pdfjs-dist jspdf xlsx`}
-                        />
-                        <EngineerNote>
-                            Ensure Node.js version is 18.x or higher to support the ESM modules used in the build process.
-                        </EngineerNote>
-                    </Step>
-                </div>
-              )}
-
-              {/* PHASE 3: ASSET PIPELINE */}
-              {activeTab === 'build' && (
-                <div className="p-8 md:p-16 animate-fade-in">
-                    <SectionHeading icon={Hammer} subtitle="Advanced Tree-Shaking and high-performance bundling logic.">Asset Pipeline</SectionHeading>
-                    
-                    <WhyBox title="Payload Optimization">
-                        Because tablets often have limited RAM, we implement strict **Code Splitting**. This ensures the customer-facing UI doesn't load the heavy Admin logic until required.
-                    </WhyBox>
-
-                    <Step number="1" title="Vite Chunking Strategy">
-                        <p>Our <code>vite.config.ts</code> uses Rollup manual chunks to isolate vendor code. This improves long-term caching behavior.</p>
-                        <CodeBlock 
-                            id="vite-config"
-                            label="vite.config.ts Excerpt"
-                            code={`output: {
-  manualChunks(id) {
-    if (id.includes('pdfjs-dist')) return 'pdf-core';
-    if (id.includes('@supabase')) return 'cloud-client';
-    if (id.includes('lucide-react')) return 'ui-icons';
-  }
-}`}
-                        />
-                    </Step>
-
-                    <Step number="2" title="Build Command">
-                        <p>Generate the production-ready static assets.</p>
-                        <CodeBlock id="npm-build" label="Build Script" code={`npm run build`} />
-                    </Step>
-                </div>
-              )}
-
-              {/* PHASE 4: EDGE NETWORK */}
-              {activeTab === 'vercel' && (
-                  <div className="p-8 md:p-16 animate-fade-in">
-                      <SectionHeading icon={Globe} subtitle="Global asset distribution with zero-downtime atomic deployments.">Edge Network Infrastructure</SectionHeading>
-                      
-                      <div className="bg-slate-900 rounded-[2.5rem] p-8 md:p-12 mb-12 shadow-2xl relative overflow-hidden">
-                          <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-                          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                              <div className="flex flex-col items-center gap-4">
-                                  <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.4)]">
-                                      <Github size={40} className="text-white" />
-                                  </div>
-                                  <div className="text-[10px] font-black text-white uppercase tracking-widest">Source Control</div>
-                              </div>
-                              <div className="flex-1 h-1 bg-white/10 relative rounded-full hidden md:block">
-                                  <div className="absolute inset-0 bg-blue-500 w-1/3 animate-[flow_2s_infinite_linear]"></div>
-                              </div>
-                              <div className="flex flex-col items-center gap-4">
-                                  <div className="w-20 h-20 bg-purple-600 rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(168,85,247,0.4)]">
-                                      <Cpu size={40} className="text-white" />
-                                  </div>
-                                  <div className="text-[10px] font-black text-white uppercase tracking-widest">Vite Build</div>
-                              </div>
-                              <div className="flex-1 h-1 bg-white/10 relative rounded-full hidden md:block">
-                                  <div className="absolute inset-0 bg-purple-500 w-1/3 animate-[flow_2s_infinite_linear_1s]"></div>
-                              </div>
-                              <div className="flex flex-col items-center gap-4">
-                                  <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(255,255,255,0.2)]">
-                                      <Globe2 size={40} className="text-slate-900" />
-                                  </div>
-                                  <div className="text-[10px] font-black text-white uppercase tracking-widest">Anycast CDN</div>
-                              </div>
-                          </div>
-                      </div>
-
-                      <div className="space-y-12">
-                          <Step number="1" title="Atomic Deployment Logic">
-                              <p className="font-medium text-slate-700 leading-relaxed">
-                                  Vercel utilizes an <strong>Atomic Deployment</strong> strategy. Each time you push code, a new, immutable URL is generated. The live production traffic is only cut over to the new version once the build is 100% successful and health checks pass.
-                              </p>
-                              <ul className="space-y-4">
-                                  <li className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                      <RefreshCw className="text-blue-500 shrink-0" size={20} />
-                                      <div>
-                                          <div className="text-sm font-black text-slate-900 uppercase">Instant Rollbacks</div>
-                                          <div className="text-xs text-slate-500 font-medium">If a build introduces a bug on the tablets, you can revert to a previous deployment in the Vercel dashboard in <strong>&lt; 1 second</strong>.</div>
-                                      </div>
-                                  </li>
-                                  <li className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                      <Zap className="text-yellow-500 shrink-0" size={20} />
-                                      <div>
-                                          <div className="text-sm font-black text-slate-900 uppercase">Anycast Routing</div>
-                                          <div className="text-xs text-slate-500 font-medium">Assets (JS/CSS) are cached on Vercel's Edge Network in 100+ cities. A tablet in Cape Town pulls data from a local node, not a server in Europe.</div>
-                                      </div>
-                                  </li>
-                              </ul>
-                          </Step>
-
-                          <Step number="2" title="Client-Side Routing Persistence">
-                              <p className="font-medium text-slate-700">Because this is a **Single Page Application (SPA)**, standard server requests for paths like <code>/admin</code> would return 404 errors. We use a <code>vercel.json</code> rewrite to force all paths back to <code>index.html</code>.</p>
-                              <CodeBlock 
-                                id="vercel-json"
-                                label="vercel.json Configuration"
-                                code={`{
-  "rewrites": [
-    { "source": "/((?!.*\\\\.).*)", "destination": "/index.html" }
-  ]
-}`}
-                              />
-                          </Step>
-
-                          <Step number="3" title="Advanced Service Worker Caching">
-                              <WhyBox title="Local-First Architectural Guard" variant="blue">
-                                  Our <code>sw.js</code> implements a **Stale-While-Revalidate** strategy for core logic and **Cache-First** for heavy media. This means the kiosk app is essentially "installed" on the browser's disk, requiring the internet only for new product data pulses.
-                              </WhyBox>
-                              <EngineerNote>
-                                  Vercel automatically handles Brotli and Gzip compression. Our build process targets ES2022 to utilize modern browser features (Optional Chaining, Nullish Coalescing) which results in a smaller bundle size compared to transpiling down to ES5.
-                              </EngineerNote>
-                          </Step>
-                      </div>
-                  </div>
-              )}
-
-              {/* PHASE 5: PRICELIST ENGINE */}
-              {activeTab === 'pricelists' && (
-                  <div className="p-8 md:p-16 animate-fade-in">
-                      <SectionHeading icon={Table} subtitle="Automated normalization, fuzzy header mapping, and real-time distribution.">Pricelist Intelligence Engine</SectionHeading>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                          <div className="bg-orange-50 p-8 rounded-[2.5rem] border border-orange-100 shadow-sm relative overflow-hidden group">
-                              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform"><FileSpreadsheet size={80} /></div>
-                              <h3 className="text-orange-900 font-black uppercase text-xs tracking-widest mb-4">Input Stage</h3>
-                              <p className="text-orange-800/80 text-sm leading-relaxed mb-4">The engine accepts raw <code>.xlsx</code> or <code>.csv</code> exports from any inventory system.</p>
-                              <div className="space-y-2">
-                                  <div className="flex justify-between text-[10px] font-mono text-orange-600 bg-white/50 p-2 rounded">
-                                      <span>Raw SKU:</span> <span className="font-bold">"  APL-ip15  "</span>
-                                  </div>
-                                  <div className="flex justify-between text-[10px] font-mono text-orange-600 bg-white/50 p-2 rounded">
-                                      <span>Raw Price:</span> <span className="font-bold">"$ 1,299.99"</span>
-                                  </div>
-                              </div>
-                          </div>
-                          <div className="bg-blue-600 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
-                              <div className="absolute top-0 right-0 p-6 opacity-20"><RefreshCw size={80} className="animate-spin-slow" /></div>
-                              <h3 className="text-white font-black uppercase text-xs tracking-widest mb-4">Normalization Stage</h3>
-                              <p className="text-blue-100 text-sm leading-relaxed mb-4">Our sanitization algorithm strips symbols and applies whole-number ceiling rounding.</p>
-                              <div className="space-y-2">
-                                  <div className="flex justify-between text-[10px] font-mono text-blue-200 bg-black/20 p-2 rounded">
-                                      <span>Sanitized:</span> <span className="font-bold">"APL-IP15"</span>
-                                  </div>
-                                  <div className="flex justify-between text-[10px] font-mono text-blue-200 bg-black/20 p-2 rounded">
-                                      <span>Normalized:</span> <span className="font-bold">"R 1,300"</span>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-
-                      <div className="space-y-12">
-                          <Step number="1" title="Spreadsheet Ingestion">
-                              <p>The system uses the <code>xlsx</code> library to parse binary spreadsheet data directly in the browser. It maps columns based on common retail keywords like 'SKU', 'Retail', and 'Promo'.</p>
-                          </Step>
-                          <Step number="2" title="Price Normalization Logic">
-                              <WhyBox title="Cognitive Pricing Optimization" variant="orange">
-                                  To maintain a premium look, prices are rounded up to the nearest whole number. Additionally, if a price ends in '9', it is pushed to the next round number (e.g., 799 becomes 800) to prevent 'discount store' aesthetics.
-                              </WhyBox>
-                              <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
-                                  <div className="flex items-center gap-4 mb-4">
-                                      <div className="text-[10px] font-mono text-slate-500 uppercase w-20">Current</div>
-                                      <div className="text-lg font-mono text-red-400 line-through">R {roundDemoValue}</div>
-                                  </div>
-                                  <div className="flex items-center gap-4">
-                                      <div className="text-[10px] font-mono text-slate-500 uppercase w-20">Logic</div>
-                                      <div className="text-2xl font-mono text-green-400 font-black animate-pulse">
-                                          R {(() => {
-                                              let n = roundDemoValue;
-                                              if (n % 1 !== 0) n = Math.ceil(n);
-                                              if (Math.floor(n) % 10 === 9) n += 1;
-                                              return n.toLocaleString();
-                                          })()}
-                                      </div>
-                                  </div>
-                              </div>
-                          </Step>
-                      </div>
-                  </div>
-              )}
            </div>
         </div>
       </div>
@@ -416,5 +303,4 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
   );
 };
 
-// Fixed: Add default export to resolve "no default export" error in AdminDashboard.tsx
 export default SetupGuide;
