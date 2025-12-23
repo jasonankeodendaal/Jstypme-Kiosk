@@ -379,7 +379,7 @@ const SystemDocumentation = () => {
                              <div className="space-y-4">
                                 <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2"><Sparkles size={18} className="text-orange-500"/> Pricing Strategy</h3>
                                 <p className="text-sm text-slate-600 leading-relaxed">
-                                    Decimals are removed via ceiling rounding. Whole numbers are preserved.
+                                    Flat numbers are preserved. Decimals are rounded UP, and values ending in 9 are pushed to the next round number.
                                 </p>
                                 <div className="bg-slate-900 p-4 rounded-xl space-y-3">
                                     <div className="flex items-center gap-3">
@@ -388,7 +388,12 @@ const SystemDocumentation = () => {
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="text-[10px] font-mono text-slate-500 uppercase w-12">Logic</div>
-                                        <div className="text-xs font-mono text-green-400 font-black animate-pulse">R {Math.ceil(roundDemoValue).toLocaleString()}</div>
+                                        <div className="text-xs font-mono text-green-400 font-black animate-pulse">R {(() => {
+                                            let n = roundDemoValue;
+                                            if (n % 1 !== 0) n = Math.ceil(n);
+                                            if (Math.floor(n) % 10 === 9) n += 1;
+                                            return n.toLocaleString();
+                                        })()}</div>
                                     </div>
                                 </div>
                              </div>
@@ -1017,7 +1022,7 @@ const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalog
         <div className="space-y-6">
             <div className="flex justify-between items-center mb-4">
                  <h3 className="font-bold uppercase text-slate-500 text-xs tracking-wider">{brandId ? 'Brand Catalogues' : 'Global Pamphlets'}</h3>
-                 <button onClick={addCatalogue} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase flex items-center gap-2"><Plus size={14} /> Add New</button>
+                 <button onClick={addCatalogue} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold textxs uppercase flex items-center gap-2"><Plus size={14} /> Add New</button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {localList.map((cat) => (
@@ -1107,10 +1112,16 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
 
     let num = parseFloat(numericPart);
     
-    // Rule: Round up only if decimals exist. Preserve whole numbers like 122.
-    // 129.99 -> 130
-    // 122 -> 122
-    num = Math.ceil(num);
+    // NEW DUAL TRIGGER LOGIC
+    // 1. Round up decimals
+    if (num % 1 !== 0) {
+        num = Math.ceil(num);
+    }
+    
+    // 2. Round up if ends in digit 9 (e.g. 799 -> 800, 49 -> 50)
+    if (Math.floor(num) % 10 === 9) {
+        num += 1;
+    }
     
     // Format back with R and grouping
     const formatted = `R ${num.toLocaleString()}`;
@@ -1176,7 +1187,11 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
                 const numeric = String(val).replace(/[^0-9.]/g, '');
                 if (!numeric) return String(val);
                 let n = parseFloat(numeric);
-                n = Math.ceil(n);
+                
+                // APPLY DUAL TRIGGER LOGIC DURING IMPORT
+                if (n % 1 !== 0) n = Math.ceil(n);
+                if (Math.floor(n) % 10 === 9) n += 1;
+                
                 return `R ${n.toLocaleString()}`;
             };
 
@@ -1257,7 +1272,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
           <div className="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center gap-3">
               <Info size={18} className="text-blue-500 shrink-0" />
               <p className="text-[10px] text-blue-800 font-bold uppercase leading-tight">
-                  Price Tip: Decimals are removed by rounding UP to the next whole number (e.g. 129.99 → 130). Whole numbers like 122 are kept exactly as they are.
+                  Price Strategy: Decimals are rounded UP (129.99 → 130). Values ending in 9 are pushed to the next round number (799 → 800). Whole numbers like 122 are kept.
               </p>
           </div>
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { X, Server, Copy, Check, ShieldCheck, Database, Key, Settings, Smartphone, Tablet, Tv, Globe, Terminal, Hammer, MousePointer, Code, Package, Info, CheckCircle2, AlertTriangle, ExternalLink, Cpu, HardDrive, Share2, Layers, Zap, Shield, Workflow, Activity, Cpu as CpuIcon, Network, Lock, ZapOff, Binary, Globe2, Wind, ShieldAlert, Github, Table, FileSpreadsheet, RefreshCw, FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward } from 'lucide-react';
 
@@ -373,51 +374,37 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
                                       <span>Sanitized:</span> <span className="font-bold">"APL-IP15"</span>
                                   </div>
                                   <div className="flex justify-between text-[10px] font-mono text-blue-200 bg-black/20 p-2 rounded">
-                                      <span>Whole:</span> <span className="font-bold">"R 1,300"</span>
+                                      <span>Normalized:</span> <span className="font-bold">"R 1,300"</span>
                                   </div>
                               </div>
                           </div>
                       </div>
 
                       <div className="space-y-12">
-                          <Step number="1" title="Fuzzy Header Mapping">
-                              <p className="font-medium text-slate-700 leading-relaxed">
-                                  The engine doesn't require specific column orders. It uses a **Heuristic keyword matching** algorithm to identify data columns:
-                              </p>
-                              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
-                                  <table className="w-full text-left">
-                                      <thead>
-                                          <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">
-                                              <th className="pb-2">Target Field</th>
-                                              <th className="pb-2">Keyword Matches (Fuzzy)</th>
-                                          </tr>
-                                      </thead>
-                                      <tbody className="text-xs font-bold text-slate-700">
-                                          <tr className="border-b border-slate-100"><td className="py-3 text-blue-600">SKU</td><td>sku, part_number, code, model_id, id</td></tr>
-                                          <tr className="border-b border-slate-100"><td className="py-3 text-blue-600">Description</td><td>desc, name, title, item, product_name</td></tr>
-                                          <tr className="border-b border-slate-100"><td className="py-3 text-blue-600">Price</td><td>retail, cost, normal, standard, msrp</td></tr>
-                                          <tr><td className="py-3 text-red-600">Promo</td><td>special, promo, deal, discount, sale</td></tr>
-                                      </tbody>
-                                  </table>
-                              </div>
+                          <Step number="1" title="Spreadsheet Ingestion">
+                              <p>The system uses the <code>xlsx</code> library to parse binary spreadsheet data directly in the browser. It maps columns based on common retail keywords like 'SKU', 'Retail', and 'Promo'.</p>
                           </Step>
-
-                          <Step number="2" title="The Whole-Number Ceiling Rule">
-                              <WhyBox title="Architectural Rule: No Decimals" variant="orange">
-                                  To maintain clean visual design across all kiosk screens and exported PDFs, the system enforces whole numbers. 
-                                  Input values with decimals (e.g., .99) are rounded <strong>UP</strong> to the nearest whole number.
+                          <Step number="2" title="Price Normalization Logic">
+                              <WhyBox title="Cognitive Pricing Optimization" variant="orange">
+                                  To maintain a premium look, prices are rounded up to the nearest whole number. Additionally, if a price ends in '9', it is pushed to the next round number (e.g., 799 becomes 800) to prevent 'discount store' aesthetics.
                               </WhyBox>
-                              <CodeBlock 
-                                id="js-logic"
-                                label="Internal Normalization Logic (Simplified)"
-                                code={`function normalizePrice(raw) {
-  // 1. Strip currency and symbols,
-  const numeric = raw.replace(/[^0-9.]/g, '');
-  if (!numeric) return '';
-  // 2. Ceiling round for design consistency
-  return 'R ' + Math.ceil(parseFloat(numeric)).toLocaleString();
-}`}
-                              />
+                              <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+                                  <div className="flex items-center gap-4 mb-4">
+                                      <div className="text-[10px] font-mono text-slate-500 uppercase w-20">Current</div>
+                                      <div className="text-lg font-mono text-red-400 line-through">R {roundDemoValue}</div>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                      <div className="text-[10px] font-mono text-slate-500 uppercase w-20">Logic</div>
+                                      <div className="text-2xl font-mono text-green-400 font-black animate-pulse">
+                                          R {(() => {
+                                              let n = roundDemoValue;
+                                              if (n % 1 !== 0) n = Math.ceil(n);
+                                              if (Math.floor(n) % 10 === 9) n += 1;
+                                              return n.toLocaleString();
+                                          })()}
+                                      </div>
+                                  </div>
+                              </div>
                           </Step>
                       </div>
                   </div>
@@ -429,5 +416,5 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key`}
   );
 };
 
-// Fix: Added default export for SetupGuide
+// Fixed: Add default export to resolve "no default export" error in AdminDashboard.tsx
 export default SetupGuide;
