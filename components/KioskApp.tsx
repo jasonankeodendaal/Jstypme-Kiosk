@@ -317,9 +317,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
             doc.text("PRICE LIST", margin, topY + 28);
             
-            doc.setTextColor(148, 163, 184); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-            // Modified: Use actual pricelist title in exported PDF
-            doc.text(pricelist.title.toUpperCase(), margin, topY + 34);
+            // Modified: Display the pricelist title clearly in the PDF
+            doc.setTextColor(30, 41, 59); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+            doc.text(pricelist.title.toUpperCase(), margin, topY + 36);
 
             const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
             doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
@@ -330,14 +330,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.text(`DOCUMENT REF: ${pricelist.id.substring(0,10).toUpperCase()}`, boxX + boxW, boxY + 14, { align: 'right' });
 
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3);
-            doc.line(margin, topY + 42, pageWidth - margin, topY + 42);
+            doc.line(margin, topY + 44, pageWidth - margin, topY + 44);
             
-            return topY + 52;
+            return topY + 54;
         };
 
         const drawTableHeaders = (startY: number) => {
-            doc.setFillColor(241, 245, 249); doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
-            doc.setTextColor(30, 41, 59); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+            doc.setFillColor(113, 113, 122); doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
+            doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
             doc.text("SKU", margin + 3, startY); doc.text("DESCRIPTION", margin + 45, startY);
             doc.text("NORMAL", pageWidth - margin - 40, startY, { align: 'right' });
             doc.text("PROMO", pageWidth - margin - 5, startY, { align: 'right' });
@@ -372,7 +372,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.text(item.normalPrice || '', pageWidth - margin - 40, currentY, { align: 'right' });
             
             if (item.promoPrice) {
-                doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'bold');
+                doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
                 doc.text(item.promoPrice, pageWidth - margin - 5, currentY, { align: 'right' });
             } else {
                 doc.setTextColor(30, 41, 59);
@@ -414,7 +414,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
           .spreadsheet-table thead { display: table-header-group !important; }
           .spreadsheet-table tr { page-break-inside: avoid !important; }
-          .spreadsheet-table th { position: static !important; background: #f1f5f9 !important; color: #000 !important; border: 1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 10pt !important; }
+          .spreadsheet-table th { position: static !important; background: #71717a !important; color: #fff !important; border: 1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 10pt !important; }
           .spreadsheet-table td { border: 0.5pt solid #e2e8f0 !important; color: #000 !important; padding: 8pt !important; font-size: 10pt !important; }
           .excel-row:nth-child(even) { background-color: #f8fafc !important; }
         }
@@ -423,39 +423,45 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         .excel-row:nth-child(even) { background-color: #f8fafc; }
         .excel-row:hover { background-color: #f1f5f9; }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        .shrink-title { font-size: clamp(0.75rem, 2.5vw, 1.5rem); }
       `}</style>
 
-      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block ${isNewlyUpdated ? 'ring-4 ring-yellow-400 print:ring-0' : ''}`} onClick={e => e.stopPropagation()}>
+      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-[2rem] shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block`} onClick={e => e.stopPropagation()}>
         
-        <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 border-b border-white/5 z-20 ${isNewlyUpdated ? 'bg-yellow-600' : 'bg-slate-900'}`}>
-          <div className="flex items-center gap-4">
-             <div className="hidden sm:flex bg-white/10 p-3 rounded-2xl border border-white/10">
-                <RIcon size={28} className={isNewlyUpdated ? 'text-white' : 'text-green-400'} />
+        {/* Updated Header to match Screenshot */}
+        <div className={`print-hidden p-4 md:p-8 text-white flex justify-between items-center shrink-0 z-20 bg-[#c0810d]`}>
+          <div className="flex items-center gap-6">
+             <div className="flex bg-white/10 p-4 rounded-2xl border border-white/10 shadow-inner">
+                <RIcon size={36} className="text-white" />
              </div>
-             <div>
-                <div className="flex items-center gap-2 md:gap-3">
-                  <h2 className="text-sm md:text-2xl font-black uppercase tracking-tight truncate max-w-[150px] md:max-w-none">{pricelist.title}</h2>
-                  {isNewlyUpdated && <span className="bg-white text-yellow-700 px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-black uppercase flex items-center gap-1 shrink-0"><Sparkles size={10} /> NEW</span>}
+             <div className="flex flex-col">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg md:text-3xl font-black uppercase tracking-tight leading-none shrink-title">{pricelist.title}</h2>
+                  {isNewlyUpdated && (
+                    <span className="bg-white text-yellow-700 px-3 py-1 rounded-full text-[10px] md:text-[12px] font-black uppercase flex items-center gap-1.5 shadow-md">
+                      <Sparkles size={12} fill="currentColor" /> NEW
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                   <p className={`${isNewlyUpdated ? 'text-yellow-100' : 'text-slate-400'} font-bold uppercase tracking-widest text-[9px] md:text-xs`}>{pricelist.month} {pricelist.year}</p>
-                </div>
+                <p className="text-yellow-100 font-bold uppercase tracking-widest text-[10px] md:text-sm mt-1">{pricelist.month} {pricelist.year}</p>
              </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
-             <div className="hidden sm:flex items-center gap-1 bg-white/10 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
-                <button onClick={handleZoomOut} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomOut size={18}/></button>
-                <button onClick={handleResetZoom} className="px-2 text-[10px] font-black uppercase tracking-widest min-w-[50px]">{Math.round(zoom * 100)}%</button>
-                <button onClick={handleZoomIn} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><ZoomIn size={18}/></button>
+          <div className="flex items-center gap-3 md:gap-6">
+             <div className="hidden sm:flex items-center gap-3 bg-black/10 p-1.5 rounded-2xl border border-white/10 backdrop-blur-sm">
+                <button onClick={handleZoomOut} className="p-2.5 hover:bg-white/10 rounded-xl transition-colors"><ZoomOut size={22}/></button>
+                <span className="text-xs font-black uppercase tracking-widest min-w-[60px] text-center">{Math.round(zoom * 100)}%</span>
+                <button onClick={handleZoomIn} className="p-2.5 hover:bg-white/10 rounded-xl transition-colors"><ZoomIn size={22}/></button>
              </div>
-             <div className="flex gap-2">
-                <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs md:text-sm uppercase shadow-lg hover:bg-blue-600 transition-all active:scale-95 group disabled:opacity-50 min-w-[160px] justify-center">
-                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={18} className="text-blue-400 group-hover:text-white" />}
-                    <span>{isExporting ? 'Generating...' : 'Save as PDF'}</span>
-                </button>
-             </div>
-             <button onClick={onClose} className="p-2 md:p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={20}/></button>
+             
+             <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-3 bg-[#0f172a] text-white px-8 py-4 rounded-2xl font-black text-xs md:text-sm uppercase shadow-2xl hover:bg-black transition-all active:scale-95 group disabled:opacity-50 min-w-[200px] justify-center border border-white/5">
+                {isExporting ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={22} className="text-blue-400 group-hover:text-white" />}
+                <span>{isExporting ? 'Generating...' : 'Save as PDF'}</span>
+             </button>
+
+             <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5">
+                <X size={28}/>
+             </button>
           </div>
         </div>
 
@@ -468,7 +474,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleDragEnd}
-            className={`table-scroll flex-1 overflow-auto bg-slate-100/50 relative p-0 md:p-4 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
+            className={`table-scroll flex-1 overflow-auto bg-slate-100/50 relative p-0 md:p-6 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
         >
           <div className="min-w-full min-h-full flex items-start justify-center">
             <div 
@@ -477,7 +483,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 transformOrigin: 'top left',
                 width: zoom > 1 ? 'max-content' : '100%'
               }} 
-              className="transition-transform duration-200 print:transform-none select-none relative bg-white shadow-xl"
+              className="transition-transform duration-200 print:transform-none select-none relative bg-white shadow-xl rounded-xl overflow-hidden"
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
@@ -493,8 +499,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                                       ) : null}
                                       <div>
                                           <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mt-4">Price List</h1>
-                                          {/* Modified: Use actual pricelist title in print media header */}
-                                          <p className="text-xl font-bold text-slate-400 uppercase tracking-[0.2em] mt-3">{pricelist.title}</p>
+                                          <p className="text-xl font-bold text-slate-900 uppercase tracking-[0.2em] mt-3">{pricelist.title}</p>
                                       </div>
                                   </div>
                                   <div className="flex flex-col items-end gap-6 text-right">
@@ -510,34 +515,34 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                       </th>
                   </tr>
                   
-                  <tr className="print:bg-[#f1f5f9]">
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 w-24 md:w-40 print:border-slate-400 print:text-black">SKU</th>
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 print:border-slate-400 print:text-black">Description</th>
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">Normal</th>
-                      <th className="p-3 md:p-5 text-[10px] md:sm font-black uppercase tracking-tight border border-slate-300 text-right w-24 md:w-32 print:border-slate-400 print:text-black">Promo</th>
+                  <tr className="print:bg-[#71717a] bg-[#71717a]">
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-24 md:w-48 text-white">SKU</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-white">Description</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-right w-24 md:w-40 text-white">Normal</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight text-right w-24 md:w-40 text-white">Promo</th>
                   </tr>
                   </thead>
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
-                      <tr key={item.id} className="excel-row transition-colors group">
-                      <td className="p-3 md:p-4 border border-slate-200 print:border-slate-300">
+                      <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
+                      <td className="p-4 md:p-5 border-r border-slate-100">
                           <span className="sku-font font-bold text-xs md:text-sm text-slate-900 uppercase">
                           {item.sku || ''}
                           </span>
                       </td>
-                      <td className="p-3 md:p-4 border border-slate-200 print:border-slate-300">
-                          <span className="font-bold text-slate-900 text-xs md:text-sm uppercase tracking-tight group-hover:text-blue-600 transition-colors">
+                      <td className="p-4 md:p-5 border-r border-slate-100">
+                          <span className="font-bold text-slate-900 text-xs md:text-sm uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">
                               {item.description}
                           </span>
                       </td>
-                      <td className="p-3 md:p-4 text-right border border-slate-200 print:border-slate-300">
-                          <span className={`font-bold text-xs md:text-sm ${item.promoPrice ? 'text-slate-400' : 'text-slate-900'}`}>
+                      <td className="p-4 md:p-5 text-right border-r border-slate-100">
+                          <span className={`font-bold text-xs md:text-sm ${item.promoPrice ? 'text-slate-300' : 'text-slate-900'}`}>
                           {item.normalPrice || ''}
                           </span>
                       </td>
-                      <td className="p-3 md:p-4 text-right border border-slate-200 print:border-slate-300 bg-slate-50/10">
+                      <td className="p-4 md:p-5 text-right bg-slate-50/10">
                           {item.promoPrice ? (
-                          <span className="font-black text-xs md:text-base text-red-600 tracking-tighter">
+                          <span className="font-black text-sm md:text-xl text-[#ef4444] tracking-tighter">
                               {item.promoPrice}
                           </span>
                           ) : (
@@ -559,9 +564,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           </div>
         </div>
 
-        <div className="p-4 md:p-5 bg-slate-50 border-t border-slate-100 flex justify-between items-center shrink-0 print:hidden z-10">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Items: {(pricelist.items || []).length}</span>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Official Kiosk Pro Document • VAT Incl.</p>
+        <div className="p-5 md:p-8 bg-white border-t border-slate-100 flex justify-between items-center shrink-0 print:hidden z-10">
+          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Items: {(pricelist.items || []).length}</span>
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Official Kiosk Pro Document • VAT Incl.</p>
         </div>
       </div>
     </div>
