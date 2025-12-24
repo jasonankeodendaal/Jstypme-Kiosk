@@ -87,10 +87,6 @@ export const provisionKioskId = async (): Promise<string> => {
   return nextId;
 };
 
-/**
- * Attempts to find this device in the Supabase database.
- * If found, restores name and type to localStorage.
- */
 export const tryRecoverIdentity = async (id: string): Promise<boolean> => {
     if (!supabase) initSupabase();
     if (!supabase) return false;
@@ -143,7 +139,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
           last_seen: new Date().toISOString(),
           wifi_strength: 100,
           ip_address: 'Unknown',
-          version: '1.0.5',
+          version: '2.8.5',
           location_description: 'Newly Registered',
           assigned_zone: 'Unassigned',
           restart_requested: false
@@ -156,7 +152,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   return true;
 };
 
-export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean } | null> => {
+export const sendHeartbeat = async (currentScreen?: string): Promise<{ deviceType?: string, name?: string, restart?: boolean, refresh?: boolean, deleted?: boolean, forceScreensaver?: boolean } | null> => {
   const id = getKioskId();
   if (!id) return null;
   if (!supabase) initSupabase();
@@ -166,17 +162,18 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
   let currentZone = "Unassigned";
   let configChanged = false;
   let restartFlag = false;
+  let refreshFlag = false;
+  let screensaverFlag = false;
 
   try {
       // 1. SYNC: Pull latest configuration from cloud first
       if (supabase) {
           const { data: remoteData, error: fetchError } = await supabase
               .from('kiosks')
-              .select('name, device_type, assigned_zone, restart_requested')
+              .select('name, device_type, assigned_zone, restart_requested, refresh_requested, screensaver_forced')
               .eq('id', id)
               .maybeSingle();
 
-          // CRITICAL FIX: If device not found in DB, it has been deleted from fleet
           if (!fetchError && !remoteData) {
               return { deleted: true };
           }
@@ -194,6 +191,8 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               }
               if (remoteData.assigned_zone) currentZone = remoteData.assigned_zone;
               if (remoteData.restart_requested) restartFlag = true;
+              if (remoteData.refresh_requested) refreshFlag = true;
+              if (remoteData.screensaver_forced) screensaverFlag = true;
           }
       }
 
@@ -209,6 +208,17 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               ipAddress = `${connection.effectiveType?.toUpperCase() || 'NET'} | ${connection.downlink}Mbps`;
           }
 
+          // Battery Telemetry
+          let batteryLevel = undefined;
+          let isCharging = undefined;
+          try {
+              if ('getBattery' in navigator) {
+                  const battery: any = await (navigator as any).getBattery();
+                  batteryLevel = Math.round(battery.level * 100);
+                  isCharging = battery.charging;
+              }
+          } catch (e) {}
+
           const payload: any = {
               id,
               name: currentName,
@@ -217,20 +227,27 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               last_seen: new Date().toISOString(),
               status: 'online',
               wifi_strength: wifiStrength,
-              ip_address: ipAddress
+              ip_address: ipAddress,
+              battery_level: batteryLevel,
+              is_charging: isCharging,
+              current_screen: currentScreen || 'Unknown',
+              version: '2.8.5'
           };
           
-          // Only clear the restart flag in the payload if it was actually true and we are acknowledging it
-          if (restartFlag) {
-              payload.restart_requested = false;
-          }
+          if (restartFlag) payload.restart_requested = false;
+          if (refreshFlag) payload.refresh_requested = false;
+          // We don't clear screensaver_forced automatically, it's a persistent state
 
           await supabase.from('kiosks').upsert(payload);
       }
 
-      if (restartFlag || configChanged) {
-          return { deviceType: currentDeviceType, name: currentName, restart: restartFlag };
-      }
+      return { 
+          deviceType: currentDeviceType, 
+          name: currentName, 
+          restart: restartFlag, 
+          refresh: refreshFlag,
+          forceScreensaver: screensaverFlag 
+      };
 
   } catch (e) {
       console.warn("Sync cycle failed", e);
