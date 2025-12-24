@@ -151,12 +151,6 @@ export interface ScreensaverSettings {
   activeHoursStart?: string; // e.g. "08:00"
   activeHoursEnd?: string;   // e.g. "20:00"
   enableSleepMode?: boolean; // Turn screen black outside active hours
-  // New Professional Marketing Engine fields
-  transitionStyle?: 'mix' | 'cinematic' | 'fade';
-  showClock?: boolean;
-  clockFormat?: '12h' | '24h';
-  enableAmbienceBlur?: boolean;
-  marketingPriority?: number; // Weighting for ads
 }
 
 export interface KioskRegistry {

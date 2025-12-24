@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { FlatProduct, AdItem, Catalogue, ScreensaverSettings } from '../types';
-import { Moon, Clock } from 'lucide-react';
+import { Moon } from 'lucide-react';
 
 interface ScreensaverProps {
   products: FlatProduct[];
@@ -26,7 +26,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSleepMode, setIsSleepMode] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
   
   // Animation State
   const [animationEffect, setAnimationEffect] = useState('effect-ken-burns');
@@ -48,21 +47,8 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       enableSleepMode: false,
       activeHoursStart: '08:00',
       activeHoursEnd: '20:00',
-      // Engine additions
-      transitionStyle: 'cinematic',
-      showClock: false,
-      clockFormat: '24h',
-      enableAmbienceBlur: true,
-      marketingPriority: 3,
       ...settings
   };
-
-  // Clock Logic
-  useEffect(() => {
-    if (!config.showClock) return;
-    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, [config.showClock]);
 
   // Check Active Hours for Sleep Mode
   useEffect(() => {
@@ -84,6 +70,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           if (startMinutes < endMinutes) {
               isActive = currentMinutes >= startMinutes && currentMinutes < endMinutes;
           } else {
+              // Night shift scenario
               isActive = currentMinutes >= startMinutes || currentMinutes < endMinutes;
           }
           
@@ -91,38 +78,45 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       };
 
       checkTime();
-      const interval = setInterval(checkTime, 60000); 
+      const interval = setInterval(checkTime, 60000); // Check every minute
       return () => clearInterval(interval);
   }, [config.activeHoursStart, config.activeHoursEnd, config.enableSleepMode]);
 
   // Helper to determine if item should be included based on age
   const shouldIncludeItem = (dateString?: string): boolean => {
+      // If no date, treat as new/important
       if (!dateString) return true;
+      
       const addedDate = new Date(dateString);
       const now = new Date();
+      
+      // Calculate age in months
       const monthsOld = (now.getFullYear() - addedDate.getFullYear()) * 12 + (now.getMonth() - addedDate.getMonth());
+      
+      // Aging Logic: If older than 6 months, apply probabilistic filtering
       if (monthsOld >= 6) {
+          // 25% chance to show up in any given playlist generation cycle if > 6 months old
           return Math.random() < 0.25; 
       }
+      
       return true;
   };
 
-  // 1. Build & Weighted Shuffle Playlist
+  // 1. Build & Shuffle Playlist
   useEffect(() => {
     const list: PlaylistItem[] = [];
 
-    // Add Custom Ads - MULTIPLIED BY MARKETING PRIORITY
+    // Add Custom Ads - Multiplied by 3 to ensure "Special Marketing" frequency
     if (config.showCustomAds) {
-        const adWeight = config.marketingPriority || 3;
         ads.forEach((ad, i) => {
           if (shouldIncludeItem(ad.dateAdded)) {
-            // Push N copies of each ad to increase frequency
-            for(let c=0; c < adWeight; c++) {
+            // Push 3 copies of each ad to increase frequency in the shuffle
+            for(let c=0; c<3; c++) {
                 list.push({
                     id: `ad-${ad.id}-${i}-${c}`,
                     type: ad.type,
                     url: ad.url,
-                    title: "Special Promotion",
+                    title: "Sponsored",
                     subtitle: "",
                     dateAdded: ad.dateAdded
                 });
@@ -141,7 +135,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     type: 'image',
                     url: pamphlet.pages[0],
                     title: pamphlet.title,
-                    subtitle: "Current Catalogue",
+                    subtitle: "Showcase Catalogue",
                     startDate: pamphlet.startDate,
                     endDate: pamphlet.endDate
                  });
@@ -171,7 +165,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     type: 'video',
                     url: p.videoUrl,
                     title: p.brandName,
-                    subtitle: `${p.name}`,
+                    subtitle: `${p.name} - Official Video`,
                     dateAdded: p.dateAdded
                  });
             }
@@ -183,7 +177,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                             type: 'video',
                             url: url,
                             title: p.brandName,
-                            subtitle: `${p.name}`,
+                            subtitle: `${p.name} - Video Showcase`,
                             dateAdded: p.dateAdded
                         });
                     }
@@ -200,7 +194,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
     setPlaylist(list);
     setCurrentIndex(0);
-  }, [products.length, ads.length, pamphlets.length, config.showProductImages, config.showProductVideos, config.showCustomAds, config.showPamphlets, config.marketingPriority]);
+  }, [products.length, ads.length, pamphlets.length, config.showProductImages, config.showProductVideos, config.showCustomAds, config.showPamphlets]);
 
   // Helper to move to next slide
   const nextSlide = () => {
@@ -217,36 +211,26 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
   const currentItem = playlist[currentIndex];
 
-  // 2. Effect Selector based on Transition Style
+  // 2. Effect Selector
   useEffect(() => {
     if (!currentItem) return;
 
-    if (config.transitionStyle === 'fade') {
-        setAnimationEffect('effect-simple-fade');
-        return;
-    }
-
     // Pick a random animation effect for this slide
     const imageEffects = ['effect-ken-burns', 'effect-pop-dynamic', 'effect-twist-enter', 'effect-circle-reveal', 'effect-pan-tilt'];
-    const videoEffects = ['effect-fade-in', 'effect-zoom-soft']; 
+    const videoEffects = ['effect-fade-in', 'effect-zoom-soft']; // Videos get subtler effects
     
-    const useCinematic = config.transitionStyle === 'cinematic' || Math.random() > 0.5;
-
-    if (useCinematic) {
-        if (currentItem.type === 'image') {
-            setAnimationEffect(imageEffects[Math.floor(Math.random() * imageEffects.length)]);
-        } else {
-            setAnimationEffect(videoEffects[Math.floor(Math.random() * videoEffects.length)]);
-        }
+    if (currentItem.type === 'image') {
+        setAnimationEffect(imageEffects[Math.floor(Math.random() * imageEffects.length)]);
     } else {
-        setAnimationEffect('effect-simple-fade');
+        setAnimationEffect(videoEffects[Math.floor(Math.random() * videoEffects.length)]);
     }
-  }, [currentItem?.id, config.transitionStyle]);
+  }, [currentItem?.id]);
 
   // 3. Playback Logic
   useEffect(() => {
     if (isSleepMode || !currentItem || playlist.length === 0) return;
 
+    // Clear previous timer
     if (timerRef.current) clearTimeout(timerRef.current);
 
     if (currentItem.type === 'image') {
@@ -257,6 +241,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     } else {
         // Video Handling
         if (videoRef.current) {
+            // Reset to beginning
             videoRef.current.currentTime = 0;
             videoRef.current.muted = config.muteVideos;
             
@@ -264,20 +249,27 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
                     console.warn("Autoplay prevented:", error);
+                    
+                    // Fallback: Mute and try again if it wasn't muted
                     if (!videoRef.current!.muted) {
+                         console.log("Retrying playback with Mute...");
                          videoRef.current!.muted = true;
-                         videoRef.current!.play().catch(e => nextSlide());
+                         videoRef.current!.play().catch(e => {
+                             console.error("Muted playback failed:", e);
+                             nextSlide(); // Skip
+                         });
                     } else {
-                        nextSlide(); 
+                        nextSlide(); // Skip
                     }
                 });
             }
         }
         
+        // Safety timeout in case 'onEnded' doesn't fire
         timerRef.current = window.setTimeout(() => {
-            console.warn("Video timeout, skipping.");
+            console.warn("Video timeout reached (stuck?), skipping.");
             nextSlide();
-        }, 180000); 
+        }, 180000); // 3 minutes max per video
     }
 
     return () => {
@@ -308,17 +300,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       </div>
   );
 
-  const formatClock = (date: Date) => {
-    const hours = date.getHours();
-    const mins = date.getMinutes().toString().padStart(2, '0');
-    if (config.clockFormat === '12h') {
-        const h12 = hours % 12 || 12;
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        return `${h12}:${mins} ${ampm}`;
-    }
-    return `${hours.toString().padStart(2, '0')}:${mins}`;
-  };
-
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -333,12 +314,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       className="fixed inset-0 z-[100] bg-black cursor-pointer flex items-center justify-center overflow-hidden"
     >
       <style>{`
-        /* Transition Effects */
-        .effect-simple-fade {
-          animation: simpleFade 1.2s ease-out forwards;
-        }
-        @keyframes simpleFade { from { opacity: 0; } to { opacity: 1; } }
-
+        /* Standard Ken Burns (Slow Zoom) */
         .effect-ken-burns {
           animation: kenBurns 20s ease-out forwards;
         }
@@ -347,6 +323,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           100% { transform: scale(1.15); filter: brightness(1); }
         }
 
+        /* Pop Dynamic (Scale Bounce) */
         .effect-pop-dynamic {
           animation: popDynamic 8s ease-out forwards;
           transform-origin: center center;
@@ -358,6 +335,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           100% { transform: scale(1); }
         }
 
+        /* Twist Enter (Rotate & Scale) */
         .effect-twist-enter {
           animation: twistEnter 10s ease-out forwards;
         }
@@ -367,6 +345,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           100% { transform: scale(1.1) rotate(2deg); }
         }
 
+        /* Circle Reveal (Clip Path) */
         .effect-circle-reveal {
           animation: circleReveal 8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
@@ -376,6 +355,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           100% { clip-path: circle(150% at 50% 50%); transform: scale(1.05); }
         }
 
+        /* Pan Tilt (3D Effect) */
         .effect-pan-tilt {
             animation: panTilt 12s ease-in-out forwards;
         }
@@ -385,13 +365,18 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             100% { transform: perspective(1000px) rotateY(5deg) scale(1.2); opacity: 1; }
         }
 
-        .effect-fade-in { animation: simpleFade 1s ease-out forwards; }
+        /* Video Effects */
+        .effect-fade-in {
+            animation: fadeInVideo 1s ease-out forwards;
+        }
+        @keyframes fadeInVideo { from { opacity: 0; } to { opacity: 1; } }
 
         .effect-zoom-soft {
             animation: zoomSoft 20s linear forwards;
         }
         @keyframes zoomSoft { from { transform: scale(1); } to { transform: scale(1.1); } }
 
+        /* Text Overlays */
         .slide-up { animation: slideUp 0.8s ease-out forwards 0.3s; opacity: 0; }
         .slide-up-delay { animation: slideUp 0.8s ease-out forwards 0.5s; opacity: 0; }
         
@@ -400,6 +385,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           100% { transform: translateY(0); opacity: 1; }
         }
 
+        /* Background Parallax (Moves opposite to main image slightly) */
         .bg-parallax {
             animation: bgParallax 20s linear infinite alternate;
         }
@@ -409,32 +395,18 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         }
       `}</style>
 
-      {/* Optional Ambience Blur Layer */}
-      {config.enableAmbienceBlur && (
-        <div 
-            key={`bg-${currentItem.id}`} 
-            className="absolute inset-0 z-0 bg-cover bg-center opacity-40 transition-all duration-1000 bg-parallax blur-2xl"
-            style={{ backgroundImage: `url(${currentItem.url})` }}
-        />
-      )}
+      {/* Background Ambience Layer - Blurred version of current image */}
+      <div 
+        key={`bg-${currentItem.id}`} 
+        className="absolute inset-0 z-0 bg-cover bg-center opacity-40 transition-all duration-1000 bg-parallax blur-2xl"
+        style={{ backgroundImage: `url(${currentItem.url})` }}
+      />
       
       {/* Texture Overlay */}
       <div className="absolute inset-0 z-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay pointer-events-none"></div>
       
-      {/* Dark Overlay */}
+      {/* Dark Overlay to make text readable */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/60 z-10" />
-
-      {/* Clock Overlay */}
-      {config.showClock && (
-          <div className="absolute top-8 right-8 md:top-12 md:right-12 z-50 animate-fade-in">
-              <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
-                  <Clock size={20} className="text-blue-500" />
-                  <span className="text-white font-mono text-2xl md:text-3xl font-black tracking-tighter">
-                      {formatClock(currentTime)}
-                  </span>
-              </div>
-          </div>
-      )}
 
       {/* Main Content Layer */}
       <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center p-8 md:p-24 overflow-hidden perspective-1000">
@@ -462,7 +434,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
              </div>
          )}
 
-         {/* Info Overlay */}
+         {/* Enhanced Overlay Info - UPDATED: Much smaller text sizes and constrained widths */}
          {config.showInfoOverlay && (currentItem.title || currentItem.subtitle) && (
              <div className="absolute bottom-12 left-8 md:bottom-20 md:left-20 max-w-[80%] md:max-w-[70%] pointer-events-none z-30">
                 {currentItem.title && (
