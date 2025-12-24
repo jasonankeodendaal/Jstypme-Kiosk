@@ -165,18 +165,7 @@ export interface KioskRegistry {
   locationDescription?: string;
   assignedZone?: string;
   notes?: string;
-  restartRequested?: boolean;
-  // Enhanced Telemetry
-  batteryLevel?: number;
-  isCharging?: boolean;
-  memoryUsage?: number;
-  orientation?: 'portrait' | 'landscape';
-  uptime?: string;
-  remoteCommand?: {
-    type: 'restart' | 'refresh' | 'broadcast' | 'clear_cache';
-    payload?: string;
-    timestamp: string;
-  } | null;
+  restartRequested?: boolean; 
 }
 
 export interface ArchivedItem {
