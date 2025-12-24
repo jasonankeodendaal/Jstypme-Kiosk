@@ -55,15 +55,6 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
             >
                 <ChevronLeft size={16} className="mr-1" /> Back to Brands
             </button>
-            {showScreensaverButton && (
-                <button 
-                    onClick={onToggleScreensaver}
-                    className={`p-1.5 rounded-lg border transition-colors ${screensaverEnabled ? 'bg-green-100 text-green-600 border-green-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}
-                    title="Toggle Screensaver"
-                >
-                    {screensaverEnabled ? <MonitorPlay size={16} /> : <MonitorStop size={16} />}
-                </button>
-            )}
           </div>
           <h1 className="text-2xl md:text-4xl font-extrabold text-slate-900 mt-2">{brand.name}</h1>
         </div>
@@ -105,7 +96,7 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
           ))}
         </div>
 
-        {/* Brand Catalogs Section - STICKY TO BOTTOM OF CONTENT IF FEW CATEGORIES */}
+        {/* Brand Catalogues Section */}
         {brandCatalogs.length > 0 && onViewCatalog && (
             <div className="mt-auto border-t-2 border-slate-200 pt-8 bg-slate-100/50 p-4 md:p-6 rounded-2xl relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
