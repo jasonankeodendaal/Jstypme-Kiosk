@@ -258,3 +258,25 @@ export const uploadFileToStorage = async (file: File): Promise<string> => {
         throw e;
     }
 };
+
+/**
+ * Detects if the current device is a TV based on the User Agent.
+ */
+export const isTvUserAgent = (): boolean => {
+    const ua = navigator.userAgent;
+    return /TV|LargeScreen|SmartTV|GoogleTV|AppleTV|HbbTV|NetCast|Web0S|Viera|CE-HTML|Nintendo Switch|PlayStation|Xbox|Roku/i.test(ua);
+};
+
+/**
+ * Attempts to force and lock the orientation to landscape.
+ */
+export const lockLandscapeOrientation = async () => {
+    try {
+        if (typeof screen !== 'undefined' && (screen as any).orientation && (screen as any).orientation.lock) {
+            await (screen as any).orientation.lock('landscape');
+            console.log("System: Orientation locked to landscape.");
+        }
+    } catch (e) {
+        console.warn("System: Orientation lock rejected. (Requires Fullscreen or PWA Mode)");
+    }
+};
