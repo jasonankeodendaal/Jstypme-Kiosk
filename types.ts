@@ -1,3 +1,4 @@
+
 export interface DimensionSet {
   label?: string; // e.g. "Device", "Stand", "Box 1"
   width: string;
@@ -150,12 +151,6 @@ export interface ScreensaverSettings {
   activeHoursStart?: string; // e.g. "08:00"
   activeHoursEnd?: string;   // e.g. "20:00"
   enableSleepMode?: boolean; // Turn screen black outside active hours
-  // Professional Marketing Engine additions
-  transitionStyle?: 'mix' | 'cinematic' | 'fade';
-  showDigitalClock?: boolean;
-  clockFormat?: '12h' | '24h';
-  enableAmbienceBlur?: boolean;
-  marketingPriority?: number; // 1 to 10
 }
 
 export interface KioskRegistry {
