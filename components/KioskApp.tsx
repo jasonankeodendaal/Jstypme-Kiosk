@@ -713,6 +713,17 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const resetDeviceIdentity = useCallback(() => { localStorage.clear(); window.location.reload(); }, []);
 
+  // Compute Current Navigation Context for Telemetry
+  const navigationContext = useMemo(() => {
+    if (isIdle) return "Screensaver / Idle";
+    if (activeProduct) return `Viewing: ${activeProduct.name}`;
+    if (activeCategory) return `Browsing: ${activeCategory.name}`;
+    if (activeBrand) return `Exploring: ${activeBrand.name}`;
+    if (showPricelistModal) return "Browsing Pricelists";
+    if (showGlobalSearch) return "Searching System";
+    return "Home Grid";
+  }, [isIdle, activeProduct, activeCategory, activeBrand, showPricelistModal, showGlobalSearch]);
+
   useEffect(() => {
     window.addEventListener('touchstart', resetIdleTimer); window.addEventListener('click', resetIdleTimer);
     const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -720,14 +731,20 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     checkCloudConnection().then(setIsCloudConnected);
     if (isSetup) {
       const syncCycle = async () => {
-         const syncResult = await sendHeartbeat();
-         if (syncResult?.deleted) { resetDeviceIdentity(); } else if (syncResult?.restart) { window.location.reload(); }
+         const syncResult = await sendHeartbeat(navigationContext);
+         if (syncResult?.deleted) { 
+             resetDeviceIdentity(); 
+         } else if (syncResult?.restart || syncResult?.forcedRefresh) { 
+             window.location.reload(); 
+         } else if (syncResult?.toggleScreensaver) {
+             setScreensaverEnabled(prev => !prev);
+         }
       };
       syncCycle(); const interval = setInterval(syncCycle, 30000);
       return () => { clearInterval(interval); clearInterval(clockInterval); };
     }
     return () => { clearInterval(clockInterval); };
-  }, [resetIdleTimer, isSetup, resetDeviceIdentity]);
+  }, [resetIdleTimer, isSetup, resetDeviceIdentity, navigationContext]);
 
   const allProductsFlat = useMemo(() => {
       if (!storeData?.brands) return [];
