@@ -166,12 +166,6 @@ export interface KioskRegistry {
   assignedZone?: string;
   notes?: string;
   restartRequested?: boolean; 
-  // Enterprise Tier Fields
-  batteryLevel?: number;
-  isCharging?: boolean;
-  currentScreen?: string;
-  refreshRequested?: boolean;
-  screensaverForce?: 'on' | 'off' | 'none';
 }
 
 export interface ArchivedItem {

@@ -2,8 +2,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { KioskRegistry } from '../types';
 
-export const APP_VERSION = '2.8.5 Enterprise';
-
 export const getEnv = (key: string, fallback: string) => {
   try {
     if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env[key]) {
@@ -145,7 +143,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
           last_seen: new Date().toISOString(),
           wifi_strength: 100,
           ip_address: 'Unknown',
-          version: APP_VERSION,
+          version: '1.0.5',
           location_description: 'Newly Registered',
           assigned_zone: 'Unassigned',
           restart_requested: false
@@ -158,21 +156,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   return true;
 };
 
-// Battery Telemetry Helper
-const getBatteryInfo = async (): Promise<{ level: number, charging: boolean } | null> => {
-    try {
-        if ('getBattery' in navigator) {
-            const battery: any = await (navigator as any).getBattery();
-            return {
-                level: Math.round(battery.level * 100),
-                charging: battery.charging
-            };
-        }
-    } catch (e) {}
-    return null;
-};
-
-export const sendHeartbeat = async (currentScreen?: string): Promise<{ deviceType?: string, name?: string, restart?: boolean, refresh?: boolean, deleted?: boolean, screensaverForce?: 'on' | 'off' | 'none' } | null> => {
+export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean } | null> => {
   const id = getKioskId();
   if (!id) return null;
   if (!supabase) initSupabase();
@@ -182,15 +166,13 @@ export const sendHeartbeat = async (currentScreen?: string): Promise<{ deviceTyp
   let currentZone = "Unassigned";
   let configChanged = false;
   let restartFlag = false;
-  let refreshFlag = false;
-  let ssForce: 'on' | 'off' | 'none' = 'none';
 
   try {
       // 1. SYNC: Pull latest configuration from cloud first
       if (supabase) {
           const { data: remoteData, error: fetchError } = await supabase
               .from('kiosks')
-              .select('name, device_type, assigned_zone, restart_requested, refresh_requested, screensaver_force')
+              .select('name, device_type, assigned_zone, restart_requested')
               .eq('id', id)
               .maybeSingle();
 
@@ -212,16 +194,12 @@ export const sendHeartbeat = async (currentScreen?: string): Promise<{ deviceTyp
               }
               if (remoteData.assigned_zone) currentZone = remoteData.assigned_zone;
               if (remoteData.restart_requested) restartFlag = true;
-              if (remoteData.refresh_requested) refreshFlag = true;
-              if (remoteData.screensaver_force) ssForce = remoteData.screensaver_force;
           }
       }
 
       // 2. TELEMETRY: Push status update
       if (supabase) {
           const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-          const battery = await getBatteryInfo();
-          
           let wifiStrength = 100;
           let ipAddress = 'Unknown';
           if(connection) {
@@ -239,28 +217,19 @@ export const sendHeartbeat = async (currentScreen?: string): Promise<{ deviceTyp
               last_seen: new Date().toISOString(),
               status: 'online',
               wifi_strength: wifiStrength,
-              ip_address: ipAddress,
-              version: APP_VERSION,
-              battery_level: battery?.level || null,
-              is_charging: battery?.charging || null,
-              current_screen: currentScreen || 'Idle'
+              ip_address: ipAddress
           };
           
-          // Clear flags in the payload if they were active to acknowledge receipt
-          if (restartFlag) payload.restart_requested = false;
-          if (refreshFlag) payload.refresh_requested = false;
+          // Only clear the restart flag in the payload if it was actually true and we are acknowledging it
+          if (restartFlag) {
+              payload.restart_requested = false;
+          }
 
           await supabase.from('kiosks').upsert(payload);
       }
 
-      if (restartFlag || refreshFlag || configChanged || ssForce !== 'none') {
-          return { 
-              deviceType: currentDeviceType, 
-              name: currentName, 
-              restart: restartFlag, 
-              refresh: refreshFlag,
-              screensaverForce: ssForce
-          };
+      if (restartFlag || configChanged) {
+          return { deviceType: currentDeviceType, name: currentName, restart: restartFlag };
       }
 
   } catch (e) {
