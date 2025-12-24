@@ -43,7 +43,6 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
   </svg>
 );
 
-// --- SETUP SCREEN ---
 const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComplete: () => void }) => {
     const [step, setStep] = useState(1);
     const [shopName, setShopName] = useState('');
@@ -236,7 +235,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const handleDragEnd = () => setIsDragging(false);
 
-  // High-reliability Image Loader using Canvas for PDF compatibility
   const loadImageForPDF = async (url: string): Promise<{ imgData: string, format: string, width: number, height: number } | null> => {
     if (!url) return null;
     
@@ -371,7 +369,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             const desc = item.description.toUpperCase();
             drawTextShrinkToFit(desc, margin + 45, currentY, (pageWidth - margin - 45) - 45, 8.5);
             
-            // USER REQUEST: NORMAL PRICE PRINT BLACK NOT GREY
             doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
             drawTextShrinkToFit(item.normalPrice || '', pageWidth - margin - 40, currentY, 32, 8, 'right');
             
@@ -379,7 +376,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
                 drawTextShrinkToFit(item.promoPrice, pageWidth - margin - 5, currentY, 32, 10, 'right');
             } else {
-                doc.setTextColor(0, 0, 0); // Always black if no promo or by request
+                doc.setTextColor(0, 0, 0); 
                 drawTextShrinkToFit(item.normalPrice || '', pageWidth - margin - 5, currentY, 32, 8, 'right');
             }
             
@@ -463,9 +460,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 <span>{isExporting ? 'Generating...' : 'Save as PDF'}</span>
              </button>
 
-             <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5">
-                <X size={28}/>
-             </button>
+             <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={28}/></button>
           </div>
         </div>
 
@@ -540,7 +535,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                           </span>
                       </td>
                       <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap">
-                          {/* USER REQUEST: NORMAL PRICE TEXT BLACK NOT GREY */}
                           <span className="font-bold text-xs md:text-sm text-slate-900">
                             {item.normalPrice || ''}
                           </span>
@@ -580,7 +574,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
 export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => (
   <div className={`fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 transition-all duration-300 ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={onClose}>
-    <div className="relative w-full max-w-xs md:max-w-sm rounded-3xl overflow-hidden shadow-2xl border border-white/20 aspect-[4/5] flex flex-col items-center justify-center text-center p-6 bg-slate-900" onClick={e => e.stopPropagation()}>
+    <div className="relative w-full max-xs md:max-w-sm rounded-3xl overflow-hidden shadow-2xl border border-white/20 aspect-[4/5] flex flex-col items-center justify-center text-center p-6 bg-slate-900" onClick={e => e.stopPropagation()}>
       <div className="absolute inset-0 bg-[url('https://i.ibb.co/dsh2c2hp/unnamed.jpg')] bg-cover bg-center opacity-30"></div>
       <div className="relative z-10">
         <img src="https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png" alt="Logo" className="w-24 h-24 mx-auto mb-4" />
@@ -658,162 +652,416 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
             const matchesCat = filterCategory === 'all' || p.categoryName === filterCategory;
             const matchesVideo = !filterHasVideo || (p.videoUrl || (p.videoUrls && p.videoUrls.length > 0));
             return matchesQuery && matchesBrand && matchesCat && matchesVideo;
-        }).sort((a,b) => a.name.localeCompare(b.name));
-    }, [query, filterBrand, filterCategory, filterHasVideo, allFlattenedProducts]);
+        });
+    }, [allFlattenedProducts, query, filterBrand, filterCategory, filterHasVideo]);
 
     return (
-        <div className="fixed inset-0 z-[120] bg-slate-900/95 backdrop-blur-xl flex flex-col animate-fade-in" onClick={onClose}>
-            <div className="p-6 md:p-12 max-w-6xl mx-auto w-full flex flex-col h-full" onClick={e => e.stopPropagation()}>
-                <div className="shrink-0 mb-8"><div className="relative group"><Search className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-500 w-8 h-8 group-focus-within:scale-110 transition-transform" /><input autoFocus type="text" placeholder="Find any product, SKU, or feature..." className="w-full bg-white/10 text-white placeholder:text-slate-500 text-3xl md:text-5xl font-black uppercase tracking-tight py-6 pl-20 pr-20 border-b-4 border-white/10 outline-none focus:border-blue-500 transition-all rounded-t-3xl" value={query} onChange={(e) => setQuery(e.target.value)} /><button onClick={onClose} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-2"><X size={40} /></button></div></div>
-                <div className="shrink-0 flex flex-wrap gap-4 mb-8"><div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10"><div className="p-2 bg-blue-600 rounded-lg text-white"><Filter size={16} /></div><select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="bg-transparent text-white font-black uppercase text-xs outline-none cursor-pointer pr-4"><option value="all" className="bg-slate-900">All Brands</option>{storeData.brands.map(b => <option key={b.id} value={b.id} className="bg-slate-900">{b.name}</option>)}</select></div><div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10"><div className="p-2 bg-purple-600 rounded-lg text-white"><LayoutGrid size={16} /></div><select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="bg-transparent text-white font-black uppercase text-xs outline-none cursor-pointer pr-4"><option value="all" className="bg-slate-900">All Categories</option>{Array.from(new Set(allFlattenedProducts.map(p => p.categoryName))).sort().map(c => (<option key={c} value={c} className="bg-slate-900">{c}</option>))}</select></div></div>
-                <div className="flex-1 overflow-y-auto no-scrollbar pb-20"><div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">{results.map(p => (<button key={p.id} onClick={() => { onSelectProduct(p); onClose(); }} className="group bg-white rounded-3xl overflow-hidden flex flex-col text-left transition-all hover:scale-105 active:scale-95 shadow-xl border-4 border-transparent hover:border-blue-500"><div className="aspect-square bg-white relative flex items-center justify-center p-4">{p.imageUrl ? <img src={p.imageUrl} className="max-w-full max-h-full object-contain" /> : <Package size={48} className="text-slate-100" />}</div><div className="p-4 bg-slate-50/50 flex-1 flex flex-col"><h4 className="font-black text-slate-900 uppercase text-xs leading-tight mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">{p.name}</h4><div className="mt-auto text-[9px] font-mono font-bold text-slate-400">{p.sku || 'N/A'}</div></div></button>))}</div></div>
+        <div className="fixed inset-0 z-[120] bg-slate-900/90 backdrop-blur-md flex flex-col p-4 md:p-12 animate-fade-in" onClick={onClose}>
+            <div className="relative w-full max-w-4xl mx-auto flex flex-col h-full bg-white rounded-3xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-slate-100 flex flex-col gap-4 shrink-0 bg-slate-50">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-black uppercase text-slate-900 flex items-center gap-2"><Search className="text-blue-500" /> Catalog Search</h2>
+                        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600"><X size={24} /></button>
+                    </div>
+                    <div className="relative">
+                        <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Type product name, SKU, or specs..." className="w-full pl-10 pr-4 py-4 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold uppercase" />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="p-2 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase">
+                            <option value="all">All Brands</option>
+                            {storeData.brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="p-2 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase">
+                            <option value="all">All Categories</option>
+                            {Array.from(new Set(storeData.brands.flatMap(b => b.categories.map(c => c.name)))).sort().map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                        <button onClick={() => setFilterHasVideo(!filterHasVideo)} className={`p-2 rounded-lg text-[10px] font-black uppercase border transition-all ${filterHasVideo ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'}`}>Has Video</button>
+                    </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 bg-slate-100/50">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {results.map(p => (
+                            <button key={p.id} onClick={() => { onSelectProduct(p); onClose(); }} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 text-left hover:shadow-md transition-all group">
+                                <div className="aspect-square bg-white mb-3 flex items-center justify-center p-2 rounded-xl border border-slate-50">
+                                    {p.imageUrl ? <img src={p.imageUrl} className="max-w-full max-h-full object-contain" /> : <Package className="text-slate-100" size={32} />}
+                                </div>
+                                <div className="text-[10px] font-black text-blue-500 uppercase mb-1">{p.brandName}</div>
+                                <h3 className="font-bold text-sm text-slate-900 leading-tight uppercase line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">{p.name}</h3>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[9px] font-mono font-bold text-slate-400">{p.sku || 'NO SKU'}</span>
+                                    {(p.videoUrl || (p.videoUrls && p.videoUrls.length > 0)) && <Video size={12} className="text-blue-400" />}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    {results.length === 0 && <div className="py-20 text-center text-slate-400 font-bold uppercase text-xs">No matching products found</div>}
+                </div>
             </div>
         </div>
     );
 };
 
-export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData: StoreData | null, lastSyncTime?: string, onSyncRequest?: () => void }) => {
-  const [isSetup, setIsSetup] = useState(isKioskConfigured());
-  const [kioskId, setKioskId] = useState(getKioskId());
-  const myFleetEntry = useMemo(() => storeData?.fleet?.find(f => f.id === kioskId), [storeData?.fleet, kioskId]);
-  const currentShopName = myFleetEntry?.name || getShopName() || "New Device";
-  const deviceType = myFleetEntry?.deviceType || getDeviceType() || 'kiosk';
-  const [activeBrand, setActiveBrand] = useState<Brand | null>(null);
-  const [activeCategory, setActiveCategory] = useState<Category | null>(null);
-  const [activeProduct, setActiveProduct] = useState<Product | null>(null);
-  const [isIdle, setIsIdle] = useState(false);
-  const [screensaverEnabled, setScreensaverEnabled] = useState(true);
-  const [showCreator, setShowCreator] = useState(false);
-  const [showPricelistModal, setShowPricelistModal] = useState(false);
-  const [showFlipbook, setShowFlipbook] = useState(false);
-  const [flipbookPages, setFlipbookPages] = useState<string[]>([]);
-  const [flipbookTitle, setFlipbookTitle] = useState<string | undefined>(undefined); 
-  const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
-  const [viewingManualList, setViewingManualList] = useState<Pricelist | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isCloudConnected, setIsCloudConnected] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [selectedBrandForPricelist, setSelectedBrandForPricelist] = useState<string | null>(null);
-  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
-  const [compareProductIds, setCompareProductIds] = useState<string[]>([]);
-  const [showCompareModal, setShowCompareModal] = useState(false);
-  const timerRef = useRef<number | null>(null);
-  const idleTimeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
+export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData: StoreData | null, lastSyncTime: string, onSyncRequest: () => void }) => {
+  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isSetup, setIsSetup] = useState(false);
+  const [isIdle, setIsIdle] = useState(true);
+  const [screensaverManualOverride, setScreensaverManualOverride] = useState(false);
+  const [viewingCatalogue, setViewingCatalogue] = useState<Catalogue | null>(null);
+  const [viewingPricelist, setViewingPricelist] = useState<Pricelist | null>(null);
+  const [showPricelistBrands, setShowPricelistBrands] = useState(false);
+  const [selectedPricelistBrand, setSelectedPricelistBrand] = useState<PricelistBrand | null>(null);
+  const [showPricelistList, setShowPricelistList] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   
-  const resetIdleTimer = useCallback(() => {
-    setIsIdle(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (screensaverEnabled && deviceType === 'kiosk' && isSetup) {
-      timerRef.current = window.setTimeout(() => {
-        setIsIdle(true); setActiveProduct(null); setActiveCategory(null); setActiveBrand(null); setShowFlipbook(false); setViewingPdf(null); setViewingManualList(null); setShowPricelistModal(false); setShowGlobalSearch(false); setShowCompareModal(false); setCompareProductIds([]);
-      }, idleTimeout);
-    }
-  }, [screensaverEnabled, idleTimeout, deviceType, isSetup]);
+  // Enterprise Overrides
+  const [remoteScreensaverForce, setRemoteScreensaverForce] = useState<'on' | 'off' | 'none'>('none');
 
-  const resetDeviceIdentity = useCallback(() => { localStorage.clear(); window.location.reload(); }, []);
+  const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+  const [showComparison, setShowComparison] = useState(false);
+
+  const [creatorPopup, setCreatorPopup] = useState(false);
+  
+  const idleTimerRef = useRef<number | null>(null);
+  const heartbeatTimerRef = useRef<number | null>(null);
+  const deviceType = getDeviceType();
+
+  // Screen state calculation for telemetry
+  const getCurrentScreenLabel = () => {
+    if (selectedProduct) return `Product: ${selectedProduct.name}`;
+    if (selectedCategory) return `Category: ${selectedCategory.name}`;
+    if (selectedBrand) return `Brand: ${selectedBrand.name}`;
+    if (viewingCatalogue) return `Catalogue: ${viewingCatalogue.title}`;
+    if (viewingPricelist) return `Pricelist: ${viewingPricelist.title}`;
+    if (showSearch) return 'Search Terminal';
+    return 'Home Screen';
+  };
+
+  const handleWake = useCallback(() => {
+    if (remoteScreensaverForce === 'on') return; // Cannot wake if forced ON
+    setIsIdle(false);
+    resetIdleTimer();
+  }, [remoteScreensaverForce]);
+
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
+    const timeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
+    idleTimerRef.current = window.setTimeout(() => {
+       if (remoteScreensaverForce !== 'off') {
+         setIsIdle(true);
+       }
+    }, timeout);
+  }, [storeData, remoteScreensaverForce]);
+
+  const toggleScreensaver = () => {
+      if (isIdle) setIsIdle(false);
+      else setIsIdle(true);
+      setScreensaverManualOverride(!isIdle);
+  };
 
   useEffect(() => {
-    window.addEventListener('touchstart', resetIdleTimer); window.addEventListener('click', resetIdleTimer);
-    const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
-    window.addEventListener('online', () => setIsOnline(true)); window.addEventListener('offline', () => setIsOnline(false));
-    checkCloudConnection().then(setIsCloudConnected);
-    if (isSetup) {
-      const syncCycle = async () => {
-         const syncResult = await sendHeartbeat();
-         if (syncResult?.deleted) { resetDeviceIdentity(); } else if (syncResult?.restart) { window.location.reload(); }
-      };
-      syncCycle(); const interval = setInterval(syncCycle, 30000);
-      return () => { clearInterval(interval); clearInterval(clockInterval); };
+    const configured = isKioskConfigured();
+    setIsSetup(configured);
+    if (configured) {
+        resetIdleTimer();
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+        events.forEach(name => document.addEventListener(name, handleWake));
+        
+        // HEARTBEAT
+        heartbeatTimerRef.current = window.setInterval(async () => {
+            const status = await sendHeartbeat(getCurrentScreenLabel());
+            if (status) {
+                if (status.deleted) { localStorage.clear(); window.location.reload(); }
+                if (status.restart) { window.location.reload(); }
+                if (status.refresh) { window.location.reload(); }
+                if (status.screensaverForce) {
+                    setRemoteScreensaverForce(status.screensaverForce);
+                    if (status.screensaverForce === 'on') setIsIdle(true);
+                    if (status.screensaverForce === 'off') setIsIdle(false);
+                }
+            }
+        }, 30000);
+
+        return () => {
+            events.forEach(name => document.removeEventListener(name, handleWake));
+            if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
+            if (heartbeatTimerRef.current) window.clearInterval(heartbeatTimerRef.current);
+        };
     }
-    return () => { clearInterval(clockInterval); };
-  }, [resetIdleTimer, isSetup, resetDeviceIdentity]);
+  }, [storeData, handleWake, remoteScreensaverForce, selectedProduct, selectedCategory, selectedBrand, viewingCatalogue, viewingPricelist, showSearch]);
 
-  const allProductsFlat = useMemo(() => {
-      if (!storeData?.brands) return [];
-      return storeData.brands.flatMap(b => (b.categories || []).flatMap(c => (c.products || []).map(p => ({...p, brandName: b.name, categoryName: c.name} as FlatProduct))));
-  }, [storeData?.brands]);
+  const allProducts = useMemo(() => {
+    if (!storeData) return [];
+    return storeData.brands.flatMap(b => b.categories.flatMap(c => c.products.map(p => ({ ...p, brandName: b.name, categoryName: c.name }))));
+  }, [storeData]);
 
-  const pricelistBrands = useMemo(() => (storeData?.pricelistBrands || []).slice().sort((a, b) => a.name.localeCompare(b.name)), [storeData?.pricelistBrands]);
-  const toggleCompareProduct = (product: Product) => setCompareProductIds(prev => prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(-5));
-  const productsToCompare = useMemo(() => allProductsFlat.filter(p => compareProductIds.includes(p.id)), [allProductsFlat, compareProductIds]);
+  const allScreensaverAds = storeData?.ads?.screensaver || [];
+  const pamphlets = storeData?.catalogues?.filter(c => c.type === 'pamphlet') || [];
 
-  const activePricelistBrand = useMemo(() => {
-      if (!viewingManualList) return undefined;
-      let found: any = pricelistBrands.find(b => b.id === viewingManualList.brandId);
-      if (!found && storeData?.brands) {
-          found = storeData.brands.find(b => b.id === viewingManualList.brandId);
-      }
-      return found;
-  }, [viewingManualList, pricelistBrands, storeData?.brands]);
+  const handleToggleCompare = (product: Product) => {
+    setSelectedForCompare(prev => prev.includes(product.id) ? prev.filter(id => id !== product.id) : [...prev, product.id].slice(0, 3));
+  };
 
-  if (!storeData) return null;
-  if (!isSetup) return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
-  if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} />;
+  if (!storeData) return <div className="h-screen w-screen flex items-center justify-center bg-slate-900 text-white font-bold animate-pulse">BOOTING SYSTEM...</div>;
+  if (!isSetup) return <SetupScreen storeData={storeData} onComplete={() => { setIsSetup(true); resetIdleTimer(); }} />;
+  if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={onSyncRequest} screensaverEnabled={!isIdle} onToggleScreensaver={toggleScreensaver} />;
   
+  if (isIdle && remoteScreensaverForce !== 'off') {
+    return (
+        <Screensaver 
+            products={allProducts} 
+            ads={allScreensaverAds} 
+            pamphlets={pamphlets}
+            onWake={handleWake} 
+            settings={storeData.screensaverSettings}
+        />
+    );
+  }
+
   return (
-    <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full">
-       {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProductsFlat} ads={storeData.ads?.screensaver || []} pamphlets={storeData.catalogues || []} onWake={resetIdleTimer} settings={storeData.screensaverSettings} />}
-       <header className="shrink-0 h-10 bg-slate-900 text-white flex items-center justify-between px-2 md:px-4 z-50 border-b border-slate-800 shadow-md print:hidden">
-           <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
-               {storeData.companyLogoUrl ? <img src={storeData.companyLogoUrl} className="h-4 md:h-6 object-contain" alt="" /> : <Store size={16} className="text-blue-500" />}
-               <button onClick={() => setShowGlobalSearch(true)} className="bg-white/10 hover:bg-blue-600 transition-colors px-2 py-1 rounded-md flex items-center gap-1.5 md:ml-4 group"><Search size={12} className="text-blue-400 group-hover:text-white" /><span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest hidden md:inline">Universal Search</span></button>
-           </div>
-           <div className="flex items-center gap-2 md:gap-4"><div className={`flex items-center gap-1 px-1.5 md:px-2 py-0.5 rounded-full ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>{isCloudConnected ? <Cloud size={8} /> : <HardDrive size={8} />}</div><div className="flex items-center gap-2 border-l border-slate-700 pl-2"><button onClick={() => setZoomLevel(zoomLevel === 1 ? 0.75 : 1)} className={`p-1 rounded flex items-center gap-1 text-[8px] md:text-[10px] font-bold transition-colors ${zoomLevel === 1 ? 'text-blue-400 bg-blue-900/30' : 'text-purple-400 bg-purple-900/30'}`}><ZoomOut size={12} /></button></div></div>
-       </header>
-       <div className="flex-1 relative flex flex-col min-h-0 print:overflow-visible" style={{ zoom: zoomLevel }}>
-         {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={storeData.catalogues || []} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} selectedForCompare={compareProductIds} onToggleCompare={toggleCompareProduct} onStartCompare={() => setShowCompareModal(true)} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={deviceType === 'kiosk'} />}
-       </div>
-       <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[7px] md:text-[10px] print:hidden">
-          <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
-              <div className="flex items-center gap-1 shrink-0">
-                  <div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                  <span className="font-bold uppercase whitespace-nowrap">{isOnline ? 'Live' : 'Offline'}</span>
-              </div>
-              <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 shrink-0">
-                  <span className="font-black text-slate-300 uppercase hidden md:inline">ID:</span>
-                  <span className="font-mono font-bold text-slate-600">{kioskId}</span>
-              </div>
-              <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 truncate">
-                  <RefreshCw size={8} className="text-slate-300 hidden md:inline" />
-                  <span className="font-bold uppercase text-slate-400">Sync: {lastSyncTime || '--:--'}</span>
+    <div className="h-screen w-screen bg-slate-50 flex flex-col relative overflow-hidden">
+      {/* Top Main Status Bar */}
+      <div className="bg-slate-900 text-white px-4 md:px-8 py-2 md:py-3 flex justify-between items-center shrink-0 z-[50] shadow-xl relative">
+          <div className="flex items-center gap-2 md:gap-4">
+              <div className="bg-blue-600 p-1.5 md:p-2 rounded-lg shadow-inner"><RIcon size={18} className="text-white" /></div>
+              <div>
+                  <h1 className="text-xs md:text-sm font-black uppercase tracking-widest leading-none">Smart Terminal</h1>
+                  <div className="flex items-center gap-1.5 mt-1">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(34,197,94,0.8)]"></div>
+                      <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Live • {getShopName()}</p>
+                  </div>
               </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0 ml-2">
-              {pricelistBrands.length > 0 && (
-                  <button 
-                    onClick={() => { setSelectedBrandForPricelist(pricelistBrands[0]?.id || null); setShowPricelistModal(true); }} 
-                    className="bg-blue-600 hover:bg-blue-700 text-white w-5 h-5 rounded flex items-center justify-center shadow-sm active:scale-95 transition-all" 
-                    title="Pricelists"
-                  >
-                    <RIcon size={10} className="text-white" />
-                  </button>
-              )}
-              <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest text-[8px] md:text-[10px]">
-                  <span>JSTYP</span>
+          <div className="flex items-center gap-2 md:gap-6">
+              <button onClick={() => setShowSearch(true)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-blue-400"><Search size={20}/></button>
+              <div className="h-6 w-[1px] bg-slate-800 hidden md:block"></div>
+              <div className="hidden md:flex flex-col items-end">
+                  <span className="text-[9px] font-black text-slate-500 uppercase">System Status</span>
+                  <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-blue-400"><Cloud size={10} /> Cloud Sync</div>
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-green-400"><Wifi size={10} /> Network Up</div>
+                  </div>
+              </div>
+              <button 
+                  onClick={toggleScreensaver}
+                  className={`p-1.5 md:p-2 rounded-xl transition-all border ${!isIdle ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-green-600 border-green-500 text-white'}`}
+                  title="Manual Screensaver Start"
+              >
+                  <MonitorPlay size={18} />
               </button>
           </div>
-       </footer>
-       <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
-       {showGlobalSearch && <SearchModal storeData={storeData} onSelectProduct={(p) => { setActiveBrand(storeData.brands.find(b => b.id === (p as any).brandId)!); setActiveCategory(storeData.brands.find(b => b.id === (p as any).brandId)!.categories.find(c => c.id === (p as any).categoryId)!); setActiveProduct(p); }} onClose={() => setShowGlobalSearch(false)} />}
-       {showCompareModal && <ComparisonModal products={productsToCompare} onClose={() => setShowCompareModal(false)} onShowDetail={setActiveProduct} />}
-       {showPricelistModal && (
-           <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-4 animate-fade-in print:hidden" onClick={() => setShowPricelistModal(false)}>
-               <div className="relative w-full h-full md:h-auto md:max-w-5xl bg-white md:rounded-2xl shadow-2xl overflow-hidden md:max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                   <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0"><h2 className="text-base md:text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={24} className="text-green-600" /> Pricelists</h2><button onClick={() => setShowPricelistModal(false)} className="p-2 rounded-full transition-colors hover:bg-slate-200"><X size={24} className="text-slate-500" /></button></div>
-                   <div className="flex-1 overflow-hidden flex flex-col md:flex-row"><div className="shrink-0 w-full md:w-1/3 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 overflow-hidden flex flex-col"><div className="md:hidden"><div className="overflow-x-auto no-scrollbar py-2"><div className="grid grid-rows-2 grid-flow-col gap-2 px-2 min-w-max">{pricelistBrands.map(brand => (<button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`flex items-center gap-2 p-2 rounded-xl border transition-all min-w-[120px] ${selectedBrandForPricelist === brand.id ? 'bg-white border-green-500 shadow-sm ring-1 ring-green-500/20' : 'bg-slate-100 border-transparent hover:bg-white'}`}><div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">{brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-[10px]">{brand.name.charAt(0)}</span>}</div><span className={`font-black text-[9px] uppercase leading-tight truncate flex-1 text-left ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-500'}`}>{brand.name}</span></button>))}</div></div></div><div className="hidden md:flex flex-1 flex-col overflow-y-auto no-scrollbar">{pricelistBrands.map(brand => (<button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-green-500' : 'hover:bg-white'}`}><div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">{brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-sm">{brand.name.charAt(0)}</span>}</div><span className={`font-black text-sm uppercase leading-tight ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-400'}`}>{brand.name}</span></button>))}</div></div><div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 relative">{selectedBrandForPricelist ? (<div className="animate-fade-in"><div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).map(pl => (<button key={pl.id} onClick={() => { if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} className={`group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border-2 flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-white hover:border-green-400'}`}><div className="aspect-[3/4] bg-slate-50 relative p-2 md:p-3 overflow-hidden">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded shadow-sm" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-200">{pl.type === 'manual' ? <List size={32}/> : <FileText size={32} />}</div>}<div className={`absolute top-2 right-2 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm z-10 ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-50'}`}>{pl.type === 'manual' ? 'TABLE' : 'PDF'}</div></div><div className="p-3 flex-1 flex flex-col justify-between bg-white"><h3 className="font-black text-slate-900 text-[10px] md:text-sm uppercase leading-tight line-clamp-2">{pl.title}</h3><div className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-2">{pl.month} {pl.year}</div></div></button>))}</div></div>) : <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4"><RIcon size={64} className="opacity-10" /></div>}</div></div></div></div>
-       )}
-       {showFlipbook && <Flipbook pages={flipbookPages} onClose={() => setShowFlipbook(false)} catalogueTitle={flipbookTitle} />}
-       {viewingPdf && <PdfViewer url={viewingPdf.url} title={viewingPdf.title} onClose={() => setViewingPdf(null)} />}
-       {viewingManualList && (
-          <ManualPricelistViewer 
-            pricelist={viewingManualList} 
-            onClose={() => setViewingManualList(null)} 
-            companyLogo={storeData.companyLogoUrl || storeData.hero.logoUrl}
-            brandLogo={activePricelistBrand?.logoUrl}
-            brandName={activePricelistBrand?.name}
+      </div>
+
+      <div className="flex-1 overflow-hidden relative">
+          {selectedProduct ? (
+            <ProductDetail product={selectedProduct} onBack={() => setSelectedProduct(null)} screensaverEnabled={!isIdle} onToggleScreensaver={toggleScreensaver} />
+          ) : selectedCategory ? (
+            <ProductList 
+                category={selectedCategory} 
+                brand={selectedBrand!} 
+                storeCatalogs={storeData.catalogues || []} 
+                onSelectProduct={setSelectedProduct} 
+                onBack={() => setSelectedCategory(null)} 
+                onViewCatalog={(p: any) => console.log(p)} 
+                screensaverEnabled={!isIdle} 
+                onToggleScreensaver={toggleScreensaver}
+                selectedForCompare={selectedForCompare}
+                onToggleCompare={handleToggleCompare}
+                onStartCompare={() => setShowComparison(true)}
+            />
+          ) : selectedBrand ? (
+            <CategoryGrid 
+                brand={selectedBrand} 
+                storeCatalogs={storeData.catalogues || []} 
+                onSelectCategory={setSelectedCategory} 
+                onViewCatalog={setViewingCatalogue}
+                onBack={() => setSelectedBrand(null)} 
+                screensaverEnabled={!isIdle} 
+                onToggleScreensaver={toggleScreensaver}
+            />
+          ) : (
+            <BrandGrid 
+                brands={storeData.brands} 
+                heroConfig={storeData.hero} 
+                allCatalogs={storeData.catalogues || []}
+                ads={storeData.ads}
+                onSelectBrand={setSelectedBrand} 
+                onViewGlobalCatalog={setViewingCatalogue}
+                onExport={() => {}} 
+                screensaverEnabled={!isIdle} 
+                onToggleScreensaver={toggleScreensaver}
+            />
+          )}
+      </div>
+
+      {/* Global Toolbar */}
+      <div className="bg-white border-t border-slate-200 h-16 md:h-20 shrink-0 flex items-center justify-between px-4 md:px-12 z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-blue-600 via-blue-400 to-cyan-500 opacity-20"></div>
+          
+          <div className="flex gap-1 md:gap-4 items-center">
+              <button 
+                  onClick={() => { setSelectedBrand(null); setSelectedCategory(null); setSelectedProduct(null); setShowPricelistBrands(false); setShowPricelistList(false); setViewingPricelist(null); }}
+                  className={`p-2.5 md:p-4 rounded-2xl transition-all active:scale-95 group ${!selectedBrand && !selectedCategory && !selectedProduct && !viewingPricelist && !showPricelistBrands ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-900'}`}
+              >
+                  <Store size={22} className="group-hover:rotate-6 transition-transform" />
+              </button>
+              <div className="w-[1px] h-8 bg-slate-200 mx-1 md:mx-2"></div>
+              <button 
+                onClick={() => setShowPricelistBrands(true)}
+                className={`flex items-center gap-2 md:gap-3 px-3 md:px-6 py-2.5 md:py-3.5 rounded-2xl font-black uppercase text-[10px] md:text-sm tracking-widest transition-all active:scale-95 group overflow-hidden relative ${viewingPricelist || showPricelistBrands ? 'bg-slate-900 text-white shadow-xl translate-y-[-2px]' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+              >
+                  <RIcon size={16} /> <span className="hidden sm:inline">Pricelists</span><span className="sm:hidden">Prices</span>
+                  {(viewingPricelist || showPricelistBrands) && <div className="absolute bottom-0 left-0 h-1 w-full bg-blue-500"></div>}
+              </button>
+              <button 
+                onClick={() => { window.history.pushState({}, '', '/about'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+                className="hidden sm:flex items-center gap-3 px-6 py-3.5 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-sm tracking-widest transition-all hover:bg-slate-200 active:scale-95"
+              >
+                  <Info size={16} /> About
+              </button>
+          </div>
+
+          <div className="flex items-center gap-3 md:gap-8">
+              <div className="hidden lg:flex flex-col items-end border-r border-slate-200 pr-6">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fleet Telemetry</span>
+                  <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600"><Monitor size={12} className="text-blue-500"/> ID: <span className="text-slate-900">{getKioskId()}</span></div>
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600"><RefreshCw size={12} className="text-purple-500"/> Sync: <span className="text-slate-900">{lastSyncTime || 'Pending'}</span></div>
+                  </div>
+              </div>
+              <div className="flex flex-col items-center cursor-pointer group" onClick={() => setCreatorPopup(true)}>
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-slate-200 group-hover:border-blue-500 transition-all p-0.5 shadow-sm">
+                      <img src="https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png" alt="Creator" className="w-full h-full object-contain bg-slate-900" />
+                  </div>
+                  <span className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase mt-1 tracking-tighter">Powered by JSTYP</span>
+              </div>
+          </div>
+      </div>
+
+      {/* Comparison Drawer */}
+      {showComparison && (
+          <ComparisonModal products={allProducts.filter(p => selectedForCompare.includes(p.id))} onClose={() => setShowComparison(false)} onShowDetail={(p) => { setSelectedProduct(p); setShowComparison(false); }} />
+      )}
+
+      {/* Global Search */}
+      {showSearch && (
+          <SearchModal storeData={storeData} onClose={() => setShowSearch(false)} onSelectProduct={setSelectedProduct} />
+      )}
+
+      {/* Modals for Catalogues and Pricelists */}
+      {viewingCatalogue && (
+          <Flipbook 
+             pages={viewingCatalogue.pages || []} 
+             onClose={() => setViewingCatalogue(null)} 
+             catalogueTitle={viewingCatalogue.title}
+             startDate={viewingCatalogue.startDate}
+             endDate={viewingCatalogue.endDate}
           />
-       )}
+      )}
+
+      {viewingPricelist && (
+          <ManualPricelistViewer 
+              pricelist={viewingPricelist} 
+              onClose={() => setViewingPricelist(null)} 
+              companyLogo={storeData.companyLogoUrl}
+              brandLogo={storeData.pricelistBrands?.find(b => b.id === viewingPricelist.brandId)?.logoUrl}
+              brandName={storeData.pricelistBrands?.find(b => b.id === viewingPricelist.brandId)?.name}
+          />
+      )}
+
+      {/* Pricelist Selection Modal */}
+      {showPricelistBrands && (
+          <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowPricelistBrands(false)}>
+              <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl scale-up" onClick={e => e.stopPropagation()}>
+                  <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                      <div>
+                          <h2 className="text-3xl font-black uppercase text-slate-900 flex items-center gap-3"><RIcon className="text-[#c0810d]" /> Official Pricelists</h2>
+                          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Select a brand to view available price sheets</p>
+                      </div>
+                      <button onClick={() => setShowPricelistBrands(false)} className="p-3 bg-white hover:bg-slate-100 text-slate-400 rounded-full shadow-sm"><X size={24} /></button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-8 bg-slate-100/50">
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                          {(storeData.pricelistBrands || []).map((brand) => (
+                              <button 
+                                key={brand.id}
+                                onClick={() => { setSelectedPricelistBrand(brand); setShowPricelistList(true); }}
+                                className="group bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col items-center justify-center text-center gap-4 hover:shadow-xl hover:border-blue-500 transition-all duration-300 aspect-square"
+                              >
+                                  <div className="w-20 h-20 bg-slate-50 rounded-xl flex items-center justify-center p-2 group-hover:scale-110 transition-transform duration-500">
+                                      {brand.logoUrl ? (
+                                          <img src={brand.logoUrl} className="max-w-full max-h-full object-contain" alt={brand.name} />
+                                      ) : (
+                                          <span className="text-3xl font-black text-slate-300">{brand.name.charAt(0)}</span>
+                                      )}
+                                  </div>
+                                  <div>
+                                      <h3 className="font-black text-slate-900 uppercase text-[10px] md:text-xs leading-tight line-clamp-2">{brand.name}</h3>
+                                      <p className="text-[8px] font-bold text-slate-400 uppercase mt-1">{storeData.pricelists?.filter(p => p.brandId === brand.id).length || 0} Documents</p>
+                                  </div>
+                              </button>
+                          ))}
+                      </div>
+                      {(storeData.pricelistBrands || []).length === 0 && (
+                          <div className="py-20 text-center text-slate-400 font-bold uppercase text-xs">No pricelists configured by system admin.</div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Pricelist Items List Modal */}
+      {showPricelistList && selectedPricelistBrand && (
+          <div className="fixed inset-0 z-[105] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowPricelistList(false)}>
+              <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                      <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-white rounded-xl border border-slate-200 p-2 flex items-center justify-center shadow-sm">
+                             {selectedPricelistBrand.logoUrl ? <img src={selectedPricelistBrand.logoUrl} className="max-w-full max-h-full object-contain" /> : <RIcon size={20} />}
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-black uppercase text-slate-900">{selectedPricelistBrand.name} <span className="text-slate-400 ml-1">Archive</span></h2>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Select a specific document to view</p>
+                          </div>
+                      </div>
+                      <button onClick={() => setShowPricelistList(false)} className="p-2 text-slate-400 hover:text-slate-600"><X size={24} /></button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 space-y-3">
+                      {storeData.pricelists?.filter(p => p.brandId === selectedPricelistBrand.id).sort((a,b) => b.year.localeCompare(a.year) || b.month.localeCompare(a.month)).map((pl) => {
+                          const recent = isRecent(pl.dateAdded);
+                          return (
+                          <button 
+                            key={pl.id}
+                            onClick={() => { setViewingPricelist(pl); setShowPricelistList(false); setShowPricelistBrands(false); }}
+                            className="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-blue-500 hover:shadow-md transition-all flex items-center gap-6 group"
+                          >
+                              <div className="w-12 h-16 bg-slate-900 rounded-lg flex flex-col items-center justify-center text-white shrink-0 group-hover:bg-blue-600 transition-colors shadow-lg relative overflow-hidden">
+                                 {recent && <div className="absolute top-0 left-0 w-full h-1 bg-yellow-400"></div>}
+                                 <span className="text-[7px] font-black uppercase opacity-60">{pl.year}</span>
+                                 <RIcon size={18} />
+                                 <span className="text-[7px] font-black uppercase opacity-60">{pl.month.substring(0,3)}</span>
+                              </div>
+                              <div className="flex-1 text-left">
+                                  <h3 className="font-black text-slate-900 uppercase text-xs md:text-sm group-hover:text-blue-700 transition-colors">{pl.title}</h3>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase">{pl.month} {pl.year}</p>
+                                    {recent && <span className="text-[8px] font-black uppercase text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded border border-yellow-100 animate-pulse">Just Added</span>}
+                                  </div>
+                              </div>
+                              <ArrowUpRight size={20} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+                          </button>
+                      );})}
+                      {(!storeData.pricelists || storeData.pricelists.filter(p => p.brandId === selectedPricelistBrand.id).length === 0) && (
+                          <div className="py-12 text-center text-slate-400 font-bold uppercase text-[10px]">No documents available for this brand.</div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      <CreatorPopup isOpen={creatorPopup} onClose={() => setCreatorPopup(false)} />
     </div>
   );
 };
