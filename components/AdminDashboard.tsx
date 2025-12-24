@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
@@ -12,6 +12,24 @@ import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 
 const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
+
+// Visual Component for Signal Bars
+const SignalStrengthBars = ({ strength }: { strength: number }) => {
+    return (
+        <div className="flex items-end gap-0.5 h-3">
+            {[1, 2, 3, 4].map((bar) => {
+                const isActive = (strength / 25) >= bar;
+                return (
+                    <div 
+                        key={bar} 
+                        className={`w-1 rounded-full transition-all duration-500 ${isActive ? 'bg-blue-500' : 'bg-slate-800'}`} 
+                        style={{ height: `${bar * 25}%` }}
+                    />
+                );
+            })}
+        </div>
+    );
+};
 
 // Custom R Icon for Pricelists
 const RIcon = (props: any) => (
@@ -1804,7 +1822,8 @@ const TVModelEditor = ({ model, onSave, onClose }: { model: TVModel, onSave: (m:
                 </div>
 
                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-white shrink-0">
-                    <button onClose={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
+                    {/* Fix: changed onClose to onClick for button compatibility */}
+                    <button onClick={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
                     <button onClick={() => onSave(draft)} className="px-4 py-2 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg">Save Model</button>
                 </div>
             </div>
@@ -1885,7 +1904,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
         } else {
             updatedList.push({
                 id: generateId('adm'),
-                name: newName,
+                name: name,
                 pin: newPin,
                 isSuperAdmin: false,
                 permissions: newPermissions
@@ -2788,113 +2807,131 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             )}
             
             {activeTab === 'fleet' && (
-                <div className="animate-fade-in max-w-6xl mx-auto pb-24">
+                <div className="animate-fade-in max-w-7xl mx-auto pb-24">
                    <div className="flex items-center justify-between mb-8">
-                       <h2 className="text-2xl font-black text-slate-900 uppercase">Device Fleet</h2>
-                       <div className="bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm text-xs font-bold text-slate-50">
-                           Total Devices: {localData.fleet?.length || 0}
+                       <div className="flex items-center gap-3">
+                           <div className="bg-slate-900 p-2.5 rounded-2xl shadow-xl shadow-blue-500/10 border border-slate-800"><Radio className="text-blue-500 animate-pulse" size={24}/></div>
+                           <div>
+                               <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none">Command Center</h2>
+                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Live Fleet Telemetry</p>
+                           </div>
+                       </div>
+                       <div className="flex items-center gap-4 bg-slate-950 p-2 rounded-2xl border border-slate-800 shadow-2xl">
+                           <div className="px-4 py-2 border-r border-slate-800">
+                               <div className="text-[8px] font-black text-slate-500 uppercase mb-0.5 tracking-widest">Active Units</div>
+                               <div className="text-lg font-black text-blue-400 font-mono leading-none">{localData.fleet?.length || 0}</div>
+                           </div>
+                           <div className="px-4 py-2">
+                               <div className="text-[8px] font-black text-slate-500 uppercase mb-0.5 tracking-widest">Health</div>
+                               <div className="text-lg font-black text-green-400 font-mono leading-none">100%</div>
+                           </div>
                        </div>
                    </div>
 
                    {/* Device Categories Loop */}
                    {['kiosk', 'mobile', 'tv'].map((type) => {
-                       // Filter devices for this category
-                       // Default undefined deviceType to 'kiosk' for legacy compatibility
                        const devices = localData.fleet?.filter(k => 
                            k.deviceType === type || (type === 'kiosk' && !k.deviceType)
                        ) || [];
 
                        if (devices.length === 0) return null;
 
-                       // Config for Section Header
                        const config = {
-                           kiosk: { label: 'Interactive Kiosks', icon: <Tablet size={20} className="text-blue-600" />, color: 'blue' },
-                           mobile: { label: 'Mobile Handhelds', icon: <Smartphone size={20} className="text-purple-600" />, color: 'purple' },
-                           tv: { label: 'TV Displays', icon: <Tv size={20} className="text-indigo-600" />, color: 'indigo' }
+                           kiosk: { label: 'Interactive Terminals', icon: <Tablet size={18} className="text-blue-500" />, color: 'blue' },
+                           mobile: { label: 'Handheld Units', icon: <Smartphone size={18} className="text-purple-500" />, color: 'purple' },
+                           tv: { label: 'Display Walls', icon: <Tv size={18} className="text-indigo-500" />, color: 'indigo' }
                        }[type as 'kiosk' | 'mobile' | 'tv'];
 
                        return (
-                           <div key={type} className="mb-10 last:mb-0">
-                               <div className="flex items-center gap-3 mb-4 border-b border-slate-200 pb-2">
-                                   <div className={`p-2 rounded-lg bg-${config.color}-50`}>
+                           <div key={type} className="mb-12 last:mb-0">
+                               <div className="flex items-center gap-3 mb-6">
+                                   <div className={`p-2 rounded-xl bg-slate-900 border border-slate-800 shadow-lg`}>
                                        {config.icon}
                                    </div>
-                                   <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{config.label}</h3>
-                                   <span className="ml-auto text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-full border border-slate-200">
-                                       {devices.length} Devices
+                                   <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">{config.label}</h3>
+                                   <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent mx-4"></div>
+                                   <span className="text-[10px] font-black bg-white text-slate-400 px-3 py-1 rounded-full border border-slate-200 uppercase tracking-widest">
+                                       {devices.length} Units
                                    </span>
                                </div>
 
-                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                    {devices.map(kiosk => {
                                        const isOnline = (new Date().getTime() - new Date(kiosk.last_seen).getTime()) < 350000;
                                        return (
-                                           <div key={kiosk.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-lg transition-all duration-300">
-                                               {/* Card Header */}
-                                               <div className="p-4 border-b border-slate-100 bg-slate-50/30 flex justify-between items-start">
-                                                   <div className="flex-1 min-w-0 pr-2">
-                                                       <div className="flex items-start gap-2 mb-1">
-                                                           <div className="mt-0.5 shrink-0">
-                                                               {type === 'kiosk' && <Tablet size={14} className="text-blue-500"/>}
-                                                               {type === 'mobile' && <Smartphone size={14} className="text-purple-500"/>}
-                                                               {type === 'tv' && <Tv size={14} className="text-indigo-500"/>}
-                                                           </div>
-                                                           <h4 className="font-bold text-slate-900 uppercase text-sm leading-tight break-words" title={kiosk.name}>
-                                                               {kiosk.name}
-                                                           </h4>
+                                           <div key={kiosk.id} className={`group relative bg-slate-950 border-2 rounded-[2rem] overflow-hidden transition-all duration-500 hover:-translate-y-1 shadow-2xl flex flex-col ${isOnline ? 'border-blue-500/50 shadow-blue-500/10' : 'border-slate-800 grayscale opacity-60'}`}>
+                                               
+                                               {/* Online Status Glow effect */}
+                                               {isOnline && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.8)] rounded-full"></div>}
+
+                                               {/* Telemetry Header */}
+                                               <div className="p-5 flex justify-between items-start">
+                                                   <div className="flex-1 min-w-0">
+                                                       <div className="flex items-center gap-2 mb-1.5">
+                                                           <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,1)] animate-pulse' : 'bg-slate-700'}`}></div>
+                                                           <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${isOnline ? 'text-blue-400' : 'text-slate-500'}`}>
+                                                               {isOnline ? 'Active Pulse' : 'Offline'}
+                                                           </span>
                                                        </div>
-                                                       <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
-                                                            <span>ID: {kiosk.id}</span>
+                                                       <h4 className="font-black text-white uppercase text-base leading-none tracking-tight truncate mb-1 group-hover:text-blue-400 transition-colors">
+                                                           {kiosk.name}
+                                                       </h4>
+                                                       <div className="text-[9px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                                            <MapPin size={10} className="text-slate-700" /> {kiosk.assignedZone || 'UNASSIGNED'}
                                                        </div>
                                                    </div>
-                                                   <div className={`shrink-0 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border flex items-center gap-1.5 ${isOnline ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                                                       <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                                                       {isOnline ? 'Online' : 'Offline'}
+                                                   <div className="shrink-0 flex flex-col items-end gap-2">
+                                                       <SignalStrengthBars strength={kiosk.wifiStrength || 0} />
+                                                       <div className="text-[8px] font-black text-slate-600 uppercase font-mono">{kiosk.ipAddress?.split(' | ')[0] || '--'}</div>
                                                    </div>
                                                </div>
                                                
-                                               {/* Card Body */}
-                                               <div className="p-4 flex-1">
-                                                   <div className="flex justify-between items-center text-xs mb-3">
-                                                       <span className="text-slate-400 font-bold uppercase text-[10px]">Zone</span>
-                                                       <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                                                           {kiosk.assignedZone || 'Unassigned'}
-                                                       </span>
+                                               {/* Dashboard Stats */}
+                                               <div className="px-5 py-4 grid grid-cols-2 gap-3 bg-black/40 border-y border-white/5">
+                                                   <div className="p-2.5 rounded-2xl bg-white/5 border border-white/5">
+                                                       <div className="text-[8px] font-black text-slate-500 uppercase mb-1 flex items-center gap-1.5">
+                                                           <Clock size={10} className="text-blue-500" /> Sync Age
+                                                       </div>
+                                                       <div className="text-xs font-bold text-slate-300 truncate">{formatRelativeTime(kiosk.last_seen)}</div>
                                                    </div>
-                                                   <div className="flex justify-between items-center text-xs">
-                                                       <span className="text-slate-400 font-bold uppercase text-[10px]">IP / Net</span>
-                                                       <span className="font-mono text-slate-500 text-[10px] flex items-center gap-1">
-                                                           <Signal size={10} /> {kiosk.ipAddress || 'Unknown'}
-                                                       </span>
+                                                   <div className="p-2.5 rounded-2xl bg-white/5 border border-white/5">
+                                                       <div className="text-[8px] font-black text-slate-500 uppercase mb-1 flex items-center gap-1.5">
+                                                           <Terminal size={10} className="text-purple-500" /> Version
+                                                       </div>
+                                                       <div className="text-xs font-mono font-black text-slate-300">v{kiosk.version || '1.0.0'}</div>
                                                    </div>
                                                </div>
 
-                                               {/* Card Footer (Actions) */}
-                                               <div className="bg-slate-50 p-2 border-t border-slate-100 flex gap-2">
+                                               {/* Command Center Action Bar */}
+                                               <div className="mt-auto p-3 flex gap-2">
                                                    <button 
                                                        onClick={() => setEditingKiosk(kiosk)} 
-                                                       className="flex-1 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:shadow-sm transition-all text-[10px] font-bold uppercase flex items-center justify-center gap-1.5"
+                                                       className="flex-1 bg-slate-900 hover:bg-blue-600 text-slate-400 hover:text-white p-2.5 rounded-2xl transition-all border border-slate-800 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 group/btn"
                                                    >
-                                                       <Edit2 size={12}/> Edit
+                                                       <Edit2 size={12} className="group-hover/btn:scale-110 transition-transform" /> <span className="hidden sm:inline">Modify</span>
                                                    </button>
                                                    
-                                                   {supabase && (
+                                                   {supabase && isOnline && (
                                                        <button 
-                                                           onClick={async () => { if(confirm("Restart Device?")) await supabase.from('kiosks').update({restart_requested: true}).eq('id', kiosk.id); }} 
-                                                           className="flex-1 py-2 bg-white text-orange-600 rounded-lg border border-slate-200 hover:border-orange-300 hover:bg-orange-50 hover:shadow-sm transition-all text-[10px] font-bold uppercase flex items-center justify-center gap-1.5" 
-                                                           title="Restart Device"
+                                                           onClick={async () => { if(confirm("Initiate Remote System Reset?")) await supabase.from('kiosks').update({restart_requested: true}).eq('id', kiosk.id); }} 
+                                                           className="flex-1 bg-slate-900 hover:bg-orange-600 text-orange-500 hover:text-white p-2.5 rounded-2xl transition-all border border-slate-800 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 group/btn"
                                                        >
-                                                           <Power size={12}/> Restart
+                                                           <Power size={12} /> <span className="hidden sm:inline">Reset</span>
                                                        </button>
                                                    )}
                                                    
                                                    <button 
                                                        onClick={() => removeFleetMember(kiosk.id)} 
-                                                       className="w-10 py-2 bg-white text-red-500 rounded-lg border border-slate-200 hover:border-red-300 hover:bg-red-100 hover:shadow-sm transition-all flex items-center justify-center" 
-                                                       title="Remove Device"
+                                                       className="w-12 bg-slate-900 hover:bg-red-600 text-slate-700 hover:text-white p-2.5 rounded-2xl transition-all border border-slate-800 flex items-center justify-center shadow-lg group/btn" 
+                                                       title="De-Authorize Device"
                                                    >
-                                                       <Trash2 size={12}/>
+                                                       <Lock size={12} className="group-hover/btn:rotate-12 transition-transform" />
                                                    </button>
+                                               </div>
+                                               
+                                               {/* Device Hardware ID Watermark */}
+                                               <div className="absolute bottom-1 right-5 text-[7px] font-mono font-black text-slate-800 uppercase pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity">
+                                                   UUID: {kiosk.id}
                                                </div>
                                            </div>
                                        );
@@ -2905,9 +2942,14 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                    })}
                    
                    {localData.fleet?.length === 0 && (
-                       <div className="p-16 text-center text-slate-400 font-bold uppercase text-xs border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50 flex flex-col items-center gap-4">
-                           <Tablet size={48} className="opacity-20" />
-                           <div>No devices registered in fleet</div>
+                       <div className="p-20 text-center flex flex-col items-center justify-center gap-6 animate-fade-in border-2 border-dashed border-slate-200 rounded-[3rem] bg-white/50">
+                           <div className="w-20 h-20 bg-slate-100 rounded-[2.5rem] flex items-center justify-center text-slate-300">
+                               <Radio size={40} />
+                           </div>
+                           <div>
+                               <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Awaiting Transmissions</h3>
+                               <p className="text-slate-500 font-medium text-sm">Initialize your first device to begin fleet telemetry monitoring.</p>
+                           </div>
                        </div>
                    )}
                 </div>
