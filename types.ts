@@ -24,12 +24,15 @@ export interface Product {
   specs: Record<string, string>;
   features: string[];
   boxContents?: string[]; 
+  // Changed to Array for multiple dimension sets
   dimensions: DimensionSet[]; 
   imageUrl: string;
   galleryUrls?: string[]; 
   videoUrl?: string; // Legacy support
   videoUrls?: string[]; // Support for multiple videos
+  // New Multiple Manuals Support
   manuals?: Manual[];
+  // Legacy support fields (will be migrated)
   manualUrl?: string; 
   manualImages?: string[]; 
   dateAdded?: string; // New: For aging logic
@@ -52,8 +55,8 @@ export interface Brand {
 
 export interface TVModel {
   id: string;
-  name: string; 
-  imageUrl?: string; 
+  name: string; // e.g. "OLED 65-inch G3"
+  imageUrl?: string; // Optional cover image for the model
   videoUrls: string[];
 }
 
@@ -62,6 +65,7 @@ export interface TVBrand {
   name: string;
   logoUrl?: string;
   models: TVModel[];
+  // Legacy support (to be migrated)
   videoUrls?: string[];
 }
 
@@ -81,15 +85,16 @@ export interface Catalogue {
   id: string;
   brandId?: string; 
   title: string;
-  type: 'catalogue' | 'pamphlet'; 
-  year?: number; 
-  startDate?: string; 
-  endDate?: string;   
+  type: 'catalogue' | 'pamphlet'; // Explicit type distinction
+  year?: number; // For Catalogues
+  startDate?: string; // For Pamphlets
+  endDate?: string;   // For Pamphlets (Auto-expiry)
   pdfUrl?: string; 
-  thumbnailUrl?: string; 
-  pages: string[]; 
+  thumbnailUrl?: string; // New Cover/Thumbnail Image
+  pages: string[]; // Legacy support for image-based flipbooks
 }
 
+// New Interface for decoupled Pricelist Brands
 export interface PricelistBrand {
   id: string;
   name: string;
@@ -108,20 +113,20 @@ export interface Pricelist {
   id: string;
   brandId: string;
   title: string;
-  type?: 'pdf' | 'manual'; 
-  items?: PricelistItem[]; 
-  url: string; 
-  thumbnailUrl?: string; 
+  type?: 'pdf' | 'manual'; // Support for manual tables
+  items?: PricelistItem[]; // Data for manual tables
+  url: string; // PDF URL
+  thumbnailUrl?: string; // New: Cover Image
   month: string;
   year: string;
-  dateAdded?: string; 
+  dateAdded?: string; // New: For "New" flag logic
 }
 
 export interface AdItem {
   id: string;
   type: 'image' | 'video';
   url: string;
-  dateAdded?: string; 
+  dateAdded?: string; // New: For aging logic
 }
 
 export interface AdConfig {
@@ -140,18 +145,12 @@ export interface ScreensaverSettings {
   showProductVideos: boolean;
   showPamphlets: boolean;
   showCustomAds: boolean;
+  // New Enhanced Controls
   displayStyle?: 'contain' | 'cover';
   showInfoOverlay?: boolean;
-  activeHoursStart?: string; 
-  activeHoursEnd?: string;   
-  enableSleepMode?: boolean;
-  // NEW ENHANCEMENTS
-  overlayPosition?: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
-  animationStyle?: 'dynamic' | 'subtle' | 'static';
-  showClock?: boolean;
-  marqueeText?: string;
-  marqueeSpeed?: number;
-  backgroundBlur?: number; // 0 to 40
+  activeHoursStart?: string; // e.g. "08:00"
+  activeHoursEnd?: string;   // e.g. "20:00"
+  enableSleepMode?: boolean; // Turn screen black outside active hours
 }
 
 export interface KioskRegistry {
@@ -179,9 +178,9 @@ export interface ArchivedItem {
 
 export interface ArchiveData {
     brands: Brand[];
-    products: { product: Product, originalBrand: string, originalCategory: string }[]; 
+    products: { product: Product, originalBrand: string, originalCategory: string }[]; // Legacy specific
     catalogues: Catalogue[];
-    deletedItems?: ArchivedItem[]; 
+    deletedItems?: ArchivedItem[]; // New Generic Catch-all
     deletedAt: Record<string, string>; 
 }
 
@@ -224,17 +223,17 @@ export interface StoreData {
   hero: HeroConfig;
   catalogues?: Catalogue[]; 
   pricelists?: Pricelist[];
-  pricelistBrands?: PricelistBrand[]; 
+  pricelistBrands?: PricelistBrand[]; // New independent list
   brands: Brand[];
-  tv?: TVConfig; 
+  tv?: TVConfig; // New TV Configuration
   ads?: AdConfig;
   screensaverSettings?: ScreensaverSettings; 
   fleet?: KioskRegistry[]; 
   archive?: ArchiveData; 
   about?: AboutConfig;
-  admins: AdminUser[]; 
-  appConfig?: AppConfig; 
-  systemSettings?: SystemSettings; 
+  admins: AdminUser[]; // New Admin Management
+  appConfig?: AppConfig; // New App Icon Configuration
+  systemSettings?: SystemSettings; // New System Configuration (PIN)
 }
 
 export interface FlatProduct extends Product {
