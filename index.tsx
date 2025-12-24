@@ -2,7 +2,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { isTvUserAgent, lockLandscapeOrientation } from './services/kioskService';
 
 interface ErrorBoundaryProps {
   children?: React.ReactNode;
@@ -106,19 +105,6 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return this.props.children;
   }
 }
-
-// AUTO-TV DETECTION & ORIENTATION LOCK
-const initializeHardware = async () => {
-    if (isTvUserAgent()) {
-        console.log("System: TV Device Detected via User Agent.");
-        // Add class to bypass portrait enforcement overlay in index.html
-        document.body.classList.add('allow-landscape');
-        // Force Landscape Lock
-        await lockLandscapeOrientation();
-    }
-};
-
-initializeHardware();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
