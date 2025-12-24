@@ -69,6 +69,7 @@ export const checkCloudConnection = async (): Promise<boolean> => {
 const STORAGE_KEY_ID = 'kiosk_pro_device_id';
 const STORAGE_KEY_NAME = 'kiosk_pro_shop_name';
 const STORAGE_KEY_TYPE = 'kiosk_pro_device_type';
+const START_TIME = Date.now();
 
 export const getKioskId = (): string | null => {
   return localStorage.getItem(STORAGE_KEY_ID);
@@ -87,10 +88,6 @@ export const provisionKioskId = async (): Promise<string> => {
   return nextId;
 };
 
-/**
- * Attempts to find this device in the Supabase database.
- * If found, restores name and type to localStorage.
- */
 export const tryRecoverIdentity = async (id: string): Promise<boolean> => {
     if (!supabase) initSupabase();
     if (!supabase) return false;
@@ -156,7 +153,14 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   return true;
 };
 
-export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean } | null> => {
+const getUptimeString = () => {
+    const diff = Date.now() - START_TIME;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${mins}m`;
+};
+
+export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean, command?: any } | null> => {
   const id = getKioskId();
   if (!id) return null;
   if (!supabase) initSupabase();
@@ -165,21 +169,18 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
   let currentDeviceType = getDeviceType();
   let currentZone = "Unassigned";
   let configChanged = false;
-  let restartFlag = false;
+  let remoteCommand = null;
 
   try {
-      // 1. SYNC: Pull latest configuration from cloud first
+      // 1. SYNC: Pull latest configuration and commands
       if (supabase) {
           const { data: remoteData, error: fetchError } = await supabase
               .from('kiosks')
-              .select('name, device_type, assigned_zone, restart_requested')
+              .select('name, device_type, assigned_zone, restart_requested, remote_command')
               .eq('id', id)
               .maybeSingle();
 
-          // CRITICAL FIX: If device not found in DB, it has been deleted from fleet
-          if (!fetchError && !remoteData) {
-              return { deleted: true };
-          }
+          if (!fetchError && !remoteData) return { deleted: true };
 
           if (!fetchError && remoteData) {
               if (remoteData.name && remoteData.name !== currentName) {
@@ -193,11 +194,12 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
                   configChanged = true;
               }
               if (remoteData.assigned_zone) currentZone = remoteData.assigned_zone;
-              if (remoteData.restart_requested) restartFlag = true;
+              if (remoteData.restart_requested) remoteCommand = { type: 'restart' };
+              if (remoteData.remote_command) remoteCommand = remoteData.remote_command;
           }
       }
 
-      // 2. TELEMETRY: Push status update
+      // 2. TELEMETRY: Detailed Metrics
       if (supabase) {
           const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
           let wifiStrength = 100;
@@ -209,6 +211,17 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               ipAddress = `${connection.effectiveType?.toUpperCase() || 'NET'} | ${connection.downlink}Mbps`;
           }
 
+          // Battery API
+          let batteryLevel = 100;
+          let isCharging = true;
+          try {
+            const battery: any = await (navigator as any).getBattery?.();
+            if (battery) {
+                batteryLevel = Math.round(battery.level * 100);
+                isCharging = battery.charging;
+            }
+          } catch(e) {}
+
           const payload: any = {
               id,
               name: currentName,
@@ -217,20 +230,29 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               last_seen: new Date().toISOString(),
               status: 'online',
               wifi_strength: wifiStrength,
-              ip_address: ipAddress
+              ip_address: ipAddress,
+              battery_level: batteryLevel,
+              is_charging: isCharging,
+              orientation: window.innerHeight > window.innerWidth ? 'portrait' : 'landscape',
+              uptime: getUptimeString(),
+              memory_usage: (performance as any).memory?.usedJSHeapSize ? Math.round((performance as any).memory.usedJSHeapSize / 1048576) : null
           };
           
-          // Only clear the restart flag in the payload if it was actually true and we are acknowledging it
-          if (restartFlag) {
+          // Clear processed commands
+          if (remoteCommand) {
               payload.restart_requested = false;
+              payload.remote_command = null;
           }
 
           await supabase.from('kiosks').upsert(payload);
       }
 
-      if (restartFlag || configChanged) {
-          return { deviceType: currentDeviceType, name: currentName, restart: restartFlag };
-      }
+      return { 
+          deviceType: currentDeviceType, 
+          name: currentName, 
+          restart: remoteCommand?.type === 'restart', 
+          command: remoteCommand 
+      };
 
   } catch (e) {
       console.warn("Sync cycle failed", e);
