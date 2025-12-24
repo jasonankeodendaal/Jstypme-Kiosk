@@ -87,6 +87,10 @@ export const provisionKioskId = async (): Promise<string> => {
   return nextId;
 };
 
+/**
+ * Attempts to find this device in the Supabase database.
+ * If found, restores name and type to localStorage.
+ */
 export const tryRecoverIdentity = async (id: string): Promise<boolean> => {
     if (!supabase) initSupabase();
     if (!supabase) return false;
@@ -139,12 +143,10 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
           last_seen: new Date().toISOString(),
           wifi_strength: 100,
           ip_address: 'Unknown',
-          version: '1.2.0-PRO',
+          version: '1.0.5',
           location_description: 'Newly Registered',
           assigned_zone: 'Unassigned',
-          restart_requested: false,
-          battery_level: 100,
-          is_charging: true
+          restart_requested: false
         };
         await supabase.from('kiosks').upsert(kioskData);
       } catch(e: any) {
@@ -154,7 +156,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   return true;
 };
 
-export const sendHeartbeat = async (currentScreen?: string): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean, forcedRefresh?: boolean, toggleScreensaver?: boolean } | null> => {
+export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean } | null> => {
   const id = getKioskId();
   if (!id) return null;
   if (!supabase) initSupabase();
@@ -164,29 +166,20 @@ export const sendHeartbeat = async (currentScreen?: string): Promise<{ deviceTyp
   let currentZone = "Unassigned";
   let configChanged = false;
   let restartFlag = false;
-  let refreshFlag = false;
-  let screensaverToggleFlag = false;
-
-  // Collect Hardware Telemetry
-  let batteryLevel = 100;
-  let isCharging = true;
-  try {
-      const battery: any = await (navigator as any).getBattery?.();
-      if (battery) {
-          batteryLevel = Math.round(battery.level * 100);
-          isCharging = battery.charging;
-      }
-  } catch (e) {}
 
   try {
+      // 1. SYNC: Pull latest configuration from cloud first
       if (supabase) {
           const { data: remoteData, error: fetchError } = await supabase
               .from('kiosks')
-              .select('name, device_type, assigned_zone, restart_requested, forced_refresh_requested, screensaver_toggle_requested')
+              .select('name, device_type, assigned_zone, restart_requested')
               .eq('id', id)
               .maybeSingle();
 
-          if (!fetchError && !remoteData) return { deleted: true };
+          // CRITICAL FIX: If device not found in DB, it has been deleted from fleet
+          if (!fetchError && !remoteData) {
+              return { deleted: true };
+          }
 
           if (!fetchError && remoteData) {
               if (remoteData.name && remoteData.name !== currentName) {
@@ -201,11 +194,10 @@ export const sendHeartbeat = async (currentScreen?: string): Promise<{ deviceTyp
               }
               if (remoteData.assigned_zone) currentZone = remoteData.assigned_zone;
               if (remoteData.restart_requested) restartFlag = true;
-              if (remoteData.forced_refresh_requested) refreshFlag = true;
-              if (remoteData.screensaver_toggle_requested) screensaverToggleFlag = true;
           }
       }
 
+      // 2. TELEMETRY: Push status update
       if (supabase) {
           const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
           let wifiStrength = 100;
@@ -225,27 +217,20 @@ export const sendHeartbeat = async (currentScreen?: string): Promise<{ deviceTyp
               last_seen: new Date().toISOString(),
               status: 'online',
               wifi_strength: wifiStrength,
-              ip_address: ipAddress,
-              version: '1.2.0-PRO',
-              battery_level: batteryLevel,
-              is_charging: isCharging,
-              current_screen: currentScreen || 'Idle'
+              ip_address: ipAddress
           };
           
-          if (restartFlag) payload.restart_requested = false;
-          if (refreshFlag) payload.forced_refresh_requested = false;
-          if (screensaverToggleFlag) payload.screensaver_toggle_requested = false;
+          // Only clear the restart flag in the payload if it was actually true and we are acknowledging it
+          if (restartFlag) {
+              payload.restart_requested = false;
+          }
 
           await supabase.from('kiosks').upsert(payload);
       }
 
-      return { 
-          deviceType: currentDeviceType, 
-          name: currentName, 
-          restart: restartFlag, 
-          forcedRefresh: refreshFlag, 
-          toggleScreensaver: screensaverToggleFlag 
-      };
+      if (restartFlag || configChanged) {
+          return { deviceType: currentDeviceType, name: currentName, restart: restartFlag };
+      }
 
   } catch (e) {
       console.warn("Sync cycle failed", e);
