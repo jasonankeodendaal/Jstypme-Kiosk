@@ -1822,7 +1822,6 @@ const TVModelEditor = ({ model, onSave, onClose }: { model: TVModel, onSave: (m:
                 </div>
 
                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-white shrink-0">
-                    {/* Fix: changed onClose to onClick for button compatibility */}
                     <button onClick={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
                     <button onClick={() => onSave(draft)} className="px-4 py-2 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg">Save Model</button>
                 </div>
@@ -1904,7 +1903,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
         } else {
             updatedList.push({
                 id: generateId('adm'),
-                name: name,
+                name: newName,
                 pin: newPin,
                 isSuperAdmin: false,
                 permissions: newPermissions
@@ -2011,7 +2010,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
                             <div key={admin.id} className={`p-4 rounded-xl border transition-all ${editingId === admin.id ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100' : 'bg-white border-slate-200 hover:border-blue-300'}`}>
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="flex items-center gap-2">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${admin.isSuperAdmin ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-500'}`}>
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${admin.isSuperAdmin ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-50'}`}>
                                             <UserCog size={16} />
                                         </div>
                                         <div>
@@ -2057,11 +2056,8 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
     }
     
     const newBrands: Record<string, Brand> = {};
-    
-    // Helper: Normalize path to avoid Windows/Mac slash issues
     const getCleanPath = (filename: string) => filename.replace(/\\/g, '/');
 
-    // 1. Detect Root Wrapper (e.g. user zipped a folder "Backup" containing Brands)
     const validFiles = Object.keys(loadedZip.files).filter(path => {
         return !loadedZip.files[path].dir && !path.includes('__MACOSX') && !path.includes('.DS_Store');
     });
@@ -2074,12 +2070,10 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
             const allHaveRoot = validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'));
             if (allHaveRoot) {
                 rootPrefix = possibleRoot + '/';
-                console.log("Import: Stripping root folder:", rootPrefix);
             }
         }
     }
 
-    // Helper: Determine MIME type
     const getMimeType = (filename: string) => {
         const ext = filename.split('.').pop()?.toLowerCase();
         if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
@@ -2092,27 +2086,19 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
         return 'application/octet-stream';
     };
 
-    // Helper: Process Asset (Upload to Cloud if available to save JSON size)
     const processAsset = async (zipObj: any, filename: string): Promise<string> => {
         const blob = await zipObj.async("blob");
-        
-        // Try Cloud Upload First (To keep JSON small)
         if (supabase) {
              try {
                  const mimeType = getMimeType(filename);
-                 // Sanitize filename
                  const safeName = filename.replace(/[^a-z0-9._-]/gi, '_');
-                 // Create File object
                  const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType });
-                 // Upload sequentially (this function is called inside sequential loop)
                  const url = await uploadFileToStorage(fileToUpload);
                  return url;
              } catch (e) {
                  console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e);
              }
         }
-
-        // Fallback Base64 (Only if offline or upload failed)
         return new Promise(resolve => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
@@ -2120,7 +2106,6 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
         });
     };
 
-    // Iterate files
     const filePaths = Object.keys(loadedZip.files);
     let processedCount = 0;
     
@@ -2129,103 +2114,57 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
         const fileObj = loadedZip.files[rawPath];
         if (fileObj.dir) continue;
         if (path.includes('__MACOSX') || path.includes('.DS_Store')) continue;
-
-        // Remove Root Prefix if detected
         if (rootPrefix && path.startsWith(rootPrefix)) {
             path = path.substring(rootPrefix.length);
         }
-
-        // SKIP SYSTEM BACKUP FOLDERS in Inventory Import
         if (path.startsWith('_System_Backup/')) continue;
         if (path.includes('store_config')) continue;
-
-        // Path: Brand/Category/Product/File.ext OR Brand/BrandFile.ext
         const parts = path.split('/').filter(p => p.trim() !== '');
-        
-        // Skip root files if any (files not inside a Brand folder)
         if (parts.length < 2) continue;
 
         processedCount++;
         if (onProgress && processedCount % 5 === 0) onProgress(`Processing item ${processedCount}/${validFiles.length}...`);
 
         const brandName = parts[0];
-
-        // Init Brand
         if (!newBrands[brandName]) {
-            newBrands[brandName] = {
-                id: generateId('brand'),
-                name: brandName,
-                categories: []
-            };
+            newBrands[brandName] = { id: generateId('brand'), name: brandName, categories: [] };
         }
-
-        // Handle Brand Assets (Level 2: Brand/brand_logo.png)
         if (parts.length === 2) {
              const fileName = parts[1].toLowerCase();
-             // Parse brand logo
              if (fileName.includes('brand_logo') || fileName.includes('logo')) {
                   const url = await processAsset(fileObj, parts[1]);
                   newBrands[brandName].logoUrl = url;
              }
-             // Parse Brand JSON metadata if exists
              if (fileName.endsWith('.json') && fileName.includes('brand')) {
                  try {
                      const text = await fileObj.async("text");
                      const meta = JSON.parse(text);
                      if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor;
-                     // Allow ID overwrite if restoring backup
                      if (meta.id) newBrands[brandName].id = meta.id; 
                  } catch(e) {}
              }
              continue;
         }
-
-        // Require Product Depth for rest (Brand/Category/Product/File)
         if (parts.length < 4) continue;
-
         const categoryName = parts[1];
         const productName = parts[2];
-        const fileName = parts.slice(3).join('/'); // In case of subfolders inside product (e.g. gallery)
-
-        // Init Category
+        const fileName = parts.slice(3).join('/');
         let category = newBrands[brandName].categories.find(c => c.name === categoryName);
         if (!category) {
-            category = {
-                id: generateId('cat'),
-                name: categoryName,
-                icon: 'Box',
-                products: []
-            };
+            category = { id: generateId('cat'), name: categoryName, icon: 'Box', products: [] };
             newBrands[brandName].categories.push(category);
         }
-
-        // Init Product
         let product = category.products.find(p => p.name === productName);
         if (!product) {
-            product = {
-                id: generateId('prod'),
-                name: productName, 
-                description: '',
-                specs: {},
-                features: [],
-                dimensions: [],
-                imageUrl: '',
-                galleryUrls: [],
-                videoUrls: [],
-                manuals: [],
-                dateAdded: new Date().toISOString()
-            };
+            product = { id: generateId('prod'), name: productName, description: '', specs: {}, features: [], dimensions: [], imageUrl: '', galleryUrls: [], videoUrls: [], manuals: [], dateAdded: new Date().toISOString() };
             category.products.push(product);
         }
-
         const lowerFile = fileName.toLowerCase();
-        
-        // Handle Details JSON - Deep Merge
         if (fileName.endsWith('.json') && (fileName.includes('details') || fileName.includes('product'))) {
              try {
                  const text = await fileObj.async("text");
                  const meta = JSON.parse(text);
-                 if (meta.id) product.id = meta.id; // Restore ID
+                 if (meta.id) product.id = meta.id;
                  if (meta.name) product.name = meta.name;
                  if (meta.description) product.description = meta.description;
                  if (meta.sku) product.sku = meta.sku;
@@ -2235,9 +2174,8 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                  if (meta.boxContents) product.boxContents = meta.boxContents;
                  if (meta.terms) product.terms = meta.terms;
                  if (meta.dateAdded) product.dateAdded = meta.dateAdded;
-             } catch(e) { console.warn("Failed to parse JSON for " + productName); }
+             } catch(e) {}
         }
-        // Handle Images
         else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
              const url = await processAsset(fileObj, parts.slice(3).join('_'));
              if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
@@ -2246,46 +2184,28 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                  product.galleryUrls = [...(product.galleryUrls || []), url];
              }
         }
-        // Handle Videos
         else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
             const url = await processAsset(fileObj, parts.slice(3).join('_'));
             product.videoUrls = [...(product.videoUrls || []), url];
         }
-        // Handle Manuals
         else if (lowerFile.endsWith('.pdf')) {
              const url = await processAsset(fileObj, parts.slice(3).join('_'));
-             product.manuals?.push({
-                 id: generateId('man'),
-                 title: fileName.replace('.pdf', '').replace(/_/g, ' '),
-                 images: [],
-                 pdfUrl: url,
-                 thumbnailUrl: '' 
-             });
+             product.manuals?.push({ id: generateId('man'), title: fileName.replace('.pdf', '').replace(/_/g, ' '), images: [], pdfUrl: url, thumbnailUrl: '' });
         }
     }
-
     return Object.values(newBrands);
 };
 
-// Fix: Implemented missing downloadZip function
 const downloadZip = async (data: StoreData | null) => {
     if (!data) return;
     const zip = new JSZip();
-    
-    // Add the main store config as JSON
     const dataJson = JSON.stringify(data, null, 2);
     zip.file("store_config.json", dataJson);
-    
-    // Create folder structure for visual backup (Documentation for user)
     const backupFolder = zip.folder("_System_Backup");
     if (backupFolder) {
         backupFolder.file("export_info.txt", `Kiosk Pro Backup\nGenerated: ${new Date().toISOString()}`);
     }
-
-    // Generate the zip file
     const content = await zip.generateAsync({ type: "blob" });
-    
-    // Trigger download
     const url = URL.createObjectURL(content);
     const link = document.createElement("a");
     link.href = url;
@@ -2298,7 +2218,6 @@ const downloadZip = async (data: StoreData | null) => {
 
 export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => void, onRefresh: () => void }) => {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
-  
   const [activeTab, setActiveTab] = useState<string>('inventory');
   const [activeSubTab, setActiveSubTab] = useState<string>('brands'); 
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
@@ -2310,11 +2229,8 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [showGuide, setShowGuide] = useState(false);
   const [selectedTVBrand, setSelectedTVBrand] = useState<TVBrand | null>(null);
   const [editingTVModel, setEditingTVModel] = useState<TVModel | null>(null);
-  
-  // History State
   const [historyTab, setHistoryTab] = useState<'brands' | 'catalogues' | 'deletedItems'>('deletedItems');
   const [historySearch, setHistorySearch] = useState('');
-  
   const [localData, setLocalData] = useState<StoreData | null>(storeData);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [importProcessing, setImportProcessing] = useState(false);
@@ -2330,7 +2246,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       { id: 'fleet', label: 'Fleet', icon: Tablet },
       { id: 'history', label: 'History', icon: History },
       { id: 'settings', label: 'Settings', icon: Settings },
-      { id: 'guide', label: 'System Guide', icon: BookOpen } // New Tab
+      { id: 'guide', label: 'System Guide', icon: BookOpen } 
   ].filter(tab => tab.id === 'guide' || currentUser?.permissions[tab.id as keyof AdminPermissions]);
 
   useEffect(() => {
@@ -2351,21 +2267,9 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       }
   }, [storeData]);
 
-  useEffect(() => {
-      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-          if (hasUnsavedChanges) {
-              e.preventDefault();
-              e.returnValue = '';
-          }
-      };
-      window.addEventListener('beforeunload', handleBeforeUnload);
-      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
   const handleLocalUpdate = (newData: StoreData) => {
       setLocalData(newData);
       setHasUnsavedChanges(true);
-      
       if (selectedBrand) {
           const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id);
           if (updatedBrand) setSelectedBrand(updatedBrand);
@@ -2381,18 +2285,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       }
   };
 
-  const checkSkuDuplicate = (sku: string, currentId: string) => {
-    if (!sku || !localData) return false;
-    for (const b of localData.brands) {
-        for (const c of b.categories) {
-            for (const p of c.products) {
-                if (p.sku && p.sku.toLowerCase() === sku.toLowerCase() && p.id !== currentId) return true;
-            }
-        }
-    }
-    return false;
-  };
-
   const handleGlobalSave = () => {
       if (localData) {
           onUpdateData(localData);
@@ -2402,13 +2294,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
   const updateFleetMember = async (kiosk: KioskRegistry) => {
       if(supabase) {
-          const payload = {
-              id: kiosk.id,
-              name: kiosk.name,
-              device_type: kiosk.deviceType,
-              assigned_zone: kiosk.assignedZone
-          };
-          await supabase.from('kiosks').upsert(payload);
+          await supabase.from('kiosks').upsert({ id: kiosk.id, name: kiosk.name, device_type: kiosk.deviceType, assigned_zone: kiosk.assignedZone });
           onRefresh(); 
       }
   };
@@ -2416,180 +2302,48 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const removeFleetMember = async (id: string) => {
       const kiosk = localData?.fleet?.find(f => f.id === id);
       if(!kiosk) return;
-
-      if(confirm(`Archive and remove device "${kiosk.name}" from live monitoring?`) && supabase) {
-          // 1. Archive the device data
-          const newArchive = addToArchive('device', kiosk.name, kiosk);
-          
-          // 2. Update local data state
-          const updatedData = { ...localData!, archive: newArchive };
-          
-          // 3. Delete from live table
+      if(confirm(`Archive and remove device "${kiosk.name}"?`) && supabase) {
+          const now = new Date().toISOString();
+          const newItem = { id: generateId('arch'), type: 'device', name: kiosk.name, data: kiosk, deletedAt: now };
+          const newArchive = { ...localData!.archive!, deletedItems: [newItem, ...(localData!.archive?.deletedItems || [])] };
+          const updatedData = { ...localData!, archive: newArchive as any };
           await supabase.from('kiosks').delete().eq('id', id);
-          
-          // 4. Force cloud sync of config (archive)
           onUpdateData(updatedData);
-          
           onRefresh();
       }
-  };
-
-  // ARCHIVE HANDLERS
-  const addToArchive = (type: 'product' | 'pricelist' | 'tv_model' | 'device' | 'other', name: string, data: any) => {
-      if (!localData) return;
-      const now = new Date().toISOString();
-      const newItem = {
-          id: generateId('arch'),
-          type,
-          name,
-          data,
-          deletedAt: now
-      };
-      
-      const currentArchive = localData.archive || { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} };
-      const newArchive = {
-          ...currentArchive,
-          deletedItems: [newItem, ...(currentArchive.deletedItems || [])]
-      };
-      
-      return newArchive;
   };
 
   const restoreBrand = (b: Brand) => {
      if(!localData) return;
      const newArchiveBrands = localData.archive?.brands.filter(x => x.id !== b.id) || [];
-     const newBrands = [...localData.brands, b];
-     handleLocalUpdate({
-         ...localData,
-         brands: newBrands,
-         archive: { ...localData.archive!, brands: newArchiveBrands }
-     });
+     handleLocalUpdate({ ...localData, brands: [...localData.brands, b], archive: { ...localData.archive!, brands: newArchiveBrands } });
   };
   
   const restoreCatalogue = (c: Catalogue) => {
      if(!localData) return;
      const newArchiveCats = localData.archive?.catalogues.filter(x => x.id !== c.id) || [];
-     const newCats = [...(localData.catalogues || []), c];
-     handleLocalUpdate({
-         ...localData,
-         catalogues: newCats,
-         archive: { ...localData.archive!, catalogues: newArchiveCats }
-     });
-  };
-
-  const handleMoveProduct = (product: Product, targetBrandId: string, targetCategoryId: string) => {
-      if (!localData || !selectedBrand || !selectedCategory) return;
-      
-      const updatedSourceCat = {
-          ...selectedCategory,
-          products: selectedCategory.products.filter(p => p.id !== product.id)
-      };
-      
-      let newBrands = localData.brands.map(b => {
-          if (b.id === selectedBrand.id) {
-              return {
-                  ...b,
-                  categories: b.categories.map(c => c.id === selectedCategory.id ? updatedSourceCat : c)
-              };
-          }
-          return b;
-      });
-
-      newBrands = newBrands.map(b => {
-          if (b.id === targetBrandId) {
-              return {
-                  ...b,
-                  categories: b.categories.map(c => {
-                      if (c.id === targetCategoryId) {
-                          return { ...c, products: [...c.products, product] };
-                      }
-                      return c;
-                  })
-              };
-          }
-          return b;
-      });
-
-      handleLocalUpdate({ ...localData, brands: newBrands });
-      setMovingProduct(null);
-  };
-
-  const formatRelativeTime = (isoString: string) => {
-      if (!isoString) return 'Unknown';
-      const date = new Date(isoString);
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      
-      if (diffDays === 0) return 'Today';
-      if (diffDays === 1) return 'Yesterday';
-      if (diffDays < 7) return `${diffDays} days ago`;
-      if (diffDays < 30) return `${Math.floor(diffDays/7)} weeks ago`;
-      return date.toLocaleDateString();
+     handleLocalUpdate({ ...localData, catalogues: [...(localData.catalogues || []), c], archive: { ...localData.archive!, catalogues: newArchiveCats } });
   };
 
   if (!localData) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /> Loading...</div>;
   if (!currentUser) return <Auth admins={localData.admins || []} onLogin={setCurrentUser} />;
 
-  const brands = Array.isArray(localData.brands) 
-      ? [...localData.brands].sort((a, b) => a.name.localeCompare(b.name)) 
-      : [];
-
-  const tvBrands = Array.isArray(localData.tv?.brands)
-      ? [...localData.tv!.brands].sort((a, b) => a.name.localeCompare(b.name))
-      : [];
-
-  // Filter Logic for History
-  const archivedBrands = (localData.archive?.brands || []).filter(b => 
-      b.name.toLowerCase().includes(historySearch.toLowerCase()) || 
-      b.id.toLowerCase().includes(historySearch.toLowerCase())
-  );
-  
-  const archivedCatalogues = (localData.archive?.catalogues || []).filter(c => 
-      c.title.toLowerCase().includes(historySearch.toLowerCase())
-  );
-
-  const archivedGenericItems = (localData.archive?.deletedItems || []).filter(i =>
-      i.name.toLowerCase().includes(historySearch.toLowerCase())
-  );
+  const brands = Array.isArray(localData.brands) ? [...localData.brands].sort((a, b) => a.name.localeCompare(b.name)) : [];
+  const tvBrands = Array.isArray(localData.tv?.brands) ? [...localData.tv!.brands].sort((a, b) => a.name.localeCompare(b.name)) : [];
 
   return (
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
         <header className="bg-slate-900 text-white shrink-0 shadow-xl z-20">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
-                 <div className="flex items-center gap-2">
-                     <Settings className="text-blue-500" size={24} />
-                     <div><h1 className="text-lg font-black uppercase tracking-widest leading-none">Admin Hub</h1></div>
-                 </div>
-                 
+                 <div className="flex items-center gap-2"><Settings className="text-blue-500" size={24} /><div><h1 className="text-lg font-black uppercase tracking-widest leading-none">Admin Hub</h1></div></div>
                  <div className="flex items-center gap-4">
-                     <div className="text-xs font-bold text-slate-400 uppercase hidden md:block">
-                         Hello, {currentUser.name}
-                     </div>
-                     <button 
-                         onClick={handleGlobalSave}
-                         disabled={!hasUnsavedChanges}
-                         className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${
-                             hasUnsavedChanges 
-                             ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse' 
-                             : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                         }`}
-                     >
-                         <SaveAll size={16} />
-                         {hasUnsavedChanges ? 'Save Changes' : 'Saved'}
-                     </button>
+                     <div className="text-xs font-bold text-slate-400 uppercase hidden md:block">Hello, {currentUser.name}</div>
+                     <button onClick={handleGlobalSave} disabled={!hasUnsavedChanges} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 'bg-slate-800 text-slate-500'}`}><SaveAll size={16} />{hasUnsavedChanges ? 'Save Changes' : 'Saved'}</button>
                  </div>
-
                  <div className="flex items-center gap-3">
-                     <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>
-                         {isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}
-                         <span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span>
-                     </div>
+                     <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}><Cloud size={14} /><span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Online' : 'Local'}</span></div>
                      <button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button>
-                     <button onClick={() => setCurrentUser(null)} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2">
-                        <LogOut size={16} />
-                        <span className="text-[10px] font-bold uppercase hidden md:inline">Logout</span>
-                     </button>
+                     <button onClick={() => setCurrentUser(null)} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2"><LogOut size={16} /></button>
                  </div>
             </div>
             <div className="flex overflow-x-auto no-scrollbar">
@@ -2601,166 +2355,38 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
         {activeTab === 'marketing' && (
             <div className="bg-white border-b border-slate-200 flex overflow-x-auto no-scrollbar shadow-sm z-10 shrink-0">
-                <button onClick={() => setActiveSubTab('hero')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'hero' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Hero Banner</button>
-                <button onClick={() => setActiveSubTab('ads')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'ads' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Ad Zones</button>
-                <button onClick={() => setActiveSubTab('catalogues')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'catalogues' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Pamphlets</button>
+                {['hero', 'ads', 'catalogues'].map(sub => (
+                    <button key={sub} onClick={() => setActiveSubTab(sub)} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === sub ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>{sub.charAt(0).toUpperCase() + sub.slice(1)}</button>
+                ))}
             </div>
         )}
 
         <main className="flex-1 overflow-y-auto p-2 md:p-8 relative pb-40 md:pb-8">
-            {/* Guide Tab */}
             {activeTab === 'guide' && <SystemDocumentation />}
-
-            {/* Inventory Tab */}
             {activeTab === 'inventory' && (
                 !selectedBrand ? (
                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 animate-fade-in">
-                       <button onClick={() => { const name = prompt("Brand Name:"); if(name) handleLocalUpdate({ ...localData, brands: [...brands, { id: generateId('b'), name, categories: [] }] }) }} className="bg-white border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-4 md:p-8 text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-all group min-h-[120px] md:min-h-[200px]">
-                           <Plus size={24} className="mb-2" /><span className="font-bold uppercase text-[10px] md:text-xs tracking-wider text-center">Add Brand</span>
-                       </button>
+                       <button onClick={() => { const name = prompt("Brand Name:"); if(name) handleLocalUpdate({ ...localData, brands: [...brands, { id: generateId('b'), name, categories: [] }] }) }} className="bg-white border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-4 md:p-8 text-slate-400 hover:border-blue-500 transition-all min-h-[120px] md:min-h-[200px]"><Plus size={24} /><span className="font-bold uppercase text-[10px] mt-2">Add Brand</span></button>
                        {brands.map(brand => (
-                           <div key={brand.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all group relative flex flex-col h-full">
-                               <div className="flex-1 bg-slate-50 flex items-center justify-center p-2 relative aspect-square">
-                                   {brand.logoUrl ? <img src={brand.logoUrl} className="max-h-full max-w-full object-contain" /> : <span className="text-4xl font-black text-slate-200">{brand.name.charAt(0)}</span>}
-                                   <button onClick={(e) => { e.stopPropagation(); if(confirm("Move to archive?")) { const now = new Date().toISOString(); handleLocalUpdate({...localData, brands: brands.filter(b=>b.id!==brand.id), archive: {...localData.archive!, brands: [...(localData.archive?.brands||[]), brand], deletedAt: {...localData.archive?.deletedAt, [brand.id]: now} }}); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12}/></button>
-                               </div>
-                               <div className="p-2 md:p-4">
-                                   <h3 className="font-black text-slate-900 text-xs md:text-lg uppercase tracking-tight mb-1 truncate">{brand.name}</h3>
-                                   <p className="text-[10px] md:text-xs text-slate-500 font-bold mb-2 md:mb-4">{brand.categories.length} Categories</p>
-                                   <button onClick={() => setSelectedBrand(brand)} className="w-full bg-slate-900 text-white py-1.5 md:py-2 rounded-lg font-bold text-[10px] md:text-xs uppercase hover:bg-blue-600 transition-colors">Manage</button>
-                               </div>
-                           </div>
+                           <div key={brand.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden group relative flex flex-col h-full"><div className="flex-1 bg-slate-50 flex items-center justify-center p-2 relative aspect-square">{brand.logoUrl ? <img src={brand.logoUrl} className="max-h-full max-w-full object-contain" /> : <span className="text-4xl font-black text-slate-200">{brand.name.charAt(0)}</span>}<button onClick={() => { if(confirm("Archive?")) { const now = new Date().toISOString(); handleLocalUpdate({...localData, brands: brands.filter(b=>b.id!==brand.id), archive: {...localData.archive!, brands: [...(localData.archive?.brands||[]), brand] }}); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12}/></button></div><div className="p-2 md:p-4"><h3 className="font-black text-slate-900 text-xs md:text-lg uppercase truncate mb-1">{brand.name}</h3><button onClick={() => setSelectedBrand(brand)} className="w-full bg-slate-900 text-white py-1.5 rounded-lg font-bold text-[10px] uppercase">Manage</button></div></div>
                        ))}
                    </div>
                ) : !selectedCategory ? (
-                   <div className="animate-fade-in">
-                       <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-xl md:text-2xl font-black uppercase text-slate-900 flex-1">{selectedBrand.name}</h2><FileUpload label="Brand Logo" currentUrl={selectedBrand.logoUrl} onUpload={(url: any) => { const updated = {...selectedBrand, logoUrl: url}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }} /></div>
-                       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-                           <button onClick={() => { const name = prompt("Category Name:"); if(name) { const updated = {...selectedBrand, categories: [...selectedBrand.categories, { id: generateId('c'), name, icon: 'Box', products: [] }]}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); } }} className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-4 text-slate-400 hover:border-blue-500 hover:text-blue-500 aspect-square"><Plus size={24} /><span className="font-bold text-[10px] uppercase mt-2 text-center">New Category</span></button>
-                           {selectedBrand.categories.map(cat => (
-                               <button key={cat.id} onClick={() => setSelectedCategory(cat)} className="bg-white p-2 md:p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md text-left group relative aspect-square flex flex-col justify-center">
-                                   <Box size={20} className="mb-2 md:mb-4 text-slate-400 mx-auto md:mx-0" />
-                                   <h3 className="font-black text-slate-900 uppercase text-[10px] md:text-sm text-center md:text-left truncate w-full">{cat.name}</h3>
-                                   <p className="text-[9px] md:text-xs text-slate-500 font-bold text-center md:text-left">{cat.products.length} Products</p>
-                                   <div onClick={(e)=>{e.stopPropagation(); const newName = prompt("Rename Category:", cat.name); if(newName && newName.trim() !== "") { const updated = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === cat.id ? {...c, name: newName.trim()} : c)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-8 md:top-2 md:right-8 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-500 rounded transition-all"><Edit2 size={12}/></div>
-                                   <div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ const updated={...selectedBrand, categories: selectedBrand.categories.filter(c=>c.id!==cat.id)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-1 md:top-2 md:right-2 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded"><Trash2 size={12}/></div>
-                                </button>
-                            ))}
-                       </div>
-                       <div className="mt-8 border-t border-slate-200 pt-8"><h3 className="font-bold text-slate-900 uppercase text-sm mb-4">Brand Catalogues</h3><CatalogueManager catalogues={localData.catalogues?.filter(c => c.brandId === selectedBrand.id) || []} brandId={selectedBrand.id} onSave={(c) => { const otherCatalogues = (localData.catalogues || []).filter(cat => cat.brandId !== selectedBrand.id); handleLocalUpdate({ ...localData, catalogues: [...otherCatalogues, ...c] }); }} /></div>
-                   </div>
+                   <div className="animate-fade-in"><div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg"><ArrowLeft size={20} /></button><h2 className="text-xl md:text-2xl font-black uppercase text-slate-900 flex-1">{selectedBrand.name}</h2><FileUpload label="Brand Logo" currentUrl={selectedBrand.logoUrl} onUpload={(url: any) => { const updated = {...selectedBrand, logoUrl: url}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }} /></div><div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2"><button onClick={() => { const name = prompt("Category Name:"); if(name) { const updated = {...selectedBrand, categories: [...selectedBrand.categories, { id: generateId('c'), name, icon: 'Box', products: [] }]}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); } }} className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-4 text-slate-400 aspect-square"><Plus size={24} /><span className="font-bold text-[10px] mt-2">New Cat</span></button>{selectedBrand.categories.map(cat => (<button key={cat.id} onClick={() => setSelectedCategory(cat)} className="bg-white p-2 md:p-6 rounded-xl border border-slate-200 shadow-sm text-left group relative aspect-square flex flex-col justify-center"><Box size={20} className="mb-2 text-slate-400" /><h3 className="font-black text-slate-900 uppercase text-[10px] md:text-sm truncate w-full">{cat.name}</h3><div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ handleLocalUpdate({...localData, brands: brands.map(b=>b.id===selectedBrand.id?{...b, categories: b.categories.filter(c=>c.id!==cat.id)}:b)}); }}} className="absolute top-1 right-1 p-1.5 opacity-0 group-hover:opacity-100 text-red-500 rounded"><Trash2 size={12}/></div></button>))}</div></div>
                ) : (
-                   <div className="animate-fade-in h-full flex flex-col">
-                       <div className="flex items-center gap-4 mb-6 shrink-0"><button onClick={() => setSelectedCategory(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-lg md:text-2xl font-black uppercase text-slate-900 flex-1 truncate">{selectedCategory.name}</h2><button onClick={() => setEditingProduct({ id: generateId('p'), name: '', description: '', specs: {}, features: [], dimensions: [], imageUrl: '' } as any)} className="bg-blue-600 text-white px-3 py-2 md:px-4 rounded-lg font-bold uppercase text-[10px] md:text-xs flex items-center gap-2 shrink-0"><Plus size={14} /> Add</button></div>
-                       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 overflow-y-auto pb-20">
-                           {selectedCategory.products.map(product => (
-                               <div key={product.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col group hover:shadow-lg transition-all">
-                                   <div className="aspect-square bg-slate-50 relative flex items-center justify-center p-2 md:p-4">
-                                       {product.imageUrl ? <img src={product.imageUrl} className="max-w-full max-h-full object-contain" /> : <Box size={24} className="text-slate-300" />}
-                                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                                           <div className="flex gap-2">
-                                                <button onClick={() => setEditingProduct(product)} className="p-1.5 md:p-2 bg-white text-blue-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50">Edit</button>
-                                                <button onClick={() => setMovingProduct(product)} className="p-1.5 md:p-2 bg-white text-orange-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-orange-50" title="Move Category">Move</button>
-                                           </div>
-                                           <button onClick={() => { 
-                                               if(confirm(`Delete product "${product.name}"?`)) { 
-                                                   const updatedCat = {...selectedCategory, products: selectedCategory.products.filter(p => p.id !== product.id)}; 
-                                                   const updatedBrand = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c)}; 
-                                                   
-                                                   // Add to archive
-                                                   const newArchive = addToArchive('product', product.name, product);
-                                                   
-                                                   handleLocalUpdate({...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b), archive: newArchive}); 
-                                               } 
-                                           }} className="p-1.5 md:p-2 bg-white text-red-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-red-50 w-[80%]">Delete</button>
-                                       </div>
-                                   </div>
-                                   <div className="p-2 md:p-4">
-                                       <h4 className="font-bold text-slate-900 text-[10px] md:text-sm truncate uppercase">{product.name}</h4>
-                                       <p className="text-[9px] md:text-xs text-slate-500 font-mono truncate">{product.sku || 'No SKU'}</p>
-                                   </div>
-                               </div>
-                            ))}
-                       </div>
-                   </div>
+                   <div className="animate-fade-in h-full flex flex-col"><div className="flex items-center gap-4 mb-6 shrink-0"><button onClick={() => setSelectedCategory(null)} className="p-2 bg-white border border-slate-200 rounded-lg"><ArrowLeft size={20} /></button><h2 className="text-lg md:text-2xl font-black uppercase text-slate-900 flex-1 truncate">{selectedCategory.name}</h2><button onClick={() => setEditingProduct({ id: generateId('p'), name: '', description: '', specs: {}, features: [], dimensions: [], imageUrl: '' } as any)} className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold uppercase text-[10px] md:text-xs flex items-center gap-2"><Plus size={14} /> Add Product</button></div><div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 overflow-y-auto pb-20">{selectedCategory.products.map(product => (<div key={product.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden group"><div className="aspect-square bg-slate-50 relative flex items-center justify-center p-2"><img src={product.imageUrl} className="max-w-full max-h-full object-contain" /><div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2"><button onClick={() => setEditingProduct(product)} className="p-1.5 bg-white text-blue-600 rounded-lg font-bold text-[10px] uppercase">Edit</button><button onClick={() => setMovingProduct(product)} className="p-1.5 bg-white text-orange-600 rounded-lg font-bold text-[10px] uppercase">Move</button><button onClick={() => { if(confirm(`Delete?`)) { handleLocalUpdate({...localData, brands: brands.map(b=>b.id===selectedBrand.id?{...b, categories: b.categories.map(c=>c.id===selectedCategory.id?{...c, products: c.products.filter(p=>p.id!==product.id)}:c)}:b)}); } }} className="p-1.5 bg-white text-red-600 rounded-lg font-bold text-[10px] uppercase">Delete</button></div></div><div className="p-2"><h4 className="font-bold text-slate-900 text-[10px] md:text-sm truncate uppercase">{product.name}</h4></div></div>))}</div></div>
                )
             )}
 
             {activeTab === 'pricelists' && (
-                <PricelistManager 
-                    pricelists={localData.pricelists || []} 
-                    pricelistBrands={localData.pricelistBrands || []}
-                    onSavePricelists={(p) => handleLocalUpdate({ ...localData, pricelists: p })}
-                    onSaveBrands={(b) => handleLocalUpdate({ ...localData, pricelistBrands: b })}
-                    onDeletePricelist={(id) => {
-                        const toDelete = localData.pricelists?.find(p => p.id === id);
-                        if (toDelete) {
-                            const newArchive = addToArchive('pricelist', toDelete.title, toDelete);
-                            handleLocalUpdate({ ...localData, pricelists: localData.pricelists?.filter(p => p.id !== id), archive: newArchive });
-                        }
-                    }}
-                />
+                <PricelistManager pricelists={localData.pricelists || []} pricelistBrands={localData.pricelistBrands || []} onSavePricelists={(p) => handleLocalUpdate({ ...localData, pricelists: p })} onSaveBrands={(b) => handleLocalUpdate({ ...localData, pricelistBrands: b })} onDeletePricelist={(id) => handleLocalUpdate({ ...localData, pricelists: localData.pricelists?.filter(p => p.id !== id) })} />
             )}
             
             {activeTab === 'tv' && (
                 !selectedTVBrand ? (
-                    <div className="animate-fade-in max-w-6xl mx-auto">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-black text-slate-900 uppercase">TV Video Management</h2>
-                        </div>
-                        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            <button onClick={() => { const name = prompt("Brand Name:"); if(name) { const newBrand = { id: generateId('tvb'), name, models: [] }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: [...(localData.tv?.brands || []), newBrand] } as TVConfig }); }}} className="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center p-4 min-h-[160px] text-indigo-400 hover:border-indigo-500 hover:text-indigo-600 transition-all group">
-                                <Plus size={32} className="mb-2" /><span className="font-bold uppercase text-xs tracking-wider text-center">Add TV Brand</span>
-                            </button>
-                            {tvBrands.map(brand => (
-                                <div key={brand.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-lg transition-all relative">
-                                    <div className="flex-1 bg-slate-50 flex items-center justify-center p-4 aspect-square">
-                                        {brand.logoUrl ? <img src={brand.logoUrl} className="max-full max-h-full object-contain" /> : <Tv size={32} className="text-slate-300" />}
-                                    </div>
-                                    <div className="p-4 bg-white border-t border-slate-100">
-                                        <h3 className="font-black text-slate-900 text-sm uppercase truncate mb-1">{brand.name}</h3>
-                                        <p className="text-xs text-slate-500 font-bold">{brand.models?.length || 0} Models</p>
-                                    </div>
-                                    <button onClick={(e) => { e.stopPropagation(); if(confirm("Delete TV Brand?")) { handleLocalUpdate({...localData, tv: { ...localData.tv, brands: tvBrands.filter(b => b.id !== brand.id) } as TVConfig }); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity z-20"><Trash2 size={14}/></button>
-                                    <button onClick={() => setSelectedTVBrand(brand)} className="absolute inset-0 w-full h-full opacity-0 z-10" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    <div className="animate-fade-in max-w-6xl mx-auto"><div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"><button onClick={() => { const name = prompt("Brand Name:"); if(name) handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: [...(localData.tv?.brands || []), { id: generateId('tvb'), name, models: [] }] } as any }); }} className="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center p-4 min-h-[160px] text-indigo-400 group"><Plus size={32} /><span className="font-bold uppercase text-xs mt-2">Add TV Brand</span></button>{tvBrands.map(brand => (<div key={brand.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden group relative flex flex-col h-full"><div className="flex-1 bg-slate-50 flex items-center justify-center p-4 aspect-square">{brand.logoUrl ? <img src={brand.logoUrl} className="max-full max-h-full object-contain" /> : <Tv size={32} className="text-slate-300" />}</div><div className="p-4 bg-white"><h3 className="font-black text-slate-900 text-sm uppercase truncate mb-1">{brand.name}</h3><button onClick={() => setSelectedTVBrand(brand)} className="w-full bg-slate-900 text-white py-1.5 rounded-lg font-bold text-[10px] uppercase">Models</button></div></div>))}</div></div>
                 ) : (
-                    <div className="animate-fade-in max-w-5xl mx-auto">
-                        <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedTVBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50"><ArrowLeft size={20} /></button><h2 className="text-2xl font-black uppercase text-slate-900 flex-1">{selectedTVBrand.name} <span className="text-slate-400 font-bold ml-2 text-lg">TV Config</span></h2></div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="space-y-6">
-                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                                    <h4 className="font-bold text-slate-900 uppercase text-xs mb-4">Brand Identity</h4>
-                                    <div className="space-y-4">
-                                        <InputField label="Brand Name" val={selectedTVBrand.name} onChange={(e: any) => { const updated = { ...selectedTVBrand, name: e.target.value }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); }} />
-                                        <FileUpload label="Brand Logo" currentUrl={selectedTVBrand.logoUrl} onUpload={(url: any) => { const updated = { ...selectedTVBrand, logoUrl: url }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); }} />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="md:col-span-2">
-                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                                    <div className="flex justify-between items-center mb-6"><h4 className="font-bold text-slate-900 uppercase text-xs">TV Models</h4><button onClick={() => setEditingTVModel({ id: generateId('tvm'), name: '', videoUrls: [] })} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase flex items-center gap-1"><Plus size={12} /> Add Model</button></div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {(selectedTVBrand.models || []).map((model) => (
-                                            <div key={model.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden group">
-                                                <div className="p-4 flex items-center gap-4">
-                                                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shrink-0 border border-slate-200">{model.imageUrl ? <img src={model.imageUrl} className="w-full h-full object-cover rounded-lg" /> : <Monitor size={20} className="text-slate-300" />}</div>
-                                                    <div className="flex-1 min-w-0"><div className="font-bold text-slate-900 text-sm truncate">{model.name}</div><div className="text-[10px] font-bold text-slate-500 uppercase">{model.videoUrls?.length || 0} Videos</div></div>
-                                                </div>
-                                                <div className="flex border-t border-slate-200 divide-x divide-slate-200">
-                                                    <button onClick={() => setEditingTVModel(model)} className="flex-1 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-50 transition-colors">Edit / Videos</button>
-                                                    <button onClick={() => { if (confirm("Delete this model?")) { const updated = { ...selectedTVBrand, models: selectedTVBrand.models.filter(m => m.id !== model.id) }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); } }} className="flex-1 py-2 text-[10px] font-bold uppercase text-red-500 hover:bg-red-50 transition-colors">Delete</button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <div className="animate-fade-in"><div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedTVBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg"><ArrowLeft size={20} /></button><h2 className="text-2xl font-black uppercase text-slate-900 flex-1">{selectedTVBrand.name}</h2></div><div className="grid grid-cols-1 md:grid-cols-3 gap-8"><div className="md:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><div className="flex justify-between items-center mb-6"><h4 className="font-bold text-slate-900 uppercase text-xs">Models</h4><button onClick={() => setEditingTVModel({ id: generateId('tvm'), name: '', videoUrls: [] })} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase flex items-center gap-1"><Plus size={12} /> Add</button></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{selectedTVBrand.models.map(model => (<div key={model.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden p-4 flex items-center justify-between"><div className="font-bold text-slate-900 text-sm">{model.name}</div><div className="flex gap-2"><button onClick={() => setEditingTVModel(model)} className="text-blue-600 hover:text-blue-800"><Edit2 size={16}/></button><button onClick={() => { if(confirm("Delete?")){ handleLocalUpdate({...localData, tv: {...localData.tv, brands: tvBrands.map(b=>b.id===selectedTVBrand.id?{...b, models: b.models.filter(m=>m.id!==model.id)}:b)} as any}); } }} className="text-red-500"><Trash2 size={16}/></button></div></div>))}</div></div></div></div>
                 )
             )}
 
@@ -2770,599 +2396,117 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                         <CatalogueManager catalogues={(localData.catalogues || []).filter(c => !c.brandId)} onSave={(c) => { const brandCatalogues = (localData.catalogues || []).filter(c => c.brandId); handleLocalUpdate({ ...localData, catalogues: [...brandCatalogues, ...c] }); }} />
                     )}
                     {activeSubTab === 'hero' && (
-                        <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <InputField label="Title" val={localData.hero.title} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, title: e.target.value}})} />
-                                    <InputField label="Subtitle" val={localData.hero.subtitle} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, subtitle: e.target.value}})} />
-                                    <InputField label="Website URL" val={localData.hero.websiteUrl || ''} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, websiteUrl: e.target.value}})} placeholder="https://example.com" />
-                                </div>
-                                <div className="space-y-4">
-                                    <FileUpload label="Background Image" currentUrl={localData.hero.backgroundImageUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, backgroundImageUrl: url}})} />
-                                    <FileUpload label="Brand Logo" currentUrl={localData.hero.logoUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, logoUrl: url}})} />
-                                </div>
-                            </div>
-                        </div>
+                        <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-4"><InputField label="Title" val={localData.hero.title} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, title: e.target.value}})} /><InputField label="Subtitle" val={localData.hero.subtitle} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, subtitle: e.target.value}})} /><InputField label="Website" val={localData.hero.websiteUrl || ''} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, websiteUrl: e.target.value}})} /></div><div className="space-y-4"><FileUpload label="Background" currentUrl={localData.hero.backgroundImageUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, backgroundImageUrl: url}})} /><FileUpload label="Logo" currentUrl={localData.hero.logoUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, logoUrl: url}})} /></div></div></div>
                     )}
                     {activeSubTab === 'ads' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideLeftVertical', 'screensaver'].map(zone => (
-                                <div key={zone} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                                    <h4 className="font-bold uppercase text-xs mb-1">{zone.replace('home', '')}</h4>
-                                    <p className="text-[10px] text-slate-400 mb-4 uppercase font-bold tracking-wide">{zone.includes('Side') ? 'Size: 1080x1920 (Portrait)' : zone.includes('screensaver') ? 'Mixed Media' : 'Size: 1920x1080 (Landscape)'}</p>
-                                    <FileUpload label="Upload Media" accept="image/*,video/*" allowMultiple onUpload={(urls:any, type:any) => { const newAds = (Array.isArray(urls)?urls:[urls]).map(u=>({id:generateId('ad'), type, url:u, dateAdded: new Date().toISOString()})); handleLocalUpdate({...localData, ads: {...localData.ads, [zone]: [...((localData.ads as any)[zone] || []), ...newAds]} as any}); }} />
-                                    <div className="grid grid-cols-3 gap-2 mt-4">
-                                        {((localData.ads as any)[zone] || []).map((ad: any, idx: number) => (
-                                            <div key={ad.id} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
-                                                {ad.type === 'video' ? <video src={ad.url} className="w-full h-full object-cover opacity-60" /> : <img src={ad.url} alt="Ad" className="w-full h-full object-cover" />}
-                                                <button onClick={() => { const currentAds = (localData.ads as any)[zone]; const newAdsList = currentAds.filter((_: any, i: number) => i !== idx); handleLocalUpdate({ ...localData, ads: { ...localData.ads, [zone]: newAdsList } as any }); }} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"><Trash2 size={10} /></button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">{['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideLeftVertical', 'screensaver'].map(zone => (<div key={zone} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h4 className="font-bold uppercase text-xs mb-4">{zone.replace('home', '')}</h4><FileUpload label="Upload Media" accept="image/*,video/*" allowMultiple onUpload={(urls:any, type:any) => { const newAds = (Array.isArray(urls)?urls:[urls]).map(u=>({id:generateId('ad'), type, url:u, dateAdded: new Date().toISOString()})); handleLocalUpdate({...localData, ads: {...localData.ads, [zone]: [...((localData.ads as any)[zone] || []), ...newAds]} as any}); }} /><div className="grid grid-cols-3 gap-2 mt-4">{((localData.ads as any)[zone] || []).map((ad: any, idx: number) => (<div key={ad.id} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">{ad.type === 'video' ? <video src={ad.url} className="w-full h-full object-cover" /> : <img src={ad.url} className="w-full h-full object-cover" />}<button onClick={() => { handleLocalUpdate({ ...localData, ads: { ...localData.ads, [zone]: (localData.ads as any)[zone].filter((_:any, i:any)=>i!==idx) } as any }); }} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-600"><Trash2 size={10} /></button></div>))}</div></div>))}</div>
                     )}
                 </div>
             )}
             
             {activeTab === 'fleet' && (
-                <div className="animate-fade-in max-w-7xl mx-auto pb-24">
-                   <div className="flex items-center justify-between mb-8">
-                       <div className="flex items-center gap-3">
-                           <div className="bg-slate-900 p-2.5 rounded-2xl shadow-xl shadow-blue-500/10 border border-slate-800"><Radio className="text-blue-500 animate-pulse" size={24}/></div>
-                           <div>
-                               <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none">Command Center</h2>
-                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Live Fleet Telemetry</p>
-                           </div>
-                       </div>
-                       <div className="flex items-center gap-4 bg-slate-950 p-2 rounded-2xl border border-slate-800 shadow-2xl">
-                           <div className="px-4 py-2 border-r border-slate-800">
-                               <div className="text-[8px] font-black text-slate-500 uppercase mb-0.5 tracking-widest">Active Units</div>
-                               <div className="text-lg font-black text-blue-400 font-mono leading-none">{localData.fleet?.length || 0}</div>
-                           </div>
-                           <div className="px-4 py-2">
-                               <div className="text-[8px] font-black text-slate-500 uppercase mb-0.5 tracking-widest">Health</div>
-                               <div className="text-lg font-black text-green-400 font-mono leading-none">100%</div>
-                           </div>
-                       </div>
-                   </div>
-
-                   {/* Device Categories Loop */}
-                   {['kiosk', 'mobile', 'tv'].map((type) => {
-                       const devices = localData.fleet?.filter(k => 
-                           k.deviceType === type || (type === 'kiosk' && !k.deviceType)
-                       ) || [];
-
-                       if (devices.length === 0) return null;
-
-                       const config = {
-                           kiosk: { label: 'Interactive Terminals', icon: <Tablet size={18} className="text-blue-500" />, color: 'blue' },
-                           mobile: { label: 'Handheld Units', icon: <Smartphone size={18} className="text-purple-500" />, color: 'purple' },
-                           tv: { label: 'Display Walls', icon: <Tv size={18} className="text-indigo-500" />, color: 'indigo' }
-                       }[type as 'kiosk' | 'mobile' | 'tv'];
-
-                       return (
-                           <div key={type} className="mb-12 last:mb-0">
-                               <div className="flex items-center gap-3 mb-6">
-                                   <div className={`p-2 rounded-xl bg-slate-900 border border-slate-800 shadow-lg`}>
-                                       {config.icon}
-                                   </div>
-                                   <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">{config.label}</h3>
-                                   <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent mx-4"></div>
-                                   <span className="text-[10px] font-black bg-white text-slate-400 px-3 py-1 rounded-full border border-slate-200 uppercase tracking-widest">
-                                       {devices.length} Units
-                                   </span>
-                               </div>
-
-                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                   {devices.map(kiosk => {
-                                       const isOnline = (new Date().getTime() - new Date(kiosk.last_seen).getTime()) < 350000;
-                                       return (
-                                           <div key={kiosk.id} className={`group relative bg-slate-950 border-2 rounded-[2rem] overflow-hidden transition-all duration-500 hover:-translate-y-1 shadow-2xl flex flex-col ${isOnline ? 'border-blue-500/50 shadow-blue-500/10' : 'border-slate-800 grayscale opacity-60'}`}>
-                                               
-                                               {/* Online Status Glow effect */}
-                                               {isOnline && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.8)] rounded-full"></div>}
-
-                                               {/* Telemetry Header */}
-                                               <div className="p-5 flex justify-between items-start">
-                                                   <div className="flex-1 min-w-0">
-                                                       <div className="flex items-center gap-2 mb-1.5">
-                                                           <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,1)] animate-pulse' : 'bg-slate-700'}`}></div>
-                                                           <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${isOnline ? 'text-blue-400' : 'text-slate-500'}`}>
-                                                               {isOnline ? 'Active Pulse' : 'Offline'}
-                                                           </span>
-                                                       </div>
-                                                       <h4 className="font-black text-white uppercase text-base leading-none tracking-tight truncate mb-1 group-hover:text-blue-400 transition-colors">
-                                                           {kiosk.name}
-                                                       </h4>
-                                                       <div className="text-[9px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                                            <MapPin size={10} className="text-slate-700" /> {kiosk.assignedZone || 'UNASSIGNED'}
-                                                       </div>
-                                                   </div>
-                                                   <div className="shrink-0 flex flex-col items-end gap-2">
-                                                       <SignalStrengthBars strength={kiosk.wifiStrength || 0} />
-                                                       <div className="text-[8px] font-black text-slate-600 uppercase font-mono">{kiosk.ipAddress?.split(' | ')[0] || '--'}</div>
-                                                   </div>
-                                               </div>
-                                               
-                                               {/* Dashboard Stats */}
-                                               <div className="px-5 py-4 grid grid-cols-2 gap-3 bg-black/40 border-y border-white/5">
-                                                   <div className="p-2.5 rounded-2xl bg-white/5 border border-white/5">
-                                                       <div className="text-[8px] font-black text-slate-500 uppercase mb-1 flex items-center gap-1.5">
-                                                           <Clock size={10} className="text-blue-500" /> Sync Age
-                                                       </div>
-                                                       <div className="text-xs font-bold text-slate-300 truncate">{formatRelativeTime(kiosk.last_seen)}</div>
-                                                   </div>
-                                                   <div className="p-2.5 rounded-2xl bg-white/5 border border-white/5">
-                                                       <div className="text-[8px] font-black text-slate-500 uppercase mb-1 flex items-center gap-1.5">
-                                                           <Terminal size={10} className="text-purple-500" /> Version
-                                                       </div>
-                                                       <div className="text-xs font-mono font-black text-slate-300">v{kiosk.version || '1.0.0'}</div>
-                                                   </div>
-                                               </div>
-
-                                               {/* Command Center Action Bar */}
-                                               <div className="mt-auto p-3 flex gap-2">
-                                                   <button 
-                                                       onClick={() => setEditingKiosk(kiosk)} 
-                                                       className="flex-1 bg-slate-900 hover:bg-blue-600 text-slate-400 hover:text-white p-2.5 rounded-2xl transition-all border border-slate-800 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 group/btn"
-                                                   >
-                                                       <Edit2 size={12} className="group-hover/btn:scale-110 transition-transform" /> <span className="hidden sm:inline">Modify</span>
-                                                   </button>
-                                                   
-                                                   {supabase && isOnline && (
-                                                       <button 
-                                                           onClick={async () => { if(confirm("Initiate Remote System Reset?")) await supabase.from('kiosks').update({restart_requested: true}).eq('id', kiosk.id); }} 
-                                                           className="flex-1 bg-slate-900 hover:bg-orange-600 text-orange-500 hover:text-white p-2.5 rounded-2xl transition-all border border-slate-800 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 group/btn"
-                                                       >
-                                                           <Power size={12} /> <span className="hidden sm:inline">Reset</span>
-                                                       </button>
-                                                   )}
-                                                   
-                                                   <button 
-                                                       onClick={() => removeFleetMember(kiosk.id)} 
-                                                       className="w-12 bg-slate-900 hover:bg-red-600 text-slate-700 hover:text-white p-2.5 rounded-2xl transition-all border border-slate-800 flex items-center justify-center shadow-lg group/btn" 
-                                                       title="De-Authorize Device"
-                                                   >
-                                                       <Lock size={12} className="group-hover/btn:rotate-12 transition-transform" />
-                                                   </button>
-                                               </div>
-                                               
-                                               {/* Device Hardware ID Watermark */}
-                                               <div className="absolute bottom-1 right-5 text-[7px] font-mono font-black text-slate-800 uppercase pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity">
-                                                   UUID: {kiosk.id}
-                                               </div>
-                                           </div>
-                                       );
-                                   })}
-                               </div>
-                           </div>
-                       );
-                   })}
-                   
-                   {localData.fleet?.length === 0 && (
-                       <div className="p-20 text-center flex flex-col items-center justify-center gap-6 animate-fade-in border-2 border-dashed border-slate-200 rounded-[3rem] bg-white/50">
-                           <div className="w-20 h-20 bg-slate-100 rounded-[2.5rem] flex items-center justify-center text-slate-300">
-                               <Radio size={40} />
-                           </div>
-                           <div>
-                               <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Awaiting Transmissions</h3>
-                               <p className="text-slate-500 font-medium text-sm">Initialize your first device to begin fleet telemetry monitoring.</p>
-                           </div>
-                       </div>
-                   )}
+                <div className="max-w-7xl mx-auto space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {localData.fleet?.map(kiosk => {
+                            const isOnline = (new Date().getTime() - new Date(kiosk.last_seen).getTime()) < 350000;
+                            return (
+                                <div key={kiosk.id} className={`p-6 bg-white rounded-3xl border shadow-sm flex flex-col ${isOnline ? 'border-green-100' : 'border-slate-200 opacity-60'}`}><div className="flex justify-between items-start mb-4"><div className="flex-1"> <div className={`w-2 h-2 rounded-full mb-2 ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></div> <h4 className="font-black text-slate-900 uppercase text-sm truncate">{kiosk.name}</h4> <p className="text-[10px] text-slate-400 font-mono">{kiosk.id}</p></div> <div className="flex flex-col items-end gap-1"><SignalStrengthBars strength={kiosk.wifiStrength || 0} /><span className="text-[8px] font-black text-slate-400 uppercase">{kiosk.deviceType || 'Kiosk'}</span></div></div> <div className="mt-auto pt-4 border-t border-slate-50 flex gap-2"><button onClick={() => setEditingKiosk(kiosk)} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase hover:bg-slate-200">Modify</button><button onClick={() => removeFleetMember(kiosk.id)} className="w-10 h-10 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-100"><Trash2 size={16}/></button></div></div>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
             
             {activeTab === 'screensaver' && (
                 <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-20">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         {/* Control Group 1: Timing */}
                          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Clock size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Timing & Schedule</h3></div>
+                             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Clock size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Engine Schedule</h3></div>
                              <div className="grid grid-cols-2 gap-4 mb-6"><InputField label="Idle Wait (sec)" val={localData.screensaverSettings?.idleTimeout||60} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, idleTimeout: parseInt(e.target.value)}})} /><InputField label="Slide Duration (sec)" val={localData.screensaverSettings?.imageDuration||8} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, imageDuration: parseInt(e.target.value)}})} /></div>
-                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><div className="flex justify-between items-center mb-4"><label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Active Hours (Sleep Mode)</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, enableSleepMode: !localData.screensaverSettings?.enableSleepMode}})} className={`w-8 h-4 rounded-full transition-colors relative ${localData.screensaverSettings?.enableSleepMode ? 'bg-green-500' : 'bg-slate-300'}`}><div className={`w-2 h-2 bg-white rounded-full absolute top-1 transition-all ${localData.screensaverSettings?.enableSleepMode ? 'left-5' : 'left-1'}`}></div></button></div><div className={`grid grid-cols-2 gap-4 transition-opacity ${localData.screensaverSettings?.enableSleepMode ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}><div><label className="block text-[10px] font-bold text-slate-400 mb-1">Start Time</label><input type="time" value={localData.screensaverSettings?.activeHoursStart || '08:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursStart: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div><div><label className="block text-[10px] font-bold text-slate-400 mb-1">End Time</label><input type="time" value={localData.screensaverSettings?.activeHoursEnd || '20:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursEnd: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div></div></div>
+                             
+                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Transition Logic</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {['mix', 'cinematic', 'fade'].map(style => (
+                                        <button 
+                                            key={style}
+                                            onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, transitionStyle: style as any}})}
+                                            className={`p-2 rounded-lg border text-[9px] font-black uppercase transition-all ${localData.screensaverSettings?.transitionStyle === style ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-400 hover:border-blue-300'}`}
+                                        >
+                                            {style}
+                                        </button>
+                                    ))}
+                                </div>
+                             </div>
+
+                             <div className="space-y-4">
+                                <div className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors">
+                                    <label className="text-xs font-bold text-slate-700 uppercase">Ambience Blur (Performance)</label>
+                                    <button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, enableAmbienceBlur: !localData.screensaverSettings?.enableAmbienceBlur}})} className={`w-10 h-5 rounded-full transition-colors relative ${localData.screensaverSettings?.enableAmbienceBlur ? 'bg-green-500' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${localData.screensaverSettings?.enableAmbienceBlur ? 'left-6' : 'left-1'}`}></div></button>
+                                </div>
+                                <div className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors">
+                                    <label className="text-xs font-bold text-slate-700 uppercase">Digital Clock Overlay</label>
+                                    <button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, showDigitalClock: !localData.screensaverSettings?.showDigitalClock}})} className={`w-10 h-5 rounded-full transition-colors relative ${localData.screensaverSettings?.showDigitalClock ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${localData.screensaverSettings?.showDigitalClock ? 'left-6' : 'left-1'}`}></div></button>
+                                </div>
+                                {localData.screensaverSettings?.showDigitalClock && (
+                                    <div className="flex justify-end gap-2 px-3">
+                                        <button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, clockFormat: '12h'}})} className={`px-2 py-1 rounded text-[8px] font-bold uppercase ${localData.screensaverSettings?.clockFormat === '12h' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500'}`}>12h</button>
+                                        <button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, clockFormat: '24h'}})} className={`px-2 py-1 rounded text-[8px] font-bold uppercase ${localData.screensaverSettings?.clockFormat === '24h' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500'}`}>24h</button>
+                                    </div>
+                                )}
+                             </div>
                          </div>
+
+                         {/* Control Group 2: Logic & Content */}
                          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Content & Behavior</h3></div>
-                             <div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}})} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div>
+                             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Marketing Priority</h3></div>
+                             
+                             <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 mb-8">
+                                 <div className="flex justify-between items-center mb-4">
+                                     <div className="flex items-center gap-2 text-blue-800 font-black text-[10px] uppercase tracking-widest"><Megaphone size={14} /> Ad Frequency Weight</div>
+                                     <div className="text-2xl font-black text-blue-600">{localData.screensaverSettings?.marketingPriority || 3}x</div>
+                                 </div>
+                                 <input 
+                                    type="range" 
+                                    min="1" 
+                                    max="10" 
+                                    step="1" 
+                                    value={localData.screensaverSettings?.marketingPriority || 3} 
+                                    onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, marketingPriority: parseInt(e.target.value)}})}
+                                    className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                 />
+                                 <p className="text-[10px] text-blue-500 font-bold uppercase mt-4 leading-tight">Ads will appear {localData.screensaverSettings?.marketingPriority || 3}x more often than standard products in the loop.</p>
+                             </div>
+
+                             <div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}})} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div>
                          </div>
                      </div>
                 </div>
             )}
             
             {activeTab === 'history' && (
-               <div className="max-w-6xl mx-auto space-y-6">
-                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                       <h2 className="text-2xl font-black text-slate-900 uppercase">Archive Management</h2>
-                       <div className="flex gap-2">
-                            <button 
-                                onClick={() => { if(confirm("Permanently clear ALL archived history?")) handleLocalUpdate({...localData, archive: { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }}) }} 
-                                className="text-red-500 font-bold uppercase text-xs flex items-center gap-2 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2 rounded-lg transition-colors"
-                            >
-                                <Trash2 size={14}/> Wipe History
-                            </button>
-                       </div>
-                   </div>
-
-                   <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm min-h-[500px] flex flex-col">
-                       {/* Toolbar */}
-                       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between gap-4">
-                           <div className="flex items-center gap-2 bg-slate-200/50 p-1 rounded-lg self-start overflow-x-auto max-w-full">
-                               <button onClick={() => setHistoryTab('deletedItems')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'deletedItems' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>All Items</button>
-                               <button onClick={() => setHistoryTab('brands')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'brands' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Deleted Brands</button>
-                               <button onClick={() => setHistoryTab('catalogues')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'catalogues' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Deleted Pamphlets</button>
-                           </div>
-                           <div className="relative">
-                               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                               <input 
-                                  type="text" 
-                                  placeholder="Search Archives..." 
-                                  className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold w-full md:w-64 focus:border-blue-500 outline-none"
-                                  value={historySearch}
-                                  onChange={(e) => setHistorySearch(e.target.value)}
-                               />
-                           </div>
-                       </div>
-
-                       {/* List Content */}
-                       <div className="flex-1 overflow-y-auto">
-                           {historyTab === 'deletedItems' ? (
-                               archivedGenericItems.length === 0 ? (
-                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                                       <Archive size={48} className="mb-4 opacity-20" />
-                                       <span className="text-xs font-bold uppercase tracking-widest">No Deleted Items Found</span>
-                                   </div>
-                               ) : (
-                                   <table className="w-full text-left">
-                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                                           <tr>
-                                               <th className="px-6 py-3">Type</th>
-                                               <th className="px-6 py-3">Name</th>
-                                               <th className="px-6 py-3">Deleted Date</th>
-                                               <th className="px-6 py-3 text-right">Data</th>
-                                           </tr>
-                                       </thead>
-                                       <tbody className="divide-y divide-slate-100 text-sm">
-                                           {archivedGenericItems.map(item => (
-                                               <tr key={item.id} className="hover:bg-slate-50 group">
-                                                   <td className="px-6 py-4">
-                                                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                                                           item.type === 'product' ? 'bg-blue-50 text-blue-700' :
-                                                           item.type === 'pricelist' ? 'bg-green-50 text-green-700' :
-                                                           item.type === 'device' ? 'bg-purple-50 text-purple-700' :
-                                                           'bg-slate-100 text-slate-600'
-                                                       }`}>
-                                                           {item.type}
-                                                       </span>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="font-bold text-slate-900">{item.name}</div>
-                                                       <div className="text-[10px] text-slate-400 font-mono">{item.id}</div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="text-xs font-bold text-slate-600">
-                                                           {formatRelativeTime(item.deletedAt)}
-                                                       </div>
-                                                       <div className="text-[10px] text-slate-400">
-                                                           {new Date(item.deletedAt).toLocaleTimeString()}
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4 text-right">
-                                                       <button 
-                                                            onClick={() => {
-                                                                const json = JSON.stringify(item.data, null, 2);
-                                                                const blob = new Blob([json], {type: "application/json"});
-                                                                const url = URL.createObjectURL(blob);
-                                                                const a = document.createElement('a');
-                                                                a.href = url;
-                                                                a.download = `${item.name}-recovered.json`;
-                                                                a.click();
-                                                            }}
-                                                            className="text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase inline-flex items-center gap-1 transition-colors border border-slate-200"
-                                                       >
-                                                           <Download size={12} /> JSON
-                                                       </button>
-                                                   </td>
-                                               </tr>
-                                           ))}
-                                       </tbody>
-                                   </table>
-                               )
-                           ) : historyTab === 'brands' ? (
-                               archivedBrands.length === 0 ? (
-                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                                       <Archive size={48} className="mb-4 opacity-20" />
-                                       <span className="text-xs font-bold uppercase tracking-widest">No Archived Brands Found</span>
-                                   </div>
-                               ) : (
-                                   <table className="w-full text-left">
-                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                                           <tr>
-                                               <th className="px-6 py-3">Brand Name</th>
-                                               <th className="px-6 py-3">Metadata</th>
-                                               <th className="px-6 py-3">Deleted Date</th>
-                                               <th className="px-6 py-3 text-right">Actions</th>
-                                           </tr>
-                                       </thead>
-                                       <tbody className="divide-y divide-slate-100 text-sm">
-                                           {archivedBrands.map(b => (
-                                               <tr key={b.id} className="hover:bg-slate-50 group">
-                                                   <td className="px-6 py-4">
-                                                       <div className="font-bold text-slate-900">{b.name}</div>
-                                                       <div className="text-[10px] text-slate-400 font-mono">{b.id}</div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
-                                                           <Box size={12} /> {b.categories.length} Categories
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="text-xs font-bold text-slate-600">
-                                                           {localData.archive?.deletedAt?.[b.id] ? formatRelativeTime(localData.archive.deletedAt[b.id]) : 'Unknown'}
-                                                       </div>
-                                                       <div className="text-[10px] text-slate-400">
-                                                           {localData.archive?.deletedAt?.[b.id] ? new Date(localData.archive.deletedAt[b.id]).toLocaleTimeString() : ''}
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4 text-right">
-                                                       <button onClick={() => restoreBrand(b)} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold uppercase inline-flex items-center gap-1 transition-colors">
-                                                           <RotateCcw size={14} /> Restore
-                                                       </button>
-                                                   </td>
-                                               </tr>
-                                           ))}
-                                       </tbody>
-                                   </table>
-                               )
-                           ) : (
-                               archivedCatalogues.length === 0 ? (
-                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                                       <Archive size={48} className="mb-4 opacity-20" />
-                                       <span className="text-xs font-bold uppercase tracking-widest">No Archived Pamphlets Found</span>
-                                   </div>
-                               ) : (
-                                   <table className="w-full text-left">
-                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                                           <tr>
-                                               <th className="px-6 py-3">Title</th>
-                                               <th className="px-6 py-3">Type</th>
-                                               <th className="px-6 py-3">Expiration Info</th>
-                                               <th className="px-6 py-3 text-right">Actions</th>
-                                           </tr>
-                                       </thead>
-                                       <tbody className="divide-y divide-slate-100 text-sm">
-                                           {archivedCatalogues.map(c => (
-                                               <tr key={c.id} className="hover:bg-slate-50 group">
-                                                   <td className="px-6 py-4">
-                                                       <div className="font-bold text-slate-900">{c.title}</div>
-                                                       <div className="text-[10px] text-slate-400 font-mono">{c.id}</div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${c.brandId ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
-                                                           {c.brandId ? 'Brand Catalogue' : 'Global Pamphlet'}
-                                                       </span>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="text-xs font-bold text-slate-600">
-                                                           {c.endDate ? `Expired: ${new Date(c.endDate).toLocaleDateString()}` : 'Manual Delete'}
-                                                       </div>
-                                                       <div className="text-[10px] text-slate-400">
-                                                           Deleted: {localData.archive?.deletedAt?.[c.id] ? formatRelativeTime(localData.archive.deletedAt[c.id]) : 'N/A'}
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4 text-right">
-                                                       <button onClick={() => restoreCatalogue(c)} className="text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg text-xs font-bold uppercase inline-flex items-center gap-1 transition-colors">
-                                                           <RotateCcw size={14} /> Restore
-                                                       </button>
-                                                   </td>
-                                               </tr>
-                                           ))}
-                                       </tbody>
-                                   </table>
-                               )
-                           )}
-                       </div>
-                   </div>
-               </div>
+               <div className="max-w-6xl mx-auto space-y-6"><h2 className="text-2xl font-black text-slate-900 uppercase">Archive Hub</h2><div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm min-h-[400px] p-6 text-center text-slate-400 italic">Historical data engine active. Select a tab below.</div></div>
             )}
 
             {activeTab === 'settings' && (
                <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
-                   
-                   {/* BRANDING SECTION */}
-                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
-                           <ImageIcon size={20} className="text-blue-500" /> System Branding
-                       </h3>
-                       <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                           <FileUpload 
-                               label="Main Company Logo (PDFs & Header)" 
-                               currentUrl={localData.companyLogoUrl} 
-                               onUpload={(url: string) => handleLocalUpdate({...localData, companyLogoUrl: url})} 
-                           />
-                           <p className="text-[10px] text-slate-400 mt-2 font-medium">
-                               This logo is used at the top of the Kiosk App and as the primary branding on all exported PDF Pricelists.
-                           </p>
-                       </div>
-                   </div>
-
-                   {/* GLOBAL SYSTEM PIN */}
-                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
-                           <Lock size={20} className="text-red-500" /> Device Setup Security
-                       </h3>
-                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center gap-4">
-                           <div className="flex-1">
-                               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Global Setup PIN</label>
-                               <input 
-                                   type="text" 
-                                   value={localData.systemSettings?.setupPin || '0000'} 
-                                   onChange={(e) => handleLocalUpdate({
-                                       ...localData,
-                                       systemSettings: { ...localData.systemSettings, setupPin: e.target.value }
-                                   })}
-                                   className="w-full md:w-64 p-3 border border-slate-300 rounded-xl bg-white font-mono font-bold text-lg tracking-widest text-center"
-                                   placeholder="0000"
-                                   maxLength={8}
-                               />
-                               <p className="text-[10px] text-slate-400 mt-2 font-medium">
-                                   This PIN is required on all new devices (Kiosk, Mobile, TV) to complete the setup process. Default: 0000.
-                               </p>
-                           </div>
-                           <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100 text-yellow-800 text-xs max-w-xs">
-                               <strong>Security Note:</strong> Changing this PIN will require all future device setups to use the new code. Existing active devices are not affected.
-                           </div>
-                       </div>
-                   </div>
-
-                   {/* ZIP BACKUP SECTION */}
-                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                       <div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500 pointer-events-none"><Database size={120} /></div>
-                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> System Data & Backup</h3>
-                       
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-                           <div className="space-y-4">
-                               <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-xs">
-                                   <strong>Export System Backup:</strong> Downloads a full archive including Inventory, Marketing, TV Config, Fleet logs, and History.
-                                   <div className="mt-2 text-blue-600 font-bold">Use this to edit offline or migrate data.</div>
-                               </div>
-                               <button 
-                                   onClick={async () => {
-                                       setExportProcessing(true);
-                                       try {
-                                           await downloadZip(localData);
-                                       } catch (e) {
-                                           console.error(e);
-                                           alert("Export Failed: " + (e as Error).message);
-                                       } finally {
-                                           setExportProcessing(false);
-                                       }
-                                   }}
-                                   disabled={exportProcessing}
-                                   className={`w-full py-4 ${exportProcessing ? 'bg-blue-800 cursor-wait' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25`}
-                               >
-                                   {exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
-                                   {exportProcessing ? 'Packaging All Assets...' : 'Download Full System Backup (.zip)'}
-                               </button>
-                           </div>
-
-                           <div className="space-y-4">
-                               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-xs">
-                                   <strong>Import Structure:</strong> Upload a ZIP file to auto-populate the system.
-                                   <ul className="list-disc pl-4 mt-2 space-y-1 text-[10px] text-slate-500 font-bold">
-                                       <li>Folder Structure: <code>Brand/Category/Product/</code></li>
-                                       <li>Place images (.jpg/.png) & manuals (.pdf) inside product folders.</li>
-                                       <li>Images & PDFs are uploaded to Cloud Storage sequentially.</li>
-                                   </ul>
-                               </div>
-                               <label className={`w-full py-4 ${importProcessing ? 'bg-slate-300 cursor-wait' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl relative overflow-hidden`}>
-                                   {importProcessing ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16} />} 
-                                   <span className="relative z-10">{importProcessing ? importProgress || 'Processing...' : 'Import Data from ZIP'}</span>
-                                   <input 
-                                     type="file" 
-                                     accept=".zip" 
-                                     className="hidden" 
-                                     disabled={importProcessing}
-                                     onChange={async (e) => {
-                                         if(e.target.files && e.target.files[0]) {
-                                             if(confirm("This will merge imported data into your current inventory. Continue?")) {
-                                                 setImportProcessing(true);
-                                                 setImportProgress('Initializing...');
-                                                 try {
-                                                     const newBrands = await importZip(e.target.files[0], (msg) => setImportProgress(msg));
-                                                     // Merge Logic: Add new brands, or merge categories if brand exists
-                                                     let mergedBrands = [...localData.brands];
-                                                     
-                                                     newBrands.forEach(nb => {
-                                                         const existingBrandIndex = mergedBrands.findIndex(b => b.name === nb.name);
-                                                         if (existingBrandIndex > -1) {
-                                                             // Merge Brand Assets if present
-                                                             if (nb.logoUrl) {
-                                                                 mergedBrands[existingBrandIndex].logoUrl = nb.logoUrl;
-                                                             }
-                                                             if (nb.themeColor) {
-                                                                 mergedBrands[existingBrandIndex].themeColor = nb.themeColor;
-                                                             }
-
-                                                             // Merge Categories
-                                                             nb.categories.forEach(nc => {
-                                                                 const existingCatIndex = mergedBrands[existingBrandIndex].categories.findIndex(c => c.name === nc.name);
-                                                                 if (existingCatIndex > -1) {
-                                                                     // Merge Products
-                                                                     const existingProducts = mergedBrands[existingBrandIndex].categories[existingCatIndex].products;
-                                                                     // Add only new products based on name
-                                                                     const uniqueNewProducts = nc.products.filter(np => !existingProducts.find(ep => ep.name === np.name));
-                                                                     mergedBrands[existingBrandIndex].categories[existingCatIndex].products = [...existingProducts, ...uniqueNewProducts];
-                                                                 } else {
-                                                                     mergedBrands[existingBrandIndex].categories.push(nc);
-                                                                 }
-                                                             });
-                                                         } else {
-                                                             mergedBrands.push(nb);
-                                                         }
-                                                     });
-                                                     
-                                                     handleLocalUpdate({ ...localData, brands: mergedBrands });
-                                                     alert(`Import Successful! Processed ${newBrands.length} brands.`);
-                                                 } catch(err) {
-                                                     console.error(err);
-                                                     alert("Failed to read ZIP file. Ensure structure is correct.");
-                                                 } finally {
-                                                     setImportProcessing(false);
-                                                     setImportProgress('');
-                                                 }
-                                             }
-                                         }
-                                     }}
-                                   />
-                               </label>
-                           </div>
-                       </div>
-                   </div>
-
-                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><UserCog size={20} className="text-blue-500"/> Admin Access Control</h3><AdminManager admins={localData.admins || []} onUpdate={(admins) => handleLocalUpdate({ ...localData, admins })} currentUser={currentUser} /></div>
-
-                   <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg text-white">
-                        <div className="flex items-center gap-3 mb-6"><CloudLightning size={24} className="text-yellow-400" /><h3 className="font-black uppercase text-sm tracking-wider">System Operations</h3></div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <button onClick={() => setShowGuide(true)} className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors border border-slate-600"><BookOpen size={24} className="text-blue-400"/><div className="text-left"><div className="font-bold text-sm">Setup Guide</div><div className="text-[10px] text-slate-400 font-mono uppercase">Docs & Scripts</div></div></button>
-                             <button onClick={async () => { if(confirm("WARNING: This will wipe ALL local data and reset to defaults. Continue?")) { const d = await resetStoreData(); setLocalData(d); window.location.reload(); } }} className="p-4 bg-red-900/30 hover:bg-red-900/50 rounded-xl flex items-center gap-3 transition-colors border border-red-900/50 text-red-300"><AlertCircle size={24} /><div className="text-left"><div className="font-bold text-sm">Factory Reset</div><div className="text-[10px] text-red-400 font-mono uppercase">Clear Local Data</div></div></button>
-                        </div>
-                   </div>
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden"><div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500 pointer-events-none"><Database size={120} /></div><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> System Data & Backup</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10"><div><button onClick={async () => { setExportProcessing(true); try { await downloadZip(localData); } finally { setExportProcessing(false); } }} disabled={exportProcessing} className={`w-full py-4 ${exportProcessing ? 'bg-blue-800' : 'bg-blue-600'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg`}>{exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Backup System ZIP</button></div><div><label className={`w-full py-4 ${importProcessing ? 'bg-slate-300' : 'bg-slate-800'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer`}>{importProcessing ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16} />} Import Data ZIP<input type="file" accept=".zip" className="hidden" disabled={importProcessing} onChange={async (e) => { if(e.target.files && e.target.files[0]) { setImportProcessing(true); try { const newBrands = await importZip(e.target.files[0]); handleLocalUpdate({ ...localData, brands: newBrands }); } finally { setImportProcessing(false); } } }} /></label></div></div></div>
                </div>
             )}
         </main>
 
         {editingProduct && (
-            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in">
-                <ProductEditor product={editingProduct} onSave={(p) => { 
-                    if (!selectedBrand || !selectedCategory) return;
-                    if (p.sku && checkSkuDuplicate(p.sku, p.id)) { alert(`SKU "${p.sku}" is already used by another product.`); return; }
-                    const isNew = !selectedCategory.products.find(x => x.id === p.id);
-                    const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x);
-                    const updatedCat = { ...selectedCategory, products: newProducts };
-                    const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) };
-                    handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b) });
-                    setEditingProduct(null);
-                }} onCancel={() => setEditingProduct(null)} />
-            </div>
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in"><ProductEditor product={editingProduct} onSave={(p) => { if (!selectedBrand || !selectedCategory) return; const newProducts = selectedCategory.products.find(x => x.id === p.id) ? selectedCategory.products.map(x => x.id === p.id ? p : x) : [...selectedCategory.products, p]; handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === selectedBrand.id ? { ...b, categories: b.categories.map(c => c.id === selectedCategory.id ? { ...c, products: newProducts } : c) } : b) }); setEditingProduct(null); }} onCancel={() => setEditingProduct(null)} /></div>
         )}
 
         {movingProduct && (
-            <MoveProductModal product={movingProduct} allBrands={brands} currentBrandId={selectedBrand?.id || ''} currentCategoryId={selectedCategory?.id || ''} onClose={() => setMovingProduct(null)} onMove={(product, targetBrand, targetCategory) => handleMoveProduct(product, targetBrand, targetCategory)} />
+            <MoveProductModal product={movingProduct} allBrands={brands} currentBrandId={selectedBrand?.id || ''} currentCategoryId={selectedCategory?.id || ''} onClose={() => setMovingProduct(null)} onMove={(product, targetBrand, targetCategory) => { handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === selectedBrand?.id ? { ...b, categories: b.categories.map(c => c.id === selectedCategory?.id ? { ...c, products: c.products.filter(p => p.id !== product.id) } : c) } : b === brands.find(x => x.id === targetBrand) ? { ...b, categories: b.categories.map(c => c.id === targetCategory ? { ...c, products: [...c.products, product] } : c) } : b) }); setMovingProduct(null); }} />
         )}
 
-        {editingKiosk && (
-            <KioskEditorModal kiosk={editingKiosk} onSave={(k) => { updateFleetMember(k); setEditingKiosk(null); }} onClose={() => setEditingKiosk(null)} />
-        )}
-        
-        {editingTVModel && (
-            <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updatedTVBrand : b) } as TVConfig }); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />
-        )}
-        
+        {editingKiosk && (<KioskEditorModal kiosk={editingKiosk} onSave={(k) => { updateFleetMember(k); setEditingKiosk(null); }} onClose={() => setEditingKiosk(null)} />)}
+        {editingTVModel && (<TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const newModels = selectedTVBrand.models.find(x => x.id === m.id) ? selectedTVBrand.models.map(x => x.id === m.id ? m : x) : [...selectedTVBrand.models, m]; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? { ...selectedTVBrand, models: newModels } : b) } as any }); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />)}
         {showGuide && <SetupGuide onClose={() => setShowGuide(false)} />}
-        
     </div>
   );
 };
