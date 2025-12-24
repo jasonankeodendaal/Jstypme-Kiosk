@@ -1338,6 +1338,17 @@ const PricelistManager = ({
 
     const [selectedBrand, setSelectedBrand] = useState<PricelistBrand | null>(sortedBrands.length > 0 ? sortedBrands[0] : null);
     const [editingManualList, setEditingManualList] = useState<Pricelist | null>(null);
+
+    // Track the ID of the brand that was globally updated last
+    const latestBrandId = useMemo(() => {
+        if (!pricelists.length) return null;
+        const sortedByDate = [...pricelists].sort((a, b) => {
+            const da = a.dateAdded ? new Date(a.dateAdded).getTime() : 0;
+            const db = b.dateAdded ? new Date(b.dateAdded).getTime() : 0;
+            return db - da;
+        });
+        return sortedByDate[0]?.brandId || null;
+    }, [pricelists]);
     
     useEffect(() => {
         if (selectedBrand && !sortedBrands.find(b => b.id === selectedBrand.id)) {
@@ -1430,12 +1441,19 @@ const PricelistManager = ({
                      </button>
                  </div>
                  <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                     {sortedBrands.map(brand => (
+                     {sortedBrands.map(brand => {
+                         const isLatest = latestBrandId === brand.id;
+                         return (
                          <div 
                             key={brand.id} 
                             onClick={() => setSelectedBrand(brand)}
                             className={`p-2 md:p-3 rounded-xl border transition-all cursor-pointer relative group ${selectedBrand?.id === brand.id ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-200' : 'bg-white border-slate-100 hover:border-blue-200'}`}
                          >
+                             {isLatest && (
+                                 <div className="absolute -top-1.5 -right-1.5 z-10 bg-orange-500 text-white text-[7px] font-black uppercase px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce">
+                                     <span className="flex items-center gap-1"><Sparkles size={8} /> Just Updated</span>
+                                 </div>
+                             )}
                              <div className="flex items-center gap-2 md:gap-3">
                                  <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-lg border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
                                      {brand.logoUrl ? (
@@ -1445,7 +1463,10 @@ const PricelistManager = ({
                                      )}
                                  </div>
                                  <div className="flex-1 min-w-0">
-                                     <div className="font-bold text-slate-900 text-[10px] md:text-xs uppercase truncate">{brand.name}</div>
+                                     <div className="flex items-center gap-2">
+                                        <div className="font-bold text-slate-900 text-[10px] md:text-xs uppercase truncate">{brand.name}</div>
+                                        {isLatest && <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>}
+                                     </div>
                                      <div className="text-[9px] md:text-[10px] text-slate-400 font-mono truncate">{pricelists.filter(p => p.brandId === brand.id).length} Lists</div>
                                  </div>
                              </div>
@@ -1471,7 +1492,7 @@ const PricelistManager = ({
                                  </div>
                              )}
                          </div>
-                     ))}
+                     );})}
                      {sortedBrands.length === 0 && (
                          <div className="p-8 text-center text-slate-400 text-xs italic">
                              No brands. Click "Add" to start.
@@ -1483,9 +1504,16 @@ const PricelistManager = ({
              {/* Right Content: Pricelist Grid */}
              <div className="flex-1 h-[65%] md:h-full bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col shadow-inner min-h-0">
                  <div className="flex justify-between items-center mb-4 shrink-0">
-                     <h3 className="font-bold text-slate-700 uppercase text-xs tracking-wider truncate mr-2 max-w-[60%]">
-                         {selectedBrand ? selectedBrand.name : 'Select Brand'}
-                     </h3>
+                     <div className="flex items-center gap-3 truncate mr-2">
+                        <h3 className="font-bold text-slate-700 uppercase text-xs tracking-wider truncate">
+                            {selectedBrand ? selectedBrand.name : 'Select Brand'}
+                        </h3>
+                        {selectedBrand && latestBrandId === selectedBrand.id && (
+                            <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded text-[8px] font-black uppercase flex items-center gap-1 border border-orange-200">
+                                <Activity size={10} /> Active Refresh
+                            </span>
+                        )}
+                     </div>
                      <button 
                         onClick={addPricelist} 
                         disabled={!selectedBrand}
