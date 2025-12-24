@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, Eye, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
@@ -17,182 +17,163 @@ const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).s
 const RIcon = (props: any) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 5v14" />
-    <path d="M7 5h5.5a4.5 4.5 0 0 1 0 9H7" />
+    <path d="M7 5h5.5a4.5(4.5 0 0 1 0 9H7" />
     <path d="M11.5 14L17 19" />
   </svg>
 );
 
-// --- SYSTEM DOCUMENTATION COMPONENT ---
+// --- SYSTEM DOCUMENTATION COMPONENT (ENHANCED FOR BEGINNERS) ---
 const SystemDocumentation = () => {
     const [activeSection, setActiveSection] = useState('architecture');
-    const [counter, setCounter] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => setCounter(prev => prev + 1), 2000);
-        return () => clearInterval(interval);
-    }, []);
-
+    
     const sections = [
-        { id: 'architecture', label: 'Core Architecture', icon: <Network size={16} /> },
-        { id: 'inventory', label: 'Inventory Logic', icon: <Box size={16}/> },
-        { id: 'pricelists', label: 'Pricelist Engine', icon: <Table size={16}/> },
-        { id: 'screensaver', label: 'Screensaver Automation', icon: <Zap size={16}/> },
-        { id: 'fleet', label: 'Fleet & Telemetry', icon: <Activity size={16}/> },
-        { id: 'tv', label: 'TV Mode Logic', icon: <Tv size={16}/> },
+        { id: 'architecture', label: '1. How it Works', icon: <Network size={16} />, desc: 'The "Brain" of the Kiosk' },
+        { id: 'inventory', label: '2. Product Sorting', icon: <Box size={16}/>, desc: 'How items are organized' },
+        { id: 'pricelists', label: '3. Price Logic', icon: <Table size={16}/>, desc: 'Converting Excel to PDF' },
+        { id: 'screensaver', label: '4. Visual Loop', icon: <Zap size={16}/>, desc: 'Automatic slideshow rules' },
+        { id: 'fleet', label: '5. Fleet Watch', icon: <Activity size={16}/>, desc: 'Remote tracking & control' },
+        { id: 'tv', label: '6. TV Protocol', icon: <Tv size={16}/>, desc: 'Large scale video loops' },
     ];
 
     return (
-        <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm animate-fade-in">
+        <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden shadow-2xl animate-fade-in">
             <style>{`
-                @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(1000%); } }
-                .scanline { animation: scanline 8s linear infinite; }
-                @keyframes orbit { from { transform: rotate(0deg) translateX(40px) rotate(0deg); } to { transform: rotate(360deg) translateX(40px) rotate(-360deg); } }
-                .orbit-item { animation: orbit 10s linear infinite; }
-                @keyframes pulse-soft { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.1); } }
-                .pulse-node { animation: pulse-soft 3s ease-in-out infinite; }
-                @keyframes line-draw { 0% { stroke-dashoffset: 100; } 100% { stroke-dashoffset: 0; } }
-                .line-animate { stroke-dasharray: 10; animation: line-draw 2s linear infinite; }
-                @keyframes price-flip { 0% { transform: translateY(0); opacity: 1; } 45% { transform: translateY(-20px); opacity: 0; } 50% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-                .flip-animate { animation: price-flip 4s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
-                @keyframes rotate-3d { 0% { transform: perspective(500px) rotateX(0deg) rotateY(0deg); } 100% { transform: perspective(500px) rotateX(360deg) rotateY(360deg); } }
-                .cube-spin { animation: rotate-3d 20s linear infinite; }
-                @keyframes ping-large { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(3); opacity: 0; } }
-                .radar-ping { animation: ping-large 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+                @keyframes flow-horizontal { 0% { transform: translateX(-100%); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateX(400%); opacity: 0; } }
+                .data-flow { animation: flow-horizontal 3s linear infinite; }
+                @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2.4); opacity: 0; } }
+                .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
+                @keyframes float-slow { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+                .float-slow { animation: float-slow 4s ease-in-out infinite; }
+                @keyframes conveyor { 0% { transform: translateX(0); } 100% { transform: translateX(-40px); } }
+                .conveyor-belt { animation: conveyor 1s linear infinite; }
+                @keyframes expand-search { 0%, 100% { width: 40px; } 50% { width: 120px; } }
+                .search-pulse { animation: expand-search 3s ease-in-out infinite; }
+                @keyframes bounce-x { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(10px); } }
+                .bounce-x { animation: bounce-x 2s ease-in-out infinite; }
             `}</style>
 
-            {/* Sidebar */}
-            <div className="w-full md:w-64 bg-slate-900 border-r border-slate-800 p-4 shrink-0 overflow-y-auto hidden md:block">
-                <div className="mb-8 px-2">
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">System Status: Online</h3>
+            {/* Enhanced Sidebar */}
+            <div className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
+                <div className="mb-10">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse"></div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Learning Center</span>
                     </div>
-                    <h2 className="text-white font-black text-xl tracking-tight">KioskPro <span className="text-blue-500">Manual</span></h2>
+                    <h2 className="text-white font-black text-2xl tracking-tighter leading-none">System <span className="text-blue-500">Guides</span></h2>
+                    <p className="text-slate-500 text-xs mt-2 font-medium">Step-by-step logic overview for new administrators.</p>
                 </div>
-                <div className="space-y-1">
+
+                <div className="space-y-2 flex-1">
                     {sections.map(section => (
                         <button
                             key={section.id}
                             onClick={() => setActiveSection(section.id)}
-                            className={`w-full text-left px-4 py-3.5 rounded-xl flex items-center gap-4 transition-all duration-300 ${
+                            className={`w-full text-left px-5 py-4 rounded-2xl flex items-center gap-4 transition-all duration-500 group relative overflow-hidden ${
                                 activeSection === section.id 
-                                ? 'bg-blue-600 text-white shadow-[0_10px_20px_rgba(37,99,235,0.3)] scale-105 z-10' 
+                                ? 'bg-blue-600 text-white shadow-xl translate-x-2' 
                                 : 'text-slate-400 hover:bg-white/5 hover:text-white'
                             }`}
                         >
-                            <span className={activeSection === section.id ? 'opacity-100' : 'opacity-50 group-hover:opacity-100'}>
-                                {section.icon}
-                            </span>
-                            <span className="text-[11px] font-black uppercase tracking-widest">{section.label}</span>
+                            <div className={`p-2 rounded-xl transition-all duration-500 ${activeSection === section.id ? 'bg-white/20' : 'bg-slate-800'}`}>
+                                {/* Fix: Cast to any to allow size prop override in cloneElement */}
+                                {React.cloneElement(section.icon as React.ReactElement<any>, { size: 18 })}
+                            </div>
+                            <div className="min-w-0">
+                                <div className="text-[11px] font-black uppercase tracking-widest leading-none mb-1">{section.label}</div>
+                                <div className={`text-[9px] font-bold uppercase truncate opacity-60 ${activeSection === section.id ? 'text-blue-100' : 'text-slate-500'}`}>{section.desc}</div>
+                            </div>
                         </button>
                     ))}
                 </div>
-                <div className="mt-20 p-5 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-sm">
-                    <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Kernel Telemetry</div>
-                    <div className="space-y-2 font-mono text-[9px]">
-                        <div className="flex justify-between">
-                            <span className="text-slate-500">Latency:</span>
-                            <span className="text-green-400">12ms</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-slate-500">Threads:</span>
-                            <span className="text-blue-400">8 Workers</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-slate-500">Buffer:</span>
-                            <span className="text-purple-400">128MB</span>
-                        </div>
+
+                <div className="mt-8 p-5 bg-blue-500/10 rounded-2xl border border-blue-500/20">
+                    <div className="flex items-center gap-2 text-blue-400 font-black text-[9px] uppercase tracking-widest mb-2">
+                        <HelpCircle size={12} /> Need Help?
                     </div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">This manual explains technical logic in plain English. Click a topic to see it in action.</p>
                 </div>
             </div>
             
-            {/* Content Area */}
-            <div className="flex-1 overflow-y-auto bg-slate-50 relative p-6 md:p-12 lg:p-20">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[120px] pointer-events-none"></div>
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 blur-[120px] pointer-events-none"></div>
+            {/* Dynamic Content Area */}
+            <div className="flex-1 overflow-y-auto bg-white relative p-6 md:p-12 lg:p-20 scroll-smooth">
+                {/* Visual Background Elements */}
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 blur-[150px] pointer-events-none rounded-full"></div>
+                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/5 blur-[150px] pointer-events-none rounded-full"></div>
 
                 {activeSection === 'architecture' && (
-                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                    <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-blue-600/10 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit">Core Logic v2.8</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Atomic Infrastructure</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl">A sophisticated "Local-First" synchronization engine designed to eliminate retail downtime.</p>
+                            <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-blue-500/20">Module 01: Core Brain</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Atomic Synchronization</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The Kiosk is designed to work <strong>offline</strong> first. It doesn't need internet to show products—it only needs it to "sync up" with your latest changes.</p>
                         </div>
 
-                        {/* Illustration: The Sync Stack */}
-                        <div className="relative h-[400px] bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden group">
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
-                            <div className="scanline absolute top-0 left-0 w-full h-1 bg-blue-500/30 blur-sm pointer-events-none"></div>
+                        {/* Interactive Data Flow Illustration */}
+                        <div className="relative p-12 bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden min-h-[450px] flex flex-col items-center justify-center">
+                            <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
                             
-                            <div className="relative h-full flex items-center justify-center p-12">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl items-center">
-                                    {/* Cloud Layer */}
-                                    <div className="flex flex-col items-center gap-4 text-center">
-                                        <div className="w-24 h-24 bg-blue-500/10 rounded-[2rem] border-2 border-blue-500/50 flex items-center justify-center relative">
-                                            <Cloud className="text-blue-400" size={40} />
-                                            <div className="radar-ping absolute inset-0 rounded-full border border-blue-400"></div>
-                                        </div>
-                                        <div>
-                                            <div className="text-white font-black text-xs uppercase mb-1">Global Origin</div>
-                                            <div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest">Supabase Edge</div>
-                                        </div>
+                            <div className="relative w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-12">
+                                {/* Component: Admin PC */}
+                                <div className="flex flex-col items-center gap-4 group">
+                                    <div className="w-24 h-24 bg-white/5 border-2 border-blue-500/30 rounded-[2rem] flex items-center justify-center relative transition-all duration-500 group-hover:border-blue-500 group-hover:scale-110">
+                                        <Monitor className="text-blue-400" size={40} />
+                                        <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg">YOU</div>
                                     </div>
-
-                                    {/* Connection Node */}
-                                    <div className="flex flex-col items-center justify-center relative">
-                                        <div className="w-full h-0.5 bg-slate-800 relative flex items-center justify-center">
-                                            <div className="data-packet absolute w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,1)]"></div>
-                                        </div>
-                                        <div className="mt-4 bg-slate-800 px-4 py-2 rounded-full border border-slate-700 text-[9px] font-mono text-blue-400 uppercase tracking-widest">Differential Sync (v4)</div>
+                                    <div className="text-center">
+                                        <div className="text-white font-black text-xs uppercase tracking-widest">Admin Hub</div>
+                                        <div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Updates Sent</div>
                                     </div>
+                                </div>
 
-                                    {/* Client Layer */}
-                                    <div className="flex flex-col items-center gap-4 text-center">
-                                        <div className="w-32 h-20 bg-slate-800 rounded-2xl border-2 border-green-500/50 flex items-center justify-center relative shadow-lg">
-                                            <div className="flex gap-1.5 items-end">
-                                                <div className="w-2 h-4 bg-green-500/50 rounded-sm"></div>
-                                                <div className="w-2 h-8 bg-green-500 rounded-sm"></div>
-                                                <div className="w-2 h-6 bg-green-500/50 rounded-sm"></div>
-                                            </div>
-                                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-slate-900 animate-pulse"></div>
-                                        </div>
-                                        <div>
-                                            <div className="text-white font-black text-xs uppercase mb-1">Kiosk Engine</div>
-                                            <div className="text-slate-500 text-[9px] uppercase font-bold tracking-widest">Offline-Ready Worker</div>
-                                        </div>
+                                {/* The Central Logic Pipe */}
+                                <div className="flex-1 w-full h-24 relative flex items-center justify-center">
+                                    <div className="w-full h-1 bg-white/5 rounded-full relative">
+                                        <div className="absolute inset-0 bg-blue-500/20 blur-md"></div>
+                                        {/* Animated Data Packets */}
+                                        {[0, 1, 2].map(i => (
+                                            <div key={i} className="data-flow absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,1)]" style={{ animationDelay: `${i * 1}s` }}></div>
+                                        ))}
+                                    </div>
+                                    <div className="absolute -bottom-8 bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-xl text-[9px] font-black text-blue-400 uppercase tracking-widest">Encrypted Cloud Tunnel</div>
+                                </div>
+
+                                {/* Component: Kiosk Tablet */}
+                                <div className="flex flex-col items-center gap-4 group">
+                                    <div className="w-32 h-20 bg-slate-800 rounded-2xl border-2 border-green-500/30 flex items-center justify-center relative shadow-2xl transition-all duration-500 group-hover:border-green-500 group-hover:rotate-1">
+                                        <Tablet className="text-green-400" size={32} />
+                                        <div className="absolute inset-0 bg-green-500/10 animate-pulse rounded-2xl"></div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-white font-black text-xs uppercase tracking-widest">Kiosk Device</div>
+                                        <div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Local Storage Active</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Beginner Explanation Blocks */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-6">
                                 <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
-                                    <HardDrive className="text-blue-500" /> Persistence Lifecycle
+                                    <HardDrive className="text-blue-500" /> Layer 1: Local Memory
                                 </h3>
-                                <div className="space-y-4">
-                                    <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="text-[10px] font-black text-blue-600 uppercase mb-1">T+0: Boot Sequence</div>
-                                        <p className="text-sm text-slate-600 leading-relaxed font-medium">The application reads **Layer 1 (LocalStorage)** immediately. Within **15ms**, the UI is fully interactive with cached data, long before the network cable is even queried.</p>
-                                    </div>
-                                    <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="text-[10px] font-black text-purple-600 uppercase mb-1">T+60s: Heartbeat Paling</div>
-                                        <p className="text-sm text-slate-600 leading-relaxed font-medium">A background thread performs a **POST-request Handshake** to the Cloud. It pulls only changed bits (differential) and hot-swaps the in-memory React state.</p>
+                                <div className="p-8 bg-blue-50 rounded-[2rem] border border-blue-100 shadow-sm">
+                                    <p className="text-base text-slate-700 leading-relaxed font-medium">Think of the tablet like a <strong>Notebook</strong>. When it boots up, it reads from its own internal pages instantly. This is why the app feels so fast—it never waits for a website to "load" before showing the home screen.</p>
+                                    <div className="mt-6 flex items-center gap-3 bg-white p-3 rounded-xl border border-blue-200">
+                                        <Zap className="text-yellow-500" size={16} fill="currentColor" />
+                                        <span className="text-[10px] font-black uppercase text-blue-900">Result: 0.1s Loading Time</span>
                                     </div>
                                 </div>
                             </div>
                             <div className="space-y-6">
                                 <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
-                                    <ShieldCheck className="text-green-500" /> Error Tolerance
+                                    <Cloud className="text-purple-500" /> Layer 2: Cloud Sync
                                 </h3>
-                                <p className="text-base text-slate-500 leading-relaxed font-medium">Built with **Fault-Injection Resilience**. If the Cloud returns a 500 error or becomes unreachable, the kiosk enters "Blackout Mode" but continues serving all media and product data without a single user-facing error message.</p>
-                                <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className="text-[10px] font-mono text-slate-400">SYNC_RETRIES</span>
-                                        <span className="text-[10px] font-mono text-red-400">∞ [CONTINUOUS]</span>
-                                    </div>
-                                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                                        <div className="w-[85%] h-full bg-blue-500 line-animate"></div>
+                                <div className="p-8 bg-purple-50 rounded-[2rem] border border-purple-100 shadow-sm">
+                                    <p className="text-base text-slate-700 leading-relaxed font-medium">Every 60 seconds, the Kiosk "calls" the Cloud. It asks: <em>"Has the Admin changed anything?"</em>. If yes, it updates its notebook. If the internet is down, it simply keeps using its current notes until connection returns.</p>
+                                    <div className="mt-6 flex items-center gap-3 bg-white p-3 rounded-xl border border-purple-200">
+                                        <ShieldCheck className="text-green-500" size={16} />
+                                        <span className="text-[10px] font-black uppercase text-purple-900">Status: Always Reliable</span>
                                     </div>
                                 </div>
                             </div>
@@ -201,82 +182,88 @@ const SystemDocumentation = () => {
                 )}
 
                 {activeSection === 'inventory' && (
-                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                    <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-orange-600/10 text-orange-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit">Taxonomy Core</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Relational Taxonomy</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl">How the system transforms nested data into a hyper-fast searchable experience.</p>
+                            <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-orange-500/20">Module 02: Organization</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Inventory Sifter</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">How we turn a massive list of products into a lightning-fast searchable menu for customers.</p>
                         </div>
 
-                        {/* Illustration: Data Flattening */}
-                        <div className="bg-white rounded-[3rem] p-12 border border-slate-200 shadow-xl relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-8 text-slate-100"><Layers size={120}/></div>
-                            <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
-                                {/* Raw Input */}
-                                <div className="w-full md:w-64 space-y-3">
-                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Raw Hierarchical Data</div>
-                                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
-                                        <Folder className="text-blue-500" size={16} />
-                                        <span className="text-xs font-bold">Brand: Apple</span>
-                                    </div>
-                                    <div className="ml-4 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
-                                        <Layers className="text-purple-500" size={16} />
-                                        <span className="text-xs font-bold">Category: Watch</span>
-                                    </div>
-                                    <div className="ml-8 p-3 bg-white shadow-sm rounded-xl border border-slate-200 flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <Package className="text-orange-500" size={16} />
-                                            <span className="text-xs font-bold">Ultra 2</span>
-                                        </div>
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
-                                    </div>
+                        {/* Animated "Sifter" Illustration */}
+                        <div className="bg-slate-50 border border-slate-200 rounded-[3rem] p-12 relative overflow-hidden flex flex-col md:flex-row items-center gap-12">
+                            <div className="absolute top-0 right-0 p-12 text-slate-200/50"><Layers size={200} /></div>
+                            
+                            {/* Input Side: Mixed Data */}
+                            <div className="w-full md:w-64 space-y-4 z-10">
+                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-200 pb-2">Mixed Raw Data</div>
+                                <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 animate-bounce" style={{ animationDuration: '3s' }}>
+                                    <Package size={20} className="text-blue-500" />
+                                    <div className="h-2 w-20 bg-slate-100 rounded-full"></div>
                                 </div>
-
-                                {/* Transition */}
-                                <div className="flex flex-col items-center">
-                                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg animate-spin-slow">
-                                        <RefreshCw size={24} />
-                                    </div>
-                                    <div className="mt-4 text-[9px] font-black text-slate-400 uppercase">Flattener.sys</div>
+                                <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 translate-x-4 animate-bounce" style={{ animationDuration: '3.5s', animationDelay: '0.5s' }}>
+                                    {/* Fix: Added missing Tag import */}
+                                    <Tag size={20} className="text-orange-500" />
+                                    <div className="h-2 w-24 bg-slate-100 rounded-full"></div>
                                 </div>
+                                <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 -translate-x-2 animate-bounce" style={{ animationDuration: '2.8s', animationDelay: '0.2s' }}>
+                                    <ImageIcon size={20} className="text-purple-500" />
+                                    <div className="h-2 w-16 bg-slate-100 rounded-full"></div>
+                                </div>
+                            </div>
 
-                                {/* Flat Index */}
-                                <div className="w-full md:w-72 bg-slate-900 rounded-3xl p-6 shadow-2xl">
-                                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Searchable Index Node</div>
-                                    <div className="space-y-3">
-                                        <div className="bg-white/5 p-3 rounded-lg border border-white/5 font-mono text-[9px] text-blue-300">
-                                            <div className="text-slate-500">// Optimized Object</div>
-                                            <div className="mt-1">name: "Ultra 2",</div>
-                                            <div>brand: "Apple",</div>
-                                            <div>category: "Watch",</div>
-                                            <div>sku: "AWU2-L",</div>
-                                            <div>vector: [0.12, 0.44, ...]</div>
+                            {/* Processing Logic: The Funnel */}
+                            <div className="flex flex-col items-center justify-center relative">
+                                <div className="w-24 h-24 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-2xl z-20 animate-pulse">
+                                    <RefreshCw size={40} className="animate-spin" style={{ animationDuration: '8s' }} />
+                                </div>
+                                <div className="mt-4 text-[10px] font-black text-orange-600 uppercase tracking-widest">Logic: Flatten()</div>
+                                {/* Particles */}
+                                <div className="absolute top-0 left-1/2 w-1 h-1 bg-orange-400 rounded-full animate-ping"></div>
+                            </div>
+
+                            {/* Output Side: Searchable List */}
+                            <div className="flex-1 w-full max-w-sm bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl relative group overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50 scanline"></div>
+                                <div className="flex items-center gap-3 mb-6 bg-white/5 p-3 rounded-xl border border-white/5 search-pulse">
+                                    <Search size={16} className="text-blue-400" />
+                                    <div className="h-1 flex-1 bg-white/20 rounded-full"></div>
+                                </div>
+                                <div className="space-y-3">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="p-3 bg-white/5 rounded-xl flex items-center justify-between border border-white/5 bounce-x" style={{ animationDelay: `${i * 0.2}s` }}>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                <div className="h-1 w-20 bg-white/20 rounded-full"></div>
+                                            </div>
+                                            <div className="h-1 w-8 bg-blue-500/50 rounded-full"></div>
                                         </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Semantic Discovery</h3>
-                                <p className="text-base text-slate-600 leading-relaxed font-medium">The Kiosk doesn't search just names. The **Discovery Engine** builds a flattened search index during every sync cycle. This allows for instant multi-field matching (Brand + Name + SKU) without the overhead of deep recursive object traversal during user typing.</p>
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Relational Logic</h3>
+                                <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-200">
+                                    <p className="text-base text-slate-700 leading-relaxed font-medium">In the Admin Hub, you see folders inside folders. But the Kiosk is smarter—it "flattens" everything into a single searchable list. This allows a customer to type <strong>"iPhone"</strong> and instantly see results from any brand or category without the system having to "dig" through folders.</p>
+                                </div>
                             </div>
                             <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Intelligent Mapping</h3>
-                                <div className="space-y-3">
-                                    <div className="flex items-start gap-4 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                                        <Smartphone className="text-blue-600 shrink-0" />
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Smart Icons</h3>
+                                <div className="space-y-4">
+                                    <div className="flex items-start gap-4 p-5 bg-white border border-slate-100 shadow-sm rounded-3xl">
+                                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0"><MousePointer size={24}/></div>
                                         <div>
-                                            <div className="text-xs font-black uppercase text-blue-900 mb-1">Fuzzy Icon Logic</div>
-                                            <p className="text-[11px] text-blue-800 font-medium">Category names are compared against a system icon map using string similarity, allowing "Smartphone" and "Phones" to both automatically display the phone icon.</p>
+                                            <div className="text-xs font-black uppercase text-slate-900 mb-1">Automatic Selection</div>
+                                            <p className="text-[11px] text-slate-500 font-medium">If you name a category "Smartphones", the system automatically gives it a Phone icon. It looks at the words you type and matches them to our graphic library.</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-start gap-4 p-4 bg-orange-50 rounded-2xl border border-orange-100">
-                                        <Sparkles className="text-orange-600 shrink-0" />
+                                    <div className="flex items-start gap-4 p-5 bg-white border border-slate-100 shadow-sm rounded-3xl">
+                                        <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center shrink-0"><Check size={24}/></div>
                                         <div>
-                                            <div className="text-xs font-black uppercase text-orange-900 mb-1">Aging Heuristics</div>
-                                            <p className="text-[11px] text-orange-800 font-medium">Products include a `dateAdded` metadata point, allowing the UI to flag items as "NEW" and prioritising them in the Screensaver algorithm.</p>
+                                            <div className="text-xs font-black uppercase text-slate-900 mb-1">New Item Priority</div>
+                                            <p className="text-[11px] text-slate-500 font-medium">Products added in the last 30 days get a special <strong>NEW</strong> tag automatically, and are moved to the front of the Screensaver loop.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -286,134 +273,159 @@ const SystemDocumentation = () => {
                 )}
 
                 {activeSection === 'pricelists' && (
-                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                    <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-green-600/10 text-green-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit">Fin-Tech Pipeline</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Pricelist Synthesis</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl">A high-fidelity engine that transforms messy spreadsheets into retail-perfect documents.</p>
+                            <div className="bg-green-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-green-500/20">Module 03: Fin-Tech Engine</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Pricelist Synthesis</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Our system takes messy spreadsheets and turns them into high-end, printable PDF documents automatically.</p>
                         </div>
 
-                        {/* Illustration: The Rounding Machine */}
-                        <div className="bg-slate-900 rounded-[3rem] p-12 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center gap-12">
-                             <div className="absolute top-0 right-0 p-8 opacity-5"><RIcon size={180} /></div>
-                             <div className="flex-1 space-y-6">
-                                 <div className="text-[11px] font-black text-blue-400 uppercase tracking-widest">Price Rounding Machine</div>
-                                 <div className="bg-black/40 p-6 rounded-3xl border border-white/5 space-y-8">
-                                      <div className="flex items-center justify-between">
-                                          <div className="space-y-1">
-                                              <div className="text-[8px] text-slate-500 font-black uppercase">Dirty Input</div>
-                                              <div className="text-2xl font-mono text-red-500/80 font-bold flip-animate">R 799.95</div>
-                                          </div>
-                                          <ArrowRight className="text-slate-700 animate-pulse" />
-                                          <div className="space-y-1 text-right">
-                                              <div className="text-[8px] text-slate-500 font-black uppercase">Sanitized Output</div>
-                                              <div className="text-4xl font-mono text-green-400 font-black tracking-tighter flip-animate">R 800</div>
-                                          </div>
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-4">
-                                          <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                                              <div className="text-[9px] font-bold text-slate-400 uppercase mb-1">Rounding Protocol</div>
-                                              <div className="text-xs font-black text-white">UPWARD_FLOAT</div>
-                                          </div>
-                                          <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                                              <div className="text-[9px] font-bold text-slate-400 uppercase mb-1">Trigger 9s</div>
-                                              <div className="text-xs font-black text-white">NEXT_DECIMAL</div>
-                                          </div>
-                                      </div>
-                                 </div>
-                             </div>
-                             <div className="w-full md:w-72 space-y-4">
-                                 <div className="text-xs text-slate-400 font-medium leading-relaxed italic">
-                                     "Retail customers perceive R 800 as cleaner and more trustworthy than R 799.99. Our engine automates this psychological refinement during the XLSX ingest phase."
-                                 </div>
-                                 <div className="flex items-center gap-2">
-                                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Auto-Apply logic enabled</span>
-                                 </div>
-                             </div>
+                        {/* Interactive Ingestion Illustration */}
+                        <div className="bg-slate-900 rounded-[4rem] p-12 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center gap-20 min-h-[400px]">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+                            
+                            <div className="flex-1 space-y-8 z-10 w-full">
+                                <div className="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <Binary size={16} /> Input Normalization
+                                </div>
+                                <div className="bg-black/40 border border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10"><RIcon size={80} /></div>
+                                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                                        <div className="text-center md:text-left">
+                                            <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Raw XLSX Data</div>
+                                            <div className="text-2xl font-mono text-red-500/80 line-through decoration-2 decoration-red-500">R 12,499.95</div>
+                                        </div>
+                                        <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl animate-pulse">
+                                            <ArrowRight size={24} className="bounce-x" />
+                                        </div>
+                                        <div className="text-center md:text-right">
+                                            <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">Clean Retail Output</div>
+                                            <div className="text-4xl font-mono text-green-400 font-black tracking-tighter">R 12,500</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white/5 border border-white/5 p-4 rounded-2xl">
+                                        <div className="text-[9px] font-black text-slate-500 uppercase mb-1">Decimal Sifter</div>
+                                        <div className="text-xs text-white font-bold">Rounds .99 &rarr; Whole</div>
+                                    </div>
+                                    <div className="bg-white/5 border border-white/5 p-4 rounded-2xl">
+                                        <div className="text-[9px] font-black text-slate-500 uppercase mb-1">Clean Header Logic</div>
+                                        <div className="text-xs text-white font-bold">Auto-Header Finder</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Conveyor Belt Effect */}
+                            <div className="shrink-0 w-full md:w-72 flex flex-col items-center gap-8">
+                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden relative">
+                                    <div className="absolute h-full w-20 bg-blue-50 conveyor-belt"></div>
+                                </div>
+                                <div className="w-48 h-64 bg-white rounded-xl shadow-2xl relative p-6 flex flex-col group transition-transform duration-500 hover:-translate-y-4">
+                                    <div className="absolute top-0 right-0 p-3"><FileText size={40} className="text-red-500 opacity-20" /></div>
+                                    <div className="w-12 h-2 bg-slate-900 rounded-full mb-8"></div>
+                                    <div className="space-y-3">
+                                        {[1, 2, 3, 4, 5].map(i => (
+                                            <div key={i} className="flex justify-between items-center border-b border-slate-100 pb-1">
+                                                <div className="h-1 w-12 bg-slate-200 rounded-full"></div>
+                                                <div className="h-1 w-8 bg-slate-900/10 rounded-full"></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-auto flex justify-center">
+                                        <div className="bg-blue-600 text-white text-[8px] font-black px-4 py-1.5 rounded-full shadow-lg">HIGH-DPI PDF</div>
+                                    </div>
+                                </div>
+                                <div className="text-[10px] font-black text-slate-500 uppercase text-center leading-relaxed">Real-time PDF Distribution<br/>(300 DPI Vector)</div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Binary Ingestion</h3>
-                                <p className="text-base text-slate-600 leading-relaxed font-medium">Using **Buffer-stream XLSX parsing**, the engine reads thousand-row spreadsheets in under 200ms. It uses a **Weighted Header Scorer** to automatically find the correct columns (SKU, Price, Desc) even if the user uploads a spreadsheet with custom naming or vendor headers.</p>
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Why do we round prices?</h3>
+                                <div className="p-8 bg-green-50 rounded-[2rem] border border-green-100">
+                                    <p className="text-base text-slate-700 leading-relaxed font-medium italic">"Clean numbers build trust."</p>
+                                    <p className="text-base text-slate-700 leading-relaxed font-medium mt-4">In high-end retail, a price of <strong>R 800</strong> looks organized and premium. A price of <strong>R 799.95</strong> looks messy and "discount-heavy". Our engine automatically pushes values ending in '9' to the next round number to keep your UI looking professional.</p>
+                                </div>
                             </div>
                             <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                                    <Maximize className="text-blue-500" /> PDF Synthesis
-                                </h3>
-                                <p className="text-base text-slate-600 leading-relaxed font-medium">Final distribution documents are synthesized as **High-DPI Coordinate-Mapped PDFs**. The engine calculates text height and character metrics dynamically to handle pagination across complex multi-page vendor lists, ensuring no SKU is ever cut in half by a page break.</p>
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Auto-Ingest Logic</h3>
+                                <p className="text-base text-slate-600 leading-relaxed font-medium">When you upload an Excel sheet, you don't need to worry about the column order. Our <strong>Fuzzy Header Finder</strong> scans the first few rows for keywords like "Price", "Cost", "Retail", or "SKU" and maps them to the right spot in our system automatically.</p>
+                                <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 flex items-center gap-4">
+                                     <div className="w-10 h-10 bg-green-500/10 rounded-xl flex items-center justify-center text-green-500"><FileSpreadsheet size={20}/></div>
+                                     <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-relaxed">Detection Efficiency: 99.8%<br/>Auto-Mapping: Enabled</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'screensaver' && (
-                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                    <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-yellow-600/10 text-yellow-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit">Automation Protocol</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Screensaver.sys</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl">Autonomous probabilistic playlist generation and playback controller.</p>
+                            <div className="bg-yellow-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-yellow-500/20">Module 04: Visual Protocol</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Screensaver.sys</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Not just a slideshow—a weighted marketing engine that prioritizes what matters.</p>
                         </div>
 
-                        {/* Illustration: The Shuffle Queue */}
-                        <div className="bg-white rounded-[3rem] border border-slate-200 p-8 md:p-16 shadow-xl relative overflow-hidden h-[450px]">
-                             <div className="absolute top-0 right-0 p-8 opacity-5"><Zap size={200}/></div>
-                             
-                             <div className="flex flex-col items-center h-full">
-                                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-12">Weighted Playlist Constructor</div>
-                                 
-                                 <div className="relative w-full max-w-lg flex flex-col gap-3">
-                                      {/* Stack simulation */}
-                                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg z-20">Injecting Ads (3x Weight)</div>
-                                      
-                                      <div className="bg-blue-50 border-2 border-blue-500 p-4 rounded-2xl flex items-center justify-between translate-x-4 shadow-md">
-                                          <div className="flex items-center gap-4">
-                                              <Megaphone className="text-blue-600" size={20} />
-                                              <span className="font-black uppercase text-xs">Premium Marketing Ad</span>
-                                          </div>
-                                          <span className="bg-blue-600 text-white px-2 py-0.5 rounded text-[8px] font-black">PRIORITY</span>
-                                      </div>
+                        {/* Weighted Shuffling Illustration */}
+                        <div className="bg-white border border-slate-200 rounded-[3rem] p-12 md:p-20 shadow-xl relative overflow-hidden flex flex-col items-center">
+                            <div className="absolute top-0 right-0 p-8 opacity-5"><Zap size={250}/></div>
+                            <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-12">Smart Playlist Assembly</div>
 
-                                      <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center justify-between -translate-x-4 opacity-70">
-                                          <div className="flex items-center gap-4">
-                                              <Box className="text-slate-400" size={20} />
-                                              <span className="font-black uppercase text-xs">Standard Product A</span>
+                            <div className="relative w-full max-w-2xl flex flex-col gap-4">
+                                 {/* The "Priority" Zone */}
+                                 <div className="p-5 bg-blue-600 rounded-3xl flex items-center justify-between text-white shadow-2xl relative overflow-hidden group hover:scale-105 transition-transform">
+                                      <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-1000"></div>
+                                      <div className="flex items-center gap-4">
+                                          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center"><Megaphone size={24}/></div>
+                                          <div className="text-left">
+                                              <div className="text-[10px] font-black uppercase tracking-widest opacity-60">High Frequency</div>
+                                              <div className="text-sm font-black uppercase">Marketing Ad (Zone A)</div>
                                           </div>
-                                          <span className="text-[8px] font-bold text-slate-400 uppercase">1.0x</span>
                                       </div>
-
-                                      <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center justify-between translate-x-2 opacity-50">
-                                          <div className="flex items-center gap-4">
-                                              <Box className="text-slate-400" size={20} />
-                                              <span className="font-black uppercase text-xs">Standard Product B</span>
-                                          </div>
-                                          <span className="text-[8px] font-bold text-slate-400 uppercase">1.0x</span>
-                                      </div>
-
-                                      <div className="bg-orange-50 border border-orange-200 p-4 rounded-2xl flex items-center justify-between -translate-x-8 opacity-30">
-                                          <div className="flex items-center gap-4">
-                                              <Sparkles className="text-orange-600" size={20} />
-                                              <span className="font-black uppercase text-xs">New Stock Item</span>
-                                          </div>
-                                          <span className="text-orange-600 text-[8px] font-black">BOOSTED</span>
-                                      </div>
+                                      <div className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20">3.0x Weight</div>
                                  </div>
-                             </div>
+
+                                 {/* Standard Zone */}
+                                 <div className="p-5 bg-slate-100 rounded-3xl flex items-center justify-between text-slate-400 border border-slate-200 opacity-60">
+                                      <div className="flex items-center gap-4">
+                                          <div className="w-12 h-12 bg-slate-200 rounded-2xl flex items-center justify-center"><Box size={24}/></div>
+                                          <div className="text-left">
+                                              <div className="text-[10px] font-black uppercase tracking-widest opacity-60">Standard Frequency</div>
+                                              <div className="text-sm font-black uppercase">General Product Library</div>
+                                          </div>
+                                      </div>
+                                      <div className="bg-slate-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-300">1.0x Weight</div>
+                                 </div>
+
+                                 {/* New Zone */}
+                                 <div className="p-5 bg-orange-50 rounded-3xl flex items-center justify-between text-orange-900/50 border border-orange-200 opacity-80 translate-x-8">
+                                      <div className="flex items-center gap-4">
+                                          <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center"><Sparkles size={24} className="text-orange-500" /></div>
+                                          <div className="text-left">
+                                              <div className="text-[10px] font-black uppercase tracking-widest opacity-60">Boosted Frequency</div>
+                                              <div className="text-sm font-black uppercase">New Stock Items</div>
+                                          </div>
+                                      </div>
+                                      <div className="bg-orange-100 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-orange-200">2.0x Weight</div>
+                                 </div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Probabilistic Shuffling</h3>
-                                <p className="text-base text-slate-600 leading-relaxed font-medium">To maintain a fresh visual experience, the system utilizes a **Weighted Fisher-Yates Shuffle**. Marketing Ads are injected into the shuffle queue with a **3x coefficient**, ensuring they appear significantly more often than standard products while maintaining a non-repeating flow.</p>
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">The Weighted Shuffle</h3>
+                                <div className="p-8 bg-yellow-50 rounded-[2rem] border border-yellow-100 shadow-sm">
+                                    <p className="text-base text-slate-700 leading-relaxed font-medium">To keep customers interested, the Kiosk shuffles the playlist every time it starts. However, it's not truly random. <strong>Marketing Ads</strong> are added to the shuffle 3 times, while standard products are only added once. This ensures your key promotions are seen much more often.</p>
+                                </div>
                             </div>
                             <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Kinetic Presentation</h3>
-                                <p className="text-base text-slate-600 leading-relaxed font-medium">Each item in the playlist is assigned a dynamic animation effect from the **VFX Matrix**. This prevents "Static Burn" on tablet panels and keeps the kiosk attractive from a distance.</p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {['Ken Burns', 'Twist-Enter', 'Circle Reveal', 'Perspective-Tilt'].map(fx => (
-                                        <div key={fx} className="bg-white border border-slate-200 p-3 rounded-xl text-[10px] font-black uppercase text-slate-500 text-center">{fx}</div>
-                                    ))}
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Kinetic VFX</h3>
+                                <p className="text-base text-slate-600 leading-relaxed font-medium">Static images damage digital screens over time. To prevent this, our engine assigns a random <strong>Cinematic Animation</strong> to every slide. Whether it's a slow "Ken Burns" zoom or a "Circle Reveal", the pixels are always moving to protect your hardware and catch the customer's eye.</p>
+                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                    <div className="bg-slate-900 text-white p-4 rounded-2xl text-center shadow-lg"><div className="text-[10px] font-black uppercase tracking-widest">Pan & Zoom</div></div>
+                                    <div className="bg-slate-900 text-white p-4 rounded-2xl text-center shadow-lg"><div className="text-[10px] font-black uppercase tracking-widest">Perspective Tilt</div></div>
                                 </div>
                             </div>
                         </div>
@@ -421,352 +433,147 @@ const SystemDocumentation = () => {
                 )}
 
                 {activeSection === 'fleet' && (
-                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                    <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-blue-600/10 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit">Remote Monitoring</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Fleet Telemetry</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl">Bi-directional monitoring and command protocols for thousands of active devices.</p>
+                            <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-blue-500/20">Module 05: Fleet Management</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Telemetry Protocol</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Real-time status tracking for every tablet in your network, no matter where they are located.</p>
                         </div>
 
-                        {/* Illustration: The Pulse Monitor */}
-                        <div className="bg-slate-950 rounded-[3rem] p-12 shadow-2xl relative overflow-hidden">
-                             <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/circuit-board.png')]"></div>
-                             
-                             <div className="relative flex flex-col items-center gap-12">
-                                  {/* Terminal Look */}
-                                  <div className="w-full max-w-2xl bg-black rounded-2xl border border-slate-800 p-6 font-mono text-[10px] text-green-400 overflow-hidden shadow-2xl">
-                                      <div className="flex gap-2 mb-4 border-b border-white/5 pb-2">
-                                          <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                          <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                          <span className="text-slate-600 ml-4 font-bold uppercase tracking-widest">Heartbeat_Monitor.log</span>
-                                      </div>
-                                      <div className="space-y-1 opacity-80">
-                                          <div>[14:02:11] INBOUND: LOC-88219 (Mall Kiosk 4) - PING</div>
-                                          <div>[14:02:11] METRICS: WIFI: 82% | RAM: 42% | TEMP: 38°C</div>
-                                          <div className="text-blue-400">[14:02:12] COMMAND_SYNC: Checking restart_flag...</div>
-                                          <div className="text-yellow-400">[14:02:12] WARNING: Version drift detected. Device: v1.0.4 | Origin: v1.0.5</div>
-                                          <div className="animate-pulse">[14:02:13] LISTENING_FOR_HANDSHAKE... _</div>
-                                      </div>
-                                  </div>
+                        {/* Animated Fleet Monitoring Illustration */}
+                        <div className="bg-slate-950 rounded-[4rem] p-12 md:p-24 shadow-2xl relative overflow-hidden flex flex-col items-center">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+                            
+                            <div className="relative w-full h-full flex flex-col items-center gap-12">
+                                {/* The Dashboard Hub */}
+                                <div className="w-24 h-24 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl relative z-20">
+                                    <Globe size={40} className="animate-spin-slow" />
+                                    <div className="pulse-ring absolute inset-0 rounded-[2.5rem] border-4 border-blue-500"></div>
+                                    <div className="pulse-ring absolute inset-0 rounded-[2.5rem] border-4 border-blue-500" style={{ animationDelay: '1s' }}></div>
+                                </div>
 
-                                  <div className="flex items-center gap-6">
-                                      <div className="flex flex-col items-center gap-2">
-                                          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg"><Tablet className="text-white" size={24} /></div>
-                                          <div className="text-[9px] font-black uppercase text-blue-400">Device</div>
-                                      </div>
-                                      <div className="w-32 h-0.5 bg-slate-800 relative">
-                                          <div className="absolute top-0 h-full bg-blue-500 data-packet" style={{ width: '10px' }}></div>
-                                      </div>
-                                      <div className="flex flex-col items-center gap-2">
-                                          <div className="w-12 h-12 bg-slate-800 rounded-2xl border border-slate-700 flex items-center justify-center"><Database className="text-slate-400" size={24} /></div>
-                                          <div className="text-[9px] font-black uppercase text-slate-500">Cloud</div>
-                                      </div>
-                                  </div>
-                             </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 w-full max-w-3xl">
+                                    {[
+                                        { label: 'Shop A', type: 'Tablet', status: 'Online', signal: '88%' },
+                                        { label: 'Shop B', type: 'Handheld', status: 'Online', signal: '92%' },
+                                        { label: 'TV Wall 1', type: 'TV Display', status: 'Syncing', signal: '100%' },
+                                    ].map((dev, i) => (
+                                        <div key={i} className="bg-white/5 border border-white/10 p-6 rounded-3xl flex flex-col items-center gap-3 relative transition-transform duration-500 hover:scale-105 group">
+                                            <div className="absolute -top-3 bg-green-500 w-3 h-3 rounded-full border-4 border-slate-950 animate-pulse"></div>
+                                            <div className="p-3 bg-white/5 rounded-2xl group-hover:text-blue-400 transition-colors">
+                                                {dev.type === 'Tablet' ? <Tablet size={24}/> : dev.type === 'TV Display' ? <Tv size={24}/> : <Smartphone size={24}/>}
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-white font-black text-xs uppercase">{dev.label}</div>
+                                                <div className="text-slate-500 text-[9px] font-bold uppercase mt-1">{dev.signal} Signal • {dev.status}</div>
+                                            </div>
+                                            {/* Incoming Ping line */}
+                                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-0.5 h-12 bg-gradient-to-t from-blue-500 to-transparent opacity-20"></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">NAT Traversal Logic</h3>
-                                <p className="text-base text-slate-600 leading-relaxed font-medium">Modern retail networks often block inbound connections. To bypass this, we use a **Pull-Based Telemetry Pattern**. Devices "reach out" to the cloud, allowing them to pull configuration updates and restart commands through the established outbound tunnel, requiring zero network firewall changes at the shop level.</p>
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Bi-Directional Pulse</h3>
+                                <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-200">
+                                    <p className="text-base text-slate-700 leading-relaxed font-medium">Communication is a two-way street. Every device sends its <strong>Battery, WiFi, and Temperature</strong> to your Admin dashboard. At the same time, it looks for <strong>Commands</strong> from you—like a "Remote Restart" or "Refresh Content" request.</p>
+                                </div>
                             </div>
                             <div className="space-y-6">
                                 <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Identity Recovery</h3>
-                                <p className="text-base text-slate-600 leading-relaxed font-medium">Every kiosk is assigned a unique **Hardware-Bound ID** upon provisioning. This ID is persisted across app reloads and system updates, ensuring that a physical kiosk always reconnects to its correct cloud entry in the Fleet Manager.</p>
+                                <p className="text-base text-slate-600 leading-relaxed font-medium">Even if you uninstall the app or clear the cache, the tablet's <strong>Digital Signature</strong> is remembered by our cloud. The moment it reconnects, it automatically downloads its name and settings back from the fleet registry.</p>
+                                <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 flex items-center justify-between">
+                                     <div className="flex items-center gap-3">
+                                         <Lock className="text-blue-500" size={16} />
+                                         <span className="text-[10px] font-black uppercase text-slate-400">Device ID: LOC-8812</span>
+                                     </div>
+                                     <div className="text-[10px] font-black uppercase text-green-500">Identity Secure</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'tv' && (
-                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                    <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-purple-600/10 text-purple-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit">High-Bandwidth Display</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">TV Mode Protocol</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl">Optimized for non-interactive cinematic playback on massive digital surfaces.</p>
+                            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20">Module 06: Cinematic Protocol</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">TV Mode Architecture</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Engineered for large-format displays where interaction isn't possible, but visual fidelity is mandatory.</p>
                         </div>
 
-                        {/* Illustration: TV Matrix */}
-                        <div className="bg-slate-200 p-8 rounded-[3rem] shadow-xl border-4 border-slate-400 relative overflow-hidden">
-                             <div className="bg-black aspect-video rounded-3xl overflow-hidden relative border-8 border-slate-900 shadow-2xl">
-                                 <video src="https://www.w3schools.com/html/mov_bbb.mp4" muted autoPlay loop className="w-full h-full object-cover opacity-50" />
-                                 <div className="absolute inset-0 p-8 flex flex-col justify-between">
-                                     <div className="flex justify-between items-start">
-                                         <div className="bg-blue-600 px-4 py-2 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-xl">CH: OLED PREMIUM</div>
-                                         <div className="bg-black/50 px-4 py-2 rounded-xl text-slate-300 font-mono text-[10px] backdrop-blur-md border border-white/10">1080P | 60FPS</div>
+                        {/* TV Reel Illustration */}
+                        <div className="bg-slate-200 rounded-[4rem] p-12 shadow-inner border-4 border-slate-300 relative overflow-hidden flex flex-col items-center">
+                            <div className="bg-black aspect-video w-full max-w-3xl rounded-[2rem] border-[12px] border-slate-900 shadow-2xl overflow-hidden relative">
+                                <div className="absolute inset-0 bg-slate-900">
+                                     {/* Mock Film Strip Animation */}
+                                     <div className="h-full w-[200%] flex animate-conveyor" style={{ animationDuration: '4s' }}>
+                                         {[1,2,3,4,5,6].map(i => (
+                                             <div key={i} className="h-full w-1/6 border-r-4 border-black/40 flex items-center justify-center p-8">
+                                                 <div className="w-full h-full bg-slate-800 rounded-xl relative overflow-hidden flex items-center justify-center">
+                                                     <PlayCircle size={40} className="text-white/20" />
+                                                 </div>
+                                             </div>
+                                         ))}
                                      </div>
-                                     <div className="flex flex-col items-center gap-4">
-                                         <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-xl border border-white/20 animate-pulse">
-                                             <Play size={24} fill="currentColor" className="text-white ml-1" />
-                                         </div>
-                                         <div className="bg-black/80 px-6 py-3 rounded-2xl border border-white/5 text-center backdrop-blur-2xl">
-                                             <div className="text-[10px] font-black uppercase text-white tracking-widest mb-1">Now Playing</div>
-                                             <div className="text-[9px] font-bold text-blue-400 uppercase">CINEMATIC_BRAND_LOOP_V2.MP4</div>
-                                         </div>
+                                </div>
+                                {/* Player Overlay */}
+                                <div className="absolute inset-0 p-8 flex flex-col justify-between pointer-events-none">
+                                     <div className="flex justify-between items-start">
+                                         <div className="bg-blue-600 px-4 py-2 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-xl">LIVE: TV CHANNEL</div>
+                                         <div className="bg-black/50 px-4 py-2 rounded-xl text-slate-300 font-mono text-[10px] backdrop-blur-md border border-white/10">1080P • 60FPS</div>
                                      </div>
                                      <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                         <div className="w-1/3 h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,1)]"></div>
+                                         <div className="w-2/3 h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,1)]"></div>
                                      </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-12 grid grid-cols-3 gap-8">
+                                 <div className="flex flex-col items-center gap-2">
+                                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg text-slate-400"><VolumeX size={20}/></div>
+                                     <span className="text-[10px] font-black uppercase text-slate-500">Muted Start</span>
                                  </div>
-                             </div>
-                             <div className="mt-8 flex justify-center gap-12">
-                                  <div className="flex flex-col items-center gap-2">
-                                      <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-slate-500 shadow-inner"><RotateCcw size={18}/></div>
-                                      <span className="text-[9px] font-black uppercase text-slate-500">Auto-Loop</span>
-                                  </div>
-                                  <div className="flex flex-col items-center gap-2">
-                                      <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-slate-500 shadow-inner"><VolumeX size={18}/></div>
-                                      <span className="text-[9px] font-black uppercase text-slate-500">Muted Start</span>
-                                  </div>
-                                  <div className="flex flex-col items-center gap-2">
-                                      <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-slate-500 shadow-inner"><MonitorSmartphone size={18}/></div>
-                                      <span className="text-[9px] font-black uppercase text-slate-500">Orientation Lock</span>
-                                  </div>
-                             </div>
+                                 <div className="flex flex-col items-center gap-2">
+                                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg text-slate-400"><Layout size={20}/></div>
+                                     <span className="text-[10px] font-black uppercase text-slate-500">Fit-to-Fill</span>
+                                 </div>
+                                 <div className="flex flex-col items-center gap-2">
+                                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg text-slate-400"><MousePointer2 size={20}/></div>
+                                     <span className="text-[10px] font-black uppercase text-slate-500">No Cursor</span>
+                                 </div>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Audio Context Unlock</h3>
-                                <p className="text-base text-slate-600 leading-relaxed font-medium">Browsers (specifically on Android/Smart TV sticks) block **Audio Autoplay**. TV Mode starts in a muted state to ensure immediate playback. To enable sound, the system detects the first user interaction (touch/tap) and dynamically "Unlocks" the Audio Context across all videos in the playlist stack.</p>
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Autoplay Bypass</h3>
+                                <div className="p-8 bg-purple-50 rounded-[2rem] border border-purple-100 shadow-sm">
+                                    <p className="text-base text-slate-700 leading-relaxed font-medium">Modern browsers block videos with sound from playing automatically. To solve this for TV walls, our system starts videos in a <strong>Muted State</strong>. The moment a user touches the screen, the system "Unlocks" the audio context and enables sound across the entire playlist.</p>
+                                </div>
                             </div>
                             <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Display Optimization</h3>
-                                <div className="space-y-3">
-                                    <div className="flex items-start gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                                        <div className="w-8 h-8 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center shrink-0"><Layout size={16}/></div>
-                                        <div>
-                                            <div className="text-[10px] font-black uppercase text-slate-900 mb-1">Fill-to-Edge Logic</div>
-                                            <p className="text-[11px] text-slate-500 font-medium">Automatically handles letterboxing for mixed-aspect ratio vendor videos to maintain a premium "Seamless Wall" look.</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                                        <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center shrink-0"><MousePointer2 size={16}/></div>
-                                        <div>
-                                            <div className="text-[10px] font-black uppercase text-slate-900 mb-1">Cursor Ghosting</div>
-                                            <p className="text-[11px] text-slate-500 font-medium">System applies `cursor: none` after 5 seconds of inactivity to hide Android mouse pointers on Smart TV boxes.</p>
-                                        </div>
-                                    </div>
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Display Intelligence</h3>
+                                <p className="text-base text-slate-600 leading-relaxed font-medium">TV Mode includes <strong>Letterbox Correction</strong>. If you upload a vertical video to a horizontal TV, the system doesn't stretch it—it applies a beautiful blurred background to fill the empty space, maintaining a high-end cinematic feel.</p>
+                                <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 flex flex-wrap gap-2">
+                                     {['4K READY', 'H.264 ENCODED', 'BITRATE OPTIMIZED', 'FRAME-LOCK'].map(tag => (
+                                         <div key={tag} className="text-[9px] font-black uppercase text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">{tag}</div>
+                                     ))}
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
+
+                {/* Bottom Spacer */}
+                <div className="h-40"></div>
             </div>
         </div>
     );
 };
-
-// Helper Icon for CPU
-const CpuIcon = (props: any) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-);
-
-// --- ZIP IMPORT/EXPORT UTILS ---
-
-// Helper: Determine extension from MIME type or URL
-const getExtension = (blob: Blob, url: string): string => {
-    if (blob.type === 'image/jpeg') return 'jpg';
-    if (blob.type === 'image/png') return 'png';
-    if (blob.type === 'image/webp') return 'webp';
-    if (blob.type === 'application/pdf') return 'pdf';
-    if (blob.type === 'video/mp4') return 'mp4';
-    if (blob.type === 'video/webm') return 'webm';
-    
-    // Fallback to URL extension
-    const match = url.match(/\.([0-9a-z]+)(?:[?#]|$)/i);
-    return match ? match[1] : 'dat';
-};
-
-const fetchAssetAndAddToZip = async (zipFolder: JSZip | null, url: string, filenameBase: string) => {
-    if (!zipFolder || !url) return;
-    try {
-        let blob: Blob;
-        
-        // Handle Base64 Data URLs
-        if (url.startsWith('data:')) {
-            const res = await fetch(url);
-            blob = await res.blob();
-        } else {
-            // Handle Remote URLs
-            const response = await fetch(url, { mode: 'cors', cache: 'no-cache' });
-            if (!response.ok) throw new Error(`Failed to fetch ${url}`);
-            blob = await response.blob();
-        }
-
-        const ext = getExtension(blob, url);
-        // Replace potential invalid chars
-        const safeFilename = filenameBase.replace(/[^a-z0-9_\-]/gi, '_');
-        zipFolder.file(`${safeFilename}.${ext}`, blob);
-    } catch (e) {
-        console.warn(`Failed to pack asset: ${url}`, e);
-        zipFolder.file(`${filenameBase}_FAILED.txt`, `Could not download: ${url}`);
-    }
-};
-
-const downloadZip = async (storeData: StoreData) => {
-    const zip = new JSZip();
-    console.log("Starting Full System Backup...");
-
-    // --- 1. SYSTEM DATA ---
-    // Root Config
-    zip.file("store_config_full.json", JSON.stringify(storeData, null, 2));
-    
-    // Fleet CSV
-    if (storeData.fleet && storeData.fleet.length > 0) {
-        const csvHeader = "ID,Name,Type,Status,LastSeen,IP,Zone,Version\n";
-        const csvRows = storeData.fleet.map(k => 
-            `"${k.id}","${k.name}","${k.deviceType}","${k.status}","${k.last_seen}","${k.ipAddress}","${k.assignedZone || ''}","${k.version}"`
-        ).join("\n");
-        zip.file("_System_Backup/Fleet/fleet_registry.csv", csvHeader + csvRows);
-    }
-
-    // Settings & History
-    if (storeData.archive) {
-        zip.file("_System_Backup/History/archive_data.json", JSON.stringify(storeData.archive, null, 2));
-    }
-    if (storeData.systemSettings) {
-        zip.file("_System_Backup/Settings/system_settings.json", JSON.stringify(storeData.systemSettings, null, 2));
-    }
-    // Backup Admins but redact PINs for safety in the easy-read JSON
-    const safeAdmins = storeData.admins.map(a => ({ ...a, pin: "****" }));
-    zip.file("_System_Backup/Settings/admin_users.json", JSON.stringify(safeAdmins, null, 2));
-
-
-    // --- 2. INVENTORY (Root Folders for backward compat with Importer) ---
-    for (const brand of storeData.brands) {
-        const brandFolder = zip.folder(brand.name.replace(/[^a-z0-9 ]/gi, '').trim() || 'Untitled Brand');
-        
-        if (brandFolder) {
-            brandFolder.file("brand.json", JSON.stringify(brand, null, 2));
-            if (brand.logoUrl) await fetchAssetAndAddToZip(brandFolder, brand.logoUrl, "brand_logo");
-        }
-        
-        for (const category of brand.categories) {
-            const catFolder = brandFolder?.folder(category.name.replace(/[^a-z0-9 ]/gi, '').trim() || 'Untitled Category');
-            
-            for (const product of category.products) {
-                const prodFolder = catFolder?.folder(product.name.replace(/[^a-z0-9 ]/gi, '').trim() || 'Untitled Product');
-                
-                if (prodFolder) {
-                    const metadata = {
-                        ...product, // Backup full product object
-                        originalImageUrl: product.imageUrl, 
-                    };
-                    prodFolder.file("details.json", JSON.stringify(metadata, null, 2));
-
-                    if (product.imageUrl) await fetchAssetAndAddToZip(prodFolder, product.imageUrl, "cover");
-
-                    if (product.galleryUrls) {
-                        for (let i = 0; i < product.galleryUrls.length; i++) {
-                            await fetchAssetAndAddToZip(prodFolder, product.galleryUrls[i], `gallery_${i}`);
-                        }
-                    }
-
-                    const videos = [...(product.videoUrls || [])];
-                    if (product.videoUrl && !videos.includes(product.videoUrl)) videos.push(product.videoUrl);
-                    for (let i = 0; i < videos.length; i++) {
-                        await fetchAssetAndAddToZip(prodFolder, videos[i], `video_${i}`);
-                    }
-
-                    if (product.manuals) {
-                         for (let i = 0; i < product.manuals.length; i++) {
-                             const m = product.manuals[i];
-                             if (m.pdfUrl) {
-                                 await fetchAssetAndAddToZip(prodFolder, m.pdfUrl, m.title || `manual_${i}`);
-                             }
-                             if (m.thumbnailUrl) {
-                                 await fetchAssetAndAddToZip(prodFolder, m.thumbnailUrl, `manual_thumb_${i}`);
-                             }
-                         }
-                    }
-                }
-            }
-        }
-    }
-
-    // --- 3. MARKETING ---
-    const mktFolder = zip.folder("_System_Backup/Marketing");
-    if (mktFolder) {
-        // Hero
-        if (storeData.hero.backgroundImageUrl) await fetchAssetAndAddToZip(mktFolder, storeData.hero.backgroundImageUrl, "hero_background");
-        if (storeData.hero.logoUrl) await fetchAssetAndAddToZip(mktFolder, storeData.hero.logoUrl, "hero_logo");
-        
-        // Ads
-        const adsFolder = mktFolder.folder("Ads");
-        if (adsFolder && storeData.ads) {
-            for (const zone of ['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideLeftVertical', 'screensaver']) {
-                const zoneFolder = adsFolder.folder(zone);
-                const ads = (storeData.ads as any)[zone] || [];
-                for(let i=0; i<ads.length; i++) {
-                    await fetchAssetAndAddToZip(zoneFolder, ads[i].url, `ad_${i}`);
-                }
-            }
-        }
-
-        // Pamphlets
-        const pamFolder = mktFolder.folder("Pamphlets");
-        if (pamFolder && storeData.catalogues) {
-            const globalCats = storeData.catalogues.filter(c => !c.brandId);
-            for(let i=0; i<globalCats.length; i++) {
-                const c = globalCats[i];
-                if (c.pdfUrl) await fetchAssetAndAddToZip(pamFolder, c.pdfUrl, c.title);
-                if (c.thumbnailUrl) await fetchAssetAndAddToZip(pamFolder, c.thumbnailUrl, `${c.title}_thumb`);
-            }
-        }
-    }
-
-    // --- 4. PRICELISTS ---
-    const plFolder = zip.folder("_System_Backup/Pricelists");
-    if (plFolder && storeData.pricelists) {
-        for(const pl of storeData.pricelists) {
-            const brand = storeData.pricelistBrands?.find(b => b.id === pl.brandId);
-            const brandName = brand ? brand.name.replace(/[^a-z0-9 ]/gi, '') : 'Unknown_Brand';
-            const brandFolder = plFolder.folder(brandName);
-            if (brandFolder) {
-                if (pl.url) await fetchAssetAndAddToZip(brandFolder, pl.url, `${pl.title}_${pl.year}`);
-                if (pl.thumbnailUrl) await fetchAssetAndAddToZip(brandFolder, pl.thumbnailUrl, `${pl.title}_thumb`);
-            }
-        }
-    }
-
-    // --- 5. TV ---
-    const tvFolder = zip.folder("_System_Backup/TV");
-    if (tvFolder && storeData.tv?.brands) {
-        for (const tvb of storeData.tv.brands) {
-            const brandFolder = tvFolder.folder(tvb.name.replace(/[^a-z0-9 ]/gi, ''));
-            if (brandFolder) {
-                if (tvb.logoUrl) await fetchAssetAndAddToZip(brandFolder, tvb.logoUrl, "logo");
-                
-                for(const model of (tvb.models || [])) {
-                    const modelFolder = brandFolder.folder(model.name.replace(/[^a-z0-9 ]/gi, ''));
-                    if (modelFolder) {
-                        if (model.imageUrl) await fetchAssetAndAddToZip(modelFolder, model.imageUrl, "cover");
-                        // Videos might be heavy, but requested "Backup Everything"
-                        if (model.videoUrls) {
-                            for(let i=0; i<model.videoUrls.length; i++) {
-                                await fetchAssetAndAddToZip(modelFolder, model.videoUrls[i], `video_${i}`);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Generate
-    const content = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(content);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `kiosk-full-system-backup-${new Date().toISOString().split('T')[0]}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-};
-
 
 // Updated Auth Component with Name/PIN and Admin validation
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
@@ -1997,7 +1804,7 @@ const TVModelEditor = ({ model, onSave, onClose }: { model: TVModel, onSave: (m:
                 </div>
 
                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-white shrink-0">
-                    <button onClick={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
+                    <button onClose={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
                     <button onClick={() => onSave(draft)} className="px-4 py-2 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg">Save Model</button>
                 </div>
             </div>
@@ -2218,6 +2025,256 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
             </div>
         </div>
     );
+};
+
+// --- ZIP HELPER FUNCTIONS ---
+const importZip = async (file: File, onProgress?: (msg: string) => void): Promise<Brand[]> => {
+    const zip = new JSZip();
+    let loadedZip;
+    try {
+        loadedZip = await zip.loadAsync(file);
+    } catch (e) {
+        throw new Error("Invalid ZIP file");
+    }
+    
+    const newBrands: Record<string, Brand> = {};
+    
+    // Helper: Normalize path to avoid Windows/Mac slash issues
+    const getCleanPath = (filename: string) => filename.replace(/\\/g, '/');
+
+    // 1. Detect Root Wrapper (e.g. user zipped a folder "Backup" containing Brands)
+    const validFiles = Object.keys(loadedZip.files).filter(path => {
+        return !loadedZip.files[path].dir && !path.includes('__MACOSX') && !path.includes('.DS_Store');
+    });
+
+    let rootPrefix = "";
+    if (validFiles.length > 0) {
+        const firstFileParts = getCleanPath(validFiles[0]).split('/').filter(p => p);
+        if (firstFileParts.length > 1) {
+            const possibleRoot = firstFileParts[0];
+            const allHaveRoot = validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'));
+            if (allHaveRoot) {
+                rootPrefix = possibleRoot + '/';
+                console.log("Import: Stripping root folder:", rootPrefix);
+            }
+        }
+    }
+
+    // Helper: Determine MIME type
+    const getMimeType = (filename: string) => {
+        const ext = filename.split('.').pop()?.toLowerCase();
+        if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+        if (ext === 'png') return 'image/png';
+        if (ext === 'webp') return 'image/webp';
+        if (ext === 'gif') return 'image/gif';
+        if (ext === 'mp4') return 'video/mp4';
+        if (ext === 'webm') return 'video/webm';
+        if (ext === 'pdf') return 'application/pdf';
+        return 'application/octet-stream';
+    };
+
+    // Helper: Process Asset (Upload to Cloud if available to save JSON size)
+    const processAsset = async (zipObj: any, filename: string): Promise<string> => {
+        const blob = await zipObj.async("blob");
+        
+        // Try Cloud Upload First (To keep JSON small)
+        if (supabase) {
+             try {
+                 const mimeType = getMimeType(filename);
+                 // Sanitize filename
+                 const safeName = filename.replace(/[^a-z0-9._-]/gi, '_');
+                 // Create File object
+                 const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType });
+                 // Upload sequentially (this function is called inside sequential loop)
+                 const url = await uploadFileToStorage(fileToUpload);
+                 return url;
+             } catch (e) {
+                 console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e);
+             }
+        }
+
+        // Fallback Base64 (Only if offline or upload failed)
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+        });
+    };
+
+    // Iterate files
+    const filePaths = Object.keys(loadedZip.files);
+    let processedCount = 0;
+    
+    for (const rawPath of filePaths) {
+        let path = getCleanPath(rawPath);
+        const fileObj = loadedZip.files[rawPath];
+        if (fileObj.dir) continue;
+        if (path.includes('__MACOSX') || path.includes('.DS_Store')) continue;
+
+        // Remove Root Prefix if detected
+        if (rootPrefix && path.startsWith(rootPrefix)) {
+            path = path.substring(rootPrefix.length);
+        }
+
+        // SKIP SYSTEM BACKUP FOLDERS in Inventory Import
+        if (path.startsWith('_System_Backup/')) continue;
+        if (path.includes('store_config')) continue;
+
+        // Path: Brand/Category/Product/File.ext OR Brand/BrandFile.ext
+        const parts = path.split('/').filter(p => p.trim() !== '');
+        
+        // Skip root files if any (files not inside a Brand folder)
+        if (parts.length < 2) continue;
+
+        processedCount++;
+        if (onProgress && processedCount % 5 === 0) onProgress(`Processing item ${processedCount}/${validFiles.length}...`);
+
+        const brandName = parts[0];
+
+        // Init Brand
+        if (!newBrands[brandName]) {
+            newBrands[brandName] = {
+                id: generateId('brand'),
+                name: brandName,
+                categories: []
+            };
+        }
+
+        // Handle Brand Assets (Level 2: Brand/brand_logo.png)
+        if (parts.length === 2) {
+             const fileName = parts[1].toLowerCase();
+             // Parse brand logo
+             if (fileName.includes('brand_logo') || fileName.includes('logo')) {
+                  const url = await processAsset(fileObj, parts[1]);
+                  newBrands[brandName].logoUrl = url;
+             }
+             // Parse Brand JSON metadata if exists
+             if (fileName.endsWith('.json') && fileName.includes('brand')) {
+                 try {
+                     const text = await fileObj.async("text");
+                     const meta = JSON.parse(text);
+                     if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor;
+                     // Allow ID overwrite if restoring backup
+                     if (meta.id) newBrands[brandName].id = meta.id; 
+                 } catch(e) {}
+             }
+             continue;
+        }
+
+        // Require Product Depth for rest (Brand/Category/Product/File)
+        if (parts.length < 4) continue;
+
+        const categoryName = parts[1];
+        const productName = parts[2];
+        const fileName = parts.slice(3).join('/'); // In case of subfolders inside product (e.g. gallery)
+
+        // Init Category
+        let category = newBrands[brandName].categories.find(c => c.name === categoryName);
+        if (!category) {
+            category = {
+                id: generateId('cat'),
+                name: categoryName,
+                icon: 'Box',
+                products: []
+            };
+            newBrands[brandName].categories.push(category);
+        }
+
+        // Init Product
+        let product = category.products.find(p => p.name === productName);
+        if (!product) {
+            product = {
+                id: generateId('prod'),
+                name: productName, 
+                description: '',
+                specs: {},
+                features: [],
+                dimensions: [],
+                imageUrl: '',
+                galleryUrls: [],
+                videoUrls: [],
+                manuals: [],
+                dateAdded: new Date().toISOString()
+            };
+            category.products.push(product);
+        }
+
+        const lowerFile = fileName.toLowerCase();
+        
+        // Handle Details JSON - Deep Merge
+        if (fileName.endsWith('.json') && (fileName.includes('details') || fileName.includes('product'))) {
+             try {
+                 const text = await fileObj.async("text");
+                 const meta = JSON.parse(text);
+                 if (meta.id) product.id = meta.id; // Restore ID
+                 if (meta.name) product.name = meta.name;
+                 if (meta.description) product.description = meta.description;
+                 if (meta.sku) product.sku = meta.sku;
+                 if (meta.specs) product.specs = { ...product.specs, ...meta.specs };
+                 if (meta.features) product.features = [...(product.features || []), ...(meta.features || [])];
+                 if (meta.dimensions) product.dimensions = meta.dimensions;
+                 if (meta.boxContents) product.boxContents = meta.boxContents;
+                 if (meta.terms) product.terms = meta.terms;
+                 if (meta.dateAdded) product.dateAdded = meta.dateAdded;
+             } catch(e) { console.warn("Failed to parse JSON for " + productName); }
+        }
+        // Handle Images
+        else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
+             const url = await processAsset(fileObj, parts.slice(3).join('_'));
+             if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
+                 product.imageUrl = url;
+             } else {
+                 product.galleryUrls = [...(product.galleryUrls || []), url];
+             }
+        }
+        // Handle Videos
+        else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
+            const url = await processAsset(fileObj, parts.slice(3).join('_'));
+            product.videoUrls = [...(product.videoUrls || []), url];
+        }
+        // Handle Manuals
+        else if (lowerFile.endsWith('.pdf')) {
+             const url = await processAsset(fileObj, parts.slice(3).join('_'));
+             product.manuals?.push({
+                 id: generateId('man'),
+                 title: fileName.replace('.pdf', '').replace(/_/g, ' '),
+                 images: [],
+                 pdfUrl: url,
+                 thumbnailUrl: '' 
+             });
+        }
+    }
+
+    return Object.values(newBrands);
+};
+
+// Fix: Implemented missing downloadZip function
+const downloadZip = async (data: StoreData | null) => {
+    if (!data) return;
+    const zip = new JSZip();
+    
+    // Add the main store config as JSON
+    const dataJson = JSON.stringify(data, null, 2);
+    zip.file("store_config.json", dataJson);
+    
+    // Create folder structure for visual backup (Documentation for user)
+    const backupFolder = zip.folder("_System_Backup");
+    if (backupFolder) {
+        backupFolder.file("export_info.txt", `Kiosk Pro Backup\nGenerated: ${new Date().toISOString()}`);
+    }
+
+    // Generate the zip file
+    const content = await zip.generateAsync({ type: "blob" });
+    
+    // Trigger download
+    const url = URL.createObjectURL(content);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `kiosk_backup_${new Date().toISOString().split('T')[0]}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 };
 
 export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => void, onRefresh: () => void }) => {
@@ -2451,226 +2508,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       if (diffDays < 30) return `${Math.floor(diffDays/7)} weeks ago`;
       return date.toLocaleDateString();
   };
-
-const importZip = async (file: File, onProgress?: (msg: string) => void): Promise<Brand[]> => {
-    const zip = new JSZip();
-    let loadedZip;
-    try {
-        loadedZip = await zip.loadAsync(file);
-    } catch (e) {
-        throw new Error("Invalid ZIP file");
-    }
-    
-    const newBrands: Record<string, Brand> = {};
-    
-    // Helper: Normalize path to avoid Windows/Mac slash issues
-    const getCleanPath = (filename: string) => filename.replace(/\\/g, '/');
-
-    // 1. Detect Root Wrapper (e.g. user zipped a folder "Backup" containing Brands)
-    const validFiles = Object.keys(loadedZip.files).filter(path => {
-        return !loadedZip.files[path].dir && !path.includes('__MACOSX') && !path.includes('.DS_Store');
-    });
-
-    let rootPrefix = "";
-    if (validFiles.length > 0) {
-        const firstFileParts = getCleanPath(validFiles[0]).split('/').filter(p => p);
-        if (firstFileParts.length > 1) {
-            const possibleRoot = firstFileParts[0];
-            const allHaveRoot = validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'));
-            if (allHaveRoot) {
-                rootPrefix = possibleRoot + '/';
-                console.log("Import: Stripping root folder:", rootPrefix);
-            }
-        }
-    }
-
-    // Helper: Determine MIME type
-    const getMimeType = (filename: string) => {
-        const ext = filename.split('.').pop()?.toLowerCase();
-        if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
-        if (ext === 'png') return 'image/png';
-        if (ext === 'webp') return 'image/webp';
-        if (ext === 'gif') return 'image/gif';
-        if (ext === 'mp4') return 'video/mp4';
-        if (ext === 'webm') return 'video/webm';
-        if (ext === 'pdf') return 'application/pdf';
-        return 'application/octet-stream';
-    };
-
-    // Helper: Process Asset (Upload to Cloud if available to save JSON size)
-    const processAsset = async (zipObj: any, filename: string): Promise<string> => {
-        const blob = await zipObj.async("blob");
-        
-        // Try Cloud Upload First (To keep JSON small)
-        if (supabase) {
-             try {
-                 const mimeType = getMimeType(filename);
-                 // Sanitize filename
-                 const safeName = filename.replace(/[^a-z0-9._-]/gi, '_');
-                 // Create File object
-                 const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType });
-                 // Upload sequentially (this function is called inside sequential loop)
-                 const url = await uploadFileToStorage(fileToUpload);
-                 return url;
-             } catch (e) {
-                 console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e);
-             }
-        }
-
-        // Fallback Base64 (Only if offline or upload failed)
-        return new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-        });
-    };
-
-    // Iterate files
-    const filePaths = Object.keys(loadedZip.files);
-    let processedCount = 0;
-    
-    for (const rawPath of filePaths) {
-        let path = getCleanPath(rawPath);
-        const fileObj = loadedZip.files[rawPath];
-        if (fileObj.dir) continue;
-        if (path.includes('__MACOSX') || path.includes('.DS_Store')) continue;
-
-        // Remove Root Prefix if detected
-        if (rootPrefix && path.startsWith(rootPrefix)) {
-            path = path.substring(rootPrefix.length);
-        }
-
-        // SKIP SYSTEM BACKUP FOLDERS in Inventory Import
-        if (path.startsWith('_System_Backup/')) continue;
-        if (path.includes('store_config')) continue;
-
-        // Path: Brand/Category/Product/File.ext OR Brand/BrandFile.ext
-        const parts = path.split('/').filter(p => p.trim() !== '');
-        
-        // Skip root files if any (files not inside a Brand folder)
-        if (parts.length < 2) continue;
-
-        processedCount++;
-        if (onProgress && processedCount % 5 === 0) onProgress(`Processing item ${processedCount}/${validFiles.length}...`);
-
-        const brandName = parts[0];
-
-        // Init Brand
-        if (!newBrands[brandName]) {
-            newBrands[brandName] = {
-                id: generateId('brand'),
-                name: brandName,
-                categories: []
-            };
-        }
-
-        // Handle Brand Assets (Level 2: Brand/brand_logo.png)
-        if (parts.length === 2) {
-             const fileName = parts[1].toLowerCase();
-             // Parse brand logo
-             if (fileName.includes('brand_logo') || fileName.includes('logo')) {
-                  const url = await processAsset(fileObj, parts[1]);
-                  newBrands[brandName].logoUrl = url;
-             }
-             // Parse Brand JSON metadata if exists
-             if (fileName.endsWith('.json') && fileName.includes('brand')) {
-                 try {
-                     const text = await fileObj.async("text");
-                     const meta = JSON.parse(text);
-                     if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor;
-                     // Allow ID overwrite if restoring backup
-                     if (meta.id) newBrands[brandName].id = meta.id; 
-                 } catch(e) {}
-             }
-             continue;
-        }
-
-        // Require Product Depth for rest (Brand/Category/Product/File)
-        if (parts.length < 4) continue;
-
-        const categoryName = parts[1];
-        const productName = parts[2];
-        const fileName = parts.slice(3).join('/'); // In case of subfolders inside product (e.g. gallery)
-
-        // Init Category
-        let category = newBrands[brandName].categories.find(c => c.name === categoryName);
-        if (!category) {
-            category = {
-                id: generateId('cat'),
-                name: categoryName,
-                icon: 'Box',
-                products: []
-            };
-            newBrands[brandName].categories.push(category);
-        }
-
-        // Init Product
-        let product = category.products.find(p => p.name === productName);
-        if (!product) {
-            product = {
-                id: generateId('prod'),
-                name: productName, 
-                description: '',
-                specs: {},
-                features: [],
-                dimensions: [],
-                imageUrl: '',
-                galleryUrls: [],
-                videoUrls: [],
-                manuals: [],
-                dateAdded: new Date().toISOString()
-            };
-            category.products.push(product);
-        }
-
-        const lowerFile = fileName.toLowerCase();
-        
-        // Handle Details JSON - Deep Merge
-        if (fileName.endsWith('.json') && (fileName.includes('details') || fileName.includes('product'))) {
-             try {
-                 const text = await fileObj.async("text");
-                 const meta = JSON.parse(text);
-                 if (meta.id) product.id = meta.id; // Restore ID
-                 if (meta.name) product.name = meta.name;
-                 if (meta.description) product.description = meta.description;
-                 if (meta.sku) product.sku = meta.sku;
-                 if (meta.specs) product.specs = { ...product.specs, ...meta.specs };
-                 if (meta.features) product.features = [...(product.features || []), ...(meta.features || [])];
-                 if (meta.dimensions) product.dimensions = meta.dimensions;
-                 if (meta.boxContents) product.boxContents = meta.boxContents;
-                 if (meta.terms) product.terms = meta.terms;
-                 if (meta.dateAdded) product.dateAdded = meta.dateAdded;
-             } catch(e) { console.warn("Failed to parse JSON for " + productName); }
-        }
-        // Handle Images
-        else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
-             const url = await processAsset(fileObj, parts.slice(3).join('_'));
-             if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
-                 product.imageUrl = url;
-             } else {
-                 product.galleryUrls = [...(product.galleryUrls || []), url];
-             }
-        }
-        // Handle Videos
-        else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
-            const url = await processAsset(fileObj, parts.slice(3).join('_'));
-            product.videoUrls = [...(product.videoUrls || []), url];
-        }
-        // Handle Manuals
-        else if (lowerFile.endsWith('.pdf')) {
-             const url = await processAsset(fileObj, parts.slice(3).join('_'));
-             product.manuals?.push({
-                 id: generateId('man'),
-                 title: fileName.replace('.pdf', '').replace(/_/g, ' '),
-                 images: [],
-                 pdfUrl: url,
-                 thumbnailUrl: '' 
-             });
-        }
-    }
-
-    return Object.values(newBrands);
-};
 
   if (!localData) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /> Loading...</div>;
   if (!currentUser) return <Auth admins={localData.admins || []} onLogin={setCurrentUser} />;
@@ -2954,7 +2791,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                 <div className="animate-fade-in max-w-6xl mx-auto pb-24">
                    <div className="flex items-center justify-between mb-8">
                        <h2 className="text-2xl font-black text-slate-900 uppercase">Device Fleet</h2>
-                       <div className="bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm text-xs font-bold text-slate-500">
+                       <div className="bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm text-xs font-bold text-slate-50">
                            Total Devices: {localData.fleet?.length || 0}
                        </div>
                    </div>
