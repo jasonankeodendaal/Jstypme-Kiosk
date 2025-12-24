@@ -143,7 +143,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
           last_seen: new Date().toISOString(),
           wifi_strength: 100,
           ip_address: 'Unknown',
-          version: '2.8.5',
+          version: '1.0.5',
           location_description: 'Newly Registered',
           assigned_zone: 'Unassigned',
           restart_requested: false
@@ -156,7 +156,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   return true;
 };
 
-export const sendHeartbeat = async (currentScreenName: string = "Home"): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean, forceRefresh?: boolean, ssOverride?: string } | null> => {
+export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean } | null> => {
   const id = getKioskId();
   if (!id) return null;
   if (!supabase) initSupabase();
@@ -166,15 +166,13 @@ export const sendHeartbeat = async (currentScreenName: string = "Home"): Promise
   let currentZone = "Unassigned";
   let configChanged = false;
   let restartFlag = false;
-  let refreshFlag = false;
-  let ssOverride = 'auto';
 
   try {
       // 1. SYNC: Pull latest configuration from cloud first
       if (supabase) {
           const { data: remoteData, error: fetchError } = await supabase
               .from('kiosks')
-              .select('name, device_type, assigned_zone, restart_requested, force_refresh, screensaver_override')
+              .select('name, device_type, assigned_zone, restart_requested')
               .eq('id', id)
               .maybeSingle();
 
@@ -196,12 +194,10 @@ export const sendHeartbeat = async (currentScreenName: string = "Home"): Promise
               }
               if (remoteData.assigned_zone) currentZone = remoteData.assigned_zone;
               if (remoteData.restart_requested) restartFlag = true;
-              if (remoteData.force_refresh) refreshFlag = true;
-              if (remoteData.screensaver_override) ssOverride = remoteData.screensaver_override;
           }
       }
 
-      // 2. TELEMETRY: Push status update with enterprise metrics
+      // 2. TELEMETRY: Push status update
       if (supabase) {
           const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
           let wifiStrength = 100;
@@ -213,15 +209,6 @@ export const sendHeartbeat = async (currentScreenName: string = "Home"): Promise
               ipAddress = `${connection.effectiveType?.toUpperCase() || 'NET'} | ${connection.downlink}Mbps`;
           }
 
-          // Battery API
-          let batteryLevel = 100;
-          let isCharging = true;
-          if ('getBattery' in navigator) {
-              const battery: any = await (navigator as any).getBattery();
-              batteryLevel = Math.round(battery.level * 100);
-              isCharging = battery.charging;
-          }
-
           const payload: any = {
               id,
               name: currentName,
@@ -230,27 +217,20 @@ export const sendHeartbeat = async (currentScreenName: string = "Home"): Promise
               last_seen: new Date().toISOString(),
               status: 'online',
               wifi_strength: wifiStrength,
-              ip_address: ipAddress,
-              battery_level: batteryLevel,
-              is_charging: isCharging,
-              current_screen: currentScreenName,
-              version: '2.8.5'
+              ip_address: ipAddress
           };
           
-          // Clear flags after acknowledgement
-          if (restartFlag) payload.restart_requested = false;
-          if (refreshFlag) payload.force_refresh = false;
+          // Only clear the restart flag in the payload if it was actually true and we are acknowledging it
+          if (restartFlag) {
+              payload.restart_requested = false;
+          }
 
           await supabase.from('kiosks').upsert(payload);
       }
 
-      return { 
-          deviceType: currentDeviceType, 
-          name: currentName, 
-          restart: restartFlag, 
-          forceRefresh: refreshFlag, 
-          ssOverride: ssOverride 
-      };
+      if (restartFlag || configChanged) {
+          return { deviceType: currentDeviceType, name: currentName, restart: restartFlag };
+      }
 
   } catch (e) {
       console.warn("Sync cycle failed", e);

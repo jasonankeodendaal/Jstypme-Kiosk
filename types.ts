@@ -166,13 +166,6 @@ export interface KioskRegistry {
   assignedZone?: string;
   notes?: string;
   restartRequested?: boolean; 
-  // Enterprise Telemetry
-  batteryLevel?: number;
-  isCharging?: boolean;
-  currentScreen?: string;
-  appVersion?: string;
-  screensaverOverride?: 'force_on' | 'force_off' | 'auto';
-  forceRefresh?: boolean;
 }
 
 export interface ArchivedItem {
