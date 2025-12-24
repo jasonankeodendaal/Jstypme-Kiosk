@@ -38,7 +38,7 @@ const isRecent = (dateString?: string) => {
 const RIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M7 5v14" />
-    <path d="M7 5h5.5a4.5 4.5 0 0 1 0 9H7" />
+    <path d="M7 5h5.5a4.5(4.5 0 0 1 0 9H7" />
     <path d="M11.5 14L17 19" />
   </svg>
 );
@@ -713,6 +713,17 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const resetDeviceIdentity = useCallback(() => { localStorage.clear(); window.location.reload(); }, []);
 
+  // Compute Current Screen Name for Telemetry
+  const currentViewName = useMemo(() => {
+    if (isIdle) return "Screensaver";
+    if (activeProduct) return `Product: ${activeProduct.name}`;
+    if (activeCategory) return `Category: ${activeCategory.name}`;
+    if (activeBrand) return `Brand: ${activeBrand.name}`;
+    if (showGlobalSearch) return "Search";
+    if (showPricelistModal) return "Pricelists";
+    return "Home";
+  }, [isIdle, activeProduct, activeCategory, activeBrand, showGlobalSearch, showPricelistModal]);
+
   useEffect(() => {
     window.addEventListener('touchstart', resetIdleTimer); window.addEventListener('click', resetIdleTimer);
     const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -720,14 +731,17 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     checkCloudConnection().then(setIsCloudConnected);
     if (isSetup) {
       const syncCycle = async () => {
-         const syncResult = await sendHeartbeat();
-         if (syncResult?.deleted) { resetDeviceIdentity(); } else if (syncResult?.restart) { window.location.reload(); }
+         const syncResult = await sendHeartbeat(currentViewName);
+         if (syncResult?.deleted) { resetDeviceIdentity(); } 
+         else if (syncResult?.restart || syncResult?.forceRefresh) { window.location.reload(); }
+         if (syncResult?.ssOverride === 'force_on') setScreensaverEnabled(true);
+         if (syncResult?.ssOverride === 'force_off') setScreensaverEnabled(false);
       };
       syncCycle(); const interval = setInterval(syncCycle, 30000);
       return () => { clearInterval(interval); clearInterval(clockInterval); };
     }
     return () => { clearInterval(clockInterval); };
-  }, [resetIdleTimer, isSetup, resetDeviceIdentity]);
+  }, [resetIdleTimer, isSetup, resetDeviceIdentity, currentViewName]);
 
   const allProductsFlat = useMemo(() => {
       if (!storeData?.brands) return [];
