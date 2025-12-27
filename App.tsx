@@ -35,6 +35,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   const syncTimeoutRef = useRef<number | null>(null);
   const kioskId = getKioskId();
@@ -46,11 +47,15 @@ export default function App() {
   }, []);
 
   const fetchData = useCallback(async (isBackground = false) => {
+      // FIX: Skip background refresh if we are in admin mode with unsaved edits to prevent state override
+      if (isBackground && window.location.pathname.startsWith('/admin') && hasUnsavedChanges) {
+          return;
+      }
+      
       if (!isBackground) setIsSyncing(true);
       try {
         const data = await generateStoreData();
         if (data) {
-           // Create a new reference to force React state update
            setStoreData({ ...data });
            setLastSyncTime(new Date().toLocaleTimeString());
         }
@@ -60,37 +65,30 @@ export default function App() {
         setLoading(false);
         setIsSyncing(false);
       }
-  }, []);
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
     initSupabase();
     fetchData();
 
-    // 1. Routine Sync (Pulsing) - Pulls every 60s
     const interval = setInterval(() => {
         fetchData(true);
     }, 60000); 
 
-    // 2. Realtime Push (Realtime) - Immediate response to Cloud changes
     if (supabase) {
         const channel = supabase
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
-              console.log("Realtime: Config change detected. Refreshing state...");
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
               syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 200);
             }
           )
           .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
             (payload: any) => {
-              // Only trigger if it affects this device or if we are in admin mode
               const isAdminView = window.location.pathname.startsWith('/admin');
               const isMyUpdate = payload.new && payload.new.id === kioskId;
-              const isMyDelete = payload.old && payload.old.id === kioskId;
-              
-              if (isAdminView || isMyUpdate || isMyDelete) {
-                  console.log("Realtime: Fleet change detected.");
+              if (isAdminView || isMyUpdate) {
                   if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
                   syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 200);
               }
@@ -103,13 +101,13 @@ export default function App() {
             clearInterval(interval);
         };
     }
-    
     return () => clearInterval(interval);
   }, [fetchData, kioskId]);
 
   const handleUpdateData = async (newData: StoreData) => {
     setIsSyncing(true);
     setStoreData({ ...newData }); 
+    setHasUnsavedChanges(false);
     try {
         await saveStoreData(newData);
         setLastSyncTime(new Date().toLocaleTimeString());
