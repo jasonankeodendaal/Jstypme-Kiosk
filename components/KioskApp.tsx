@@ -38,7 +38,7 @@ const isRecent = (dateString?: string) => {
 const RIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M7 5v14" />
-    <path d="M7 5h5.5a4.5 4.5 0 0 1 0 9H7" />
+    <path d="M7 5h5.5a4.5(4.5 0 0 1 0 9H7" />
     <path d="M11.5 14L17 19" />
   </svg>
 );
@@ -236,41 +236,22 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const handleDragEnd = () => setIsDragging(false);
 
-  // High-reliability Image Loader using Canvas for PDF compatibility
   const loadImageForPDF = async (url: string): Promise<{ imgData: string, format: string, width: number, height: number } | null> => {
     if (!url) return null;
-    
     return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "anonymous"; 
-        
         img.onload = () => {
             try {
                 const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
+                canvas.width = img.width; canvas.height = img.height;
                 const ctx = canvas.getContext('2d');
                 if (!ctx) { resolve(null); return; }
-                
                 ctx.drawImage(img, 0, 0);
-                const dataUrl = canvas.toDataURL('image/png');
-                
-                resolve({ 
-                    imgData: dataUrl, 
-                    format: 'PNG', 
-                    width: img.width, 
-                    height: img.height 
-                });
-            } catch (err) {
-                console.error("PDF Image processing failed", err);
-                resolve(null);
-            }
+                resolve({ imgData: canvas.toDataURL('image/png'), format: 'PNG', width: img.width, height: img.height });
+            } catch (err) { resolve(null); }
         };
-        
-        img.onerror = () => {
-            console.warn("Failed to load image for PDF:", url);
-            resolve(null);
-        };
+        img.onerror = () => resolve(null);
         img.src = url;
     });
   };
@@ -289,42 +270,31 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             companyLogo ? loadImageForPDF(companyLogo) : Promise.resolve(null)
         ]);
 
-        const drawHeader = (pageNum: number) => {
+        const drawHeader = () => {
             let topY = 15;
             if (brandAsset) {
-                const ratio = brandAsset.width / brandAsset.height;
-                const h = 20; 
-                const w = h * ratio;
+                const h = 20; const w = h * (brandAsset.width / brandAsset.height);
                 doc.addImage(brandAsset.imgData, brandAsset.format, margin, topY, w, h);
             } else if (brandName) {
                 doc.setTextColor(30, 41, 59); doc.setFontSize(28); doc.setFont('helvetica', 'black');
                 doc.text(brandName.toUpperCase(), margin, topY + 15);
             }
-
             if (companyAsset) {
-                const ratio = companyAsset.width / companyAsset.height;
-                const h = 12; 
-                const w = h * ratio;
+                const h = 12; const w = h * (companyAsset.width / companyAsset.height);
                 doc.addImage(companyAsset.imgData, companyAsset.format, pageWidth - margin - w, topY, w, h);
             }
-
             doc.setTextColor(0, 0, 0); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
             doc.text("PRICE LIST", margin, topY + 28);
-            
             doc.setTextColor(30, 41, 59); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
             doc.text(pricelist.title.toUpperCase(), margin, topY + 36);
-
             const boxW = 45; const boxH = 9; const boxX = pageWidth - margin - boxW; const boxY = topY + 22;
             doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
             doc.text(`${pricelist.month} ${pricelist.year}`.toUpperCase(), boxX + (boxW/2), boxY + 6, { align: 'center' });
-            
             doc.setTextColor(148, 163, 184); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
             doc.text(`DOCUMENT REF: ${pricelist.id.substring(0,10).toUpperCase()}`, boxX + boxW, boxY + 14, { align: 'right' });
-
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.3);
             doc.line(margin, topY + 44, pageWidth - margin, topY + 44);
-            
             return topY + 54;
         };
 
@@ -337,26 +307,46 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             return startY + 8;
         };
 
-        const drawTextShrinkToFit = (text: string, x: number, y: number, maxWidth: number, baseSize: number, align: 'left' | 'right' = 'left') => {
+        const drawTextFit = (text: string, x: number, y: number, maxWidth: number, baseSize: number, align: 'left' | 'right' = 'left'): number => {
             let currentSize = baseSize;
             doc.setFontSize(currentSize);
-            while (doc.getTextWidth(text) > maxWidth && currentSize > 5.5) {
+            // First pass: Shrink font size
+            while (doc.getTextWidth(text) > maxWidth && currentSize > 7) {
                 currentSize -= 0.5;
                 doc.setFontSize(currentSize);
             }
+            // Second pass: Wrap if still too big
+            if (doc.getTextWidth(text) > maxWidth) {
+                const lines = doc.splitTextToSize(text, maxWidth);
+                doc.text(lines, x, y, { align });
+                return lines.length;
+            }
             doc.text(text, x, y, { align });
+            return 1;
         };
 
-        let currentY = drawHeader(1);
+        let currentY = drawHeader();
         currentY = drawTableHeaders(currentY);
         
         const items = pricelist.items || [];
-        const rowHeight = 9; const footerMargin = 20;
+        const baseRowHeight = 9; const footerMargin = 20;
 
         items.forEach((item, index) => {
+            const skuMaxW = 38;
+            const descMaxW = (pageWidth - margin - 45) - 45;
+            
+            // Measure both content pieces
+            doc.setFontSize(8);
+            const skuLines = doc.splitTextToSize(item.sku || '', skuMaxW).length;
+            doc.setFontSize(9);
+            const descLines = doc.splitTextToSize(item.description.toUpperCase(), descMaxW).length;
+            
+            const maxLines = Math.max(skuLines, descLines);
+            const rowHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
+
             if (currentY + rowHeight > pageHeight - footerMargin) {
                 doc.addPage();
-                currentY = drawHeader(doc.internal.getNumberOfPages());
+                currentY = drawHeader();
                 currentY = drawTableHeaders(currentY);
             }
             
@@ -365,24 +355,21 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             }
 
             doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal');
-            drawTextShrinkToFit(item.sku || '', margin + 3, currentY, 38, 8);
+            drawTextFit(item.sku || '', margin + 3, currentY, skuMaxW, 8);
             
             doc.setFont('helvetica', 'bold');
-            const desc = item.description.toUpperCase();
-            drawTextShrinkToFit(desc, margin + 45, currentY, (pageWidth - margin - 45) - 45, 8.5);
+            drawTextFit(item.description.toUpperCase(), margin + 45, currentY, descMaxW, 8.5);
             
-            // USER REQUEST: NORMAL PRICE PRINT BLACK NOT GREY
             doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
-            drawTextShrinkToFit(item.normalPrice || '', pageWidth - margin - 40, currentY, 32, 8, 'right');
+            drawTextFit(item.normalPrice || '', pageWidth - margin - 40, currentY, 32, 8, 'right');
             
             if (item.promoPrice) {
                 doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
-                drawTextShrinkToFit(item.promoPrice, pageWidth - margin - 5, currentY, 32, 10, 'right');
+                drawTextFit(item.promoPrice, pageWidth - margin - 5, currentY, 32, 10, 'right');
             } else {
-                doc.setTextColor(0, 0, 0); // Always black if no promo or by request
-                drawTextShrinkToFit(item.normalPrice || '', pageWidth - margin - 5, currentY, 32, 8, 'right');
+                doc.setTextColor(0, 0, 0);
+                drawTextFit(item.normalPrice || '', pageWidth - margin - 5, currentY, 32, 8, 'right');
             }
-            
             currentY += rowHeight;
         });
 
@@ -390,15 +377,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
             doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-            doc.text(`Kiosk Pro Smart Retail Solution • ${new Date().toLocaleDateString()}`, margin, pageHeight - 10);
         }
         doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
-    } catch (err) {
-        console.error("PDF Export failed", err);
-        alert("Unable to generate PDF.");
-    } finally {
-        setIsExporting(false);
-    }
+    } catch (err) { alert("Unable to generate PDF."); } finally { setIsExporting(false); }
   };
 
   const handleZoomIn = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.min(prev + 0.25, 2.5)); };
@@ -411,82 +392,56 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           @page { size: portrait; margin: 5mm; }
           body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0 !important; padding: 0 !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
           .print-hidden { display: none !important; }
-          .print-only { display: block !important; }
-          #root, .relative, .viewer-container, .table-scroll { display: block !important; position: static !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
           .viewer-container { box-shadow: none !important; border: none !important; }
           .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
-          .spreadsheet-table thead { display: table-header-group !important; }
-          .spreadsheet-table tr { page-break-inside: avoid !important; }
-          .spreadsheet-table th { position: static !important; background: #71717a !important; color: #fff !important; border: 1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 10pt !important; }
+          .spreadsheet-table th { position: static !important; background: #71717a !important; color: #fff !important; border: 1pt solid #cbd5e1 !important; padding: 8pt !important; font-size: 10pt !important; }
           .spreadsheet-table td { border: 0.5pt solid #e2e8f0 !important; color: #000 !important; padding: 8pt !important; font-size: 10pt !important; }
-          .excel-row:nth-child(even) { background-color: #f8fafc !important; }
         }
-        .spreadsheet-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        .spreadsheet-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 100%; }
         .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; }
         .excel-row:nth-child(even) { background-color: #f8fafc; }
-        .excel-row:hover { background-color: #f1f5f9; }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        .sku-cell { word-break: break-all; line-height: 1.2; font-size: clamp(8px, 1.4vw, 13px); padding: 12px 8px; }
+        .desc-cell { line-height: 1.3; font-size: clamp(9px, 1.5vw, 14px); padding: 12px 10px; }
+        .price-cell { font-size: clamp(10px, 1.6vw, 16px); font-weight: 900; }
         .shrink-title { font-size: clamp(0.75rem, 2.5vw, 1.5rem); }
-        .fit-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all; }
-        .sku-cell { word-break: break-all; line-height: 1.1; font-size: clamp(8px, 1.2vw, 14px); }
-        .desc-cell { line-height: 1.2; font-size: clamp(9px, 1.3vw, 15px); }
       `}</style>
 
       <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-[2rem] shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block`} onClick={e => e.stopPropagation()}>
         <div className={`print-hidden p-4 md:p-8 text-white flex justify-between items-center shrink-0 z-20 bg-[#c0810d]`}>
           <div className="flex items-center gap-6">
-             <div className="flex bg-white/10 p-4 rounded-2xl border border-white/10 shadow-inner">
-                <RIcon size={36} className="text-white" />
-             </div>
+             <div className="flex bg-white/10 p-4 rounded-2xl border border-white/10 shadow-inner"><RIcon size={36} className="text-white" /></div>
              <div className="flex flex-col">
                 <div className="flex items-center gap-3">
                   <h2 className="text-lg md:text-3xl font-black uppercase tracking-tight leading-none shrink-title">{pricelist.title}</h2>
-                  {isNewlyUpdated && (
-                    <span className="bg-white text-yellow-700 px-3 py-1 rounded-full text-[10px] md:text-[12px] font-black uppercase flex items-center gap-1.5 shadow-md">
-                      <Sparkles size={12} fill="currentColor" /> NEW
-                    </span>
-                  )}
+                  {isNewlyUpdated && (<span className="bg-white text-yellow-700 px-3 py-1 rounded-full text-[10px] md:text-[12px] font-black uppercase flex items-center gap-1.5 shadow-md"><Sparkles size={12} fill="currentColor" /> NEW</span>)}
                 </div>
                 <p className="text-yellow-100 font-bold uppercase tracking-widest text-[10px] md:sm mt-1">{pricelist.month} {pricelist.year}</p>
              </div>
           </div>
-
           <div className="flex items-center gap-3 md:gap-6">
              <div className="hidden sm:flex items-center gap-3 bg-black/10 p-1.5 rounded-2xl border border-white/10 backdrop-blur-sm">
                 <button onClick={handleZoomOut} className="p-2.5 hover:bg-white/10 rounded-xl transition-colors"><ZoomOut size={22}/></button>
                 <span className="text-xs font-black uppercase tracking-widest min-w-[60px] text-center">{Math.round(zoom * 100)}%</span>
                 <button onClick={handleZoomIn} className="p-2.5 hover:bg-white/10 rounded-xl transition-colors"><ZoomIn size={22}/></button>
              </div>
-             
              <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-3 bg-[#0f172a] text-white px-8 py-4 rounded-2xl font-black text-xs md:text-sm uppercase shadow-2xl hover:bg-black transition-all active:scale-95 group disabled:opacity-50 min-w-[200px] justify-center border border-white/5">
                 {isExporting ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={22} className="text-blue-400 group-hover:text-white" />}
                 <span>{isExporting ? 'Generating...' : 'Save as PDF'}</span>
              </button>
-
-             <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5">
-                <X size={28}/>
-             </button>
+             <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={28}/></button>
           </div>
         </div>
 
         <div 
             ref={scrollContainerRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleDragEnd}
-            onMouseLeave={handleDragEnd}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleDragEnd}
+            onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleDragEnd} onMouseLeave={handleDragEnd}
+            onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleDragEnd}
             className={`table-scroll flex-1 overflow-auto bg-slate-100/50 relative p-0 md:p-6 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
         >
           <div className="min-w-full min-h-full flex items-start justify-center">
             <div 
-              style={{ 
-                transform: `scale(${zoom})`, 
-                transformOrigin: 'top left',
-                width: zoom > 1 ? 'max-content' : '100%'
-              }} 
+              style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: zoom > 1 ? 'max-content' : '100%' }} 
               className="transition-transform duration-200 print:transform-none select-none relative bg-white shadow-xl rounded-xl overflow-hidden"
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
@@ -496,29 +451,18 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                           <div className="w-full px-10 pt-10 pb-6 text-left">
                               <div className="flex justify-between items-start mb-10">
                                   <div className="flex flex-col gap-6">
-                                      {brandLogo ? (
-                                          <img src={brandLogo} alt="Brand" className="h-20 object-contain self-start" />
-                                      ) : brandName ? (
-                                          <h2 className="text-6xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2>
-                                      ) : null}
-                                      <div>
-                                          <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mt-4">Price List</h1>
-                                          <p className="text-xl font-bold text-slate-900 uppercase tracking-[0.2em] mt-3">{pricelist.title}</p>
-                                      </div>
+                                      {brandLogo ? <img src={brandLogo} alt="Brand" className="h-20 object-contain self-start" /> : brandName ? <h2 className="text-6xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2> : null}
+                                      <div><h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mt-4">Price List</h1><p className="text-xl font-bold text-slate-900 uppercase tracking-[0.2em] mt-3">{pricelist.title}</p></div>
                                   </div>
                                   <div className="flex flex-col items-end gap-6 text-right">
                                       {companyLogo && <img src={companyLogo} alt="Company" className="h-14 object-contain" />}
-                                      <div>
-                                          <div className="bg-slate-900 text-white px-6 py-2 rounded-xl text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div>
-                                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p>
-                                      </div>
+                                      <div><div className="bg-slate-900 text-white px-6 py-2 rounded-xl text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div><p className="text-[10px] font-bold text-slate-400 uppercase mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p></div>
                                   </div>
                               </div>
                               <div className="h-1 bg-slate-200 w-full rounded-full mb-10"></div>
                           </div>
                       </th>
                   </tr>
-                  
                   <tr className="print:bg-[#71717a] bg-[#71717a]">
                       <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[20%] text-white">SKU</th>
                       <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[50%] text-white">Description</th>
@@ -529,46 +473,18 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
                       <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
-                      <td className="p-4 md:p-5 border-r border-slate-100 sku-cell">
-                          <span className="sku-font font-bold text-slate-900 uppercase fit-text">
-                          {item.sku || ''}
-                          </span>
-                      </td>
-                      <td className="p-4 md:p-5 border-r border-slate-100 desc-cell">
-                          <span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors fit-text">
-                              {item.description}
-                          </span>
-                      </td>
-                      <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap">
-                          {/* USER REQUEST: NORMAL PRICE TEXT BLACK NOT GREY */}
-                          <span className="font-bold text-xs md:text-sm text-slate-900">
-                            {item.normalPrice || ''}
-                          </span>
-                      </td>
-                      <td className="p-4 md:p-5 text-right bg-slate-50/10 whitespace-nowrap">
-                          {item.promoPrice ? (
-                          <span className="font-black text-sm md:text-xl text-[#ef4444] tracking-tighter">
-                              {item.promoPrice}
-                          </span>
-                          ) : (
-                          <span className="font-bold text-xs md:text-sm text-slate-900">
-                              {item.normalPrice || ''}
-                          </span>
-                          )}
-                      </td>
+                      <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
+                      <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">{item.description}</span></td>
+                      <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900 price-cell">{item.normalPrice || ''}</span></td>
+                      <td className="p-4 md:p-5 text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter price-cell">{item.promoPrice}</span>) : (<span className="font-bold text-slate-900 price-cell">{item.normalPrice || ''}</span>)}</td>
                       </tr>
                   ))}
                   </tbody>
               </table>
-              {zoom > 1.2 && !isDragging && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
-                    <Grip size={120} className="text-black" />
-                </div>
-              )}
+              {zoom > 1.2 && !isDragging && (<div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5"><Grip size={120} className="text-black" /></div>)}
             </div>
           </div>
         </div>
-
         <div className="p-5 md:p-8 bg-white border-t border-slate-100 flex justify-between items-center shrink-0 print:hidden z-10">
           <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Items: {(pricelist.items || []).length}</span>
           <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Official Kiosk Pro Document • VAT Incl.</p>
