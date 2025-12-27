@@ -38,7 +38,7 @@ const isRecent = (dateString?: string) => {
 const RIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M7 5v14" />
-    <path d="M7 5h5.5a4.5 4.5 0 0 1 0 9H7" />
+    <path d="M7 5h5.5a4.5(4.5 0 0 1 0 9H7" />
     <path d="M11.5 14L17 19" />
   </svg>
 );
@@ -283,11 +283,48 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
+        const items = pricelist.items || [];
         
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImageForPDF(companyLogo) : Promise.resolve(null)
         ]);
+
+        // DYNAMIC COLUMN WIDTH CALCULATIONS
+        // Calculate max widths for SKU and Prices to determine remaining space for Description
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        
+        let maxSkuWidth = 25; // Min default
+        let maxNormalWidth = 20;
+        let maxPromoWidth = 20;
+
+        items.forEach(item => {
+            const sw = doc.getTextWidth(item.sku || '');
+            const nw = doc.getTextWidth(item.normalPrice || '');
+            const pw = doc.getTextWidth(item.promoPrice || '');
+            if (sw > maxSkuWidth) maxSkuWidth = sw;
+            if (nw > maxNormalWidth) maxNormalWidth = nw;
+            if (pw > maxPromoWidth) maxPromoWidth = pw;
+        });
+
+        // Add padding
+        maxSkuWidth += 6;
+        maxNormalWidth += 6;
+        maxPromoWidth += 6;
+
+        // Ensure widths don't squeeze description too much (max SKU width cap)
+        maxSkuWidth = Math.min(maxSkuWidth, 50);
+        
+        const totalContentWidth = pageWidth - (margin * 2);
+        const descriptionWidth = totalContentWidth - maxSkuWidth - maxNormalWidth - maxPromoWidth;
+
+        const colX = {
+            sku: margin,
+            desc: margin + maxSkuWidth,
+            normal: margin + maxSkuWidth + descriptionWidth,
+            promo: margin + maxSkuWidth + descriptionWidth + maxNormalWidth
+        };
 
         const drawHeader = (pageNum: number) => {
             let topY = 15;
@@ -331,16 +368,18 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const drawTableHeaders = (startY: number) => {
             doc.setFillColor(113, 113, 122); doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-            doc.text("SKU", margin + 3, startY); doc.text("DESCRIPTION", margin + 45, startY);
-            doc.text("NORMAL", pageWidth - margin - 40, startY, { align: 'right' });
-            doc.text("PROMO", pageWidth - margin - 5, startY, { align: 'right' });
+            doc.text("SKU", colX.sku + 3, startY); 
+            doc.text("DESCRIPTION", colX.desc + 3, startY);
+            doc.text("NORMAL", colX.normal + maxNormalWidth - 3, startY, { align: 'right' });
+            doc.text("PROMO", colX.promo + maxPromoWidth - 3, startY, { align: 'right' });
             return startY + 8;
         };
 
         const drawTextShrinkToFit = (text: string, x: number, y: number, maxWidth: number, baseSize: number, align: 'left' | 'right' = 'left') => {
             let currentSize = baseSize;
             doc.setFontSize(currentSize);
-            while (doc.getTextWidth(text) > maxWidth && currentSize > 5.5) {
+            // If text is very long, try to shrink aggressively
+            while (doc.getTextWidth(text) > maxWidth && currentSize > 4.5) {
                 currentSize -= 0.5;
                 doc.setFontSize(currentSize);
             }
@@ -350,7 +389,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         let currentY = drawHeader(1);
         currentY = drawTableHeaders(currentY);
         
-        const items = pricelist.items || [];
         const rowHeight = 9; const footerMargin = 20;
 
         items.forEach((item, index) => {
@@ -364,23 +402,26 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
             }
 
+            // Draw SKU
             doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal');
-            drawTextShrinkToFit(item.sku || '', margin + 3, currentY, 38, 8);
+            drawTextShrinkToFit(item.sku || '', colX.sku + 3, currentY, maxSkuWidth - 6, 8);
             
+            // Draw Description
             doc.setFont('helvetica', 'bold');
             const desc = item.description.toUpperCase();
-            drawTextShrinkToFit(desc, margin + 45, currentY, (pageWidth - margin - 45) - 45, 8.5);
+            drawTextShrinkToFit(desc, colX.desc + 3, currentY, descriptionWidth - 6, 8.5);
             
-            // USER REQUEST: NORMAL PRICE PRINT BLACK NOT GREY
+            // Draw Normal Price
             doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
-            drawTextShrinkToFit(item.normalPrice || '', pageWidth - margin - 40, currentY, 32, 8, 'right');
+            drawTextShrinkToFit(item.normalPrice || '', colX.normal + maxNormalWidth - 3, currentY, maxNormalWidth - 6, 8, 'right');
             
+            // Draw Promo Price
             if (item.promoPrice) {
                 doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
-                drawTextShrinkToFit(item.promoPrice, pageWidth - margin - 5, currentY, 32, 10, 'right');
+                drawTextShrinkToFit(item.promoPrice, colX.promo + maxPromoWidth - 3, currentY, maxPromoWidth - 6, 10, 'right');
             } else {
-                doc.setTextColor(0, 0, 0); // Always black if no promo or by request
-                drawTextShrinkToFit(item.normalPrice || '', pageWidth - margin - 5, currentY, 32, 8, 'right');
+                doc.setTextColor(0, 0, 0);
+                drawTextShrinkToFit(item.normalPrice || '', colX.promo + maxPromoWidth - 3, currentY, maxPromoWidth - 6, 8, 'right');
             }
             
             currentY += rowHeight;
@@ -414,22 +455,34 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           .print-only { display: block !important; }
           #root, .relative, .viewer-container, .table-scroll { display: block !important; position: static !important; height: auto !important; width: 100% !important; overflow: visible !important; transform: none !important; zoom: 1 !important; }
           .viewer-container { box-shadow: none !important; border: none !important; }
-          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
+          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
           .spreadsheet-table thead { display: table-header-group !important; }
           .spreadsheet-table tr { page-break-inside: avoid !important; }
           .spreadsheet-table th { position: static !important; background: #71717a !important; color: #fff !important; border: 1pt solid #cbd5e1 !important; font-weight: 900 !important; text-transform: uppercase !important; padding: 8pt !important; font-size: 10pt !important; }
           .spreadsheet-table td { border: 0.5pt solid #e2e8f0 !important; color: #000 !important; padding: 8pt !important; font-size: 10pt !important; }
           .excel-row:nth-child(even) { background-color: #f8fafc !important; }
         }
-        .spreadsheet-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        .spreadsheet-table { border-collapse: separate; border-spacing: 0; table-layout: auto; }
         .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; }
         .excel-row:nth-child(even) { background-color: #f8fafc; }
         .excel-row:hover { background-color: #f1f5f9; }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
         .shrink-title { font-size: clamp(0.75rem, 2.5vw, 1.5rem); }
-        .fit-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all; }
-        .sku-cell { word-break: break-all; line-height: 1.1; font-size: clamp(8px, 1.2vw, 14px); }
-        .desc-cell { line-height: 1.2; font-size: clamp(9px, 1.3vw, 15px); }
+        
+        /* User Request: Dynamic Shrink to Fit Column Text */
+        .dynamic-shrink {
+            display: inline-block;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: clamp(8px, 1.4vw, 15px);
+            line-height: 1;
+        }
+
+        .sku-cell { min-width: 80px; max-width: 180px; }
+        .desc-cell { min-width: 250px; }
+        .price-cell { min-width: 100px; white-space: nowrap; }
       `}</style>
 
       <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-[2rem] shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block`} onClick={e => e.stopPropagation()}>
@@ -520,32 +573,31 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   </tr>
                   
                   <tr className="print:bg-[#71717a] bg-[#71717a]">
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[20%] text-white">SKU</th>
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[50%] text-white">Description</th>
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-right w-[15%] text-white">Normal</th>
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight text-right w-[15%] text-white">Promo</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-white sku-cell">SKU</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-white desc-cell">Description</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-right text-white price-cell">Normal</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight text-right text-white price-cell">Promo</th>
                   </tr>
                   </thead>
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
                       <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
                       <td className="p-4 md:p-5 border-r border-slate-100 sku-cell">
-                          <span className="sku-font font-bold text-slate-900 uppercase fit-text">
-                          {item.sku || ''}
+                          <span className="sku-font font-bold text-slate-900 uppercase dynamic-shrink">
+                            {item.sku || ''}
                           </span>
                       </td>
                       <td className="p-4 md:p-5 border-r border-slate-100 desc-cell">
-                          <span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors fit-text">
+                          <span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors dynamic-shrink">
                               {item.description}
                           </span>
                       </td>
-                      <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap">
-                          {/* USER REQUEST: NORMAL PRICE TEXT BLACK NOT GREY */}
+                      <td className="p-4 md:p-5 text-right border-r border-slate-100 price-cell">
                           <span className="font-bold text-xs md:text-sm text-slate-900">
                             {item.normalPrice || ''}
                           </span>
                       </td>
-                      <td className="p-4 md:p-5 text-right bg-slate-50/10 whitespace-nowrap">
+                      <td className="p-4 md:p-5 text-right bg-slate-50/10 price-cell">
                           {item.promoPrice ? (
                           <span className="font-black text-sm md:text-xl text-[#ef4444] tracking-tighter">
                               {item.promoPrice}
