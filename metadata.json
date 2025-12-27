@@ -1,5 +1,11 @@
 {
-  "name": "Copy of Kiosk Pro Showcase",
-  "description": "A robust, touch-first retail kiosk application designed for Android tablets. Features persistent idle screensaver, product data management, and brand-specific showcases.",
-  "requestFramePermissions": []
+  "name": "Kiosk Pro Showcase",
+  "short_name": "KioskPro",
+  "description": "Enterprise-grade touch-first retail kiosk application for Android. Features cloud sync, offline support, and remote fleet management.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ],
+  "orientation": "landscape",
+  "display": "standalone"
 }
