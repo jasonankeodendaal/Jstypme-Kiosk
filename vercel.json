@@ -14,11 +14,7 @@
       "destination": "/sw.js"
     },
     {
-      "source": "/assets/:path*",
-      "destination": "/assets/:path*"
-    },
-    {
-      "source": "/((?!.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|pdf|json|woff|woff2|ttf|otf|mp4|webm)).*)",
+      "source": "/((?!.*\\.).*)",
       "destination": "/index.html"
     }
   ]
