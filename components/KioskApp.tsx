@@ -264,21 +264,31 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 15;
+        const innerWidth = pageWidth - (margin * 2);
         
         // --- LAYOUT DEFINITIONS ---
-        const skuX = margin + 3;
-        const skuMaxW = 32;
-        const descX = margin + 40;
-        const normalPriceX = pageWidth - margin - 42; 
-        const promoPriceX = pageWidth - margin - 5;   
-        const descMaxW = normalPriceX - descX - 8;    
+        // Consistent column width scaling
+        const skuW = 25;
+        const normalW = 28;
+        const promoW = 28;
+        const descW = innerWidth - skuW - normalW - promoW;
 
-        // Vertical Line Anchor Points
+        // Vertical boundary lines
         const line1 = margin;
-        const line2 = margin + 37;
-        const line3 = pageWidth - margin - 45;
-        const line4 = pageWidth - margin - 22;
-        const line5 = pageWidth - margin;
+        const line2 = line1 + skuW;
+        const line3 = line2 + descW;
+        const line4 = line3 + normalW;
+        const line5 = line1 + innerWidth;
+
+        // Content anchors
+        const skuX = line1 + 2;
+        const descX = line2 + 2;
+        const normalPriceX = line4 - 2; // Right align at right of normal column
+        const promoPriceX = line5 - 2;  // Right align at right of promo column
+        
+        // Split text max widths
+        const skuMaxW = skuW - 4;
+        const descMaxW = descW - 4;
 
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
@@ -365,7 +375,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             const rowHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
 
             if (currentY + rowHeight > pageHeight - footerMargin) {
-                // Draw bottom border of last row on page before new page
+                // Bottom closure for current page
                 doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
                 doc.line(line1, currentY - 6, line5, currentY - 6);
                 
@@ -386,22 +396,19 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             drawTextFit(item.description.toUpperCase(), descX, currentY, descMaxW, 8.5);
             
             doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
-            drawTextFit(item.normalPrice || '', normalPriceX, currentY, 32, 8, 'right');
+            drawTextFit(item.normalPrice || '', normalPriceX, currentY, normalW - 4, 8, 'right');
             
             if (item.promoPrice) {
                 doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
-                drawTextFit(item.promoPrice, promoPriceX, currentY, 32, 10, 'right');
+                drawTextFit(item.promoPrice, promoPriceX, currentY, promoW - 4, 10, 'right');
             } else {
                 doc.setTextColor(0, 0, 0);
-                drawTextFit(item.normalPrice || '', promoPriceX, currentY, 32, 8, 'right');
+                drawTextFit(item.normalPrice || '', promoPriceX, currentY, promoW - 4, 8, 'right');
             }
 
             // --- GRID LINES ---
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
-            // Horizontal line (Bottom of this row)
             doc.line(line1, currentY + rowHeight - 6, line5, currentY + rowHeight - 6);
-            
-            // Vertical lines for this row
             doc.line(line1, currentY - 6, line1, currentY + rowHeight - 6);
             doc.line(line2, currentY - 6, line2, currentY + rowHeight - 6);
             doc.line(line3, currentY - 6, line3, currentY + rowHeight - 6);
