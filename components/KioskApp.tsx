@@ -269,9 +269,16 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const skuX = margin + 3;
         const skuMaxW = 32;
         const descX = margin + 40;
-        const normalPriceX = pageWidth - margin - 42; // Right aligned
-        const promoPriceX = pageWidth - margin - 5;   // Right aligned
-        const descMaxW = normalPriceX - descX - 8;    // Added safe gutter
+        const normalPriceX = pageWidth - margin - 42; 
+        const promoPriceX = pageWidth - margin - 5;   
+        const descMaxW = normalPriceX - descX - 8;    
+
+        // Vertical Line Anchor Points
+        const line1 = margin;
+        const line2 = margin + 37;
+        const line3 = pageWidth - margin - 45;
+        const line4 = pageWidth - margin - 22;
+        const line5 = pageWidth - margin;
 
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
@@ -307,24 +314,32 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         };
 
         const drawTableHeaders = (startY: number) => {
-            doc.setFillColor(113, 113, 122); doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
+            const headerHeight = 10;
+            doc.setFillColor(113, 113, 122); 
+            doc.rect(margin, startY - 7, pageWidth - (margin * 2), headerHeight, 'F');
+            
             doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
             doc.text("SKU", skuX, startY); 
             doc.text("DESCRIPTION", descX, startY);
             doc.text("NORMAL", normalPriceX, startY, { align: 'right' });
             doc.text("PROMO", promoPriceX, startY, { align: 'right' });
+
+            // Vertical Grid Lines for Headers
+            doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.2);
+            doc.line(line2, startY - 7, line2, startY + 3);
+            doc.line(line3, startY - 7, line3, startY + 3);
+            doc.line(line4, startY - 7, line4, startY + 3);
+
             return startY + 8;
         };
 
         const drawTextFit = (text: string, x: number, y: number, maxWidth: number, baseSize: number, align: 'left' | 'right' = 'left'): number => {
             let currentSize = baseSize;
             doc.setFontSize(currentSize);
-            // First pass: Shrink font size
             while (doc.getTextWidth(text) > maxWidth && currentSize > 7) {
                 currentSize -= 0.5;
                 doc.setFontSize(currentSize);
             }
-            // Second pass: Wrap if still too big
             if (doc.getTextWidth(text) > maxWidth) {
                 const lines = doc.splitTextToSize(text, maxWidth);
                 doc.text(lines, x, y, { align });
@@ -341,7 +356,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const baseRowHeight = 9; const footerMargin = 20;
 
         items.forEach((item, index) => {
-            // Measure both content pieces
             doc.setFontSize(8);
             const skuLines = doc.splitTextToSize(item.sku || '', skuMaxW).length;
             doc.setFontSize(9);
@@ -351,6 +365,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             const rowHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
 
             if (currentY + rowHeight > pageHeight - footerMargin) {
+                // Draw bottom border of last row on page before new page
+                doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
+                doc.line(line1, currentY - 6, line5, currentY - 6);
+                
                 doc.addPage();
                 currentY = drawHeader();
                 currentY = drawTableHeaders(currentY);
@@ -360,6 +378,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
             }
 
+            // Cell Contents
             doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal');
             drawTextFit(item.sku || '', skuX, currentY, skuMaxW, 8);
             
@@ -376,6 +395,19 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.setTextColor(0, 0, 0);
                 drawTextFit(item.normalPrice || '', promoPriceX, currentY, 32, 8, 'right');
             }
+
+            // --- GRID LINES ---
+            doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
+            // Horizontal line (Bottom of this row)
+            doc.line(line1, currentY + rowHeight - 6, line5, currentY + rowHeight - 6);
+            
+            // Vertical lines for this row
+            doc.line(line1, currentY - 6, line1, currentY + rowHeight - 6);
+            doc.line(line2, currentY - 6, line2, currentY + rowHeight - 6);
+            doc.line(line3, currentY - 6, line3, currentY + rowHeight - 6);
+            doc.line(line4, currentY - 6, line4, currentY + rowHeight - 6);
+            doc.line(line5, currentY - 6, line5, currentY + rowHeight - 6);
+
             currentY += rowHeight;
         });
 
