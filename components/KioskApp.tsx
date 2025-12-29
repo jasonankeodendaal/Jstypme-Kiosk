@@ -24,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 const isRecent = (dateString?: string) => {
@@ -267,24 +267,27 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const innerWidth = pageWidth - (margin * 2);
         
         // --- LAYOUT DEFINITIONS ---
-        // Consistent column width scaling
-        const skuW = 25;
+        // Consistent column width scaling with NEW IMAGE COLUMN
+        const imgW = 12; // Width for product image
+        const skuW = 20;
         const normalW = 28;
         const promoW = 28;
-        const descW = innerWidth - skuW - normalW - promoW;
+        const descW = innerWidth - imgW - skuW - normalW - promoW;
 
         // Vertical boundary lines
         const line1 = margin;
-        const line2 = line1 + skuW;
+        const lineImgEnd = line1 + imgW;
+        const line2 = lineImgEnd + skuW;
         const line3 = line2 + descW;
         const line4 = line3 + normalW;
         const line5 = line1 + innerWidth;
 
         // Content anchors
-        const skuX = line1 + 2;
+        const imgX = line1 + 1;
+        const skuX = lineImgEnd + 2;
         const descX = line2 + 2;
-        const normalPriceX = line4 - 2; // Right align at right of normal column
-        const promoPriceX = line5 - 2;  // Right align at right of promo column
+        const normalPriceX = line4 - 2; 
+        const promoPriceX = line5 - 2;  
         
         // Split text max widths
         const skuMaxW = skuW - 4;
@@ -294,6 +297,16 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
             companyLogo ? loadImageForPDF(companyLogo) : Promise.resolve(null)
         ]);
+
+        // Pre-load all row images to avoid await inside loops
+        const rowImagesMap = new Map();
+        const items = pricelist.items || [];
+        await Promise.all(items.map(async (item) => {
+            if (item.imageUrl) {
+                const asset = await loadImageForPDF(item.imageUrl);
+                if (asset) rowImagesMap.set(item.id, asset);
+            }
+        }));
 
         const drawHeader = () => {
             let topY = 15;
@@ -328,7 +341,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.setFillColor(113, 113, 122); 
             doc.rect(margin, startY - 7, pageWidth - (margin * 2), headerHeight, 'F');
             
-            doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+            doc.setTextColor(255, 255, 255); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+            doc.text("IMG", imgX + (imgW/2) - 2.5, startY);
             doc.text("SKU", skuX, startY); 
             doc.text("DESCRIPTION", descX, startY);
             doc.text("NORMAL", normalPriceX, startY, { align: 'right' });
@@ -336,6 +350,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
             // Vertical Grid Lines for Headers
             doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.2);
+            doc.line(lineImgEnd, startY - 7, lineImgEnd, startY + 3);
             doc.line(line2, startY - 7, line2, startY + 3);
             doc.line(line3, startY - 7, line3, startY + 3);
             doc.line(line4, startY - 7, line4, startY + 3);
@@ -362,7 +377,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         let currentY = drawHeader();
         currentY = drawTableHeaders(currentY);
         
-        const items = pricelist.items || [];
         const baseRowHeight = 9; const footerMargin = 20;
 
         items.forEach((item, index) => {
@@ -372,13 +386,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             const descLines = doc.splitTextToSize(item.description.toUpperCase(), descMaxW).length;
             
             const maxLines = Math.max(skuLines, descLines);
-            const rowHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
+            let rowHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
+            // Ensure minimum height for image cell
+            if (rowHeight < 10) rowHeight = 10;
 
             if (currentY + rowHeight > pageHeight - footerMargin) {
-                // Bottom closure for current page
                 doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
                 doc.line(line1, currentY - 6, line5, currentY - 6);
-                
                 doc.addPage();
                 currentY = drawHeader();
                 currentY = drawTableHeaders(currentY);
@@ -386,6 +400,23 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             
             if (index % 2 !== 0) {
                 doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
+            }
+
+            // --- DRAW IMAGE IF EXISTS ---
+            const rowAsset = rowImagesMap.get(item.id);
+            if (rowAsset) {
+                const maxW = imgW - 2;
+                const maxH = rowHeight - 2;
+                const ratio = rowAsset.width / rowAsset.height;
+                let w = maxW;
+                let h = w / ratio;
+                if (h > maxH) {
+                    h = maxH;
+                    w = h * ratio;
+                }
+                const offX = (imgW - w) / 2;
+                const offY = (rowHeight - h) / 2;
+                doc.addImage(rowAsset.imgData, rowAsset.format, line1 + offX, currentY - 6 + offY, w, h);
             }
 
             // Cell Contents
@@ -410,6 +441,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
             doc.line(line1, currentY + rowHeight - 6, line5, currentY + rowHeight - 6);
             doc.line(line1, currentY - 6, line1, currentY + rowHeight - 6);
+            doc.line(lineImgEnd, currentY - 6, lineImgEnd, currentY + rowHeight - 6);
             doc.line(line2, currentY - 6, line2, currentY + rowHeight - 6);
             doc.line(line3, currentY - 6, line3, currentY + rowHeight - 6);
             doc.line(line4, currentY - 6, line4, currentY + rowHeight - 6);
@@ -492,7 +524,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
                   <tr className="hidden print:table-row border-none">
-                      <th colSpan={4} className="p-0 border-none bg-white">
+                      <th colSpan={5} className="p-0 border-none bg-white">
                           <div className="w-full px-10 pt-10 pb-6 text-left">
                               <div className="flex justify-between items-start mb-10">
                                   <div className="flex flex-col gap-6">
@@ -509,8 +541,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                       </th>
                   </tr>
                   <tr className="print:bg-[#71717a] bg-[#71717a]">
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[20%] text-white">SKU</th>
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[50%] text-white">Description</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[8%] text-white text-center">IMG</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[17%] text-white">SKU</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[45%] text-white">Description</th>
                       <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-right w-[15%] text-white">Normal</th>
                       <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight text-right w-[15%] text-white">Promo</th>
                   </tr>
@@ -518,6 +551,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
                       <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
+                      <td className="p-2 border-r border-slate-100">
+                        <div className="w-10 h-10 mx-auto bg-white rounded-lg flex items-center justify-center overflow-hidden border border-slate-50">
+                          {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-contain" alt="" /> : <ImageIcon size={16} className="text-slate-200" />}
+                        </div>
+                      </td>
                       <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
                       <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">{item.description}</span></td>
                       <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900 price-cell">{item.normalPrice || ''}</span></td>
@@ -692,7 +730,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const allProductsFlat = useMemo(() => {
       if (!storeData?.brands) return [];
-      return storeData.brands.flatMap(b => (b.categories || []).flatMap(c => (c.products || []).map(p => ({...p, brandName: b.name, categoryName: c.name} as FlatProduct))));
+      return storeData.brands.flatMap(b => b.categories.flatMap(c => c.products.map(p => ({...p, brandName: b.name, categoryName: c.name} as FlatProduct))));
   }, [storeData?.brands]);
 
   const pricelistBrands = useMemo(() => (storeData?.pricelistBrands || []).slice().sort((a, b) => a.name.localeCompare(b.name)), [storeData?.pricelistBrands]);
