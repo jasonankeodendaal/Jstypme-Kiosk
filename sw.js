@@ -1,6 +1,6 @@
-
-// Service Worker for Kiosk Pro
+// Service Worker for Kiosk Pro with LRU Cache Management
 const CACHE_NAME = 'kiosk-pro-v4';
+const MAX_CACHE_ENTRIES = 200; // Limit entries to prevent storage leak
 
 const PRECACHE_URLS = [
   '/',
@@ -33,79 +33,58 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+async function trimCache(cacheName, maxItems) {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    if (keys.length > maxItems) {
+        // Delete oldest items
+        for (let i = 0; i < keys.length - maxItems; i++) {
+            await cache.delete(keys[i]);
+        }
+    }
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
-        .catch(() => {
-          return caches.match('/index.html');
-        })
+      fetch(event.request).catch(() => caches.match('/index.html'))
     );
     return;
   }
 
   const url = new URL(event.request.url);
-  const isPdf = url.pathname.toLowerCase().endsWith('.pdf');
-  const isImage = event.request.destination === 'image';
-  const isFont = event.request.destination === 'font';
-  const isMedia = isImage || isFont || isPdf;
+  const isMedia = url.pathname.toLowerCase().match(/\.(pdf|jpg|jpeg|png|webp|gif|mp4|webm)$/) || 
+                  event.request.destination === 'image' || 
+                  event.request.destination === 'font';
 
   if (isMedia) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          // If we have a cached version, return it
-          return cachedResponse;
-        }
+        if (cachedResponse) return cachedResponse;
         return fetch(event.request).then((response) => {
-          // Robust caching check:
-          // 1. Must exist
-          // 2. If it's a standard response, must be 200 OK
-          // 3. If it's an opaque response (cross-origin without CORS), 
-          //    only cache if it's not suspiciously small (usually error fragments)
           const isOpaque = response.type === 'opaque';
           const isOk = response.status === 200;
-          
-          if (!response || (!isOk && !isOpaque)) {
-            return response;
-          }
-
-          // Don't cache very small opaque responses which are often error messages from Supabase
-          if (isOpaque && response.clone().blob().then(b => b.size < 500)) {
-             return response;
-          }
+          if (!response || (!isOk && !isOpaque)) return response;
           
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
+            trimCache(CACHE_NAME, MAX_CACHE_ENTRIES);
           });
           return response;
-        }).catch(() => {
-           // If network fails and not in cache, return null (browser shows broken image icon)
-           return null;
-        });
+        }).catch(() => null);
       })
     );
     return;
   }
 
-  // Network First for Data
+  // Network First for everything else
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (!response || response.status !== 200) {
-          return response;
-        }
-        
+    fetch(event.request).then((response) => {
+        if (!response || response.status !== 200) return response;
         const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-        
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
         return response;
-      })
-      .catch(() => {
-        return caches.match(event.request);
-      })
+    }).catch(() => caches.match(event.request))
   );
 });
