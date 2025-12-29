@@ -1,17 +1,4 @@
 
-export const UI_Z_INDEX = {
-  BASE: 0,
-  HEADER: 50,
-  DRAWER: 60,
-  MODAL: 150,
-  OVERLAY: 160,
-  SYNC_INDICATOR: 200,
-  SCREENSAVER: 210,
-  TV_PLAYER: 250,
-  SETUP: 300,
-  ERROR_BOUNDARY: 400
-};
-
 export interface DimensionSet {
   label?: string; // e.g. "Device", "Stand", "Box 1"
   width: string;
