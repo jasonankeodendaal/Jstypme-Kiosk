@@ -1,13 +1,12 @@
 
 // Service Worker for Kiosk Pro
-const CACHE_NAME = 'kiosk-pro-v5';
+const CACHE_NAME = 'kiosk-pro-v4';
 
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/manifest-kiosk.json',
-  '/manifest-admin.json',
-  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+  '/manifest-admin.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -34,38 +33,13 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-async function handleMediaFetch(request) {
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) return cachedResponse;
-
-    try {
-        const response = await fetch(request);
-        const isOpaque = response.type === 'opaque';
-        const isOk = response.status === 200;
-
-        if (!response || (!isOk && !isOpaque)) {
-            return response;
-        }
-
-        // Properly await blob check for opaque responses to filter out error fragments
-        if (isOpaque) {
-            const blob = await response.clone().blob();
-            if (blob.size < 500) return response; // Don't cache error shards
-        }
-
-        const responseToCache = response.clone();
-        const cache = await caches.open(CACHE_NAME);
-        cache.put(request, responseToCache);
-        return response;
-    } catch (e) {
-        return null;
-    }
-}
-
 self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/index.html'))
+      fetch(event.request)
+        .catch(() => {
+          return caches.match('/index.html');
+        })
     );
     return;
   }
@@ -77,7 +51,41 @@ self.addEventListener('fetch', (event) => {
   const isMedia = isImage || isFont || isPdf;
 
   if (isMedia) {
-    event.respondWith(handleMediaFetch(event.request));
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          // If we have a cached version, return it
+          return cachedResponse;
+        }
+        return fetch(event.request).then((response) => {
+          // Robust caching check:
+          // 1. Must exist
+          // 2. If it's a standard response, must be 200 OK
+          // 3. If it's an opaque response (cross-origin without CORS), 
+          //    only cache if it's not suspiciously small (usually error fragments)
+          const isOpaque = response.type === 'opaque';
+          const isOk = response.status === 200;
+          
+          if (!response || (!isOk && !isOpaque)) {
+            return response;
+          }
+
+          // Don't cache very small opaque responses which are often error messages from Supabase
+          if (isOpaque && response.clone().blob().then(b => b.size < 500)) {
+             return response;
+          }
+          
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        }).catch(() => {
+           // If network fails and not in cache, return null (browser shows broken image icon)
+           return null;
+        });
+      })
+    );
     return;
   }
 
@@ -85,11 +93,19 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (!response || response.status !== 200) return response;
+        if (!response || response.status !== 200) {
+          return response;
+        }
+        
         const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 });

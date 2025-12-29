@@ -24,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, HandMetal } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 const isRecent = (dateString?: string) => {
@@ -249,10 +249,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 if (!ctx) { resolve(null); return; }
                 ctx.drawImage(img, 0, 0);
                 resolve({ imgData: canvas.toDataURL('image/png'), format: 'PNG', width: img.width, height: img.height });
-            } catch (err) { 
-                console.warn("CORS/Tainting Error while processing PDF image, skipping asset.");
-                resolve(null); 
-            }
+            } catch (err) { resolve(null); }
         };
         img.onerror = () => resolve(null);
         img.src = url;
@@ -270,19 +267,26 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const innerWidth = pageWidth - (margin * 2);
         
         // --- LAYOUT DEFINITIONS ---
+        // Consistent column width scaling
         const skuW = 25;
         const normalW = 28;
         const promoW = 28;
         const descW = innerWidth - skuW - normalW - promoW;
+
+        // Vertical boundary lines
         const line1 = margin;
         const line2 = line1 + skuW;
         const line3 = line2 + descW;
         const line4 = line3 + normalW;
         const line5 = line1 + innerWidth;
+
+        // Content anchors
         const skuX = line1 + 2;
         const descX = line2 + 2;
-        const normalPriceX = line4 - 2;
-        const promoPriceX = line5 - 2;
+        const normalPriceX = line4 - 2; // Right align at right of normal column
+        const promoPriceX = line5 - 2;  // Right align at right of promo column
+        
+        // Split text max widths
         const skuMaxW = skuW - 4;
         const descMaxW = descW - 4;
 
@@ -320,15 +324,22 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         };
 
         const drawTableHeaders = (startY: number) => {
+            const headerHeight = 10;
             doc.setFillColor(113, 113, 122); 
-            doc.rect(margin, startY - 7, pageWidth - (margin * 2), 10, 'F');
+            doc.rect(margin, startY - 7, pageWidth - (margin * 2), headerHeight, 'F');
+            
             doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-            doc.text("SKU", skuX, startY); doc.text("DESCRIPTION", descX, startY);
+            doc.text("SKU", skuX, startY); 
+            doc.text("DESCRIPTION", descX, startY);
             doc.text("NORMAL", normalPriceX, startY, { align: 'right' });
             doc.text("PROMO", promoPriceX, startY, { align: 'right' });
+
+            // Vertical Grid Lines for Headers
             doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.2);
-            doc.line(line2, startY - 7, line2, startY + 3); doc.line(line3, startY - 7, line3, startY + 3);
+            doc.line(line2, startY - 7, line2, startY + 3);
+            doc.line(line3, startY - 7, line3, startY + 3);
             doc.line(line4, startY - 7, line4, startY + 3);
+
             return startY + 8;
         };
 
@@ -336,7 +347,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             let currentSize = baseSize;
             doc.setFontSize(currentSize);
             while (doc.getTextWidth(text) > maxWidth && currentSize > 7) {
-                currentSize -= 0.5; doc.setFontSize(currentSize);
+                currentSize -= 0.5;
+                doc.setFontSize(currentSize);
             }
             if (doc.getTextWidth(text) > maxWidth) {
                 const lines = doc.splitTextToSize(text, maxWidth);
@@ -349,29 +361,43 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
         let currentY = drawHeader();
         currentY = drawTableHeaders(currentY);
+        
         const items = pricelist.items || [];
+        const baseRowHeight = 9; const footerMargin = 20;
+
         items.forEach((item, index) => {
             doc.setFontSize(8);
             const skuLines = doc.splitTextToSize(item.sku || '', skuMaxW).length;
             doc.setFontSize(9);
             const descLines = doc.splitTextToSize(item.description.toUpperCase(), descMaxW).length;
+            
             const maxLines = Math.max(skuLines, descLines);
-            const rowHeight = maxLines > 1 ? (9 + (maxLines - 1) * 4) : 9;
+            const rowHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
 
-            if (currentY + rowHeight > pageHeight - 20) {
+            if (currentY + rowHeight > pageHeight - footerMargin) {
+                // Bottom closure for current page
                 doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
                 doc.line(line1, currentY - 6, line5, currentY - 6);
+                
                 doc.addPage();
                 currentY = drawHeader();
                 currentY = drawTableHeaders(currentY);
             }
-            if (index % 2 !== 0) { doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, innerWidth, rowHeight, 'F'); }
+            
+            if (index % 2 !== 0) {
+                doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
+            }
+
+            // Cell Contents
             doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal');
             drawTextFit(item.sku || '', skuX, currentY, skuMaxW, 8);
+            
             doc.setFont('helvetica', 'bold');
             drawTextFit(item.description.toUpperCase(), descX, currentY, descMaxW, 8.5);
+            
             doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
             drawTextFit(item.normalPrice || '', normalPriceX, currentY, normalW - 4, 8, 'right');
+            
             if (item.promoPrice) {
                 doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
                 drawTextFit(item.promoPrice, promoPriceX, currentY, promoW - 4, 10, 'right');
@@ -379,6 +405,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.setTextColor(0, 0, 0);
                 drawTextFit(item.normalPrice || '', promoPriceX, currentY, promoW - 4, 8, 'right');
             }
+
+            // --- GRID LINES ---
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
             doc.line(line1, currentY + rowHeight - 6, line5, currentY + rowHeight - 6);
             doc.line(line1, currentY - 6, line1, currentY + rowHeight - 6);
@@ -386,8 +414,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.line(line3, currentY - 6, line3, currentY + rowHeight - 6);
             doc.line(line4, currentY - 6, line4, currentY + rowHeight - 6);
             doc.line(line5, currentY - 6, line5, currentY + rowHeight - 6);
+
             currentY += rowHeight;
         });
+
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
+            doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        }
         doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
     } catch (err) { alert("Unable to generate PDF."); } finally { setIsExporting(false); }
   };
@@ -600,7 +635,6 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
 
 export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData: StoreData | null, lastSyncTime?: string, onSyncRequest?: () => void }) => {
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
-  const [needsInitInteraction, setNeedsInitInteraction] = useState(true);
   const [kioskId, setKioskId] = useState(getKioskId());
   const myFleetEntry = useMemo(() => storeData?.fleet?.find(f => f.id === kioskId), [storeData?.fleet, kioskId]);
   const currentShopName = myFleetEntry?.name || getShopName() || "New Device";
@@ -628,18 +662,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const timerRef = useRef<number | null>(null);
   const idleTimeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
   
-  const handleAppInteraction = () => {
-    if (needsInitInteraction) {
-        setNeedsInitInteraction(false);
-        // Explicitly resume audio context for Android WebViews
-        const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
-        if (AudioContext) {
-            const ctx = new AudioContext();
-            ctx.resume();
-        }
-    }
-  };
-
   const resetIdleTimer = useCallback(() => {
     setIsIdle(false);
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -688,25 +710,10 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   if (!storeData) return null;
   if (!isSetup) return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
-  
-  if (needsInitInteraction && deviceType !== 'tv') {
-      return (
-          <div className="fixed inset-0 z-[500] bg-slate-900 flex items-center justify-center p-8 text-center cursor-pointer" onClick={handleAppInteraction}>
-              <div className="animate-fade-in flex flex-col items-center">
-                  <div className="bg-blue-600 p-8 rounded-full shadow-2xl mb-8 animate-bounce">
-                      <HandMetal size={48} className="text-white" />
-                  </div>
-                  <h2 className="text-white text-3xl font-black uppercase tracking-widest mb-4">Tap to Start Experience</h2>
-                  <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">Resuming system core & audio protocols</p>
-              </div>
-          </div>
-      );
-  }
-
   if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} />;
   
   return (
-    <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full" onClick={handleAppInteraction}>
+    <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full">
        {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProductsFlat} ads={storeData.ads?.screensaver || []} pamphlets={storeData.catalogues || []} onWake={resetIdleTimer} settings={storeData.screensaverSettings} />}
        <header className="shrink-0 h-10 bg-slate-900 text-white flex items-center justify-between px-2 md:px-4 z-50 border-b border-slate-800 shadow-md print:hidden">
            <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
