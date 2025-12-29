@@ -1,4 +1,3 @@
-
 export interface DimensionSet {
   label?: string; // e.g. "Device", "Stand", "Box 1"
   width: string;
@@ -107,6 +106,7 @@ export interface PricelistItem {
   description: string;
   normalPrice: string;
   promoPrice?: string;
+  imageUrl?: string; // New: Optional product image
 }
 
 export interface Pricelist {
