@@ -107,7 +107,6 @@ export interface PricelistItem {
   description: string;
   normalPrice: string;
   promoPrice?: string;
-  imageUrl?: string; // Optional product image
 }
 
 export interface Pricelist {
@@ -164,7 +163,7 @@ export interface KioskRegistry {
   ipAddress: string;
   version: string;
   locationDescription?: string;
-  assigned_zone?: string;
+  assignedZone?: string;
   notes?: string;
   restartRequested?: boolean; 
 }
