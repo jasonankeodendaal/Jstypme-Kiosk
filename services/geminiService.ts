@@ -3,7 +3,44 @@ import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, Admi
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
 const STORAGE_KEY_DATA = 'kiosk_pro_store_data';
-const STORAGE_KEY_ID = 'kiosk_pro_device_id';
+const DB_NAME = 'KioskProDB';
+const STORE_NAME = 'config';
+
+// Simple IndexedDB wrapper for large data storage
+const dbRequest = (): Promise<IDBDatabase> => {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = () => {
+            if (!request.result.objectStoreNames.contains(STORE_NAME)) {
+                request.result.createObjectStore(STORE_NAME);
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+};
+
+const getDBValue = async (key: string): Promise<any> => {
+    const db = await dbRequest();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.get(key);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+};
+
+const setDBValue = async (key: string, value: any): Promise<void> => {
+    const db = await dbRequest();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.put(value, key);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+};
 
 const DEFAULT_ADMIN: AdminUser = {
     id: 'super-admin',
@@ -135,390 +172,6 @@ const MOCK_BRANDS: Brand[] = [
         ]
       }
     ]
-  },
-  {
-    id: 'b-lg',
-    name: 'LG',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/LG_logo_%282015%29.svg/1024px-LG_logo_%282015%29.svg.png',
-    categories: [
-      {
-        id: 'c-lg-tv',
-        name: 'Monitor',
-        icon: 'Monitor',
-        products: [
-          {
-            id: 'p-lg-c3',
-            sku: 'LG-65C3',
-            name: 'OLED evo C3 65"',
-            description: 'The world’s #1 OLED brand. Boasting over a decade of excellence in the field.',
-            specs: { 'Resolution': '4K UHD', 'Refresh Rate': '120Hz', 'Panel': 'OLED evo' },
-            features: ['α9 AI Processor Gen6', 'Brightness Booster', 'Ultra Slim Design'],
-            dimensions: [{ label: 'With Stand', width: '1441 mm', height: '880 mm', depth: '230 mm', weight: '18.5 kg' }],
-            imageUrl: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-canon',
-    name: 'Canon',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Canon_logo.svg/1280px-Canon_logo.svg.png',
-    categories: [
-      {
-        id: 'c-canon-cam',
-        name: 'Camera',
-        icon: 'Box',
-        products: [
-          {
-            id: 'p-eos-r6',
-            sku: 'CAN-R6II',
-            name: 'EOS R6 Mark II',
-            description: 'The ultimate hybrid camera. Master the art of video and photography with unrivaled performance.',
-            specs: { 'Sensor': '24.2MP Full-Frame', 'Video': '4K 60p', 'AF': 'Dual Pixel CMOS AF II' },
-            features: ['Up to 40fps electronic shutter', 'In-body Image Stabilization', 'Weather sealed'],
-            dimensions: [{ width: '138.4 mm', height: '98.4 mm', depth: '88.4 mm', weight: '670 g' }],
-            imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-dji',
-    name: 'DJI',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/DJI_Logo.svg/1200px-DJI_Logo.svg.png',
-    categories: [
-      {
-        id: 'c-dji-drone',
-        name: 'Drone',
-        icon: 'Box',
-        products: [
-          {
-            id: 'p-avata2',
-            sku: 'DJI-AVATA2',
-            name: 'Avata 2',
-            description: 'The ultimate adrenaline-fueled FPV drone experience with enhanced safety and battery life.',
-            specs: { 'Video': '4K/60fps HDR', 'Flight Time': '23 mins', 'Sensor': '1/1.3-inch CMOS' },
-            features: ['Integrated Propeller Guard', 'Easy ACRO', 'O4 Video Transmission'],
-            dimensions: [{ width: '185 mm', height: '64 mm', depth: '212 mm', weight: '377 g' }],
-            imageUrl: 'https://images.unsplash.com/photo-1473968512647-3e44a224fe8f?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-bose',
-    name: 'Bose',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Bose_Logo.svg/1200px-Bose_Logo.svg.png',
-    categories: [
-      {
-        id: 'c-bose-audio',
-        name: 'Headphones',
-        icon: 'Headphones',
-        products: [
-          {
-            id: 'p-qc-ultra',
-            sku: 'BSE-QC-ULTRA',
-            name: 'QuietComfort Ultra',
-            description: 'World-class noise cancellation, quieter than ever before. Breakthrough spatialized audio for more immersive listening.',
-            specs: { 'Battery': 'Up to 24 hours', 'Modes': 'Quiet, Aware, Immersion', 'Bluetooth': '5.3' },
-            features: ['CustomTune technology', 'Immersive Audio', 'All-day comfort'],
-            dimensions: [{ width: '150 mm', height: '190 mm', depth: '50 mm', weight: '250 g' }],
-            imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-kitchenaid',
-    name: 'KitchenAid',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/KitchenAid_logo.svg/1200px-KitchenAid_logo.svg.png',
-    categories: [
-      {
-        id: 'c-ka-mixer',
-        name: 'Appliances',
-        icon: 'Box',
-        products: [
-          {
-            id: 'p-artisan-mixer',
-            sku: 'KTC-MIX',
-            name: 'Artisan 4.8L Stand Mixer',
-            description: 'The iconic kitchen essential. Smooth, rounded tilt-head design with high-quality metal construction.',
-            specs: { 'Capacity': '4.8 Liters', 'Power': '300 Watts', 'Speeds': '10 Speeds' },
-            features: ['Original planetary action', 'Full metal construction', 'Versatile attachments'],
-            dimensions: [{ width: '240 mm', height: '360 mm', depth: '370 mm', weight: '10.4 kg' }],
-            imageUrl: 'https://images.unsplash.com/photo-1594385208974-2e75f9d8ad48?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-microsoft',
-    name: 'Microsoft',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Microsoft_logo.svg/1024px-Microsoft_logo.svg.png',
-    categories: [
-      {
-        id: 'c-ms-surface',
-        name: 'Laptop',
-        icon: 'Laptop',
-        products: [
-          {
-            id: 'p-surface-l5',
-            sku: 'MS-SURF-L5',
-            name: 'Surface Laptop 5',
-            description: 'Sleek, powerful, and elegant. Multi-tasking speed with 12th Gen Intel Core i5/i7 processors.',
-            specs: { 'Display': '13.5" or 15" PixelSense', 'RAM': 'Up to 32GB', 'Battery': 'Up to 18 hours' },
-            features: ['Dolby Vision IQ', 'Omnisonic Speakers', 'Windows 11'],
-            dimensions: [{ label: '13.5"', width: '308 mm', height: '223 mm', depth: '14.5 mm', weight: '1.27 kg' }],
-            imageUrl: 'https://images.unsplash.com/photo-1583573636246-18cb2246697f?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-nintendo',
-    name: 'Nintendo',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Nintendo.svg/1200px-Nintendo.svg.png',
-    categories: [
-      {
-        id: 'c-n-gaming',
-        name: 'Gaming',
-        icon: 'Box',
-        products: [
-          {
-            id: 'p-switch-oled',
-            sku: 'NIN-SW-OLED',
-            name: 'Switch (OLED Model)',
-            description: 'Vibrant 7-inch OLED screen, a wide adjustable stand, a dock with a wired LAN port, 64 GB of internal storage, and enhanced audio.',
-            specs: { 'Screen': '7" OLED', 'Storage': '64GB', 'Battery': 'Up to 9 hours' },
-            features: ['Three modes in one', 'Local and online multiplayer', 'Share the fun'],
-            dimensions: [{ width: '242 mm', height: '102 mm', depth: '13.9 mm', weight: '420 g' }],
-            imageUrl: 'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-hp',
-    name: 'HP',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/HP_logo_2012.svg/1200px-HP_logo_2012.svg.png',
-    categories: [
-      {
-        id: 'c-hp-laptop',
-        name: 'Laptop',
-        icon: 'Laptop',
-        products: [
-          {
-            id: 'p-spectre-x360',
-            sku: 'HP-SPEC-360',
-            name: 'Spectre x360',
-            description: 'Elevate your every day with the Spectre x360. Combining premium craftsmanship with powerful performance.',
-            specs: { 'Processor': 'Intel Core i7-1355U', 'RAM': '16GB LPDDR4x', 'Storage': '512GB SSD' },
-            features: ['360-degree hinge', 'OLED Touch Display', 'Long battery life'],
-            dimensions: [{ width: '298 mm', height: '220 mm', depth: '16.9 mm', weight: '1.36 kg' }],
-            imageUrl: 'https://images.unsplash.com/photo-1589561084283-930aa7b1ce50?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-dell',
-    name: 'Dell',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Dell_logo_2016.svg/1200px-Dell_logo_2016.svg.png',
-    categories: [
-      {
-        id: 'c-dell-laptop',
-        name: 'Laptop',
-        icon: 'Laptop',
-        products: [
-          {
-            id: 'p-xps-13',
-            sku: 'DELL-XPS-13',
-            name: 'XPS 13 Laptop',
-            description: 'The world\'s smallest 13-inch laptop with the first InfinityEdge display. Stunning inside and out.',
-            specs: { 'Display': '13.4" FHD+ InfinityEdge', 'CPU': '12th Gen Intel Core', 'Weight': 'Starting at 1.17kg' },
-            features: ['Precision-machined aluminum', 'Gorilla Glass 6', 'Eyesafe display technology'],
-            dimensions: [{ width: '295 mm', height: '199 mm', depth: '13.9 mm', weight: '1.17 kg' }],
-            imageUrl: 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-asus',
-    name: 'ASUS',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/ASUS_Logo.svg/1200px-ASUS_Logo.svg.png',
-    categories: [
-      {
-        id: 'c-asus-gaming',
-        name: 'Laptop',
-        icon: 'Laptop',
-        products: [
-          {
-            id: 'p-rog-g14',
-            sku: 'ASU-ROG-G14',
-            name: 'ROG Zephyrus G14',
-            description: 'The world\'s most powerful 14-inch Windows 11 gaming laptop. Portable and powerful.',
-            specs: { 'GPU': 'RTX 4060', 'Display': 'ROG Nebula HDR 165Hz', 'Storage': '1TB NVMe' },
-            features: ['AniMe Matrix display', 'Liquid metal cooling', 'Lightweight chassis'],
-            dimensions: [{ width: '312 mm', height: '227 mm', depth: '19.5 mm', weight: '1.72 kg' }],
-            imageUrl: 'https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-garmin',
-    name: 'Garmin',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Garmin_logo.svg/1200px-Garmin_logo.svg.png',
-    categories: [
-      {
-        id: 'c-garmin-watch',
-        name: 'Watch',
-        icon: 'Watch',
-        products: [
-          {
-            id: 'p-epix-2',
-            sku: 'GAR-EPIX2',
-            name: 'Epix (Gen 2)',
-            description: 'The premium active smartwatch. Featuring a stunning AMOLED display and built-in maps.',
-            specs: { 'Display': '1.3" AMOLED', 'Battery': 'Up to 16 days', 'Memory': '32GB' },
-            features: ['Built-in sports apps', 'TOPO mapping', 'Music storage'],
-            dimensions: [{ width: '47 mm', height: '47 mm', depth: '14.5 mm', weight: '76 g' }],
-            imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-sennheiser',
-    name: 'Sennheiser',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Sennheiser_logo.svg/1280px-Sennheiser_logo.svg.png',
-    categories: [
-      {
-        id: 'c-senn-audio',
-        name: 'Headphones',
-        icon: 'Headphones',
-        products: [
-          {
-            id: 'p-mom-4',
-            sku: 'SEN-MOM4',
-            name: 'Momentum 4 Wireless',
-            description: 'Unmatched 60-hour battery life and incredible sound quality with personalized listening.',
-            specs: { 'Battery': '60 Hours', 'Bluetooth': '5.2', 'Driver': '42mm' },
-            features: ['Adaptive Noise Cancellation', 'Smart Pause', 'Built-in EQ'],
-            dimensions: [{ width: '160 mm', height: '210 mm', depth: '60 mm', weight: '293 g' }],
-            imageUrl: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-nikon',
-    name: 'Nikon',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Nikon_logo.svg/1200px-Nikon_logo.svg.png',
-    categories: [
-      {
-        id: 'c-nikon-cam',
-        name: 'Camera',
-        icon: 'Box',
-        products: [
-          {
-            id: 'p-nikon-z8',
-            sku: 'NIK-Z8',
-            name: 'Nikon Z8',
-            description: 'The ultimate agile full-frame mirrorless. Video and photo performance in a compact body.',
-            specs: { 'Sensor': '45.7MP Stacked CMOS', 'Video': '8.3K/60p', 'AF': 'Subject detection with 3D tracking' },
-            features: ['Real-Live Viewfinder', 'ProRes RAW internal', 'Rugged build'],
-            dimensions: [{ width: '144 mm', height: '118.5 mm', depth: '83 mm', weight: '910 g' }],
-            imageUrl: 'https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-razer',
-    name: 'Razer',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/40/Razer_snake_logo.svg/1200px-Razer_snake_logo.svg.png',
-    categories: [
-      {
-        id: 'c-razer-gaming',
-        name: 'Laptop',
-        icon: 'Laptop',
-        products: [
-          {
-            id: 'p-blade-16',
-            sku: 'RAZ-BLD16',
-            name: 'Razer Blade 16',
-            description: 'Uncompromising power and portability. The most powerful gaming laptop in its class.',
-            specs: { 'GPU': 'RTX 4090', 'CPU': 'Intel Core i9-14900HX', 'Display': 'Dual Mode Mini-LED' },
-            features: ['CNC aluminum unibody', 'Chroma RGB', 'THX Spatial Audio'],
-            dimensions: [{ width: '355 mm', height: '244 mm', depth: '21.9 mm', weight: '2.45 kg' }],
-            imageUrl: 'https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-sonos',
-    name: 'Sonos',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Sonos_logo.svg/1200px-Sonos_logo.svg.png',
-    categories: [
-      {
-        id: 'c-sonos-audio',
-        name: 'Headphones',
-        icon: 'Headphones',
-        products: [
-          {
-            id: 'p-era-300',
-            sku: 'SONO-ERA300',
-            name: 'Sonos Era 300',
-            description: 'Feel the music. With next-level audio that hits from every direction, Era 300 doesn’t just surround you, it puts you inside your music.',
-            specs: { 'Drivers': '6 Class-D digital amplifiers', 'Connectivity': 'Wi-Fi 6, Bluetooth 5.0', 'Weight': '4.47kg' },
-            features: ['Spatial audio with Dolby Atmos', 'Trueplay tuning', 'Apple AirPlay 2'],
-            dimensions: [{ width: '260 mm', height: '160 mm', depth: '185 mm', weight: '4.47 kg' }],
-            imageUrl: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'b-nespresso',
-    name: 'Nespresso',
-    logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Nespresso_logo.svg/1200px-Nespresso_logo.svg.png',
-    categories: [
-      {
-        id: 'c-nesp-app',
-        name: 'Appliances',
-        icon: 'Box',
-        products: [
-          {
-            id: 'p-vertuo-next',
-            sku: 'NES-VRTO',
-            name: 'Vertuo Next',
-            description: 'Centrifusion technology to gently and fully extract all the aromas of your coffee.',
-            specs: { 'Cup Sizes': '5 Sizes', 'Heat up': '30 Seconds', 'Water Tank': '1.1 L' },
-            features: ['One-touch brewing', 'Automatic capsule ejection', 'Sustainability first'],
-            dimensions: [{ width: '142 mm', height: '314 mm', depth: '429 mm', weight: '4 kg' }],
-            imageUrl: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
   }
 ];
 
@@ -617,10 +270,7 @@ const migrateData = (data: any): StoreData => {
         });
     }
 
-    if (!data.appConfig) {
-        data.appConfig = { ...DEFAULT_DATA.appConfig };
-    }
-    
+    if (!data.appConfig) data.appConfig = { ...DEFAULT_DATA.appConfig };
     if (!data.tv) data.tv = { brands: [] };
     if (!data.systemSettings) data.systemSettings = { ...DEFAULT_DATA.systemSettings };
 
@@ -684,7 +334,6 @@ export const generateStoreData = async (): Promise<StoreData> => {
           
           if (configResponse.data) {
               let processedData = migrateData(configResponse.data.data || {});
-              
               if (fleetResponse.data) {
                   const mappedFleet: KioskRegistry[] = fleetResponse.data.map((k: any) => ({
                       id: k.id,
@@ -702,15 +351,8 @@ export const generateStoreData = async (): Promise<StoreData> => {
                   }));
                   processedData.fleet = mappedFleet;
               }
-                  
               processedData = await handleExpiration(processedData);
-
-              try {
-                  localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(processedData));
-              } catch (e) {
-                  console.error("CRITICAL: LocalStorage is full. Large images/Base64 data might be causing this. Images may disappear on next reload.", e);
-              }
-              
+              await setDBValue(STORAGE_KEY_DATA, processedData);
               return processedData;
           }
       } catch (e) {
@@ -719,8 +361,17 @@ export const generateStoreData = async (): Promise<StoreData> => {
   }
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY_DATA);
-    if (stored) return migrateData(JSON.parse(stored));
+    const stored = await getDBValue(STORAGE_KEY_DATA);
+    if (stored) return migrateData(stored);
+    
+    // Legacy migration
+    const legacy = localStorage.getItem(STORAGE_KEY_DATA);
+    if (legacy) {
+        const parsed = JSON.parse(legacy);
+        await setDBValue(STORAGE_KEY_DATA, parsed);
+        localStorage.removeItem(STORAGE_KEY_DATA);
+        return migrateData(parsed);
+    }
   } catch (e) {}
 
   return migrateData(DEFAULT_DATA);
@@ -728,20 +379,12 @@ export const generateStoreData = async (): Promise<StoreData> => {
 
 export const saveStoreData = async (data: StoreData): Promise<void> => {
     try {
-        localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
+        await setDBValue(STORAGE_KEY_DATA, data);
     } catch (e) {
-        console.warn("Storage Quota Exceeded. Removing archive data to save space.");
-        // Emergency cleanup: Try saving without the archive to stay under 5MB
-        const { archive, ...smallerData } = data;
-        try {
-            localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(smallerData));
-        } catch (innerE) {
-             console.error("Local Storage completely full. Kiosk data will not persist offline.");
-        }
+        console.error("Storage Critical Failure: Unable to save to IndexedDB.", e);
     }
 
     if (!supabase) initSupabase();
-
     if (supabase) {
         try {
             const { fleet, ...dataToSave } = data;
