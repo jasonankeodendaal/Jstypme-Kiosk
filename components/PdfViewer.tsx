@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-const pdfjs: any = (pdfjsLib as any).default || pdfjsLib;
+// Robust reference for Vite/ESM/Legacy environments
+const pdfjs: any = pdfjsLib;
 
 if (pdfjs.GlobalWorkerOptions) {
   pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
