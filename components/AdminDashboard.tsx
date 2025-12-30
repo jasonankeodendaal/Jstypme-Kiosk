@@ -219,7 +219,6 @@ const SystemDocumentation = () => {
                                     <div className="h-2 w-20 bg-slate-100 rounded-full"></div>
                                 </div>
                                 <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 translate-x-4 animate-bounce" style={{ animationDuration: '3.5s', animationDelay: '0.5s' }}>
-                                    {/* Fix: Added missing Tag import */}
                                     <Tag size={20} className="text-orange-500" />
                                     <div className="h-2 w-24 bg-slate-100 rounded-full"></div>
                                 </div>
@@ -845,7 +844,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
   const [isImporting, setIsImporting] = useState(false);
   
   const addItem = () => {
-    setItems([...items, { id: generateId('item'), sku: '', description: '', normalPrice: '', promoPrice: '' }]);
+    setItems([...items, { id: generateId('item'), sku: '', description: '', normalPrice: '', promoPrice: '', imageUrl: '' }]);
   };
 
   const updateItem = (id: string, field: keyof PricelistItem, val: string) => {
@@ -955,7 +954,8 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
                 sku: String(row[sIdx] || '').trim().toUpperCase(),
                 description: String(row[dIdx] || '').trim(),
                 normalPrice: formatImported(row[nIdx]),
-                promoPrice: row[pIdx] ? formatImported(row[pIdx]) : ''
+                promoPrice: row[pIdx] ? formatImported(row[pIdx]) : '',
+                imageUrl: ''
             };
         });
 
@@ -1034,6 +1034,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 sticky top-0 z-10">
               <tr>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 w-16">Visual</th>
                 <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">SKU</th>
                 <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Description</th>
                 <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Normal Price</th>
@@ -1044,6 +1045,33 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             <tbody className="divide-y divide-slate-100">
               {items.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="p-2">
+                    <div className="w-12 h-12 relative group/item-img">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} className="w-full h-full object-contain rounded bg-white border border-slate-100" />
+                      ) : (
+                        <div className="w-full h-full bg-slate-50 border border-dashed border-slate-200 rounded flex items-center justify-center text-slate-300">
+                          <ImageIcon size={14} />
+                        </div>
+                      )}
+                      <label className="absolute inset-0 bg-black/40 opacity-0 group-hover/item-img:opacity-100 flex items-center justify-center cursor-pointer rounded transition-opacity">
+                        <Upload size={12} className="text-white" />
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*" 
+                          onChange={async (e) => {
+                            if (e.target.files?.[0]) {
+                              try {
+                                const url = await uploadFileToStorage(e.target.files[0]);
+                                updateItem(item.id, 'imageUrl', url);
+                              } catch (err) { alert("Upload failed"); }
+                            }
+                          }} 
+                        />
+                      </label>
+                    </div>
+                  </td>
                   <td className="p-2"><input value={item.sku} onChange={(e) => updateItem(item.id, 'sku', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="SKU-123" /></td>
                   <td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="Product details..." /></td>
                   <td className="p-2"><input value={item.normalPrice} onBlur={(e) => handlePriceBlur(item.id, 'normalPrice', e.target.value)} onChange={(e) => updateItem(item.id, 'normalPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-black text-sm" placeholder="R 999" /></td>
@@ -1055,7 +1083,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center text-slate-400 text-sm font-bold uppercase italic">No items yet. Click "Add Row" or "Import" to start.</td>
+                  <td colSpan={6} className="py-20 text-center text-slate-400 text-sm font-bold uppercase italic">No items yet. Click "Add Row" or "Import" to start.</td>
                 </tr>
               )}
             </tbody>
@@ -1822,7 +1850,6 @@ const TVModelEditor = ({ model, onSave, onClose }: { model: TVModel, onSave: (m:
                 </div>
 
                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-white shrink-0">
-                    {/* Fix: changed onClose to onClick for button compatibility */}
                     <button onClick={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
                     <button onClick={() => onSave(draft)} className="px-4 py-2 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg">Save Model</button>
                 </div>
@@ -1904,7 +1931,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
         } else {
             updatedList.push({
                 id: generateId('adm'),
-                name: name,
+                name: newName,
                 pin: newPin,
                 isSuperAdmin: false,
                 permissions: newPermissions
