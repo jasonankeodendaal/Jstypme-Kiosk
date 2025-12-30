@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -93,7 +94,6 @@ const SystemDocumentation = () => {
                             }`}
                         >
                             <div className={`p-2 rounded-xl transition-all duration-500 ${activeSection === section.id ? 'bg-white/20' : 'bg-slate-800'}`}>
-                                {/* Fix: Cast to any to allow size prop override in cloneElement */}
                                 {React.cloneElement(section.icon as React.ReactElement<any>, { size: 18 })}
                             </div>
                             <div className="min-w-0">
@@ -219,7 +219,6 @@ const SystemDocumentation = () => {
                                     <div className="h-2 w-20 bg-slate-100 rounded-full"></div>
                                 </div>
                                 <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 translate-x-4 animate-bounce" style={{ animationDuration: '3.5s', animationDelay: '0.5s' }}>
-                                    {/* Fix: Added missing Tag import */}
                                     <Tag size={20} className="text-orange-500" />
                                     <div className="h-2 w-24 bg-slate-100 rounded-full"></div>
                                 </div>
@@ -659,7 +658,7 @@ const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminU
 };
 
 // Updated FileUpload to always return Base64 for local processing if needed
-const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <ImageIcon />, allowMultiple = false }: any) => {
+const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <ImageIcon />, allowMultiple = false, compact = false }: any) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -712,9 +711,20 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
     }
   };
 
+  if (compact) {
+    return (
+        <div className="flex items-center justify-center">
+            <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 p-1.5 rounded-lg border border-slate-300 relative transition-all group overflow-hidden">
+                {isProcessing ? <Loader2 className="animate-spin text-blue-500" size={14} /> : currentUrl ? <img src={currentUrl} className="w-8 h-8 object-contain" /> : <ImageIcon size={14} className="text-slate-400 group-hover:text-blue-500" />}
+                <input type="file" className="hidden" accept={accept} onChange={handleFileChange} disabled={isProcessing} />
+            </label>
+        </div>
+    );
+  }
+
   return (
     <div className="mb-4">
-      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">{label}</label>
+      {label && <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">{label}</label>}
       <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
         {isProcessing && <div className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all" style={{ width: `${uploadProgress}%` }}></div>}
         <div className="w-10 h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center overflow-hidden shrink-0 text-slate-400">
@@ -845,7 +855,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
   const [isImporting, setIsImporting] = useState(false);
   
   const addItem = () => {
-    setItems([...items, { id: generateId('item'), sku: '', description: '', normalPrice: '', promoPrice: '' }]);
+    setItems([...items, { id: generateId('item'), sku: '', description: '', normalPrice: '', promoPrice: '', imageUrl: '' }]);
   };
 
   const updateItem = (id: string, field: keyof PricelistItem, val: string) => {
@@ -955,7 +965,8 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
                 sku: String(row[sIdx] || '').trim().toUpperCase(),
                 description: String(row[dIdx] || '').trim(),
                 normalPrice: formatImported(row[nIdx]),
-                promoPrice: row[pIdx] ? formatImported(row[pIdx]) : ''
+                promoPrice: row[pIdx] ? formatImported(row[pIdx]) : '',
+                imageUrl: ''
             };
         });
 
@@ -1034,6 +1045,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 sticky top-0 z-10">
               <tr>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 w-16 text-center">Img</th>
                 <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">SKU</th>
                 <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Description</th>
                 <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Normal Price</th>
@@ -1044,6 +1056,13 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             <tbody className="divide-y divide-slate-100">
               {items.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="p-2">
+                    <FileUpload 
+                        compact={true} 
+                        currentUrl={item.imageUrl} 
+                        onUpload={(url: any) => updateItem(item.id, 'imageUrl', url)} 
+                    />
+                  </td>
                   <td className="p-2"><input value={item.sku} onChange={(e) => updateItem(item.id, 'sku', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="SKU-123" /></td>
                   <td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="Product details..." /></td>
                   <td className="p-2"><input value={item.normalPrice} onBlur={(e) => handlePriceBlur(item.id, 'normalPrice', e.target.value)} onChange={(e) => updateItem(item.id, 'normalPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-black text-sm" placeholder="R 999" /></td>
@@ -1055,7 +1074,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center text-slate-400 text-sm font-bold uppercase italic">No items yet. Click "Add Row" or "Import" to start.</td>
+                  <td colSpan={6} className="py-20 text-center text-slate-400 text-sm font-bold uppercase italic">No items yet. Click "Add Row" or "Import" to start.</td>
                 </tr>
               )}
             </tbody>
@@ -1202,7 +1221,7 @@ const PricelistManager = ({
                          <div 
                             key={brand.id} 
                             onClick={() => setSelectedBrand(brand)}
-                            className={`p-2 md:p-3 rounded-xl border transition-all cursor-pointer relative group ${selectedBrand?.id === brand.id ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-200' : 'bg-white border-slate-100 hover:border-blue-200'}`}
+                            className={`p-2 md:p-3 rounded-xl border transition-all duration-300 cursor-pointer relative group ${selectedBrand?.id === brand.id ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-200' : 'bg-white border-slate-100 hover:border-blue-200'}`}
                          >
                              {isLatest && (
                                  <div className="absolute -top-1.5 -right-1.5 z-10 bg-orange-500 text-white text-[7px] font-black uppercase px-2 py-0.5 rounded-full shadow-lg border border-white animate-bounce">
@@ -1822,7 +1841,6 @@ const TVModelEditor = ({ model, onSave, onClose }: { model: TVModel, onSave: (m:
                 </div>
 
                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-white shrink-0">
-                    {/* Fix: changed onClose to onClick for button compatibility */}
                     <button onClick={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
                     <button onClick={() => onSave(draft)} className="px-4 py-2 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg">Save Model</button>
                 </div>
@@ -1904,7 +1922,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
         } else {
             updatedList.push({
                 id: generateId('adm'),
-                name: name,
+                name: newName, // Corrected variable reference
                 pin: newPin,
                 isSuperAdmin: false,
                 permissions: newPermissions
@@ -2400,6 +2418,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       }
   };
 
+  // Fix: Use camelCase assignedZone instead of snake_case assigned_zone for KioskRegistry interface
   const updateFleetMember = async (kiosk: KioskRegistry) => {
       if(supabase) {
           const payload = {
@@ -2509,6 +2528,11 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
           }
           return b;
       });
+
+      // Fix: Update current view state to reflect removal
+      if (selectedCategory && selectedCategory.products.find(p => p.id === product.id)) {
+          setSelectedCategory(updatedSourceCat);
+      }
 
       handleLocalUpdate({ ...localData, brands: newBrands });
       setMovingProduct(null);
@@ -2965,406 +2989,49 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                          </div>
                          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Content & Behavior</h3></div>
-                             <div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}})} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div>
+                             <div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (
+                                <div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
+                                    <label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label>
+                                    <button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}})} className={`w-8 h-4 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-green-500' : 'bg-slate-300'}`}>
+                                        <div className={`w-2 h-2 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-5' : 'left-1'}`}></div>
+                                    </button>
+                                </div>
+                             ))}</div>
                          </div>
                      </div>
                 </div>
             )}
-            
-            {activeTab === 'history' && (
-               <div className="max-w-6xl mx-auto space-y-6">
-                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                       <h2 className="text-2xl font-black text-slate-900 uppercase">Archive Management</h2>
-                       <div className="flex gap-2">
-                            <button 
-                                onClick={() => { if(confirm("Permanently clear ALL archived history?")) handleLocalUpdate({...localData, archive: { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }}) }} 
-                                className="text-red-500 font-bold uppercase text-xs flex items-center gap-2 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2 rounded-lg transition-colors"
-                            >
-                                <Trash2 size={14}/> Wipe History
-                            </button>
-                       </div>
-                   </div>
-
-                   <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm min-h-[500px] flex flex-col">
-                       {/* Toolbar */}
-                       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between gap-4">
-                           <div className="flex items-center gap-2 bg-slate-200/50 p-1 rounded-lg self-start overflow-x-auto max-w-full">
-                               <button onClick={() => setHistoryTab('deletedItems')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'deletedItems' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>All Items</button>
-                               <button onClick={() => setHistoryTab('brands')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'brands' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Deleted Brands</button>
-                               <button onClick={() => setHistoryTab('catalogues')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'catalogues' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Deleted Pamphlets</button>
-                           </div>
-                           <div className="relative">
-                               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                               <input 
-                                  type="text" 
-                                  placeholder="Search Archives..." 
-                                  className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold w-full md:w-64 focus:border-blue-500 outline-none"
-                                  value={historySearch}
-                                  onChange={(e) => setHistorySearch(e.target.value)}
-                               />
-                           </div>
-                       </div>
-
-                       {/* List Content */}
-                       <div className="flex-1 overflow-y-auto">
-                           {historyTab === 'deletedItems' ? (
-                               archivedGenericItems.length === 0 ? (
-                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                                       <Archive size={48} className="mb-4 opacity-20" />
-                                       <span className="text-xs font-bold uppercase tracking-widest">No Deleted Items Found</span>
-                                   </div>
-                               ) : (
-                                   <table className="w-full text-left">
-                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                                           <tr>
-                                               <th className="px-6 py-3">Type</th>
-                                               <th className="px-6 py-3">Name</th>
-                                               <th className="px-6 py-3">Deleted Date</th>
-                                               <th className="px-6 py-3 text-right">Data</th>
-                                           </tr>
-                                       </thead>
-                                       <tbody className="divide-y divide-slate-100 text-sm">
-                                           {archivedGenericItems.map(item => (
-                                               <tr key={item.id} className="hover:bg-slate-50 group">
-                                                   <td className="px-6 py-4">
-                                                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                                                           item.type === 'product' ? 'bg-blue-50 text-blue-700' :
-                                                           item.type === 'pricelist' ? 'bg-green-50 text-green-700' :
-                                                           item.type === 'device' ? 'bg-purple-50 text-purple-700' :
-                                                           'bg-slate-100 text-slate-600'
-                                                       }`}>
-                                                           {item.type}
-                                                       </span>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="font-bold text-slate-900">{item.name}</div>
-                                                       <div className="text-[10px] text-slate-400 font-mono">{item.id}</div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="text-xs font-bold text-slate-600">
-                                                           {formatRelativeTime(item.deletedAt)}
-                                                       </div>
-                                                       <div className="text-[10px] text-slate-400">
-                                                           {new Date(item.deletedAt).toLocaleTimeString()}
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4 text-right">
-                                                       <button 
-                                                            onClick={() => {
-                                                                const json = JSON.stringify(item.data, null, 2);
-                                                                const blob = new Blob([json], {type: "application/json"});
-                                                                const url = URL.createObjectURL(blob);
-                                                                const a = document.createElement('a');
-                                                                a.href = url;
-                                                                a.download = `${item.name}-recovered.json`;
-                                                                a.click();
-                                                            }}
-                                                            className="text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase inline-flex items-center gap-1 transition-colors border border-slate-200"
-                                                       >
-                                                           <Download size={12} /> JSON
-                                                       </button>
-                                                   </td>
-                                               </tr>
-                                           ))}
-                                       </tbody>
-                                   </table>
-                               )
-                           ) : historyTab === 'brands' ? (
-                               archivedBrands.length === 0 ? (
-                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                                       <Archive size={48} className="mb-4 opacity-20" />
-                                       <span className="text-xs font-bold uppercase tracking-widest">No Archived Brands Found</span>
-                                   </div>
-                               ) : (
-                                   <table className="w-full text-left">
-                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                                           <tr>
-                                               <th className="px-6 py-3">Brand Name</th>
-                                               <th className="px-6 py-3">Metadata</th>
-                                               <th className="px-6 py-3">Deleted Date</th>
-                                               <th className="px-6 py-3 text-right">Actions</th>
-                                           </tr>
-                                       </thead>
-                                       <tbody className="divide-y divide-slate-100 text-sm">
-                                           {archivedBrands.map(b => (
-                                               <tr key={b.id} className="hover:bg-slate-50 group">
-                                                   <td className="px-6 py-4">
-                                                       <div className="font-bold text-slate-900">{b.name}</div>
-                                                       <div className="text-[10px] text-slate-400 font-mono">{b.id}</div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
-                                                           <Box size={12} /> {b.categories.length} Categories
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="text-xs font-bold text-slate-600">
-                                                           {localData.archive?.deletedAt?.[b.id] ? formatRelativeTime(localData.archive.deletedAt[b.id]) : 'Unknown'}
-                                                       </div>
-                                                       <div className="text-[10px] text-slate-400">
-                                                           {localData.archive?.deletedAt?.[b.id] ? new Date(localData.archive.deletedAt[b.id]).toLocaleTimeString() : ''}
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4 text-right">
-                                                       <button onClick={() => restoreBrand(b)} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold uppercase inline-flex items-center gap-1 transition-colors">
-                                                           <RotateCcw size={14} /> Restore
-                                                       </button>
-                                                   </td>
-                                               </tr>
-                                           ))}
-                                       </tbody>
-                                   </table>
-                               )
-                           ) : (
-                               archivedCatalogues.length === 0 ? (
-                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                                       <Archive size={48} className="mb-4 opacity-20" />
-                                       <span className="text-xs font-bold uppercase tracking-widest">No Archived Pamphlets Found</span>
-                                   </div>
-                               ) : (
-                                   <table className="w-full text-left">
-                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                                           <tr>
-                                               <th className="px-6 py-3">Title</th>
-                                               <th className="px-6 py-3">Type</th>
-                                               <th className="px-6 py-3">Expiration Info</th>
-                                               <th className="px-6 py-3 text-right">Actions</th>
-                                           </tr>
-                                       </thead>
-                                       <tbody className="divide-y divide-slate-100 text-sm">
-                                           {archivedCatalogues.map(c => (
-                                               <tr key={c.id} className="hover:bg-slate-50 group">
-                                                   <td className="px-6 py-4">
-                                                       <div className="font-bold text-slate-900">{c.title}</div>
-                                                       <div className="text-[10px] text-slate-400 font-mono">{c.id}</div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${c.brandId ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
-                                                           {c.brandId ? 'Brand Catalogue' : 'Global Pamphlet'}
-                                                       </span>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="text-xs font-bold text-slate-600">
-                                                           {c.endDate ? `Expired: ${new Date(c.endDate).toLocaleDateString()}` : 'Manual Delete'}
-                                                       </div>
-                                                       <div className="text-[10px] text-slate-400">
-                                                           Deleted: {localData.archive?.deletedAt?.[c.id] ? formatRelativeTime(localData.archive.deletedAt[c.id]) : 'N/A'}
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4 text-right">
-                                                       <button onClick={() => restoreCatalogue(c)} className="text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg text-xs font-bold uppercase inline-flex items-center gap-1 transition-colors">
-                                                           <RotateCcw size={14} /> Restore
-                                                       </button>
-                                                   </td>
-                                               </tr>
-                                           ))}
-                                       </tbody>
-                                   </table>
-                               )
-                           )}
-                       </div>
-                   </div>
-               </div>
-            )}
-
-            {activeTab === 'settings' && (
-               <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
-                   
-                   {/* BRANDING SECTION */}
-                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
-                           <ImageIcon size={20} className="text-blue-500" /> System Branding
-                       </h3>
-                       <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                           <FileUpload 
-                               label="Main Company Logo (PDFs & Header)" 
-                               currentUrl={localData.companyLogoUrl} 
-                               onUpload={(url: string) => handleLocalUpdate({...localData, companyLogoUrl: url})} 
-                           />
-                           <p className="text-[10px] text-slate-400 mt-2 font-medium">
-                               This logo is used at the top of the Kiosk App and as the primary branding on all exported PDF Pricelists.
-                           </p>
-                       </div>
-                   </div>
-
-                   {/* GLOBAL SYSTEM PIN */}
-                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
-                           <Lock size={20} className="text-red-500" /> Device Setup Security
-                       </h3>
-                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center gap-4">
-                           <div className="flex-1">
-                               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Global Setup PIN</label>
-                               <input 
-                                   type="text" 
-                                   value={localData.systemSettings?.setupPin || '0000'} 
-                                   onChange={(e) => handleLocalUpdate({
-                                       ...localData,
-                                       systemSettings: { ...localData.systemSettings, setupPin: e.target.value }
-                                   })}
-                                   className="w-full md:w-64 p-3 border border-slate-300 rounded-xl bg-white font-mono font-bold text-lg tracking-widest text-center"
-                                   placeholder="0000"
-                                   maxLength={8}
-                               />
-                               <p className="text-[10px] text-slate-400 mt-2 font-medium">
-                                   This PIN is required on all new devices (Kiosk, Mobile, TV) to complete the setup process. Default: 0000.
-                               </p>
-                           </div>
-                           <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100 text-yellow-800 text-xs max-w-xs">
-                               <strong>Security Note:</strong> Changing this PIN will require all future device setups to use the new code. Existing active devices are not affected.
-                           </div>
-                       </div>
-                   </div>
-
-                   {/* ZIP BACKUP SECTION */}
-                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                       <div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500 pointer-events-none"><Database size={120} /></div>
-                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> System Data & Backup</h3>
-                       
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-                           <div className="space-y-4">
-                               <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-xs">
-                                   <strong>Export System Backup:</strong> Downloads a full archive including Inventory, Marketing, TV Config, Fleet logs, and History.
-                                   <div className="mt-2 text-blue-600 font-bold">Use this to edit offline or migrate data.</div>
-                               </div>
-                               <button 
-                                   onClick={async () => {
-                                       setExportProcessing(true);
-                                       try {
-                                           await downloadZip(localData);
-                                       } catch (e) {
-                                           console.error(e);
-                                           alert("Export Failed: " + (e as Error).message);
-                                       } finally {
-                                           setExportProcessing(false);
-                                       }
-                                   }}
-                                   disabled={exportProcessing}
-                                   className={`w-full py-4 ${exportProcessing ? 'bg-blue-800 cursor-wait' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25`}
-                               >
-                                   {exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
-                                   {exportProcessing ? 'Packaging All Assets...' : 'Download Full System Backup (.zip)'}
-                               </button>
-                           </div>
-
-                           <div className="space-y-4">
-                               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-xs">
-                                   <strong>Import Structure:</strong> Upload a ZIP file to auto-populate the system.
-                                   <ul className="list-disc pl-4 mt-2 space-y-1 text-[10px] text-slate-500 font-bold">
-                                       <li>Folder Structure: <code>Brand/Category/Product/</code></li>
-                                       <li>Place images (.jpg/.png) & manuals (.pdf) inside product folders.</li>
-                                       <li>Images & PDFs are uploaded to Cloud Storage sequentially.</li>
-                                   </ul>
-                               </div>
-                               <label className={`w-full py-4 ${importProcessing ? 'bg-slate-300 cursor-wait' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl relative overflow-hidden`}>
-                                   {importProcessing ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16} />} 
-                                   <span className="relative z-10">{importProcessing ? importProgress || 'Processing...' : 'Import Data from ZIP'}</span>
-                                   <input 
-                                     type="file" 
-                                     accept=".zip" 
-                                     className="hidden" 
-                                     disabled={importProcessing}
-                                     onChange={async (e) => {
-                                         if(e.target.files && e.target.files[0]) {
-                                             if(confirm("This will merge imported data into your current inventory. Continue?")) {
-                                                 setImportProcessing(true);
-                                                 setImportProgress('Initializing...');
-                                                 try {
-                                                     const newBrands = await importZip(e.target.files[0], (msg) => setImportProgress(msg));
-                                                     // Merge Logic: Add new brands, or merge categories if brand exists
-                                                     let mergedBrands = [...localData.brands];
-                                                     
-                                                     newBrands.forEach(nb => {
-                                                         const existingBrandIndex = mergedBrands.findIndex(b => b.name === nb.name);
-                                                         if (existingBrandIndex > -1) {
-                                                             // Merge Brand Assets if present
-                                                             if (nb.logoUrl) {
-                                                                 mergedBrands[existingBrandIndex].logoUrl = nb.logoUrl;
-                                                             }
-                                                             if (nb.themeColor) {
-                                                                 mergedBrands[existingBrandIndex].themeColor = nb.themeColor;
-                                                             }
-
-                                                             // Merge Categories
-                                                             nb.categories.forEach(nc => {
-                                                                 const existingCatIndex = mergedBrands[existingBrandIndex].categories.findIndex(c => c.name === nc.name);
-                                                                 if (existingCatIndex > -1) {
-                                                                     // Merge Products
-                                                                     const existingProducts = mergedBrands[existingBrandIndex].categories[existingCatIndex].products;
-                                                                     // Add only new products based on name
-                                                                     const uniqueNewProducts = nc.products.filter(np => !existingProducts.find(ep => ep.name === np.name));
-                                                                     mergedBrands[existingBrandIndex].categories[existingCatIndex].products = [...existingProducts, ...uniqueNewProducts];
-                                                                 } else {
-                                                                     mergedBrands[existingBrandIndex].categories.push(nc);
-                                                                 }
-                                                             });
-                                                         } else {
-                                                             mergedBrands.push(nb);
-                                                         }
-                                                     });
-                                                     
-                                                     handleLocalUpdate({ ...localData, brands: mergedBrands });
-                                                     alert(`Import Successful! Processed ${newBrands.length} brands.`);
-                                                 } catch(err) {
-                                                     console.error(err);
-                                                     alert("Failed to read ZIP file. Ensure structure is correct.");
-                                                 } finally {
-                                                     setImportProcessing(false);
-                                                     setImportProgress('');
-                                                 }
-                                             }
-                                         }
-                                     }}
-                                   />
-                               </label>
-                           </div>
-                       </div>
-                   </div>
-
-                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><UserCog size={20} className="text-blue-500"/> Admin Access Control</h3><AdminManager admins={localData.admins || []} onUpdate={(admins) => handleLocalUpdate({ ...localData, admins })} currentUser={currentUser} /></div>
-
-                   <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg text-white">
-                        <div className="flex items-center gap-3 mb-6"><CloudLightning size={24} className="text-yellow-400" /><h3 className="font-black uppercase text-sm tracking-wider">System Operations</h3></div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <button onClick={() => setShowGuide(true)} className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors border border-slate-600"><BookOpen size={24} className="text-blue-400"/><div className="text-left"><div className="font-bold text-sm">Setup Guide</div><div className="text-[10px] text-slate-400 font-mono uppercase">Docs & Scripts</div></div></button>
-                             <button onClick={async () => { if(confirm("WARNING: This will wipe ALL local data and reset to defaults. Continue?")) { const d = await resetStoreData(); setLocalData(d); window.location.reload(); } }} className="p-4 bg-red-900/30 hover:bg-red-900/50 rounded-xl flex items-center gap-3 transition-colors border border-red-900/50 text-red-300"><AlertCircle size={24} /><div className="text-left"><div className="font-bold text-sm">Factory Reset</div><div className="text-[10px] text-red-400 font-mono uppercase">Clear Local Data</div></div></button>
-                        </div>
-                   </div>
-               </div>
-            )}
         </main>
 
-        {editingProduct && (
-            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in">
-                <ProductEditor product={editingProduct} onSave={(p) => { 
-                    if (!selectedBrand || !selectedCategory) return;
-                    if (p.sku && checkSkuDuplicate(p.sku, p.id)) { alert(`SKU "${p.sku}" is already used by another product.`); return; }
-                    const isNew = !selectedCategory.products.find(x => x.id === p.id);
-                    const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x);
-                    const updatedCat = { ...selectedCategory, products: newProducts };
-                    const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) };
-                    handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b) });
-                    setEditingProduct(null);
-                }} onCancel={() => setEditingProduct(null)} />
-            </div>
+        {editingKiosk && <KioskEditorModal kiosk={editingKiosk} onSave={async (k) => { await updateFleetMember(k); setEditingKiosk(null); }} onClose={() => setEditingKiosk(null)} />}
+        {editingTVModel && <TVModelEditor model={editingTVModel} onSave={(m) => {
+            if (!selectedTVBrand || !localData.tv) return;
+            const updatedBrand = { ...selectedTVBrand, models: selectedTVBrand.models.map(x => x.id === m.id ? m : x) };
+            if (!selectedTVBrand.models.find(x => x.id === m.id)) {
+                updatedBrand.models.push(m);
+            }
+            handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: localData.tv.brands.map(b => b.id === selectedTVBrand.id ? updatedBrand : b) } });
+            setEditingTVModel(null);
+        }} onClose={() => setEditingTVModel(null)} />}
+        {editingProduct && <div className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm"><div className="w-full max-w-6xl h-[90vh]"><ProductEditor product={editingProduct} onCancel={() => setEditingProduct(null)} onSave={(p) => {
+            if (!selectedBrand || !selectedCategory) return;
+            const isNew = !selectedCategory.products.find(x => x.id === p.id);
+            if (isNew && checkSkuDuplicate(p.sku || '', p.id)) { alert("Duplicate SKU found in inventory."); return; }
+            const updatedCat = { ...selectedCategory, products: isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x) };
+            const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === selectedCategory.id ? updatedCat : c) };
+            handleLocalUpdate({ ...localData, brands: localData.brands.map(b => b.id === selectedBrand.id ? updatedBrand : b) });
+            setEditingProduct(null);
+        }} /></div></div>}
+        {movingProduct && selectedBrand && selectedCategory && (
+            <MoveProductModal 
+                product={movingProduct} 
+                allBrands={localData.brands} 
+                currentBrandId={selectedBrand.id} 
+                currentCategoryId={selectedCategory.id} 
+                onClose={() => setMovingProduct(null)} 
+                onMove={handleMoveProduct} 
+            />
         )}
-
-        {movingProduct && (
-            <MoveProductModal product={movingProduct} allBrands={brands} currentBrandId={selectedBrand?.id || ''} currentCategoryId={selectedCategory?.id || ''} onClose={() => setMovingProduct(null)} onMove={(product, targetBrand, targetCategory) => handleMoveProduct(product, targetBrand, targetCategory)} />
-        )}
-
-        {editingKiosk && (
-            <KioskEditorModal kiosk={editingKiosk} onSave={(k) => { updateFleetMember(k); setEditingKiosk(null); }} onClose={() => setEditingKiosk(null)} />
-        )}
-        
-        {editingTVModel && (
-            <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updatedTVBrand : b) } as TVConfig }); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />
-        )}
-        
-        {showGuide && <SetupGuide onClose={() => setShowGuide(false)} />}
-        
     </div>
   );
 };
-
-export default AdminDashboard;
