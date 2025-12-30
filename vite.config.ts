@@ -10,12 +10,15 @@ export default defineConfig({
     include: /\.(ts|tsx|js|jsx)$/,
   },
   build: {
-    target: "es5",
+    // Esbuild cannot natively transpile modern syntax (const/let, arrow functions) to ES5.
+    // Setting target to es2015 allows the build to succeed while maintaining 
+    // the highest possible legacy compatibility within the esbuild engine.
+    target: "es2015",
     cssTarget: "chrome37", 
-    minify: 'esbuild', // Changed from 'terser' to avoid build dependency error
+    minify: 'esbuild',
     modulePreload: false,
-    cssCodeSplit: false, // Faster build
-    reportCompressedSize: false, // Faster build
+    cssCodeSplit: false,
+    reportCompressedSize: false,
     rollupOptions: {
       output: {
         // Force IIFE (Immediately Invoked Function Expression)
