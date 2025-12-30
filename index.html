@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -72,9 +73,8 @@
     </div>
     <div id="root"></div>
     
-    <!-- Vite will inject the bundled script here. 
-         For Chrome 37, the build config MUST set format to 'iife' 
-         so it doesn't use 'type=module'. -->
-    <script src="/index.tsx"></script>
+    <!-- Vite needs type="module" in the source to recognize the entry point. 
+         The build config will still output a legacy-compatible IIFE bundle. -->
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
