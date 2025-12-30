@@ -8,7 +8,6 @@
     <title>Kiosk Pro Showcase</title>
     
     <!-- SYSTEM POLYFILLS (CRITICAL FOR CHROME 37 / ANDROID 5.0) -->
-    <!-- We load these synchronously to ensure the environment is ready for the bundle -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-promise/4.2.8/es6-promise.auto.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.14.1/runtime.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/3.32.2/minified.js"></script>
@@ -16,14 +15,11 @@
     <script src="https://cdn.jsdelivr.net/npm/intersection-observer@0.12.2/intersection-observer.js"></script>
 
     <script>
-      // Legacy Engine Shims
       (function() {
         if (typeof globalThis === 'undefined') { window.globalThis = window.self || window || {}; }
         if (typeof global === 'undefined') { window.global = window; }
         window.process = { env: { NODE_ENV: 'production' } };
         
-        // Android 5.0 Webview SSL/TLS fix shim (ISRG Root X1 fallback logic)
-        // This doesn't fix the OS cert, but ensures fetch doesn't crash on standard error types
         if (typeof AbortController === 'undefined') {
             window.AbortController = function() {
                 this.signal = { aborted: false, addEventListener: function(){} };
@@ -31,7 +27,6 @@
             };
         }
 
-        // SYSTEM COMPATIBILITY GUARD (Pure ES5)
         var requirements = {
             'Promise': typeof Promise !== 'undefined',
             'Fetch': typeof fetch !== 'undefined',
@@ -68,6 +63,8 @@
   <script type="importmap">
 {
   "imports": {
+    "core-js/": "https://esm.sh/core-js@^3.47.0/",
+    "regenerator-runtime/": "https://esm.sh/regenerator-runtime@^0.14.1/",
     "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
@@ -79,9 +76,7 @@
     "pdfjs-dist": "https://esm.sh/pdfjs-dist@^5.4.530",
     "vite": "https://esm.sh/vite@^7.3.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "core-js/": "https://esm.sh/core-js@^3.47.0/",
-    "@vitejs/plugin-legacy": "https://esm.sh/@vitejs/plugin-legacy@^7.2.1",
-    "regenerator-runtime/": "https://esm.sh/regenerator-runtime@^0.14.1/"
+    "@vitejs/plugin-legacy": "https://esm.sh/@vitejs/plugin-legacy@^7.2.1"
   }
 }
 </script>
@@ -112,12 +107,14 @@
                 return;
             }
             
-            // In a production build, Vite Legacy plugin will inject the correct 
-            // script tags. For this context, we load the main entry.
-            var script = document.createElement('script');
-            script.type = 'module';
-            script.src = '/index.tsx';
-            document.body.appendChild(script);
+            // Vite will automatically inject the transpiled entry script here during build
+            // The module script below is only for local dev mode
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port) {
+                var script = document.createElement('script');
+                script.type = 'module';
+                script.src = '/index.tsx';
+                document.body.appendChild(script);
+            }
         })();
     </script>
   </body>

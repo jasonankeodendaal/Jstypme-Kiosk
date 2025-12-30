@@ -9,6 +9,10 @@
     "build": "vite build",
     "preview": "vite preview"
   },
+  "browserslist": [
+    "chrome 37",
+    "not dead"
+  ],
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",
     "core-js": "^3.40.0",

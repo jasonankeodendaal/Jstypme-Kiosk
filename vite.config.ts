@@ -7,19 +7,25 @@ export default defineConfig({
   plugins: [
     react(),
     legacy({
-      // Explicitly target the extremely old Chrome 37 found on Android 5.0
-      targets: ['chrome 37', 'android 5'],
+      // Chrome 37 is the actual engine for Android 5.0
+      // 'android' refers to the old legacy Android Browser (v4 and below)
+      targets: ['chrome >= 37'],
       additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
       modernPolyfills: true,
       renderLegacyChunks: true,
       externalSystemJS: false
     }),
   ],
+  esbuild: {
+    // Hint to esbuild to keep syntax as simple as possible
+    target: 'es6',
+    include: /\.(ts|tsx|js|jsx)$/,
+  },
   build: {
-    // We target ES5 for the maximum possible compatibility
+    // Force the final transformation to ES5
     target: 'es5',
     cssTarget: 'chrome37',
-    minify: 'terser', // Terser is better at ES5 minification than esbuild
+    minify: 'terser',
     terserOptions: {
       compress: {
         keep_fnames: true,
@@ -32,8 +38,7 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Android 5.0 WebView often struggles with ESM, so we 
-        // rely on the legacy plugin's SystemJS/IIFE injection.
+        // IIFE is the most compatible format for 2014-era browsers
         format: 'iife',
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -42,7 +47,6 @@ export default defineConfig({
     }
   },
   define: {
-    // Shims for libraries that expect a node-like environment
     'process.env.NODE_ENV': JSON.stringify('production'),
     'global': 'window'
   }
