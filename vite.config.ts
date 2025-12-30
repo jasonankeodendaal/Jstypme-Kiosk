@@ -7,9 +7,12 @@ export default defineConfig({
   plugins: [
     react(),
     legacy({
-      // Chrome 37 is the target for Android 5.0 tablets
       targets: ['chrome >= 37'],
-      additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
+      additionalLegacyPolyfills: [
+        'regenerator-runtime/runtime',
+        'core-js/modules/es.promise.js',
+        'core-js/modules/es.array.iterator.js'
+      ],
       modernPolyfills: true,
       renderLegacyChunks: true,
       externalSystemJS: false
@@ -20,13 +23,11 @@ export default defineConfig({
     include: /\.(ts|tsx|js|jsx)$/,
   },
   build: {
-    // ES5 is required for Chrome 37
     target: 'es5',
     cssTarget: 'chrome37',
     minify: 'terser',
     terserOptions: {
       compress: {
-        // Disable some aggressive optimizations for stability on old engines
         keep_fnames: true,
         keep_classnames: true,
       },
@@ -36,7 +37,6 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // IIFE is the most reliable format for non-ESM browsers
         format: 'iife',
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
