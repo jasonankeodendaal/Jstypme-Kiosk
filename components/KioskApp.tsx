@@ -14,8 +14,7 @@ import {
   checkCloudConnection,
   initSupabase,
   getCloudProjectName,
-  tryRecoverIdentity,
-  lockOrientation
+  tryRecoverIdentity
 } from '../services/kioskService';
 import BrandGrid from './BrandGrid';
 import CategoryGrid from './CategoryGrid';
@@ -25,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, ImageIcon } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 const isRecent = (dateString?: string) => {
@@ -68,10 +67,7 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
             try {
                 await provisionKioskId();
                 const success = await completeKioskSetup(shopName.trim(), deviceType);
-                if (success) {
-                    await lockOrientation();
-                    onComplete();
-                }
+                if (success) onComplete();
                 else setError('Setup failed. Local storage error.');
             } catch (e) {
                 setError('Cloud registration failed.');
@@ -272,7 +268,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         
         // --- LAYOUT DEFINITIONS ---
         // Consistent column width scaling
-        const skuW = 28; // Increased slightly for image
+        const skuW = 25;
         const normalW = 28;
         const promoW = 28;
         const descW = innerWidth - skuW - normalW - promoW;
@@ -285,32 +281,19 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const line5 = line1 + innerWidth;
 
         // Content anchors
-        const skuX = line1 + 10; // Shifted right for image
+        const skuX = line1 + 2;
         const descX = line2 + 2;
-        const normalPriceX = line4 - 2; 
-        const promoPriceX = line5 - 2;  
+        const normalPriceX = line4 - 2; // Right align at right of normal column
+        const promoPriceX = line5 - 2;  // Right align at right of promo column
         
-        const skuMaxW = skuW - 12;
+        // Split text max widths
+        const skuMaxW = skuW - 4;
         const descMaxW = descW - 4;
 
-        // Load all needed assets including product images
-        const itemImagePromises = (pricelist.items || []).map(async (item) => {
-            if (item.imageUrl) {
-                return { id: item.id, asset: await loadImageForPDF(item.imageUrl) };
-            }
-            return { id: item.id, asset: null };
-        });
-
-        const [brandAsset, companyAsset, itemAssets] = await Promise.all([
+        const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
-            companyLogo ? loadImageForPDF(companyLogo) : Promise.resolve(null),
-            Promise.all(itemImagePromises)
+            companyLogo ? loadImageForPDF(companyLogo) : Promise.resolve(null)
         ]);
-
-        const itemAssetsMap = itemAssets.reduce((acc, curr) => {
-            acc[curr.id] = curr.asset;
-            return acc;
-        }, {} as Record<string, any>);
 
         const drawHeader = () => {
             let topY = 15;
@@ -346,11 +329,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.rect(margin, startY - 7, pageWidth - (margin * 2), headerHeight, 'F');
             
             doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-            doc.text("SKU", skuX - 2, startY); 
+            doc.text("SKU", skuX, startY); 
             doc.text("DESCRIPTION", descX, startY);
             doc.text("NORMAL", normalPriceX, startY, { align: 'right' });
             doc.text("PROMO", promoPriceX, startY, { align: 'right' });
 
+            // Vertical Grid Lines for Headers
             doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.2);
             doc.line(line2, startY - 7, line2, startY + 3);
             doc.line(line3, startY - 7, line3, startY + 3);
@@ -379,8 +363,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         currentY = drawTableHeaders(currentY);
         
         const items = pricelist.items || [];
-        const baseRowHeight = 12; // Increased for thumbnail
-        const footerMargin = 20;
+        const baseRowHeight = 9; const footerMargin = 20;
 
         items.forEach((item, index) => {
             doc.setFontSize(8);
@@ -389,9 +372,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             const descLines = doc.splitTextToSize(item.description.toUpperCase(), descMaxW).length;
             
             const maxLines = Math.max(skuLines, descLines);
-            const rowHeight = Math.max(baseRowHeight, maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight);
+            const rowHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
 
             if (currentY + rowHeight > pageHeight - footerMargin) {
+                // Bottom closure for current page
                 doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
                 doc.line(line1, currentY - 6, line5, currentY - 6);
                 
@@ -402,13 +386,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             
             if (index % 2 !== 0) {
                 doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
-            }
-
-            // Draw product thumbnail if available
-            const itemAsset = itemAssetsMap[item.id];
-            if (itemAsset) {
-                const imgSize = 8;
-                doc.addImage(itemAsset.imgData, itemAsset.format, line1 + 1, currentY - 4, imgSize, imgSize);
             }
 
             // Cell Contents
@@ -429,6 +406,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 drawTextFit(item.normalPrice || '', promoPriceX, currentY, promoW - 4, 8, 'right');
             }
 
+            // --- GRID LINES ---
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
             doc.line(line1, currentY + rowHeight - 6, line5, currentY + rowHeight - 6);
             doc.line(line1, currentY - 6, line1, currentY + rowHeight - 6);
@@ -468,7 +446,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; }
         .excel-row:nth-child(even) { background-color: #f8fafc; }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-        .sku-cell { word-break: break-all; line-height: 1.2; font-size: clamp(8px, 1.4vw, 13px); padding: 12px 8px; display: flex; align-items: center; gap: 8px; }
+        .sku-cell { word-break: break-all; line-height: 1.2; font-size: clamp(8px, 1.4vw, 13px); padding: 12px 8px; }
         .desc-cell { line-height: 1.3; font-size: clamp(9px, 1.5vw, 14px); padding: 12px 10px; }
         .price-cell { font-size: clamp(10px, 1.6vw, 16px); font-weight: 900; }
         .shrink-title { font-size: clamp(0.75rem, 2.5vw, 1.5rem); }
@@ -540,14 +518,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
                       <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
-                      <td className="sku-cell border-r border-slate-100">
-                          {item.imageUrl ? (
-                              <img src={item.imageUrl} className="w-8 h-8 md:w-10 md:h-10 object-contain rounded bg-white shadow-sm shrink-0" alt="" />
-                          ) : (
-                              <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center bg-slate-50 text-slate-200 rounded shrink-0 print:hidden"><ImageIcon size={16} /></div>
-                          )}
-                          <span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span>
-                      </td>
+                      <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
                       <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">{item.description}</span></td>
                       <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900 price-cell">{item.normalPrice || ''}</span></td>
                       <td className="p-4 md:p-5 text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter price-cell">{item.promoPrice}</span>) : (<span className="font-bold text-slate-900 price-cell">{item.normalPrice || ''}</span>)}</td>
@@ -691,11 +662,8 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const timerRef = useRef<number | null>(null);
   const idleTimeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
   
-  const resetIdleTimer = useCallback(async () => {
+  const resetIdleTimer = useCallback(() => {
     setIsIdle(false);
-    // On first interaction or subsequent wakes, ensure orientation is correct
-    if (isSetup) await lockOrientation();
-    
     if (timerRef.current) clearTimeout(timerRef.current);
     if (screensaverEnabled && deviceType === 'kiosk' && isSetup) {
       timerRef.current = window.setTimeout(() => {
@@ -733,11 +701,9 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const activePricelistBrand = useMemo(() => {
       if (!viewingManualList) return undefined;
-      const bId = viewingManualList?.brandId;
-      if (!bId) return undefined;
-      let found: any = pricelistBrands.find(b => b.id === bId);
+      let found: any = pricelistBrands.find(b => b.id === viewingManualList.brandId);
       if (!found && storeData?.brands) {
-          found = storeData.brands.find(b => b.id === bId);
+          found = storeData.brands.find(b => b.id === viewingManualList.brandId);
       }
       return found;
   }, [viewingManualList, pricelistBrands, storeData?.brands]);

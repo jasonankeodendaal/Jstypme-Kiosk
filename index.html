@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -18,7 +19,7 @@
     <link rel="preload" as="image" href="https://i.ibb.co/r2HkbjLj/image-removebg-preview-2.png" />
 
     <script>
-      // TV Detection & Basic Environment Prep
+      // TV Detection & Orientation Lock
       (function() {
         const tvUserAgents = /SmartTV|Tizen|Web0S|NetCast|BRAVIA|Viera|AndroidTV|AppleTV|GoogleTV|Chromecast|AFTB|AFTN/i;
         const isTV = tvUserAgents.test(navigator.userAgent);
@@ -27,6 +28,12 @@
           console.log("System: TV Device Detected. Optimizing for Horizontal Display.");
           document.addEventListener('DOMContentLoaded', function() {
             document.body.classList.add('allow-landscape');
+            
+            if (screen.orientation && screen.orientation.lock) {
+              screen.orientation.lock('landscape').catch(function(error) {
+                console.warn("System: Orientation lock rejected (Requires user gesture/fullscreen):", error);
+              });
+            }
           });
         }
       })();

@@ -1,15 +1,12 @@
+
 // Service Worker for Kiosk Pro
-const CACHE_NAME = 'kiosk-pro-v5';
+const CACHE_NAME = 'kiosk-pro-v4';
 
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/manifest-kiosk.json',
-  '/manifest-admin.json',
-  // Core Module Dependencies from importmap
-  'https://aistudiocdn.com/lucide-react@^0.555.0',
-  'https://aistudiocdn.com/@supabase/supabase-js@^2.86.0',
-  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+  '/manifest-admin.json'
 ];
 
 self.addEventListener('install', (event) => {
