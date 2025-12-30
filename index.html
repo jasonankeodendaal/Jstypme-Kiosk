@@ -18,11 +18,27 @@
     <link rel="preload" as="image" href="https://i.ibb.co/Z1YHvjgT/image-removebg-preview-1.png" />
     <link rel="preload" as="image" href="https://i.ibb.co/r2HkbjLj/image-removebg-preview-2.png" />
 
-    <!-- Polyfills for older Android (Lollipop 5.1.1) support -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/3.33.0/minified.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.19/fetch.min.js"></script>
+    <!-- Legacy Device Polyfills (Android 5.1.1 Support) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/3.32.0/minified.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.13.11/runtime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.2/fetch.min.js"></script>
 
     <script>
+      // Global compatibility fixes
+      if (!Object.assign) {
+        Object.assign = function(target) {
+          for (var i = 1; i < arguments.length; i++) {
+            var source = arguments[i];
+            for (var key in source) {
+              if (Object.prototype.hasOwnProperty.call(source, key)) {
+                target[key] = source[key];
+              }
+            }
+          }
+          return target;
+        };
+      }
+
       // TV Detection & Orientation Lock
       (function() {
         const tvUserAgents = /SmartTV|Tizen|Web0S|NetCast|BRAVIA|Viera|AndroidTV|AppleTV|GoogleTV|Chromecast|AFTB|AFTN/i;
@@ -44,7 +60,7 @@
 
       // Feature detection and basic polyfills
       if (!window.Promise) {
-        console.warn('Promises not supported on this device. Some features may not work.');
+        console.warn('Promises not supported on this device. Polyfill applied.');
       }
       
       if ('serviceWorker' in navigator) {

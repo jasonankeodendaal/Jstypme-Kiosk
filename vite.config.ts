@@ -5,13 +5,19 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   esbuild: {
-    // Lowering target to ES2015 for better compatibility with older WebViews
-    target: "es2015"
+    // Lower target to es2015 to support older Chromium/WebView versions
+    target: "es2015",
+    // Ensure Class Properties and modern operators are transpiled
+    supported: {
+      'class-properties': true,
+      'optional-chaining': true,
+      'nullish-coalescing': true
+    }
   },
   build: {
-    // Setting target to Chrome 49 (minimum floor for many legacy Android devices)
-    target: ["es2015", "chrome49"],
-    cssTarget: "chrome49",
+    // Target browsers that support ES6 modules, but optimize code for es2015 compatibility
+    target: "es2015",
+    // Increase the chunk size warning limit
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
       output: {
