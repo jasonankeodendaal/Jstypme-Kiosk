@@ -1048,28 +1048,38 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
                   <td className="p-2">
                     <div className="w-12 h-12 relative group/item-img">
                       {item.imageUrl ? (
-                        <img src={item.imageUrl} className="w-full h-full object-contain rounded bg-white border border-slate-100" />
+                        <>
+                          <img src={item.imageUrl} className="w-full h-full object-contain rounded bg-white border border-slate-100" />
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); if(confirm("Remove this image?")) updateItem(item.id, 'imageUrl', ''); }}
+                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover/item-img:opacity-100 transition-opacity z-10 hover:bg-red-600"
+                          >
+                            <X size={10} strokeWidth={3} />
+                          </button>
+                        </>
                       ) : (
                         <div className="w-full h-full bg-slate-50 border border-dashed border-slate-200 rounded flex items-center justify-center text-slate-300">
                           <ImageIcon size={14} />
                         </div>
                       )}
-                      <label className="absolute inset-0 bg-black/40 opacity-0 group-hover/item-img:opacity-100 flex items-center justify-center cursor-pointer rounded transition-opacity">
-                        <Upload size={12} className="text-white" />
-                        <input 
-                          type="file" 
-                          className="hidden" 
-                          accept="image/*" 
-                          onChange={async (e) => {
-                            if (e.target.files?.[0]) {
-                              try {
-                                const url = await uploadFileToStorage(e.target.files[0]);
-                                updateItem(item.id, 'imageUrl', url);
-                              } catch (err) { alert("Upload failed"); }
-                            }
-                          }} 
-                        />
-                      </label>
+                      {!item.imageUrl && (
+                        <label className="absolute inset-0 bg-black/40 opacity-0 group-hover/item-img:opacity-100 flex items-center justify-center cursor-pointer rounded transition-opacity">
+                          <Upload size={12} className="text-white" />
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*" 
+                            onChange={async (e) => {
+                              if (e.target.files?.[0]) {
+                                try {
+                                  const url = await uploadFileToStorage(e.target.files[0]);
+                                  updateItem(item.id, 'imageUrl', url);
+                                } catch (err) { alert("Upload failed"); }
+                              }
+                            }} 
+                          />
+                        </label>
+                      )}
                     </div>
                   </td>
                   <td className="p-2"><input value={item.sku} onChange={(e) => updateItem(item.id, 'sku', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="SKU-123" /></td>
