@@ -1,23 +1,15 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
   esbuild: {
-    // Lower target to es2015 to support older Chromium/WebView versions
-    target: "es2015",
-    // Ensure Class Properties and modern operators are transpiled
-    supported: {
-      'class-properties': true,
-      'optional-chaining': true,
-      'nullish-coalescing': true
-    }
+    // Lowered target to es2015 for Android 5.1.1 compatibility
+    target: "es2015"
   },
   build: {
-    // Target browsers that support ES6 modules, but optimize code for es2015 compatibility
+    // Lowered target to es2015 for Android 5.1.1 compatibility
     target: "es2015",
-    // Increase the chunk size warning limit
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
       output: {

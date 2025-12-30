@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -18,13 +17,13 @@
     <link rel="preload" as="image" href="https://i.ibb.co/Z1YHvjgT/image-removebg-preview-1.png" />
     <link rel="preload" as="image" href="https://i.ibb.co/r2HkbjLj/image-removebg-preview-2.png" />
 
-    <!-- Legacy Device Polyfills (Android 5.1.1 Support) -->
+    <!-- Legacy Compatibility Polyfills for Android 5.1.1 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/3.32.0/minified.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.13.11/runtime.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.2/fetch.min.js"></script>
 
     <script>
-      // Global compatibility fixes
+      // Global compatibility fixes for Object.assign
       if (!Object.assign) {
         Object.assign = function(target) {
           for (var i = 1; i < arguments.length; i++) {
@@ -58,11 +57,6 @@
         }
       })();
 
-      // Feature detection and basic polyfills
-      if (!window.Promise) {
-        console.warn('Promises not supported on this device. Polyfill applied.');
-      }
-      
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
@@ -84,7 +78,6 @@
         overscroll-behavior-y: none;
         background-color: #f1f5f9;
         -webkit-tap-highlight-color: transparent;
-        /* Ensure height logic works on old devices */
         min-height: 100vh; 
         min-height: -webkit-fill-available;
       }
@@ -93,11 +86,10 @@
         height: -webkit-fill-available;
       }
 
-      /* Force High Quality Media Rendering */
       img, video {
-        image-rendering: -webkit-optimize-contrast; /* Sharp edges for Chrome/Webview */
-        image-rendering: high-quality; /* Standard property */
-        backface-visibility: hidden; /* Prevent blur during 3D transforms */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: high-quality;
+        backface-visibility: hidden;
         -webkit-backface-visibility: hidden;
       }
 
@@ -120,7 +112,6 @@
         to { opacity: 1; transform: translateY(0); }
       }
 
-      /* Fallback for glass panels on devices without backdrop-filter */
       .glass-panel {
         background: rgba(255, 255, 255, 0.95);
       }
@@ -169,8 +160,6 @@
         animation: float 6s ease-in-out infinite;
       }
 
-      /* ROTATION LOCK ENFORCEMENT for Browsers that ignore Manifest */
-      /* Only apply if the 'allow-landscape' class is NOT present on body */
       @media screen and (orientation: landscape) and (max-width: 1024px) {
         body:not(.allow-landscape)::after {
           content: "Please rotate your device to Portrait mode.";
