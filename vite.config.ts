@@ -13,7 +13,7 @@ export default defineConfig({
   build: {
     // Production target for compatibility
     target: "chrome37",
-    minify: 'terser', // Terser is better at legacy compression than esbuild
+    minify: 'esbuild', // Changed from 'terser' to use built-in minifier and avoid dependency error
     cssTarget: "chrome37", 
     modulePreload: false, 
     sourcemap: false, 
