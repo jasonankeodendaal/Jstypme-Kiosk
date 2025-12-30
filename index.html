@@ -7,20 +7,15 @@
     <title>Kiosk Pro Showcase</title>
     
     <!-- 1. SYSTEM POLYFILLS (CRITICAL FOR CHROME 37) -->
-    <!-- Essential for async/await logic in ES5 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.14.1/runtime.min.js"></script>
-    <!-- Core-JS for ES6 features (Promises, Object.assign, etc) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/3.32.2/minified.js"></script>
-    <!-- Fetch support for Chrome < 42 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.19/fetch.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/intersection-observer@0.12.2/intersection-observer.js"></script>
 
     <script>
-      // Global Shims for Legacy Engines
       if (typeof globalThis === 'undefined') { window.globalThis = window.self || window || {}; }
       window.process = { env: { NODE_ENV: 'production' } };
 
-      // Crash Reporting for Hardware
       window.onerror = function(msg, url, line, col, error) {
         var errDiv = document.getElementById('hardware-crash-log');
         if (!errDiv) {
@@ -40,8 +35,6 @@
     <style>
       body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; overflow: hidden; }
       #root { height: 100vh; width: 100vw; }
-      
-      /* Visual fallback for loading state */
       #system-loader {
         position: fixed; inset: 0; background: #0f172a; display: flex; 
         flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
@@ -77,19 +70,11 @@
             Initializing Firmware...
         </div>
     </div>
-
     <div id="root"></div>
-
-    <!-- 
-      IMPORTANT: Android 5.0 DOES NOT support type="module".
-      The Vite build process will convert this to a standard script tag 
-      in the production 'dist' folder.
-    -->
-    <script type="module" src="/index.tsx"></script>
-
-    <script>
-      // Post-load check: If this runs, it means the module above at least attempted to load
-      console.log("System: Main entry sequence initiated.");
-    </script>
+    
+    <!-- Vite will inject the bundled script here. 
+         For Chrome 37, the build config MUST set format to 'iife' 
+         so it doesn't use 'type=module'. -->
+    <script src="/index.tsx"></script>
   </body>
 </html>
