@@ -7,8 +7,7 @@
     <meta name="theme-color" content="#0f172a" />
     <title>Kiosk Pro Showcase</title>
     
-    <!-- 1. BASE POLYFILLS (CRITICAL FOR CHROME 37) -->
-    <!-- Order Matters: Promise MUST come before Fetch -->
+    <!-- 1. BASE SYSTEM POLYFILLS (CRITICAL) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-promise/4.2.8/es6-promise.auto.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.19/fetch.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.14.1/runtime.min.js"></script>
@@ -16,23 +15,27 @@
     <script src="https://cdn.jsdelivr.net/npm/intersection-observer@0.12.2/intersection-observer.js"></script>
 
     <script>
-      // Global Environment Shims
+      // Global Shims for old engines
       (function() {
+        window.appStarted = false;
         if (typeof window.globalThis === 'undefined') { window.globalThis = window; }
         if (typeof window.global === 'undefined') { window.global = window; }
         window.process = { env: { NODE_ENV: 'production' } };
         
-        // Ensure Fetch is bound to window if the polyfill didn't do it automatically
-        if (typeof fetch === 'undefined' && window.fetch) {
-            window.fetch = window.fetch.bind(window);
-        }
-
-        if (typeof AbortController === 'undefined') {
-            window.AbortController = function() {
-                this.signal = { aborted: false, addEventListener: function(){} };
-                this.abort = function() { this.signal.aborted = true; };
-            };
-        }
+        // Watchdog Timer: If app doesn't hide loader in 8s, show error
+        window.onload = function() {
+            setTimeout(function() {
+                if (!window.appStarted) {
+                    var text = document.getElementById('loader-text');
+                    var spinner = document.querySelector('.spinner');
+                    if (text) {
+                        text.style.color = '#ef4444';
+                        text.innerHTML = "KERNEL TIMEOUT: SCRIPT FAILED TO BOOT.<br><span style='font-size:8px; opacity:0.6'>Check network or browser console for syntax errors.</span>";
+                    }
+                    if (spinner) spinner.style.borderColor = '#ef4444';
+                }
+            }, 8000);
+        };
       })();
     </script>
 
@@ -55,19 +58,19 @@
   <script type="importmap">
 {
   "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "xlsx": "https://esm.sh/xlsx@^0.18.5",
-    "pdfjs-dist": "https://esm.sh/pdfjs-dist@^5.4.530",
-    "jszip": "https://esm.sh/jszip@^3.10.1",
-    "jspdf": "https://esm.sh/jspdf@^3.0.4",
     "core-js/": "https://esm.sh/core-js@^3.47.0/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
     "regenerator-runtime/": "https://esm.sh/regenerator-runtime@^0.14.1/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "jszip": "https://esm.sh/jszip@^3.10.1",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
+    "jspdf": "https://esm.sh/jspdf@^3.0.4",
+    "pdfjs-dist": "https://esm.sh/pdfjs-dist@^5.4.530",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "@vitejs/plugin-legacy": "https://esm.sh/@vitejs/plugin-legacy@^7.2.1"
   }
 }
@@ -76,18 +79,18 @@
   <body>
     <div id="system-loader">
         <div class="spinner"></div>
-        <div id="loader-text" style="color:#64748b; font-weight:800; font-size:10px; margin-top:20px; letter-spacing: 0.2em; text-transform: uppercase;">
+        <div id="loader-text" style="color:#64748b; font-weight:800; font-size:10px; margin-top:20px; letter-spacing: 0.2em; text-transform: uppercase; text-align: center;">
             Initializing Firmware...
         </div>
     </div>
 
     <div id="root"></div>
 
-    <!-- The module script is for modern browsers; Vite Legacy Plugin will handle the rest -->
+    <!-- Main Entry Point -->
     <script type="module" src="/index.tsx"></script>
 
     <script>
-        // Delayed compatibility check to allow CDNs to finish loading
+        // Emergency Compatibility Check
         setTimeout(function() {
             var requirements = {
                 'Promise': typeof Promise !== 'undefined',
@@ -97,24 +100,12 @@
             for (var key in requirements) {
                 if (!requirements[key]) { missing.push(key); }
             }
-
             if (missing.length > 0) {
                 var loader = document.getElementById('system-loader');
-                var root = document.getElementById('root');
                 if (loader) loader.style.display = 'none';
-                if (root) {
-                    root.innerHTML = [
-                        '<div style="padding:40px; color:#ef4444; background:#0f172a; height:100vh; font-family:sans-serif;">',
-                            '<h1 style="font-weight:900; font-size:24px; margin-bottom:10px;">FIRMWARE ERROR</h1>',
-                            '<p style="color:white; margin-bottom:20px;">The system failed to load critical polyfills from the network.</p>',
-                            '<div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:10px;">',
-                                '<p style="color:#64748b; font-size:12px; margin-bottom:5px;">MISSING COMPONENTS:</p>',
-                                '<p style="color:#fca5a5; font-weight:bold; font-family:monospace;">' + missing.join(', ') + '</p>',
-                            '</div>',
-                            '<p style="margin-top:30px; font-size:11px; color:#475569;">Recommendation: Ensure the tablet has an active internet connection to load system drivers on first boot.</p>',
-                        '</div>'
-                    ].join('');
-                }
+                document.getElementById('root').innerHTML = '<div style="padding:40px; color:#ef4444; background:#0f172a; height:100vh; font-family:sans-serif;">' +
+                    '<h1 style="font-weight:900;">FIRMWARE ERROR</h1>' +
+                    '<p style="color:white;">Missing drivers: ' + missing.join(', ') + '</p></div>';
             }
         }, 500);
     </script>

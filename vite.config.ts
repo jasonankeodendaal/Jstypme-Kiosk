@@ -13,15 +13,11 @@ export default defineConfig({
         'core-js/modules/es.promise.js',
         'core-js/modules/es.array.iterator.js'
       ],
-      modernPolyfills: true,
       renderLegacyChunks: true,
+      modernPolyfills: true,
       externalSystemJS: false
     }),
   ],
-  esbuild: {
-    target: 'es6',
-    include: /\.(ts|tsx|js|jsx)$/,
-  },
   build: {
     target: 'es5',
     cssTarget: 'chrome37',

@@ -7,6 +7,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
+// Signal to index.html watchdog that we have arrived
+(window as any).appStarted = true;
+
 var rootElement = document.getElementById('root');
 var loader = document.getElementById('system-loader');
 
@@ -17,7 +20,7 @@ var hideLoader = function() {
 };
 
 if (rootElement) {
-    // Hide the loader immediately when the script executes
+    // Hide the loader immediately
     hideLoader();
 
     try {
@@ -40,7 +43,6 @@ if (rootElement) {
                     '<p style="color: #fca5a5; font-weight: bold; margin-bottom: 10px;">The React engine failed to boot:</p>',
                     '<pre style="font-size:11px; color:#fecaca; white-space: pre-wrap; word-break: break-all;">' + errStack + '</pre>',
                 '</div>',
-                '<p style="margin-top:20px; font-size:12px; opacity: 0.6;">Hardware: Chrome 37 / Android 5.0 Legacy Mode</p>',
             '</div>'
         ].join('');
     }
