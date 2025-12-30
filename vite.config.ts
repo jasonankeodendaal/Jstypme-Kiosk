@@ -4,23 +4,24 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   esbuild: {
-    // Match the target to reduce double-transpilation effort
-    target: "es5", 
+    // esbuild does not support outputting ES5. We set it to ES2015
+    // so it can handle modern syntax (const, arrow functions) during the initial pass.
+    target: "es2015", 
     include: /\.(ts|tsx|js|jsx)$/,
   },
   build: {
-    // ES5 is mandatory for Android 5.0 (Chrome 37)
+    // This is the final output target. Vite will use Rollup and Terser
+    // to down-level the code to ES5 for Android 5.0 (Chrome 37).
     target: "es5",
     cssTarget: "chrome37", 
     minify: 'terser',
     modulePreload: false, 
-    sourcemap: false, // Disabling sourcemaps significantly speeds up build time
+    sourcemap: false, 
     terserOptions: {
       compress: {
         keep_fnames: true,
         keep_classnames: true,
-        // Reduce complexity of compression to speed up build
-        passes: 1, 
+        passes: 2, 
       },
       mangle: {
         keep_fnames: true,
@@ -34,14 +35,14 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
-        // CRITICAL: Split large dependencies to avoid build memory exhaustion
+        // Manual chunking to keep memory usage low on Vercel build servers
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
             if (id.includes('pdfjs-dist')) return 'vendor-pdf';
             if (id.includes('xlsx')) return 'vendor-excel';
             if (id.includes('lucide-react')) return 'vendor-icons';
             if (id.includes('jspdf')) return 'vendor-jspdf';
-            return 'vendor-core'; // All other small dependencies
+            return 'vendor-core';
           }
         }
       }
