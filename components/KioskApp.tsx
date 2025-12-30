@@ -268,7 +268,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         
         // --- LAYOUT DEFINITIONS ---
         // Consistent column width scaling
-        const skuW = 28; // Increased slightly for image
+        const skuW = 25;
         const normalW = 28;
         const promoW = 28;
         const descW = innerWidth - skuW - normalW - promoW;
@@ -281,13 +281,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const line5 = line1 + innerWidth;
 
         // Content anchors
-        const imgX = line1 + 1;
-        const skuX = line1 + 10; // Shifted right for image
+        const skuX = line1 + 2;
         const descX = line2 + 2;
-        const normalPriceX = line4 - 2; 
-        const promoPriceX = line5 - 2;  
+        const normalPriceX = line4 - 2; // Right align at right of normal column
+        const promoPriceX = line5 - 2;  // Right align at right of promo column
         
-        const skuMaxW = skuW - 12;
+        // Split text max widths
+        const skuMaxW = skuW - 4;
         const descMaxW = descW - 4;
 
         const [brandAsset, companyAsset] = await Promise.all([
@@ -334,6 +334,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.text("NORMAL", normalPriceX, startY, { align: 'right' });
             doc.text("PROMO", promoPriceX, startY, { align: 'right' });
 
+            // Vertical Grid Lines for Headers
             doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.2);
             doc.line(line2, startY - 7, line2, startY + 3);
             doc.line(line3, startY - 7, line3, startY + 3);
@@ -362,11 +363,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         currentY = drawTableHeaders(currentY);
         
         const items = pricelist.items || [];
-        const baseRowHeight = 11; // Increased for images
-        const footerMargin = 20;
+        const baseRowHeight = 9; const footerMargin = 20;
 
-        for(let i=0; i<items.length; i++){
-            const item = items[i];
+        items.forEach((item, index) => {
             doc.setFontSize(8);
             const skuLines = doc.splitTextToSize(item.sku || '', skuMaxW).length;
             doc.setFontSize(9);
@@ -376,31 +375,20 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             const rowHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
 
             if (currentY + rowHeight > pageHeight - footerMargin) {
+                // Bottom closure for current page
                 doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
                 doc.line(line1, currentY - 6, line5, currentY - 6);
+                
                 doc.addPage();
                 currentY = drawHeader();
                 currentY = drawTableHeaders(currentY);
             }
             
-            if (i % 2 !== 0) {
+            if (index % 2 !== 0) {
                 doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 6, pageWidth - (margin * 2), rowHeight, 'F');
             }
 
-            // Draw product image
-            if (item.imageUrl) {
-                const itemAsset = await loadImageForPDF(item.imageUrl);
-                if (itemAsset) {
-                    const side = 8;
-                    const aspect = itemAsset.width / itemAsset.height;
-                    let w = side, h = side;
-                    if (aspect > 1) h = side / aspect; else w = side * aspect;
-                    // Center in 8x8 box
-                    const offX = (side - w) / 2; const offY = (side - h) / 2;
-                    doc.addImage(itemAsset.imgData, itemAsset.format, imgX + offX, currentY - 5 + offY, w, h);
-                }
-            }
-
+            // Cell Contents
             doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal');
             drawTextFit(item.sku || '', skuX, currentY, skuMaxW, 8);
             
@@ -418,6 +406,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 drawTextFit(item.normalPrice || '', promoPriceX, currentY, promoW - 4, 8, 'right');
             }
 
+            // --- GRID LINES ---
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
             doc.line(line1, currentY + rowHeight - 6, line5, currentY + rowHeight - 6);
             doc.line(line1, currentY - 6, line1, currentY + rowHeight - 6);
@@ -427,7 +416,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.line(line5, currentY - 6, line5, currentY + rowHeight - 6);
 
             currentY += rowHeight;
-        }
+        });
 
         const totalPages = doc.internal.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
@@ -529,16 +518,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
                       <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
-                      <td className="sku-cell border-r border-slate-100">
-                          <div className="flex items-center gap-2">
-                             {item.imageUrl && (
-                                 <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-sm">
-                                     <img src={item.imageUrl} className="w-full h-full object-contain" />
-                                 </div>
-                             )}
-                             <span className="sku-font font-bold text-slate-900 uppercase truncate">{item.sku || ''}</span>
-                          </div>
-                      </td>
+                      <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
                       <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">{item.description}</span></td>
                       <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900 price-cell">{item.normalPrice || ''}</span></td>
                       <td className="p-4 md:p-5 text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter price-cell">{item.promoPrice}</span>) : (<span className="font-bold text-slate-900 price-cell">{item.normalPrice || ''}</span>)}</td>

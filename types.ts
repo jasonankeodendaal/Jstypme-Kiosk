@@ -107,7 +107,6 @@ export interface PricelistItem {
   description: string;
   normalPrice: string;
   promoPrice?: string;
-  imageUrl?: string; // Support for product image in manual tables
 }
 
 export interface Pricelist {
