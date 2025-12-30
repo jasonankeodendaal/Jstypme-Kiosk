@@ -4,7 +4,6 @@ import { KioskRegistry } from '../types';
 
 export const getEnv = (key: string, fallback: string) => {
   try {
-    // Safer check for older environments that don't support import.meta
     const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) ? (import.meta as any).env : {};
     if (metaEnv[key]) {
       return metaEnv[key];
@@ -34,7 +33,14 @@ export const initSupabase = () => {
   if (supabase) return true;
   if (SUPABASE_URL && SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.length > 10) {
     try {
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      // FIX: Explicitly pass the bound fetch polyfill to the Supabase client.
+      // Chrome 37's native fetch (if any) or missing fetch causes connection failures.
+      // Binding to window ensures we use the whatwg-fetch polyfill injected in index.html.
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: {
+          fetch: window.fetch.bind(window)
+        }
+      });
       return true;
     } catch (e) {
       console.warn("Supabase init failed", e);
@@ -89,10 +95,6 @@ export const provisionKioskId = async (): Promise<string> => {
   return nextId;
 };
 
-/**
- * Attempts to find this device in the Supabase database.
- * If found, restores name and type to localStorage.
- */
 export const tryRecoverIdentity = async (id: string): Promise<boolean> => {
     if (!supabase) initSupabase();
     if (!supabase) return false;
@@ -205,7 +207,7 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               if(connection.downlink < 1) wifiStrength = 20;
               else if(connection.downlink < 5) wifiStrength = 50;
               else if(connection.downlink < 10) wifiStrength = 80;
-              ipAddress = `${connection.effectiveType?.toUpperCase() || 'NET'} | ${connection.downlink}Mbps`;
+              ipAddress = (connection.effectiveType ? connection.effectiveType.toUpperCase() : 'NET') + ' | ' + connection.downlink + 'Mbps';
           }
 
           const payload: any = {
@@ -243,8 +245,8 @@ export const uploadFileToStorage = async (file: File): Promise<string> => {
 
     try {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const fileName = Math.random().toString(36).substring(2, 15) + '_' + Date.now() + '.' + fileExt;
+        const filePath = fileName;
 
         const { error } = await supabase.storage.from('kiosk-media').upload(filePath, file);
         if (error) throw error;
