@@ -1,197 +1,95 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#0f172a" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Kiosk Pro Showcase</title>
     
-    <link rel="manifest" href="manifest-kiosk.json" id="pwa-manifest" />
-    <link rel="icon" href="https://i.ibb.co/HT0wsB3y/android-launchericon-192-192.png" id="pwa-icon" />
-    <link rel="apple-touch-icon" href="https://i.ibb.co/HT0wsB3y/android-launchericon-192-192.png" id="pwa-apple-icon" />
-
-    <link rel="preload" as="image" href="https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png" />
-    <link rel="preload" as="image" href="https://i.ibb.co/dsh2c2hp/unnamed.jpg" />
-    <link rel="preload" as="image" href="https://i.ibb.co/Z1YHvjgT/image-removebg-preview-1.png" />
-    <link rel="preload" as="image" href="https://i.ibb.co/r2HkbjLj/image-removebg-preview-2.png" />
+    <!-- 1. SYSTEM POLYFILLS (CRITICAL FOR CHROME 37) -->
+    <!-- Essential for async/await logic in ES5 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.14.1/runtime.min.js"></script>
+    <!-- Core-JS for ES6 features (Promises, Object.assign, etc) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/3.32.2/minified.js"></script>
+    <!-- Fetch support for Chrome < 42 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.19/fetch.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/intersection-observer@0.12.2/intersection-observer.js"></script>
 
     <script>
-      // TV Detection & Orientation Lock
-      (function() {
-        const tvUserAgents = /SmartTV|Tizen|Web0S|NetCast|BRAVIA|Viera|AndroidTV|AppleTV|GoogleTV|Chromecast|AFTB|AFTN/i;
-        const isTV = tvUserAgents.test(navigator.userAgent);
-        
-        if (isTV) {
-          console.log("System: TV Device Detected. Optimizing for Horizontal Display.");
-          document.addEventListener('DOMContentLoaded', function() {
-            document.body.classList.add('allow-landscape');
-            
-            if (screen.orientation && screen.orientation.lock) {
-              screen.orientation.lock('landscape').catch(function(error) {
-                console.warn("System: Orientation lock rejected (Requires user gesture/fullscreen):", error);
-              });
-            }
-          });
-        }
-      })();
+      // Global Shims for Legacy Engines
+      if (typeof globalThis === 'undefined') { window.globalThis = window.self || window || {}; }
+      window.process = { env: { NODE_ENV: 'production' } };
 
-      // Feature detection and basic polyfills
-      if (!window.Promise) {
-        console.warn('Promises not supported on this device. Some features may not work.');
-      }
-      
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('SW Registered');
-            })
-            .catch(registrationError => {
-              console.log('SW Registration Failed: ', registrationError);
-            });
-        });
-      }
+      // Crash Reporting for Hardware
+      window.onerror = function(msg, url, line, col, error) {
+        var errDiv = document.getElementById('hardware-crash-log');
+        if (!errDiv) {
+          errDiv = document.createElement('div');
+          errDiv.id = 'hardware-crash-log';
+          errDiv.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;background:#450a0a;color:#fecaca;padding:15px;z-index:999999;font-family:monospace;font-size:10px;border-top:2px solid #ef4444;';
+          document.body.appendChild(errDiv);
+        }
+        errDiv.innerHTML = '<b>JS ENGINE CRASH:</b> ' + msg + ' (Line ' + line + ')';
+        return false;
+      };
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
     <style>
-      body {
-        font-family: 'Inter', sans-serif;
-        overscroll-behavior-y: none;
-        background-color: #f1f5f9;
-        -webkit-tap-highlight-color: transparent;
-        /* Ensure height logic works on old devices */
-        min-height: 100vh; 
-        min-height: -webkit-fill-available;
-      }
+      body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; overflow: hidden; }
+      #root { height: 100vh; width: 100vw; }
       
-      html {
-        height: -webkit-fill-available;
+      /* Visual fallback for loading state */
+      #system-loader {
+        position: fixed; inset: 0; background: #0f172a; display: flex; 
+        flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
       }
-
-      /* Force High Quality Media Rendering */
-      img, video {
-        image-rendering: -webkit-optimize-contrast; /* Sharp edges for Chrome/Webview */
-        image-rendering: high-quality; /* Standard property */
-        backface-visibility: hidden; /* Prevent blur during 3D transforms */
-        -webkit-backface-visibility: hidden;
+      .spinner {
+        width: 40px; height: 40px; border: 4px solid rgba(59, 130, 246, 0.1);
+        border-left-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;
       }
-
-      .overflow-y-auto {
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-y: auto;
-      }
-
-      ::-webkit-scrollbar {
-        width: 0px;
-        background: transparent;
-      }
-      
-      .animate-fade-in {
-        animation: fadeIn 0.4s ease-out forwards;
-      }
-      
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      /* Fallback for glass panels on devices without backdrop-filter */
-      .glass-panel {
-        background: rgba(255, 255, 255, 0.95);
-      }
-      @supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
-        .glass-panel {
-          background: rgba(255, 255, 255, 0.8);
-          -webkit-backdrop-filter: blur(10px);
-          backdrop-filter: blur(10px);
-        }
-      }
-
-      .depth-shadow {
-        box-shadow: 
-          0 4px 6px -1px rgba(0, 0, 0, 0.1), 
-          0 2px 4px -1px rgba(0, 0, 0, 0.06),
-          0 20px 25px -5px rgba(0, 0, 0, 0.1),
-          0 10px 10px -5px rgba(0, 0, 0, 0.04);
-      }
-      
-      .input-depth {
-        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
-      }
-
-      .perspective-1000 {
-        perspective: 1000px;
-      }
-      .book-container {
-        transform-style: preserve-3d;
-        transform: rotateY(-25deg) rotateX(5deg);
-        transition: transform 0.5s ease-out;
-      }
-      .book-container:hover {
-        transform: rotateY(0deg) rotateX(0deg) scale(1.05);
-      }
-      .book-cover {
-        box-shadow: 
-           -5px 5px 20px rgba(0,0,0,0.4),
-           inset 2px 0px 5px rgba(255,255,255,0.2);
-      }
-      
-      @keyframes float {
-        0%, 100% { transform: translateY(0) rotateY(-25deg); }
-        50% { transform: translateY(-15px) rotateY(-20deg); }
-      }
-      .animate-float {
-        animation: float 6s ease-in-out infinite;
-      }
-
-      /* ROTATION LOCK ENFORCEMENT for Browsers that ignore Manifest */
-      /* Only apply if the 'allow-landscape' class is NOT present on body */
-      @media screen and (orientation: landscape) and (max-width: 1024px) {
-        body:not(.allow-landscape)::after {
-          content: "Please rotate your device to Portrait mode.";
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: #0f172a;
-          color: white;
-          z-index: 99999;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 900;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          font-size: 1.5rem;
-          text-align: center;
-          padding: 20px;
-        }
-      }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.86.0",
-    "jszip": "https://aistudiocdn.com/jszip@3.10.1",
-    "pdfjs-dist": "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/+esm",
-    "jspdf": "https://aistudiocdn.com/jspdf@^2.5.1",
-    "peerjs": "https://esm.sh/peerjs@1.5.2?bundle",
-    "xlsx": "https://esm.sh/xlsx@0.18.5",
-    "vite": "https://esm.sh/vite@^7.2.7",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "jszip": "https://esm.sh/jszip@^3.10.1",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
+    "jspdf": "https://esm.sh/jspdf@^3.0.4",
+    "pdfjs-dist": "https://esm.sh/pdfjs-dist@^5.4.530",
+    "vite": "https://esm.sh/vite@^7.3.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
 </head>
-  <body class="bg-slate-200 text-slate-900 h-screen w-screen overflow-hidden">
-    <div id="root" class="h-full w-full"></div>
+  <body>
+    <div id="system-loader">
+        <div class="spinner"></div>
+        <div style="color:#64748b; font-weight:800; font-size:10px; margin-top:20px; letter-spacing: 0.2em; text-transform: uppercase;">
+            Initializing Firmware...
+        </div>
+    </div>
+
+    <div id="root"></div>
+
+    <!-- 
+      IMPORTANT: Android 5.0 DOES NOT support type="module".
+      The Vite build process will convert this to a standard script tag 
+      in the production 'dist' folder.
+    -->
     <script type="module" src="/index.tsx"></script>
+
+    <script>
+      // Post-load check: If this runs, it means the module above at least attempted to load
+      console.log("System: Main entry sequence initiated.");
+    </script>
   </body>
 </html>

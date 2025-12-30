@@ -4,8 +4,10 @@ import { KioskRegistry } from '../types';
 
 export const getEnv = (key: string, fallback: string) => {
   try {
-    if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env[key]) {
-      return (import.meta as any).env[key];
+    // Safer check for older environments that don't support import.meta
+    const metaEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) ? (import.meta as any).env : {};
+    if (metaEnv[key]) {
+      return metaEnv[key];
     }
     if (typeof process !== 'undefined' && process.env && process.env[key]) {
       return process.env[key];
@@ -168,7 +170,6 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
   let restartFlag = false;
 
   try {
-      // 1. SYNC: Pull latest configuration from cloud first
       if (supabase) {
           const { data: remoteData, error: fetchError } = await supabase
               .from('kiosks')
@@ -176,7 +177,6 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               .eq('id', id)
               .maybeSingle();
 
-          // CRITICAL FIX: If device not found in DB, it has been deleted from fleet
           if (!fetchError && !remoteData) {
               return { deleted: true };
           }
@@ -197,7 +197,6 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
           }
       }
 
-      // 2. TELEMETRY: Push status update
       if (supabase) {
           const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
           let wifiStrength = 100;
@@ -220,7 +219,6 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               ip_address: ipAddress
           };
           
-          // Only clear the restart flag in the payload if it was actually true and we are acknowledging it
           if (restartFlag) {
               payload.restart_requested = false;
           }
