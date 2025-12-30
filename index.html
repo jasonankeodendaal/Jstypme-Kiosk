@@ -15,6 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/intersection-observer@0.12.2/intersection-observer.js"></script>
 
     <script>
+      // Global Environment Shims for Legacy Engines
       (function() {
         if (typeof globalThis === 'undefined') { window.globalThis = window.self || window || {}; }
         if (typeof global === 'undefined') { window.global = window; }
@@ -27,17 +28,15 @@
             };
         }
 
+        // Compatibility Check
         var requirements = {
             'Promise': typeof Promise !== 'undefined',
             'Fetch': typeof fetch !== 'undefined',
-            'Symbols': typeof Symbol !== 'undefined',
-            'Assign': typeof Object.assign !== 'undefined'
+            'Symbols': typeof Symbol !== 'undefined'
         };
         var missing = [];
         for (var key in requirements) {
-            if (Object.prototype.hasOwnProperty.call(requirements, key)) {
-                if (!requirements[key]) { missing.push(key); }
-            }
+            if (!requirements[key]) { missing.push(key); }
         }
         window.isSystemCompatible = missing.length === 0;
         window.missingRequirements = missing;
@@ -91,29 +90,25 @@
 
     <div id="root"></div>
 
+    <!-- 
+      IMPORTANT: Standard script tag must be present for Vite Legacy Plugin to 
+      detect and transpile the entry point into an ES5 IIFE for Android 5.0.
+    -->
+    <script type="module" src="/index.tsx"></script>
+
     <script>
+        // Guard against catastrophic polyfill failure
         (function() {
-            var root = document.getElementById('root');
-            var loader = document.getElementById('system-loader');
             if (!window.isSystemCompatible) {
+                var loader = document.getElementById('system-loader');
+                var root = document.getElementById('root');
                 if (loader) loader.style.display = 'none';
-                root.innerHTML = [
-                    '<div style="padding:40px; color:#ef4444; background:#0f172a; height:100vh; font-family: sans-serif;">',
-                        '<h1 style="font-weight:900; margin-bottom:10px; font-size:24px;">FIRMWARE INCOMPATIBLE</h1>',
-                        '<p style="color:white;">Hardware failed polyfill check: <b>' + (window.missingRequirements ? window.missingRequirements.join(', ') : 'Unknown') + '</b></p>',
-                        '<p style="margin-top:20px; font-size:12px; color:#64748b;">Device: Chrome 37 / Android 5.0 Legacy. Manual update required.</p>',
-                    '</div>'
-                ].join('');
-                return;
-            }
-            
-            // Vite will automatically inject the transpiled entry script here during build
-            // The module script below is only for local dev mode
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port) {
-                var script = document.createElement('script');
-                script.type = 'module';
-                script.src = '/index.tsx';
-                document.body.appendChild(script);
+                if (root) {
+                    root.innerHTML = '<div style="padding:40px; color:#ef4444; background:#0f172a; height:100vh;">' +
+                        '<h1 style="font-weight:900;">FIRMWARE ERROR</h1>' +
+                        '<p style="color:white;">Missing: ' + window.missingRequirements.join(', ') + '</p>' +
+                        '</div>';
+                }
             }
         })();
     </script>

@@ -17,6 +17,9 @@ var hideLoader = function() {
 };
 
 if (rootElement) {
+    // Hide the loader immediately when the script executes
+    hideLoader();
+
     try {
         var root = ReactDOM.createRoot(rootElement);
         root.render(
@@ -24,9 +27,7 @@ if (rootElement) {
                 <App />
             </React.StrictMode>
         );
-        hideLoader();
     } catch (e) {
-        hideLoader();
         var errStack = "No stack trace available";
         if (e && typeof e === 'object') {
             errStack = (e as any).stack || (e as any).message || String(e);

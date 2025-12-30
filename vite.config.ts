@@ -7,8 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     legacy({
-      // Chrome 37 is the actual engine for Android 5.0
-      // 'android' refers to the old legacy Android Browser (v4 and below)
+      // Chrome 37 is the target for Android 5.0 tablets
       targets: ['chrome >= 37'],
       additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
       modernPolyfills: true,
@@ -17,28 +16,27 @@ export default defineConfig({
     }),
   ],
   esbuild: {
-    // Hint to esbuild to keep syntax as simple as possible
     target: 'es6',
     include: /\.(ts|tsx|js|jsx)$/,
   },
   build: {
-    // Force the final transformation to ES5
+    // ES5 is required for Chrome 37
     target: 'es5',
     cssTarget: 'chrome37',
     minify: 'terser',
     terserOptions: {
       compress: {
+        // Disable some aggressive optimizations for stability on old engines
         keep_fnames: true,
         keep_classnames: true,
       },
       mangle: {
         keep_fnames: true,
-        keep_classnames: true,
       }
     },
     rollupOptions: {
       output: {
-        // IIFE is the most compatible format for 2014-era browsers
+        // IIFE is the most reliable format for non-ESM browsers
         format: 'iife',
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
