@@ -6,12 +6,9 @@
     <meta name="theme-color" content="#0f172a" />
     <title>Kiosk Pro Showcase</title>
     
-    <!-- 1. SYSTEM POLYFILLS (CRITICAL FOR CHROME 37) -->
-    <!-- Essential for async/await logic in ES5 -->
+    <!-- 1. SYSTEM POLYFILLS (CRITICAL FOR CHROME 37 / ANDROID 5.0) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.14.1/runtime.min.js"></script>
-    <!-- Core-JS for ES6 features (Promises, Object.assign, etc) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/3.32.2/minified.js"></script>
-    <!-- Fetch support for Chrome < 42 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.19/fetch.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/intersection-observer@0.12.2/intersection-observer.js"></script>
 
@@ -20,18 +17,37 @@
       if (typeof globalThis === 'undefined') { window.globalThis = window.self || window || {}; }
       window.process = { env: { NODE_ENV: 'production' } };
 
-      // Crash Reporting for Hardware
-      window.onerror = function(msg, url, line, col, error) {
-        var errDiv = document.getElementById('hardware-crash-log');
-        if (!errDiv) {
-          errDiv = document.createElement('div');
-          errDiv.id = 'hardware-crash-log';
-          errDiv.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;background:#450a0a;color:#fecaca;padding:15px;z-index:999999;font-family:monospace;font-size:10px;border-top:2px solid #ef4444;';
-          document.body.appendChild(errDiv);
+      // SYSTEM COMPATIBILITY GUARD (Pure ES5 - No const/let/arrows)
+      (function() {
+        var requirements = {
+            'Promise': typeof Promise !== 'undefined',
+            'Fetch': typeof fetch !== 'undefined',
+            'Symbols': typeof Symbol !== 'undefined',
+            'Assign': typeof Object.assign !== 'undefined',
+            'Map': typeof Map !== 'undefined'
+        };
+        var missing = [];
+        for (var key in requirements) {
+            if (Object.prototype.hasOwnProperty.call(requirements, key)) {
+                if (!requirements[key]) { missing.push(key); }
+            }
         }
-        errDiv.innerHTML = '<b>JS ENGINE CRASH:</b> ' + msg + ' (Line ' + line + ')';
-        return false;
-      };
+
+        window.isSystemCompatible = missing.length === 0;
+        window.missingRequirements = missing;
+
+        window.onerror = function(msg, url, line, col, error) {
+          var errDiv = document.getElementById('hardware-crash-log');
+          if (!errDiv) {
+            errDiv = document.createElement('div');
+            errDiv.id = 'hardware-crash-log';
+            errDiv.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;background:#450a0a;color:#fecaca;padding:15px;z-index:999999;font-family:monospace;font-size:10px;border-top:2px solid #ef4444;';
+            document.body.appendChild(errDiv);
+          }
+          errDiv.innerHTML = '<b>JS ENGINE CRASH:</b> ' + msg + ' (Line ' + line + ')';
+          return false;
+        };
+      })();
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -40,8 +56,6 @@
     <style>
       body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; overflow: hidden; }
       #root { height: 100vh; width: 100vw; }
-      
-      /* Visual fallback for loading state */
       #system-loader {
         position: fixed; inset: 0; background: #0f172a; display: flex; 
         flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
@@ -52,44 +66,60 @@
       }
       @keyframes spin { to { transform: rotate(360deg); } }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "jszip": "https://esm.sh/jszip@^3.10.1",
-    "xlsx": "https://esm.sh/xlsx@^0.18.5",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
-    "jspdf": "https://esm.sh/jspdf@^3.0.4",
-    "pdfjs-dist": "https://esm.sh/pdfjs-dist@^5.4.530",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
-  }
-}
-</script>
-</head>
+    
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.3",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+        "jszip": "https://esm.sh/jszip@^3.10.1",
+        "xlsx": "https://esm.sh/xlsx@^0.18.5",
+        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
+        "jspdf": "https://esm.sh/jspdf@^3.0.4",
+        "pdfjs-dist": "https://esm.sh/pdfjs-dist@^5.4.530",
+        "vite": "https://esm.sh/vite@^7.3.0",
+        "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+      }
+    }
+    </script>
+  </head>
   <body>
     <div id="system-loader">
         <div class="spinner"></div>
-        <div style="color:#64748b; font-weight:800; font-size:10px; margin-top:20px; letter-spacing: 0.2em; text-transform: uppercase;">
+        <div id="loader-text" style="color:#64748b; font-weight:800; font-size:10px; margin-top:20px; letter-spacing: 0.2em; text-transform: uppercase;">
             Initializing Firmware...
         </div>
     </div>
 
     <div id="root"></div>
 
-    <!-- 
-      IMPORTANT: Android 5.0 DOES NOT support type="module".
-      The Vite build process will convert this to a standard script tag 
-      in the production 'dist' folder.
-    -->
-    <script type="module" src="/index.tsx"></script>
-
     <script>
-      // Post-load check: If this runs, it means the module above at least attempted to load
-      console.log("System: Main entry sequence initiated.");
+        // Check compatibility before loading module
+        (function() {
+            var root = document.getElementById('root');
+            var loader = document.getElementById('system-loader');
+            if (!window.isSystemCompatible) {
+                if (loader) loader.style.display = 'none';
+                root.innerHTML = [
+                    '<div style="padding:40px; color:#ef4444; background:#0f172a; height:100vh; font-family: sans-serif;">',
+                        '<h1 style="font-weight:900; margin-bottom:10px; font-size:24px;">SYSTEM INCOMPATIBLE</h1>',
+                        '<p style="color:white;">Missing requirements: <b>' + (window.missingRequirements ? window.missingRequirements.join(', ') : 'Unknown') + '</b></p>',
+                        '<p style="margin-top:20px; font-size:12px; color:#64748b;">',
+                            'Device: Chrome 37 / Android 5.0. Modern Retail Firmware required.',
+                        '</p>',
+                    '</div>'
+                ].join('');
+                return;
+            }
+
+            // If compatible, load the application script
+            var script = document.createElement('script');
+            script.type = 'module';
+            script.src = '/index.tsx';
+            document.body.appendChild(script);
+        })();
     </script>
   </body>
 </html>

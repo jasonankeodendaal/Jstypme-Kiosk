@@ -1,29 +1,33 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
   esbuild: {
-    // esbuild does not support transforming to ES5. 
-    // We target es2015 to allow the build to pass.
-    target: "es2015", 
+    // Setting target to chrome37 forces esbuild to transpile const/let to var 
+    // and handle other basic ES6 features for the old browser engine.
+    target: "chrome37", 
     include: /\.(ts|tsx|js|jsx)$/,
     legalComments: 'none',
   },
   build: {
-    // Targeting es2015 for the bundle logic.
-    // Real ES5 support for Chrome 37 usually requires @vitejs/plugin-legacy.
-    target: "es2015",
+    // Production target for compatibility
+    target: "chrome37",
+    minify: 'terser', // Terser is better at legacy compression than esbuild
     cssTarget: "chrome37", 
-    minify: 'esbuild',
     modulePreload: false, 
     sourcemap: false, 
     rollupOptions: {
       output: {
+        // IIFE format is best for older browsers without module support
         format: 'iife', 
         entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     }
+  },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production')
   }
 });
