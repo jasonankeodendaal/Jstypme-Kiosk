@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Brand, Catalogue, HeroConfig, AdConfig, AdItem } from '../types';
 import { BookOpen, Globe, ChevronRight, X, Grid } from 'lucide-react';
@@ -13,6 +12,7 @@ interface BrandGridProps {
   onExport: () => void; 
   screensaverEnabled: boolean;
   onToggleScreensaver: () => void;
+  deviceType?: string;
 }
 
 // Improved AdUnit with robust playback logic
@@ -123,10 +123,13 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
     );
 };
 
-const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewGlobalCatalog, onExport, screensaverEnabled, onToggleScreensaver }) => {
+const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewGlobalCatalog, onExport, screensaverEnabled, onToggleScreensaver, deviceType }) => {
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(11);
   
+  // Ad Visibility Check
+  const showAds = deviceType !== 'mobile';
+
   // Dynamic Responsive Limit: Show 2 rows based on grid columns
   useEffect(() => {
     const handleResize = () => {
@@ -295,11 +298,13 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
       <div className="flex-1 p-4 md:p-8 max-w-[1600px] mx-auto w-full flex flex-col lg:flex-row gap-6">
         
         {/* Left Column (New Side Ad) */}
-        <div className="hidden lg:block w-80 shrink-0">
-             {ads && (
-                 <AdUnit items={ads.homeSideLeftVertical} className="h-full w-full min-h-[500px]" />
-             )}
-        </div>
+        {showAds && (
+            <div className="hidden lg:block w-80 shrink-0">
+                {ads && (
+                    <AdUnit items={ads.homeSideLeftVertical} className="h-full w-full min-h-[500px]" />
+                )}
+            </div>
+        )}
 
         {/* Center Column (Brands + Bottom Ads) */}
         <div className="flex-1 flex flex-col gap-8">
@@ -345,7 +350,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             </div>
 
             {/* Bottom Ads Area */}
-            {ads && (
+            {showAds && ads && (
                 <div className="grid grid-cols-2 gap-4 mt-auto w-full">
                     <AdUnit items={ads.homeBottomLeft} className="aspect-[2/1] w-full" />
                     <AdUnit items={ads.homeBottomRight} className="aspect-[2/1] w-full" />
@@ -354,11 +359,13 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         </div>
 
         {/* Right Column (Side Ad) */}
-        <div className="hidden lg:block w-80 shrink-0">
-             {ads && (
-                 <AdUnit items={ads.homeSideVertical} className="h-full w-full min-h-[500px]" />
-             )}
-        </div>
+        {showAds && (
+            <div className="hidden lg:block w-80 shrink-0">
+                {ads && (
+                    <AdUnit items={ads.homeSideVertical} className="h-full w-full min-h-[500px]" />
+                )}
+            </div>
+        )}
       </div>
 
       {/* ALL BRANDS MODAL */}
