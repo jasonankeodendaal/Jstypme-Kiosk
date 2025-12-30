@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
@@ -24,7 +23,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 const isRecent = (dateString?: string) => {
@@ -268,23 +267,26 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         
         // --- LAYOUT DEFINITIONS ---
         // Consistent column width scaling
+        const mediaW = 20;
         const skuW = 25;
         const normalW = 28;
         const promoW = 28;
-        const descW = innerWidth - skuW - normalW - promoW;
+        const descW = innerWidth - mediaW - skuW - normalW - promoW;
 
         // Vertical boundary lines
         const line1 = margin;
-        const line2 = line1 + skuW;
-        const line3 = line2 + descW;
-        const line4 = line3 + normalW;
-        const line5 = line1 + innerWidth;
+        const line2 = line1 + mediaW;
+        const line3 = line2 + skuW;
+        const line4 = line3 + descW;
+        const line5 = line4 + normalW;
+        const line6 = line1 + innerWidth;
 
         // Content anchors
-        const skuX = line1 + 2;
-        const descX = line2 + 2;
-        const normalPriceX = line4 - 2; // Right align at right of normal column
-        const promoPriceX = line5 - 2;  // Right align at right of promo column
+        const mediaX = line1 + 2;
+        const skuX = line2 + 2;
+        const descX = line3 + 2;
+        const normalPriceX = line5 - 2; // Right align at right of normal column
+        const promoPriceX = line6 - 2;  // Right align at right of promo column
         
         // Split text max widths
         const skuMaxW = skuW - 4;
@@ -329,6 +331,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.rect(margin, startY - 7, pageWidth - (margin * 2), headerHeight, 'F');
             
             doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+            doc.text("MEDIA", mediaX, startY);
             doc.text("SKU", skuX, startY); 
             doc.text("DESCRIPTION", descX, startY);
             doc.text("NORMAL", normalPriceX, startY, { align: 'right' });
@@ -339,6 +342,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.line(line2, startY - 7, line2, startY + 3);
             doc.line(line3, startY - 7, line3, startY + 3);
             doc.line(line4, startY - 7, line4, startY + 3);
+            doc.line(line5, startY - 7, line5, startY + 3);
 
             return startY + 8;
         };
@@ -363,21 +367,22 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         currentY = drawTableHeaders(currentY);
         
         const items = pricelist.items || [];
-        const baseRowHeight = 9; const footerMargin = 20;
+        const baseRowHeight = 15; const footerMargin = 20;
 
-        items.forEach((item, index) => {
+        for (let index = 0; index < items.length; index++) {
+            const item = items[index];
             doc.setFontSize(8);
             const skuLines = doc.splitTextToSize(item.sku || '', skuMaxW).length;
             doc.setFontSize(9);
             const descLines = doc.splitTextToSize(item.description.toUpperCase(), descMaxW).length;
             
             const maxLines = Math.max(skuLines, descLines);
-            const rowHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
+            const contentHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
+            const rowHeight = Math.max(contentHeight, 15);
 
             if (currentY + rowHeight > pageHeight - footerMargin) {
-                // Bottom closure for current page
                 doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
-                doc.line(line1, currentY - 6, line5, currentY - 6);
+                doc.line(line1, currentY - 6, line6, currentY - 6);
                 
                 doc.addPage();
                 currentY = drawHeader();
@@ -389,6 +394,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             }
 
             // Cell Contents
+            if (item.imageUrl) {
+                const asset = await loadImageForPDF(item.imageUrl);
+                if (asset) {
+                   const imgDim = 10;
+                   doc.addImage(asset.imgData, asset.format, mediaX, currentY - 4, imgDim, imgDim);
+                }
+            }
+
             doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal');
             drawTextFit(item.sku || '', skuX, currentY, skuMaxW, 8);
             
@@ -408,17 +421,19 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
             // --- GRID LINES ---
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
-            doc.line(line1, currentY + rowHeight - 6, line5, currentY + rowHeight - 6);
+            doc.line(line1, currentY + rowHeight - 6, line6, currentY + rowHeight - 6);
             doc.line(line1, currentY - 6, line1, currentY + rowHeight - 6);
             doc.line(line2, currentY - 6, line2, currentY + rowHeight - 6);
             doc.line(line3, currentY - 6, line3, currentY + rowHeight - 6);
             doc.line(line4, currentY - 6, line4, currentY + rowHeight - 6);
             doc.line(line5, currentY - 6, line5, currentY + rowHeight - 6);
+            doc.line(line6, currentY - 6, line6, currentY + rowHeight - 6);
 
             currentY += rowHeight;
-        });
+        }
 
-        const totalPages = doc.internal.getNumberOfPages();
+        // Fix: getNumberOfPages() is a direct method of the jsPDF instance, not available on doc.internal.
+        const totalPages = doc.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
             doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
@@ -459,22 +474,22 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
              <div className="flex flex-col">
                 <div className="flex items-center gap-3">
                   <h2 className="text-lg md:text-3xl font-black uppercase tracking-tight leading-none shrink-title">{pricelist.title}</h2>
-                  {isNewlyUpdated && (<span className="bg-white text-yellow-700 px-3 py-1 rounded-full text-[10px] md:text-[12px] font-black uppercase flex items-center gap-1.5 shadow-md"><Sparkles size={12} fill="currentColor" /> NEW</span>)}
+                  {isNewlyUpdated && (<span className="bg-white text-[#c0810d] px-3 py-1 rounded-full text-[10px] md:text-[12px] font-black uppercase flex items-center gap-1.5 shadow-md"><Sparkles size={12} fill="currentColor" /> NEW</span>)}
                 </div>
                 <p className="text-yellow-100 font-bold uppercase tracking-widest text-[10px] md:sm mt-1">{pricelist.month} {pricelist.year}</p>
              </div>
           </div>
           <div className="flex items-center gap-3 md:gap-6">
-             <div className="hidden sm:flex items-center gap-3 bg-black/10 p-1.5 rounded-2xl border border-white/10 backdrop-blur-sm">
-                <button onClick={handleZoomOut} className="p-2.5 hover:bg-white/10 rounded-xl transition-colors"><ZoomOut size={22}/></button>
-                <span className="text-xs font-black uppercase tracking-widest min-w-[60px] text-center">{Math.round(zoom * 100)}%</span>
-                <button onClick={handleZoomIn} className="p-2.5 hover:bg-white/10 rounded-xl transition-colors"><ZoomIn size={22}/></button>
+             <div className="hidden sm:flex items-center gap-4 bg-black/30 p-2 rounded-full border border-white/10 backdrop-blur-md">
+                <button onClick={handleZoomOut} className="p-2 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={20} className="scale-x-[-1]"/></button>
+                <span className="text-xs font-black uppercase tracking-widest min-w-[50px] text-center">{Math.round(zoom * 100)}%</span>
+                <button onClick={handleZoomIn} className="p-2 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={20}/></button>
              </div>
              <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-3 bg-[#0f172a] text-white px-8 py-4 rounded-2xl font-black text-xs md:text-sm uppercase shadow-2xl hover:bg-black transition-all active:scale-95 group disabled:opacity-50 min-w-[200px] justify-center border border-white/5">
                 {isExporting ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={22} className="text-blue-400 group-hover:text-white" />}
-                <span>{isExporting ? 'Generating...' : 'Save as PDF'}</span>
+                <span>{isExporting ? 'Generating...' : 'SAVE AS PDF'}</span>
              </button>
-             <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={28}/></button>
+             <button onClick={onClose} className="p-3 bg-white/20 rounded-full hover:bg-white/30 transition-colors border border-white/5"><X size={28}/></button>
           </div>
         </div>
 
@@ -492,7 +507,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
                   <tr className="hidden print:table-row border-none">
-                      <th colSpan={4} className="p-0 border-none bg-white">
+                      <th colSpan={5} className="p-0 border-none bg-white">
                           <div className="w-full px-10 pt-10 pb-6 text-left">
                               <div className="flex justify-between items-start mb-10">
                                   <div className="flex flex-col gap-6">
@@ -509,8 +524,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                       </th>
                   </tr>
                   <tr className="print:bg-[#71717a] bg-[#71717a]">
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[20%] text-white">SKU</th>
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[50%] text-white">Description</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[12%] text-white">Media</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[15%] text-white">SKU</th>
+                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[43%] text-white">Description</th>
                       <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-right w-[15%] text-white">Normal</th>
                       <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight text-right w-[15%] text-white">Promo</th>
                   </tr>
@@ -518,6 +534,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
                       <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
+                      <td className="p-2 border-r border-slate-100 text-center">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-lg flex items-center justify-center mx-auto overflow-hidden border border-slate-50">
+                           {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-contain" alt="" /> : <ImageIcon size={20} className="text-slate-100" />}
+                        </div>
+                      </td>
                       <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
                       <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">{item.description}</span></td>
                       <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900 price-cell">{item.normalPrice || ''}</span></td>
@@ -531,8 +552,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           </div>
         </div>
         <div className="p-5 md:p-8 bg-white border-t border-slate-100 flex justify-between items-center shrink-0 print:hidden z-10">
-          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Items: {(pricelist.items || []).length}</span>
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Official Kiosk Pro Document • VAT Incl.</p>
+          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">ITEMS: {(pricelist.items || []).length}</span>
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">OFFICIAL KIOSK PRO DOCUMENT • VAT INCL.</p>
         </div>
       </div>
     </div>
