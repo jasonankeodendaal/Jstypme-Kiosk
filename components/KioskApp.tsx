@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
@@ -193,6 +194,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Check if any items have images
+  const hasImages = useMemo(() => {
+    return pricelist.items?.some(item => item.imageUrl && item.imageUrl.trim() !== '') || false;
+  }, [pricelist.items]);
+
   const onDragStart = (clientX: number, clientY: number) => {
     if (zoom <= 1 || !scrollContainerRef.current) return;
     setIsDragging(true);
@@ -266,9 +272,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const innerWidth = pageWidth - (margin * 2);
         
         // --- LAYOUT DEFINITIONS ---
-        // Consistent column width scaling
-        const mediaW = 20;
-        const skuW = 25;
+        // Dynamically adjust column widths based on images
+        const mediaW = hasImages ? 20 : 0;
+        const skuW = hasImages ? 25 : 30;
         const normalW = 28;
         const promoW = 28;
         const descW = innerWidth - mediaW - skuW - normalW - promoW;
@@ -285,8 +291,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const mediaX = line1 + 2;
         const skuX = line2 + 2;
         const descX = line3 + 2;
-        const normalPriceX = line5 - 2; // Right align at right of normal column
-        const promoPriceX = line6 - 2;  // Right align at right of promo column
+        const normalPriceX = line5 - 2; 
+        const promoPriceX = line6 - 2;  
         
         // Split text max widths
         const skuMaxW = skuW - 4;
@@ -331,7 +337,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.rect(margin, startY - 7, pageWidth - (margin * 2), headerHeight, 'F');
             
             doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-            doc.text("MEDIA", mediaX, startY);
+            if (hasImages) doc.text("MEDIA", mediaX, startY);
             doc.text("SKU", skuX, startY); 
             doc.text("DESCRIPTION", descX, startY);
             doc.text("NORMAL", normalPriceX, startY, { align: 'right' });
@@ -339,7 +345,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
             // Vertical Grid Lines for Headers
             doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.2);
-            doc.line(line2, startY - 7, line2, startY + 3);
+            if (hasImages) doc.line(line2, startY - 7, line2, startY + 3);
             doc.line(line3, startY - 7, line3, startY + 3);
             doc.line(line4, startY - 7, line4, startY + 3);
             doc.line(line5, startY - 7, line5, startY + 3);
@@ -367,7 +373,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         currentY = drawTableHeaders(currentY);
         
         const items = pricelist.items || [];
-        const baseRowHeight = 15; const footerMargin = 20;
+        const baseRowHeight = hasImages ? 15 : 12; 
+        const footerMargin = 20;
 
         for (let index = 0; index < items.length; index++) {
             const item = items[index];
@@ -378,7 +385,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             
             const maxLines = Math.max(skuLines, descLines);
             const contentHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 4) : baseRowHeight;
-            const rowHeight = Math.max(contentHeight, 15);
+            const rowHeight = Math.max(contentHeight, hasImages ? 15 : 10);
 
             if (currentY + rowHeight > pageHeight - footerMargin) {
                 doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
@@ -394,7 +401,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             }
 
             // Cell Contents
-            if (item.imageUrl) {
+            if (hasImages && item.imageUrl) {
                 const asset = await loadImageForPDF(item.imageUrl);
                 if (asset) {
                    const imgDim = 10;
@@ -423,7 +430,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
             doc.line(line1, currentY + rowHeight - 6, line6, currentY + rowHeight - 6);
             doc.line(line1, currentY - 6, line1, currentY + rowHeight - 6);
-            doc.line(line2, currentY - 6, line2, currentY + rowHeight - 6);
+            if (hasImages) doc.line(line2, currentY - 6, line2, currentY + rowHeight - 6);
             doc.line(line3, currentY - 6, line3, currentY + rowHeight - 6);
             doc.line(line4, currentY - 6, line4, currentY + rowHeight - 6);
             doc.line(line5, currentY - 6, line5, currentY + rowHeight - 6);
@@ -432,7 +439,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             currentY += rowHeight;
         }
 
-        // Fix: getNumberOfPages() is a direct method of the jsPDF instance, not available on doc.internal.
         const totalPages = doc.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
@@ -469,27 +475,28 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
       <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-[2rem] shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block`} onClick={e => e.stopPropagation()}>
         <div className={`print-hidden p-4 md:p-8 text-white flex justify-between items-center shrink-0 z-20 bg-[#c0810d]`}>
-          <div className="flex items-center gap-6">
-             <div className="flex bg-white/10 p-4 rounded-2xl border border-white/10 shadow-inner"><RIcon size={36} className="text-white" /></div>
-             <div className="flex flex-col">
+          <div className="flex items-center gap-6 overflow-hidden">
+             <div className="hidden md:flex bg-white/10 p-4 rounded-2xl border border-white/10 shadow-inner"><RIcon size={36} className="text-white" /></div>
+             <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-lg md:text-3xl font-black uppercase tracking-tight leading-none shrink-title">{pricelist.title}</h2>
-                  {isNewlyUpdated && (<span className="bg-white text-[#c0810d] px-3 py-1 rounded-full text-[10px] md:text-[12px] font-black uppercase flex items-center gap-1.5 shadow-md"><Sparkles size={12} fill="currentColor" /> NEW</span>)}
+                  <h2 className="text-lg md:text-3xl font-black uppercase tracking-tight leading-none shrink-title truncate">{pricelist.title}</h2>
+                  {isNewlyUpdated && (<span className="hidden sm:inline bg-white text-[#c0810d] px-3 py-1 rounded-full text-[10px] md:text-[12px] font-black uppercase flex items-center gap-1.5 shadow-md"><Sparkles size={12} fill="currentColor" /> NEW</span>)}
                 </div>
                 <p className="text-yellow-100 font-bold uppercase tracking-widest text-[10px] md:sm mt-1">{pricelist.month} {pricelist.year}</p>
              </div>
           </div>
           <div className="flex items-center gap-3 md:gap-6">
-             <div className="hidden sm:flex items-center gap-4 bg-black/30 p-2 rounded-full border border-white/10 backdrop-blur-md">
+             <div className="hidden lg:flex items-center gap-4 bg-black/30 p-2 rounded-full border border-white/10 backdrop-blur-md">
                 <button onClick={handleZoomOut} className="p-2 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={20} className="scale-x-[-1]"/></button>
                 <span className="text-xs font-black uppercase tracking-widest min-w-[50px] text-center">{Math.round(zoom * 100)}%</span>
                 <button onClick={handleZoomIn} className="p-2 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={20}/></button>
              </div>
-             <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-3 bg-[#0f172a] text-white px-8 py-4 rounded-2xl font-black text-xs md:text-sm uppercase shadow-2xl hover:bg-black transition-all active:scale-95 group disabled:opacity-50 min-w-[200px] justify-center border border-white/5">
+             <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-3 bg-[#0f172a] text-white px-4 md:px-8 py-3 md:py-4 rounded-2xl font-black text-xs md:text-sm uppercase shadow-2xl hover:bg-black transition-all active:scale-95 group disabled:opacity-50 min-w-[120px] md:min-w-[200px] justify-center border border-white/5">
                 {isExporting ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={22} className="text-blue-400 group-hover:text-white" />}
-                <span>{isExporting ? 'Generating...' : 'SAVE AS PDF'}</span>
+                <span className="hidden md:inline">{isExporting ? 'Generating...' : 'SAVE AS PDF'}</span>
+                <span className="md:hidden">{isExporting ? '...' : 'PDF'}</span>
              </button>
-             <button onClick={onClose} className="p-3 bg-white/20 rounded-full hover:bg-white/30 transition-colors border border-white/5"><X size={28}/></button>
+             <button onClick={onClose} className="p-2 md:p-3 bg-white/20 rounded-full hover:bg-white/30 transition-colors border border-white/5"><X size={24}/></button>
           </div>
         </div>
 
@@ -507,7 +514,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
                   <tr className="hidden print:table-row border-none">
-                      <th colSpan={5} className="p-0 border-none bg-white">
+                      <th colSpan={hasImages ? 5 : 4} className="p-0 border-none bg-white">
                           <div className="w-full px-10 pt-10 pb-6 text-left">
                               <div className="flex justify-between items-start mb-10">
                                   <div className="flex flex-col gap-6">
@@ -524,9 +531,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                       </th>
                   </tr>
                   <tr className="print:bg-[#71717a] bg-[#71717a]">
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[12%] text-white">Media</th>
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[15%] text-white">SKU</th>
-                      <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[43%] text-white">Description</th>
+                      {hasImages && <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 w-[12%] text-white">Media</th>}
+                      <th className={`p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-white ${hasImages ? 'w-[15%]' : 'w-[20%]'}`}>SKU</th>
+                      <th className={`p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-white ${hasImages ? 'w-[43%]' : 'w-[50%]'}`}>Description</th>
                       <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight border-r border-white/10 text-right w-[15%] text-white">Normal</th>
                       <th className="p-4 md:p-6 text-[11px] md:sm font-black uppercase tracking-tight text-right w-[15%] text-white">Promo</th>
                   </tr>
@@ -534,11 +541,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
                       <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
-                      <td className="p-2 border-r border-slate-100 text-center">
-                        <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-lg flex items-center justify-center mx-auto overflow-hidden border border-slate-50">
-                           {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-contain" alt="" /> : <ImageIcon size={20} className="text-slate-100" />}
-                        </div>
-                      </td>
+                      {hasImages && (
+                        <td className="p-2 border-r border-slate-100 text-center">
+                          <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-lg flex items-center justify-center mx-auto overflow-hidden border border-slate-50">
+                             {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-contain" alt="" /> : <ImageIcon size={20} className="text-slate-100" />}
+                          </div>
+                        </td>
+                      )}
                       <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
                       <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">{item.description}</span></td>
                       <td className="p-4 md:p-5 text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900 price-cell">{item.normalPrice || ''}</span></td>
@@ -552,8 +561,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           </div>
         </div>
         <div className="p-5 md:p-8 bg-white border-t border-slate-100 flex justify-between items-center shrink-0 print:hidden z-10">
-          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">ITEMS: {(pricelist.items || []).length}</span>
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">OFFICIAL KIOSK PRO DOCUMENT • VAT INCL.</p>
+          <span className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest">ITEMS: {(pricelist.items || []).length}</span>
+          <p className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest text-right">OFFICIAL KIOSK PRO DOCUMENT • VAT INCL.</p>
         </div>
       </div>
     </div>
