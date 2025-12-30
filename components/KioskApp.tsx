@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
@@ -14,7 +13,8 @@ import {
   checkCloudConnection,
   initSupabase,
   getCloudProjectName,
-  tryRecoverIdentity
+  tryRecoverIdentity,
+  lockOrientation
 } from '../services/kioskService';
 import BrandGrid from './BrandGrid';
 import CategoryGrid from './CategoryGrid';
@@ -67,7 +67,10 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
             try {
                 await provisionKioskId();
                 const success = await completeKioskSetup(shopName.trim(), deviceType);
-                if (success) onComplete();
+                if (success) {
+                    await lockOrientation();
+                    onComplete();
+                }
                 else setError('Setup failed. Local storage error.');
             } catch (e) {
                 setError('Cloud registration failed.');
@@ -662,8 +665,11 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const timerRef = useRef<number | null>(null);
   const idleTimeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
   
-  const resetIdleTimer = useCallback(() => {
+  const resetIdleTimer = useCallback(async () => {
     setIsIdle(false);
+    // On first interaction or subsequent wakes, ensure orientation is correct
+    if (isSetup) await lockOrientation();
+    
     if (timerRef.current) clearTimeout(timerRef.current);
     if (screensaverEnabled && deviceType === 'kiosk' && isSetup) {
       timerRef.current = window.setTimeout(() => {
@@ -701,9 +707,11 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const activePricelistBrand = useMemo(() => {
       if (!viewingManualList) return undefined;
-      let found: any = pricelistBrands.find(b => b.id === viewingManualList.brandId);
+      const bId = viewingManualList?.brandId;
+      if (!bId) return undefined;
+      let found: any = pricelistBrands.find(b => b.id === bId);
       if (!found && storeData?.brands) {
-          found = storeData.brands.find(b => b.id === viewingManualList.brandId);
+          found = storeData.brands.find(b => b.id === bId);
       }
       return found;
   }, [viewingManualList, pricelistBrands, storeData?.brands]);

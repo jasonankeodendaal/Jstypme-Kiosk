@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { KioskRegistry } from '../types';
 
@@ -85,6 +84,21 @@ export const provisionKioskId = async (): Promise<string> => {
   const nextId = "LOC-" + randomSuffix;
   localStorage.setItem(STORAGE_KEY_ID, nextId);
   return nextId;
+};
+
+/**
+ * Attempts to lock screen orientation to landscape.
+ * Must be called following a user interaction.
+ */
+export const lockOrientation = async () => {
+    if (screen.orientation && (screen.orientation as any).lock) {
+        try {
+            await (screen.orientation as any).lock('landscape');
+            console.log("System: Orientation Locked to Landscape.");
+        } catch (e) {
+            console.warn("System: Orientation lock rejected or unsupported.");
+        }
+    }
 };
 
 /**
