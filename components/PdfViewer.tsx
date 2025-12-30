@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -150,4 +149,71 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
                       <button onClick={handleFit} className={`p-1.5 rounded transition-colors ${scale === 0 ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Auto Fit"><Maximize size={16}/></button>
                       <div className="w-[1px] h-4 bg-slate-700 mx-1"></div>
                       <button onClick={handleZoomOut} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><ZoomOut size={16}/></button>
-                      <button onClick={handleZoomIn} className="p
+                      <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><ZoomIn size={16}/></button>
+                  </div>
+              )}
+          </div>
+          <div className="flex items-center gap-4">
+              {pdf && (
+                  <div className="flex items-center gap-3">
+                      <button 
+                        disabled={pageNum <= 1}
+                        onClick={() => changePage(-1)}
+                        className="p-2 bg-white/5 hover:bg-white/10 rounded-full disabled:opacity-30 transition-colors"
+                      >
+                          <ChevronLeft size={24} />
+                      </button>
+                      <div className="text-xs font-black tracking-widest uppercase bg-white/10 px-4 py-2 rounded-full border border-white/5">
+                          {pageNum} <span className="opacity-40">/</span> {pdf.numPages}
+                      </div>
+                      <button 
+                        disabled={pageNum >= pdf.numPages}
+                        onClick={() => changePage(1)}
+                        className="p-2 bg-white/5 hover:bg-white/10 rounded-full disabled:opacity-30 transition-colors"
+                      >
+                          <ChevronRight size={24} />
+                      </button>
+                  </div>
+              )}
+              <button onClick={onClose} className="p-2 hover:bg-red-500 rounded-full transition-colors"><X size={24}/></button>
+          </div>
+       </div>
+
+       <div 
+         ref={containerRef}
+         className={`flex-1 overflow-auto bg-slate-800 flex items-start justify-center p-4 md:p-8 select-none ${isDragging ? 'cursor-grabbing' : (scale > 0 ? 'cursor-grab' : 'cursor-default')}`}
+         onMouseDown={handleMouseDown}
+         onMouseMove={handleMouseMove}
+         onMouseUp={onEnd}
+         onMouseLeave={onEnd}
+         onTouchStart={handleTouchStart}
+         onTouchMove={handleTouchMove}
+         onTouchEnd={onEnd}
+       >
+           <div className="relative shadow-2xl bg-white min-w-max">
+               {loading && (
+                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-800/50 z-10">
+                       <Loader2 size={48} className="text-blue-500 animate-spin mb-4" />
+                       <span className="text-white text-xs font-black uppercase tracking-widest">Rendering Document...</span>
+                   </div>
+               )}
+               {error && (
+                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-10 p-8 text-center">
+                       <AlertCircle size={48} className="text-red-500 mb-4" />
+                       <h3 className="text-white font-black uppercase mb-2">Display Error</h3>
+                       <p className="text-slate-400 text-sm max-w-xs">{error}</p>
+                   </div>
+               )}
+               <canvas ref={canvasRef} className="block shadow-xl" />
+               {scale > 1.2 && !isDragging && !loading && (
+                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
+                       <Grip size={120} className="text-black" />
+                   </div>
+               )}
+           </div>
+       </div>
+    </div>
+  );
+};
+
+export default PdfViewer;
