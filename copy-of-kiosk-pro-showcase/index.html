@@ -1,0 +1,79 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Kiosk Pro Showcase</title>
+    
+    <!-- Critical Shims for Android 5.0 WebView (Chrome 37+) -->
+    <script>
+      // 1. globalThis Shim
+      if (typeof globalThis === 'undefined') {
+        (function() {
+          if (typeof self !== 'undefined') { window.globalThis = self; }
+          else if (typeof window !== 'undefined') { window.globalThis = window; }
+          else if (typeof global !== 'undefined') { window.globalThis = global; }
+          else { window.globalThis = this; }
+        })();
+      }
+
+      // 2. Process/Env Shim for Supabase/React
+      window.process = window.process || { env: { NODE_ENV: 'production' } };
+
+      // 3. Visual Debugger for "White Screen" on Device
+      window.onerror = function(msg, url, line, col, error) {
+        var extra = !col ? '' : '\ncolumn: ' + col;
+        extra += !error ? '' : '\nerror: ' + error;
+        var errDiv = document.createElement('div');
+        errDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:red;color:white;padding:20px;z-index:99999;font-family:monospace;font-size:12px;word-break:break-all;';
+        errDiv.innerHTML = '<b>HARDWARE ERROR:</b><br>' + msg + '<br>Line: ' + line + extra;
+        document.body.appendChild(errDiv);
+        return false;
+      };
+    </script>
+
+    <!-- Essential Polyfills for Supabase & React 18/19 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-polyfill/7.12.1/polyfill.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/abortcontroller-polyfill@1.7.5/dist/abortcontroller-polyfill-only.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/url-polyfill@1.1.12/url-polyfill.min.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+      body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; margin: 0; overflow: hidden; }
+      #root { height: 100vh; width: 100vw; }
+      /* CSS Fallbacks for older browsers */
+      .glass-panel { background: #ffffff; }
+      @supports (backdrop-filter: blur(10px)) {
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
+    "pdfjs-dist": "https://esm.sh/pdfjs-dist@^5.4.530",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "jspdf": "https://esm.sh/jspdf@^3.0.4",
+    "jszip": "https://esm.sh/jszip@^3.10.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <!-- Standard script entry point (Vite will handle transpilation to ES5) -->
+    <script type="text/javascript" src="/index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
