@@ -1178,8 +1178,8 @@ const PricelistManager = ({
         if (!dateStr) return false;
         const date = new Date(dateStr);
         const now = new Date();
-        const diffMs = Math.abs(now.getTime() - date.getTime());
-        return Math.ceil(diffMs / (1000 * 60 * 60 * 24)) <= 30;
+        const diff = Math.abs(now.getTime() - date.getTime());
+        return Math.ceil(diff / (1000 * 60 * 60 * 24)) <= 30;
     };
 
     return (
@@ -1806,7 +1806,7 @@ const TVModelEditor = ({ model, onSave, onClose }: { model: TVModel, onSave: (m:
                                             const newUrls = [...draft.videoUrls];
                                             [newUrls[idx], newUrls[idx+1]] = [newUrls[idx+1], newUrls[idx]];
                                             setDraft({ ...draft, videoUrls: newUrls });
-                                        }} className="p-1.5 bg-red-50 border border-red-100 text-red-500 hover:bg-red-100 rounded ml-2"><Trash2 size={14} /></button>}
+                                        }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"><ChevronDown size={14} /></button>}
                                         
                                         <button onClick={() => {
                                             setDraft({ ...draft, videoUrls: draft.videoUrls.filter((_, i) => i !== idx) });
@@ -1822,6 +1822,7 @@ const TVModelEditor = ({ model, onSave, onClose }: { model: TVModel, onSave: (m:
                 </div>
 
                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-white shrink-0">
+                    {/* Fix: changed onClose to onClick for button compatibility */}
                     <button onClick={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
                     <button onClick={() => onSave(draft)} className="px-4 py-2 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg">Save Model</button>
                 </div>
@@ -1903,7 +1904,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
         } else {
             updatedList.push({
                 id: generateId('adm'),
-                name: newName, // Fix: Changed 'name' to 'newName'
+                name: name,
                 pin: newPin,
                 isSuperAdmin: false,
                 permissions: newPermissions
@@ -2266,7 +2267,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
     return Object.values(newBrands);
 };
 
-// Implemented missing downloadZip function
+// Fix: Implemented missing downloadZip function
 const downloadZip = async (data: StoreData | null) => {
     if (!data) return;
     const zip = new JSZip();
@@ -2405,7 +2406,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
               id: kiosk.id,
               name: kiosk.name,
               device_type: kiosk.deviceType,
-              // Fix: accessing assignedZone instead of assigned_zone which is not on type KioskRegistry
               assigned_zone: kiosk.assignedZone
           };
           await supabase.from('kiosks').upsert(payload);
@@ -2510,9 +2510,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
           return b;
       });
 
-      // Fix: Update internal selection state to prevent desync
-      setSelectedCategory(updatedSourceCat);
-      
       handleLocalUpdate({ ...localData, brands: newBrands });
       setMovingProduct(null);
   };
@@ -3179,4 +3176,195 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                            <ImageIcon size={20} className="text-blue-500" /> System Branding
                        </h3>
                        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                           <FileUpload
+                           <FileUpload 
+                               label="Main Company Logo (PDFs & Header)" 
+                               currentUrl={localData.companyLogoUrl} 
+                               onUpload={(url: string) => handleLocalUpdate({...localData, companyLogoUrl: url})} 
+                           />
+                           <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                               This logo is used at the top of the Kiosk App and as the primary branding on all exported PDF Pricelists.
+                           </p>
+                       </div>
+                   </div>
+
+                   {/* GLOBAL SYSTEM PIN */}
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
+                           <Lock size={20} className="text-red-500" /> Device Setup Security
+                       </h3>
+                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center gap-4">
+                           <div className="flex-1">
+                               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Global Setup PIN</label>
+                               <input 
+                                   type="text" 
+                                   value={localData.systemSettings?.setupPin || '0000'} 
+                                   onChange={(e) => handleLocalUpdate({
+                                       ...localData,
+                                       systemSettings: { ...localData.systemSettings, setupPin: e.target.value }
+                                   })}
+                                   className="w-full md:w-64 p-3 border border-slate-300 rounded-xl bg-white font-mono font-bold text-lg tracking-widest text-center"
+                                   placeholder="0000"
+                                   maxLength={8}
+                               />
+                               <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                                   This PIN is required on all new devices (Kiosk, Mobile, TV) to complete the setup process. Default: 0000.
+                               </p>
+                           </div>
+                           <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100 text-yellow-800 text-xs max-w-xs">
+                               <strong>Security Note:</strong> Changing this PIN will require all future device setups to use the new code. Existing active devices are not affected.
+                           </div>
+                       </div>
+                   </div>
+
+                   {/* ZIP BACKUP SECTION */}
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                       <div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500 pointer-events-none"><Database size={120} /></div>
+                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> System Data & Backup</h3>
+                       
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                           <div className="space-y-4">
+                               <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-xs">
+                                   <strong>Export System Backup:</strong> Downloads a full archive including Inventory, Marketing, TV Config, Fleet logs, and History.
+                                   <div className="mt-2 text-blue-600 font-bold">Use this to edit offline or migrate data.</div>
+                               </div>
+                               <button 
+                                   onClick={async () => {
+                                       setExportProcessing(true);
+                                       try {
+                                           await downloadZip(localData);
+                                       } catch (e) {
+                                           console.error(e);
+                                           alert("Export Failed: " + (e as Error).message);
+                                       } finally {
+                                           setExportProcessing(false);
+                                       }
+                                   }}
+                                   disabled={exportProcessing}
+                                   className={`w-full py-4 ${exportProcessing ? 'bg-blue-800 cursor-wait' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25`}
+                               >
+                                   {exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+                                   {exportProcessing ? 'Packaging All Assets...' : 'Download Full System Backup (.zip)'}
+                               </button>
+                           </div>
+
+                           <div className="space-y-4">
+                               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-xs">
+                                   <strong>Import Structure:</strong> Upload a ZIP file to auto-populate the system.
+                                   <ul className="list-disc pl-4 mt-2 space-y-1 text-[10px] text-slate-500 font-bold">
+                                       <li>Folder Structure: <code>Brand/Category/Product/</code></li>
+                                       <li>Place images (.jpg/.png) & manuals (.pdf) inside product folders.</li>
+                                       <li>Images & PDFs are uploaded to Cloud Storage sequentially.</li>
+                                   </ul>
+                               </div>
+                               <label className={`w-full py-4 ${importProcessing ? 'bg-slate-300 cursor-wait' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl relative overflow-hidden`}>
+                                   {importProcessing ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16} />} 
+                                   <span className="relative z-10">{importProcessing ? importProgress || 'Processing...' : 'Import Data from ZIP'}</span>
+                                   <input 
+                                     type="file" 
+                                     accept=".zip" 
+                                     className="hidden" 
+                                     disabled={importProcessing}
+                                     onChange={async (e) => {
+                                         if(e.target.files && e.target.files[0]) {
+                                             if(confirm("This will merge imported data into your current inventory. Continue?")) {
+                                                 setImportProcessing(true);
+                                                 setImportProgress('Initializing...');
+                                                 try {
+                                                     const newBrands = await importZip(e.target.files[0], (msg) => setImportProgress(msg));
+                                                     // Merge Logic: Add new brands, or merge categories if brand exists
+                                                     let mergedBrands = [...localData.brands];
+                                                     
+                                                     newBrands.forEach(nb => {
+                                                         const existingBrandIndex = mergedBrands.findIndex(b => b.name === nb.name);
+                                                         if (existingBrandIndex > -1) {
+                                                             // Merge Brand Assets if present
+                                                             if (nb.logoUrl) {
+                                                                 mergedBrands[existingBrandIndex].logoUrl = nb.logoUrl;
+                                                             }
+                                                             if (nb.themeColor) {
+                                                                 mergedBrands[existingBrandIndex].themeColor = nb.themeColor;
+                                                             }
+
+                                                             // Merge Categories
+                                                             nb.categories.forEach(nc => {
+                                                                 const existingCatIndex = mergedBrands[existingBrandIndex].categories.findIndex(c => c.name === nc.name);
+                                                                 if (existingCatIndex > -1) {
+                                                                     // Merge Products
+                                                                     const existingProducts = mergedBrands[existingBrandIndex].categories[existingCatIndex].products;
+                                                                     // Add only new products based on name
+                                                                     const uniqueNewProducts = nc.products.filter(np => !existingProducts.find(ep => ep.name === np.name));
+                                                                     mergedBrands[existingBrandIndex].categories[existingCatIndex].products = [...existingProducts, ...uniqueNewProducts];
+                                                                 } else {
+                                                                     mergedBrands[existingBrandIndex].categories.push(nc);
+                                                                 }
+                                                             });
+                                                         } else {
+                                                             mergedBrands.push(nb);
+                                                         }
+                                                     });
+                                                     
+                                                     handleLocalUpdate({ ...localData, brands: mergedBrands });
+                                                     alert(`Import Successful! Processed ${newBrands.length} brands.`);
+                                                 } catch(err) {
+                                                     console.error(err);
+                                                     alert("Failed to read ZIP file. Ensure structure is correct.");
+                                                 } finally {
+                                                     setImportProcessing(false);
+                                                     setImportProgress('');
+                                                 }
+                                             }
+                                         }
+                                     }}
+                                   />
+                               </label>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><UserCog size={20} className="text-blue-500"/> Admin Access Control</h3><AdminManager admins={localData.admins || []} onUpdate={(admins) => handleLocalUpdate({ ...localData, admins })} currentUser={currentUser} /></div>
+
+                   <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg text-white">
+                        <div className="flex items-center gap-3 mb-6"><CloudLightning size={24} className="text-yellow-400" /><h3 className="font-black uppercase text-sm tracking-wider">System Operations</h3></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <button onClick={() => setShowGuide(true)} className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors border border-slate-600"><BookOpen size={24} className="text-blue-400"/><div className="text-left"><div className="font-bold text-sm">Setup Guide</div><div className="text-[10px] text-slate-400 font-mono uppercase">Docs & Scripts</div></div></button>
+                             <button onClick={async () => { if(confirm("WARNING: This will wipe ALL local data and reset to defaults. Continue?")) { const d = await resetStoreData(); setLocalData(d); window.location.reload(); } }} className="p-4 bg-red-900/30 hover:bg-red-900/50 rounded-xl flex items-center gap-3 transition-colors border border-red-900/50 text-red-300"><AlertCircle size={24} /><div className="text-left"><div className="font-bold text-sm">Factory Reset</div><div className="text-[10px] text-red-400 font-mono uppercase">Clear Local Data</div></div></button>
+                        </div>
+                   </div>
+               </div>
+            )}
+        </main>
+
+        {editingProduct && (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in">
+                <ProductEditor product={editingProduct} onSave={(p) => { 
+                    if (!selectedBrand || !selectedCategory) return;
+                    if (p.sku && checkSkuDuplicate(p.sku, p.id)) { alert(`SKU "${p.sku}" is already used by another product.`); return; }
+                    const isNew = !selectedCategory.products.find(x => x.id === p.id);
+                    const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x);
+                    const updatedCat = { ...selectedCategory, products: newProducts };
+                    const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) };
+                    handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b) });
+                    setEditingProduct(null);
+                }} onCancel={() => setEditingProduct(null)} />
+            </div>
+        )}
+
+        {movingProduct && (
+            <MoveProductModal product={movingProduct} allBrands={brands} currentBrandId={selectedBrand?.id || ''} currentCategoryId={selectedCategory?.id || ''} onClose={() => setMovingProduct(null)} onMove={(product, targetBrand, targetCategory) => handleMoveProduct(product, targetBrand, targetCategory)} />
+        )}
+
+        {editingKiosk && (
+            <KioskEditorModal kiosk={editingKiosk} onSave={(k) => { updateFleetMember(k); setEditingKiosk(null); }} onClose={() => setEditingKiosk(null)} />
+        )}
+        
+        {editingTVModel && (
+            <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updatedTVBrand : b) } as TVConfig }); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />
+        )}
+        
+        {showGuide && <SetupGuide onClose={() => setShowGuide(false)} />}
+        
+    </div>
+  );
+};
+
+export default AdminDashboard;
