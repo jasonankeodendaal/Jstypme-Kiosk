@@ -7,27 +7,28 @@
     <meta name="theme-color" content="#0f172a" />
     <title>Kiosk Pro Showcase</title>
     
-    <!-- 1. SYSTEM POLYFILLS FOR CHROME 37 (CRITICAL) -->
+    <!-- 1. CRITICAL LEGACY POLYFILLS (LOADED FIRST & SYNC) -->
+    <!-- We use older, more stable versions of polyfills that Chrome 37 prefers -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-shim/0.35.6/es6-shim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-promise/4.2.8/es6-promise.auto.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.19/fetch.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.14.1/runtime.min.js"></script>
-    <!-- Core JS 3.x is vital for React 18+ on old engines -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/3.32.2/minified.js"></script>
     
     <script>
       (function() {
         window.appStarted = false;
-        // Map/Set Polyfill check for older engines
+        // Fix for missing globalThis in Chrome 37
         if (typeof window.globalThis === 'undefined') { window.globalThis = window; }
         if (typeof window.global === 'undefined') { window.global = window; }
         window.process = { env: { NODE_ENV: 'production' } };
         
-        // Global Error Catcher for older browsers
+        // Global Error Catcher
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             var loaderText = document.getElementById('loader-text');
             if (loaderText) {
                 loaderText.style.color = '#ef4444';
-                loaderText.innerHTML = "KERNEL PANIC: " + msg + "<br><span style='font-size:8px; opacity:0.6'>L" + lineNo + ":" + columnNo + " " + url + "</span>";
+                loaderText.innerHTML = "BOOT ERROR: " + msg;
             }
             return false;
         };
@@ -37,11 +38,11 @@
                 if (!window.appStarted) {
                     var text = document.getElementById('loader-text');
                     if (text) {
-                        text.style.color = '#ef4444';
-                        text.innerHTML = "TIMEOUT: SCRIPT FAILED TO MOUNT.<br><span style='font-size:8px; opacity:0.6'>Ensure tablet date/time is correct and network is stable.</span>";
+                        text.style.color = '#f59e0b';
+                        text.innerHTML = "SLOW BOOT DETECTED...<br><span style='font-size:8px; opacity:0.6'>Older hardware detected. Please wait.</span>";
                     }
                 }
-            }, 10000);
+            }, 8000);
         };
       })();
     </script>
@@ -93,32 +94,32 @@
 
     <div id="root"></div>
 
-    <!-- 
-      Note: Chrome 37 fails on type="module". 
-      In a real Vite build, plugin-legacy handles this replacement.
-    -->
     <script type="module" src="/index.tsx"></script>
 
     <script>
-        // Emergency Driver Check
+        // Relaxed Driver Check for Legacy Engines
         setTimeout(function() {
             var requirements = {
                 'Promise': typeof Promise !== 'undefined',
-                'Fetch': typeof fetch !== 'undefined',
-                'Map': typeof Map !== 'undefined'
+                'Map': typeof Map !== 'undefined',
+                'Set': typeof Set !== 'undefined'
             };
             var missing = [];
             for (var key in requirements) {
                 if (!requirements[key]) { missing.push(key); }
             }
             if (missing.length > 0) {
-                var loader = document.getElementById('system-loader');
-                if (loader) loader.style.display = 'none';
-                document.getElementById('root').innerHTML = '<div style="padding:40px; color:#ef4444; background:#0f172a; height:100vh; font-family:sans-serif;">' +
-                    '<h1 style="font-weight:900;">DRIVER ERROR</h1>' +
-                    '<p style="color:white;">Missing legacy drivers: ' + missing.join(', ') + '</p><p style="color:#64748b; font-size:12px;">This tablet requires a modern WebView update.</p></div>';
+                // If the app hasn't started yet and we are missing essentials
+                if (!window.appStarted) {
+                    var loader = document.getElementById('system-loader');
+                    if (loader) loader.style.display = 'none';
+                    document.getElementById('root').innerHTML = '<div style="padding:40px; color:#ef4444; background:#0f172a; height:100vh; font-family:sans-serif;">' +
+                        '<h1 style="font-weight:900; font-size:24px;">HARDWARE INCOMPATIBLE</h1>' +
+                        '<p style="color:white; margin-top:10px;">This device is missing internal drivers: <b>' + missing.join(', ') + '</b></p>' +
+                        '<p style="color:#64748b; font-size:12px; margin-top:20px;">The Android 5.0 WebView is too old to support modern apps without manual driver injection.</p></div>';
+                }
             }
-        }, 1000);
+        }, 5000);
     </script>
   </body>
 </html>

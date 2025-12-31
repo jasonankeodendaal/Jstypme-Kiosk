@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     legacy({
-      targets: ['chrome >= 37'],
+      targets: ['chrome >= 37', 'android >= 5'],
       additionalLegacyPolyfills: [
         'regenerator-runtime/runtime',
         'core-js/stable/promise',
@@ -15,7 +15,8 @@ export default defineConfig({
         'core-js/stable/map',
         'core-js/stable/set',
         'core-js/stable/object/assign',
-        'core-js/stable/symbol'
+        'core-js/stable/symbol',
+        'core-js/stable/string/starts-with'
       ],
       renderLegacyChunks: true,
       modernPolyfills: true,
@@ -27,9 +28,12 @@ export default defineConfig({
     cssTarget: 'chrome37',
     minify: 'terser',
     terserOptions: {
+      ecma: 5,
+      safari10: true,
       compress: {
         keep_fnames: true,
         keep_classnames: true,
+        drop_console: false,
       },
       mangle: {
         keep_fnames: true,
@@ -37,7 +41,6 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Force non-module format for legacy compatibility
         format: 'iife',
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -50,7 +53,6 @@ export default defineConfig({
     'global': 'window'
   },
   server: {
-    // Force esbuild to transpile everything to ES5 during dev for testing on old tablets
     host: true
   }
 });

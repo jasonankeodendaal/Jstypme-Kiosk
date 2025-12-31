@@ -1,7 +1,6 @@
 
 /**
  * CRITICAL: Polyfills MUST be imported first.
- * These handle ES6+ features on Chrome 37.
  */
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
@@ -9,6 +8,11 @@ import 'regenerator-runtime/runtime';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+
+// Explicitly patch Map/Set if they exist but aren't global (happens in some WebViews)
+if (typeof (window as any).Map === 'undefined') {
+    console.error("Critical: Map polyfill failed to attach to window.");
+}
 
 // Signal to index.html watchdog that we have arrived
 (window as any).appStarted = true;
@@ -23,11 +27,9 @@ var hideLoader = function() {
 };
 
 if (rootElement) {
-    // Hide the loader as soon as JS execution reaches this point
     hideLoader();
 
     try {
-        // Use createRoot (React 18+) with polyfilled Map/Set
         var root = ReactDOM.createRoot(rootElement);
         root.render(
             <React.StrictMode>
@@ -42,12 +44,12 @@ if (rootElement) {
 
         rootElement.innerHTML = [
             '<div style="padding:40px; color:white; background:#7f1d1d; height:100vh; font-family: monospace; overflow: auto;">',
-                '<h1 style="font-weight:900; font-size: 24px;">INITIALIZATION CRASH</h1>',
+                '<h1 style="font-weight:900; font-size: 24px;">KERNEL INITIALIZATION CRASH</h1>',
                 '<div style="margin-top:20px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 8px;">',
-                    '<p style="color: #fca5a5; font-weight: bold; margin-bottom: 10px;">The React engine failed to boot:</p>',
+                    '<p style="color: #fca5a5; font-weight: bold; margin-bottom: 10px;">React failed to boot on this engine:</p>',
                     '<pre style="font-size:11px; color:#fecaca; white-space: pre-wrap; word-break: break-all;">' + errStack + '</pre>',
                 '</div>',
-                '<p style="margin-top:20px; font-size:12px; opacity:0.6;">Tip: Ensure the tablet system WebView is updated to at least v37.</p>',
+                '<p style="margin-top:20px; font-size:12px; opacity:0.6;">Check for missing polyfills or syntax errors in legacy chunks.</p>',
             '</div>'
         ].join('');
     }
