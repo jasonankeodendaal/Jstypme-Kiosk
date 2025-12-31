@@ -4,7 +4,7 @@ import { KioskApp } from './components/KioskApp';
 import { AdminDashboard } from './components/AdminDashboard';
 import AboutPage from './components/AboutPage';
 import { generateStoreData, saveStoreData } from './services/geminiService';
-import { initSupabase, supabase, getKioskId, runPoliteTask } from './services/kioskService';
+import { initSupabase, supabase, getKioskId } from './services/kioskService';
 import { StoreData } from './types';
 import { Loader2 } from 'lucide-react';
 
@@ -50,6 +50,7 @@ export default function App() {
       try {
         const data = await generateStoreData();
         if (data) {
+           // Create a new reference to force React state update
            setStoreData({ ...data });
            setLastSyncTime(new Date().toLocaleTimeString());
         }
@@ -65,30 +66,33 @@ export default function App() {
     initSupabase();
     fetchData();
 
-    // 1. Routine Sync - Polite pull
+    // 1. Routine Sync (Pulsing) - Pulls every 60s
     const interval = setInterval(() => {
-        runPoliteTask(() => fetchData(true));
+        fetchData(true);
     }, 60000); 
 
-    // 2. Realtime Push
+    // 2. Realtime Push (Realtime) - Immediate response to Cloud changes
     if (supabase) {
         const channel = supabase
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
+              console.log("Realtime: Config change detected. Refreshing state...");
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-              syncTimeoutRef.current = window.setTimeout(() => runPoliteTask(() => fetchData(true)), 200);
+              syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 200);
             }
           )
           .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
             (payload: any) => {
+              // Only trigger if it affects this device or if we are in admin mode
               const isAdminView = window.location.pathname.startsWith('/admin');
               const isMyUpdate = payload.new && payload.new.id === kioskId;
               const isMyDelete = payload.old && payload.old.id === kioskId;
               
               if (isAdminView || isMyUpdate || isMyDelete) {
+                  console.log("Realtime: Fleet change detected.");
                   if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-                  syncTimeoutRef.current = window.setTimeout(() => runPoliteTask(() => fetchData(true)), 200);
+                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 200);
               }
             }
           )

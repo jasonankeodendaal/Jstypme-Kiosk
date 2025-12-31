@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -10,9 +9,11 @@ import { resetStoreData } from '../services/geminiService';
 import { uploadFileToStorage, supabase, checkCloudConnection } from '../services/kioskService';
 import SetupGuide from './SetupGuide';
 import JSZip from 'jszip';
+import * as XLSX from 'xlsx';
 
 const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
 
+// Visual Component for Signal Bars
 const SignalStrengthBars = ({ strength }: { strength: number }) => {
     return (
         <div className="flex items-end gap-0.5 h-3">
@@ -30,6 +31,7 @@ const SignalStrengthBars = ({ strength }: { strength: number }) => {
     );
 };
 
+// Custom R Icon for Pricelists
 const RIcon = (props: any) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 5v14" />
@@ -38,6 +40,7 @@ const RIcon = (props: any) => (
   </svg>
 );
 
+// --- SYSTEM DOCUMENTATION COMPONENT (ENHANCED FOR BEGINNERS) ---
 const SystemDocumentation = () => {
     const [activeSection, setActiveSection] = useState('architecture');
     
@@ -67,6 +70,7 @@ const SystemDocumentation = () => {
                 .bounce-x { animation: bounce-x 2s ease-in-out infinite; }
             `}</style>
 
+            {/* Enhanced Sidebar */}
             <div className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
                 <div className="mb-10">
                     <div className="flex items-center gap-2 mb-3">
@@ -89,6 +93,7 @@ const SystemDocumentation = () => {
                             }`}
                         >
                             <div className={`p-2 rounded-xl transition-all duration-500 ${activeSection === section.id ? 'bg-white/20' : 'bg-slate-800'}`}>
+                                {/* Fix: Cast to any to allow size prop override in cloneElement */}
                                 {React.cloneElement(section.icon as React.ReactElement<any>, { size: 18 })}
                             </div>
                             <div className="min-w-0">
@@ -107,7 +112,9 @@ const SystemDocumentation = () => {
                 </div>
             </div>
             
+            {/* Dynamic Content Area */}
             <div className="flex-1 overflow-y-auto bg-white relative p-6 md:p-12 lg:p-20 scroll-smooth">
+                {/* Visual Background Elements */}
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 blur-[150px] pointer-events-none rounded-full"></div>
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/5 blur-[150px] pointer-events-none rounded-full"></div>
 
@@ -119,10 +126,12 @@ const SystemDocumentation = () => {
                             <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The Kiosk is designed to work <strong>offline</strong> first. It doesn't need internet to show products—it only needs it to "sync up" with your latest changes.</p>
                         </div>
 
+                        {/* Interactive Data Flow Illustration */}
                         <div className="relative p-12 bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden min-h-[450px] flex flex-col items-center justify-center">
                             <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
                             
                             <div className="relative w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-12">
+                                {/* Component: Admin PC */}
                                 <div className="flex flex-col items-center gap-4 group">
                                     <div className="w-24 h-24 bg-white/5 border-2 border-blue-500/30 rounded-[2rem] flex items-center justify-center relative transition-all duration-500 group-hover:border-blue-500 group-hover:scale-110">
                                         <Monitor className="text-blue-400" size={40} />
@@ -134,9 +143,11 @@ const SystemDocumentation = () => {
                                     </div>
                                 </div>
 
+                                {/* The Central Logic Pipe */}
                                 <div className="flex-1 w-full h-24 relative flex items-center justify-center">
                                     <div className="w-full h-1 bg-white/5 rounded-full relative">
                                         <div className="absolute inset-0 bg-blue-500/20 blur-md"></div>
+                                        {/* Animated Data Packets */}
                                         {[0, 1, 2].map(i => (
                                             <div key={i} className="data-flow absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,1)]" style={{ animationDelay: `${i * 1}s` }}></div>
                                         ))}
@@ -144,6 +155,7 @@ const SystemDocumentation = () => {
                                     <div className="absolute -bottom-8 bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-xl text-[9px] font-black text-blue-400 uppercase tracking-widest">Encrypted Cloud Tunnel</div>
                                 </div>
 
+                                {/* Component: Kiosk Tablet */}
                                 <div className="flex flex-col items-center gap-4 group">
                                     <div className="w-32 h-20 bg-slate-800 rounded-2xl border-2 border-green-500/30 flex items-center justify-center relative shadow-2xl transition-all duration-500 group-hover:border-green-500 group-hover:rotate-1">
                                         <Tablet className="text-green-400" size={32} />
@@ -157,6 +169,7 @@ const SystemDocumentation = () => {
                             </div>
                         </div>
 
+                        {/* Beginner Explanation Blocks */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-6">
                                 <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
@@ -194,9 +207,11 @@ const SystemDocumentation = () => {
                             <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">How we turn a massive list of products into a lightning-fast searchable menu for customers.</p>
                         </div>
 
+                        {/* Animated "Sifter" Illustration */}
                         <div className="bg-slate-50 border border-slate-200 rounded-[3rem] p-12 relative overflow-hidden flex flex-col md:flex-row items-center gap-12">
                             <div className="absolute top-0 right-0 p-12 text-slate-200/50"><Layers size={200} /></div>
                             
+                            {/* Input Side: Mixed Data */}
                             <div className="w-full md:w-64 space-y-4 z-10">
                                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-200 pb-2">Mixed Raw Data</div>
                                 <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 animate-bounce" style={{ animationDuration: '3s' }}>
@@ -213,14 +228,17 @@ const SystemDocumentation = () => {
                                 </div>
                             </div>
 
+                            {/* Processing Logic: The Funnel */}
                             <div className="flex flex-col items-center justify-center relative">
                                 <div className="w-24 h-24 bg-orange-500 rounded-full flex items-center justify-center text-white shadow-2xl z-20 animate-pulse">
                                     <RefreshCw size={40} className="animate-spin" style={{ animationDuration: '8s' }} />
                                 </div>
                                 <div className="mt-4 text-[10px] font-black text-orange-600 uppercase tracking-widest">Logic: Flatten()</div>
+                                {/* Particles */}
                                 <div className="absolute top-0 left-1/2 w-1 h-1 bg-orange-400 rounded-full animate-ping"></div>
                             </div>
 
+                            {/* Output Side: Searchable List */}
                             <div className="flex-1 w-full max-w-sm bg-slate-900 rounded-[2.5rem] p-8 shadow-2xl relative group overflow-hidden">
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50 scanline"></div>
                                 <div className="flex items-center gap-3 mb-6 bg-white/5 p-3 rounded-xl border border-white/5 search-pulse">
@@ -279,6 +297,7 @@ const SystemDocumentation = () => {
                             <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Our system takes messy spreadsheets and turns them into high-end, printable PDF documents automatically.</p>
                         </div>
 
+                        {/* Interactive Ingestion Illustration */}
                         <div className="bg-slate-900 rounded-[4rem] p-12 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center gap-20 min-h-[400px]">
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
                             
@@ -314,6 +333,7 @@ const SystemDocumentation = () => {
                                 </div>
                             </div>
 
+                            {/* Conveyor Belt Effect */}
                             <div className="shrink-0 w-full md:w-72 flex flex-col items-center gap-8">
                                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden relative">
                                     <div className="absolute h-full w-20 bg-blue-50 conveyor-belt"></div>
@@ -365,11 +385,13 @@ const SystemDocumentation = () => {
                             <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Not just a slideshow—a weighted marketing engine that prioritizes what matters.</p>
                         </div>
 
+                        {/* Weighted Shuffling Illustration */}
                         <div className="bg-white border border-slate-200 rounded-[3rem] p-12 md:p-20 shadow-xl relative overflow-hidden flex flex-col items-center">
                             <div className="absolute top-0 right-0 p-8 opacity-5"><Zap size={250}/></div>
                             <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-12">Smart Playlist Assembly</div>
 
                             <div className="relative w-full max-w-2xl flex flex-col gap-4">
+                                 {/* The "Priority" Zone */}
                                  <div className="p-5 bg-blue-600 rounded-3xl flex items-center justify-between text-white shadow-2xl relative overflow-hidden group hover:scale-105 transition-transform">
                                       <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-1000"></div>
                                       <div className="flex items-center gap-4">
@@ -382,6 +404,7 @@ const SystemDocumentation = () => {
                                       <div className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20">3.0x Weight</div>
                                  </div>
 
+                                 {/* Standard Zone */}
                                  <div className="p-5 bg-slate-100 rounded-3xl flex items-center justify-between text-slate-400 border border-slate-200 opacity-60">
                                       <div className="flex items-center gap-4">
                                           <div className="w-12 h-12 bg-slate-200 rounded-2xl flex items-center justify-center"><Box size={24}/></div>
@@ -393,6 +416,7 @@ const SystemDocumentation = () => {
                                       <div className="bg-slate-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-300">1.0x Weight</div>
                                  </div>
 
+                                 {/* New Zone */}
                                  <div className="p-5 bg-orange-50 rounded-3xl flex items-center justify-between text-orange-900/50 border border-orange-200 opacity-80 translate-x-8">
                                       <div className="flex items-center gap-4">
                                           <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center"><Sparkles size={24} className="text-orange-500" /></div>
@@ -433,10 +457,12 @@ const SystemDocumentation = () => {
                             <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Real-time status tracking for every tablet in your network, no matter where they are located.</p>
                         </div>
 
+                        {/* Animated Fleet Monitoring Illustration */}
                         <div className="bg-slate-950 rounded-[4rem] p-12 md:p-24 shadow-2xl relative overflow-hidden flex flex-col items-center">
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
                             
                             <div className="relative w-full h-full flex flex-col items-center gap-12">
+                                {/* The Dashboard Hub */}
                                 <div className="w-24 h-24 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl relative z-20">
                                     <Globe size={40} className="animate-spin-slow" />
                                     <div className="pulse-ring absolute inset-0 rounded-[2.5rem] border-4 border-blue-500"></div>
@@ -458,6 +484,7 @@ const SystemDocumentation = () => {
                                                 <div className="text-white font-black text-xs uppercase">{dev.label}</div>
                                                 <div className="text-slate-500 text-[9px] font-bold uppercase mt-1">{dev.signal} Signal • {dev.status}</div>
                                             </div>
+                                            {/* Incoming Ping line */}
                                             <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-0.5 h-12 bg-gradient-to-t from-blue-500 to-transparent opacity-20"></div>
                                         </div>
                                     ))}
@@ -495,9 +522,11 @@ const SystemDocumentation = () => {
                             <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Engineered for large-format displays where interaction isn't possible, but visual fidelity is mandatory.</p>
                         </div>
 
+                        {/* TV Reel Illustration */}
                         <div className="bg-slate-200 rounded-[4rem] p-12 shadow-inner border-4 border-slate-300 relative overflow-hidden flex flex-col items-center">
                             <div className="bg-black aspect-video w-full max-w-3xl rounded-[2rem] border-[12px] border-slate-900 shadow-2xl overflow-hidden relative">
                                 <div className="absolute inset-0 bg-slate-900">
+                                     {/* Mock Film Strip Animation */}
                                      <div className="h-full w-[200%] flex animate-conveyor" style={{ animationDuration: '4s' }}>
                                          {[1,2,3,4,5,6].map(i => (
                                              <div key={i} className="h-full w-1/6 border-r-4 border-black/40 flex items-center justify-center p-8">
@@ -508,6 +537,7 @@ const SystemDocumentation = () => {
                                          ))}
                                      </div>
                                 </div>
+                                {/* Player Overlay */}
                                 <div className="absolute inset-0 p-8 flex flex-col justify-between pointer-events-none">
                                      <div className="flex justify-between items-start">
                                          <div className="bg-blue-600 px-4 py-2 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-xl">LIVE: TV CHANNEL</div>
@@ -555,12 +585,14 @@ const SystemDocumentation = () => {
                     </div>
                 )}
 
+                {/* Bottom Spacer */}
                 <div className="h-40"></div>
             </div>
         </div>
     );
 };
 
+// Updated Auth Component with Name/PIN and Admin validation
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
@@ -625,6 +657,7 @@ const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminU
   );
 };
 
+// Updated FileUpload to always return Base64 for local processing if needed
 const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <ImageIcon />, allowMultiple = false }: any) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -645,6 +678,7 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
       };
 
       const uploadSingle = async (file: File) => {
+           // Always get local base64 first (useful for PDF conversion locally)
            const localBase64 = await readFileAsBase64(file);
            
            try {
@@ -665,6 +699,7 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
                   base64s.push(res.base64);
                   setUploadProgress(((i+1)/files.length)*100);
               }
+              // Pass back both URL list and Base64 list (last arg)
               onUpload(results, fileType, base64s);
           } else {
               const res = await uploadSingle(files[0]);
@@ -818,20 +853,31 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
 
   const handlePriceBlur = (id: string, field: 'normalPrice' | 'promoPrice', value: string) => {
     if (!value) return;
+    
+    // Extract numbers and dot for decimals
     const numericPart = value.replace(/[^0-9.]/g, '');
     if (!numericPart) {
+        // If not a number but has text, just prepend R if needed
         if (value && !value.startsWith('R ')) {
             updateItem(id, field, `R ${value}`);
         }
         return;
     }
+
     let num = parseFloat(numericPart);
+    
+    // NEW DUAL TRIGGER LOGIC
+    // 1. Round up decimals
     if (num % 1 !== 0) {
         num = Math.ceil(num);
     }
+    
+    // 2. Round up if ends in digit 9 (e.g. 799 -> 800, 49 -> 50)
     if (Math.floor(num) % 10 === 9) {
         num += 1;
     }
+    
+    // Format back with R and grouping
     const formatted = `R ${num.toLocaleString()}`;
     updateItem(id, field, formatted);
   };
@@ -846,13 +892,12 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
 
     setIsImporting(true);
     try {
-        // DYNAMIC LIBRARY LOADING: Load heavy parser only when needed
-        const XLSX = await import('xlsx');
-        
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert to 2D array for easy mapping
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
         if (jsonData.length === 0) {
@@ -860,6 +905,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             return;
         }
 
+        // Filter out completely empty rows
         const validRows = jsonData.filter(row => 
             row && row.length > 0 && row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '')
         );
@@ -869,6 +915,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             return;
         }
 
+        // --- ENHANCED HEADER DETECTION ---
         const firstRow = validRows[0].map(c => String(c || '').toLowerCase().trim());
         const findIdx = (keywords: string[]) => firstRow.findIndex(h => keywords.some(k => h.includes(k)));
 
@@ -877,9 +924,12 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
         const normalIdx = findIdx(['normal', 'retail', 'price', 'standard', 'cost']);
         const promoIdx = findIdx(['promo', 'special', 'sale', 'discount', 'deal']);
 
+        // Heuristic to check if first row is actually a header row
         const hasHeader = skuIdx !== -1 || descIdx !== -1 || normalIdx !== -1;
+        
         const dataRows = hasHeader ? validRows.slice(1) : validRows;
         
+        // Default indices if headers not found
         const sIdx = skuIdx !== -1 ? skuIdx : 0;
         const dIdx = descIdx !== -1 ? descIdx : 1;
         const nIdx = normalIdx !== -1 ? normalIdx : 2;
@@ -891,8 +941,11 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
                 const numeric = String(val).replace(/[^0-9.]/g, '');
                 if (!numeric) return String(val);
                 let n = parseFloat(numeric);
+                
+                // APPLY DUAL TRIGGER LOGIC DURING IMPORT
                 if (n % 1 !== 0) n = Math.ceil(n);
                 if (Math.floor(n) % 10 === 9) n += 1;
+                
                 return `R ${n.toLocaleString()}`;
             };
 
@@ -910,12 +963,14 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             const userChoice = confirm(`Parsed ${newImportedItems.length} items.\n\nOK -> UPDATE existing SKUs and ADD new ones (Merge).\nCANCEL -> REPLACE entire current list.`);
             
             if (userChoice) {
+                // MERGE Logic
                 const merged = [...items];
                 const onlyNew: PricelistItem[] = [];
 
                 newImportedItems.forEach(newItem => {
                     const existingIdx = merged.findIndex(curr => curr.sku && newItem.sku && curr.sku.trim().toUpperCase() === newItem.sku.trim().toUpperCase());
                     if (existingIdx > -1) {
+                        // Update existing entry with new prices (and description if provided)
                         merged[existingIdx] = {
                             ...merged[existingIdx],
                             description: newItem.description || merged[existingIdx].description,
@@ -929,18 +984,19 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
                 setItems([...merged, ...onlyNew]);
                 alert(`Merge Complete: Updated existing SKUs and added ${onlyNew.length} new items.`);
             } else {
+                // REPLACE Logic
                 setItems(newImportedItems);
                 alert("Pricelist replaced with imported data.");
             }
         } else {
-            alert("Could not extract any valid items.");
+            alert("Could not extract any valid items. Ensure the sheet follows the format: SKU, Description, Normal Price, Promo Price.");
         }
     } catch (err) {
         console.error("Spreadsheet Import Error:", err);
-        alert("Error parsing file.");
+        alert("Error parsing file. Ensure it is a valid .xlsx or .csv file.");
     } finally {
         setIsImporting(false);
-        e.target.value = '';
+        e.target.value = ''; // Reset input for re-upload if needed
     }
   };
 
@@ -1068,6 +1124,7 @@ const PricelistManager = ({
     onSaveBrands: (b: PricelistBrand[]) => void,
     onDeletePricelist: (id: string) => void
 }) => {
+    // Sort Brands Alphabetically for Display
     const sortedBrands = useMemo(() => {
         return [...pricelistBrands].sort((a, b) => a.name.localeCompare(b.name));
     }, [pricelistBrands]);
@@ -1075,6 +1132,7 @@ const PricelistManager = ({
     const [selectedBrand, setSelectedBrand] = useState<PricelistBrand | null>(sortedBrands.length > 0 ? sortedBrands[0] : null);
     const [editingManualList, setEditingManualList] = useState<Pricelist | null>(null);
 
+    // Track the ID of the brand that was globally updated last
     const latestBrandId = useMemo(() => {
         if (!pricelists.length) return null;
         const sortedByDate = [...pricelists].sort((a, b) => {
@@ -1098,6 +1156,7 @@ const PricelistManager = ({
     const sortedLists = [...filteredLists].sort((a, b) => {
         const yearA = parseInt(a.year) || 0;
         const yearB = parseInt(b.year) || 0;
+        // Date Descending (Closest date first)
         if (yearA !== yearB) return yearB - yearA;
         return months.indexOf(b.month) - months.indexOf(a.month);
     });
@@ -1135,10 +1194,10 @@ const PricelistManager = ({
             brandId: selectedBrand.id,
             title: 'New Pricelist',
             url: '',
-            type: 'pdf', 
+            type: 'pdf', // Default to PDF
             month: 'January',
             year: new Date().getFullYear().toString(),
-            dateAdded: new Date().toISOString()
+            dateAdded: new Date().toISOString() // Set dateAdded to now for "New" flag
         };
         onSavePricelists([...pricelists, newItem]);
     };
@@ -1157,12 +1216,13 @@ const PricelistManager = ({
         if (!dateStr) return false;
         const date = new Date(dateStr);
         const now = new Date();
-        const diffMs = Math.abs(now.getTime() - date.getTime());
-        return Math.ceil(diffMs / (1000 * 60 * 60 * 24)) <= 30;
+        const diff = Math.abs(now.getTime() - date.getTime());
+        return Math.ceil(diff / (1000 * 60 * 60 * 24)) <= 30;
     };
 
     return (
         <div className="max-w-7xl mx-auto animate-fade-in flex flex-col md:flex-row gap-4 md:gap-6 h-[calc(100dvh-130px)] md:h-[calc(100vh-140px)]">
+             {/* Left Sidebar: Brands List */}
              <div className="w-full md:w-1/3 h-[35%] md:h-full flex flex-col bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden shrink-0">
                  <div className="p-3 md:p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
                      <div>
@@ -1226,9 +1286,15 @@ const PricelistManager = ({
                              )}
                          </div>
                      );})}
+                     {sortedBrands.length === 0 && (
+                         <div className="p-8 text-center text-slate-400 text-xs italic">
+                             No brands. Click "Add" to start.
+                         </div>
+                     )}
                  </div>
              </div>
              
+             {/* Right Content: Pricelist Grid */}
              <div className="flex-1 h-[65%] md:h-full bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col shadow-inner min-h-0">
                  <div className="flex justify-between items-center mb-4 shrink-0">
                      <div className="flex items-center gap-3 truncate mr-2">
@@ -1340,6 +1406,11 @@ const PricelistManager = ({
                              </button>
                          </div>
                      )})}
+                     {sortedLists.length === 0 && selectedBrand && (
+                         <div className="col-span-full py-8 md:py-12 text-center text-slate-400 text-xs italic border-2 border-dashed border-slate-200 rounded-xl">
+                             No pricelists found for this brand.
+                         </div>
+                     )}
                  </div>
              </div>
 
@@ -1569,6 +1640,11 @@ const ProductEditor = ({ product, onSave, onCancel }: { product: Product, onSave
                                         </div>
                                     </div>
                                 ))}
+                                {(draft.manuals || []).length === 0 && (
+                                    <div className="text-center text-slate-400 text-xs italic py-4 border-2 border-dashed border-slate-200 rounded-xl">
+                                        No manuals added. Click "Add Manual" above.
+                                    </div>
+                                )}
                              </div>
                         </div>
 
@@ -1631,6 +1707,7 @@ const KioskEditorModal = ({ kiosk, onSave, onClose }: { kiosk: KioskRegistry, on
     );
 };
 
+// --- MOVE PRODUCT MODAL COMPONENT ---
 const MoveProductModal = ({ product, allBrands, currentBrandId, currentCategoryId, onClose, onMove }: { product: Product, allBrands: Brand[], currentBrandId: string, currentCategoryId: string, onClose: () => void, onMove: (p: Product, b: string, c: string) => void }) => {
     const [targetBrandId, setTargetBrandId] = useState(currentBrandId);
     const [targetCategoryId, setTargetCategoryId] = useState(currentCategoryId);
@@ -1638,6 +1715,7 @@ const MoveProductModal = ({ product, allBrands, currentBrandId, currentCategoryI
     const targetBrand = allBrands.find(b => b.id === targetBrandId);
     const targetCategories = targetBrand?.categories || [];
 
+    // Reset target category if brand changes and current cat not in new brand
     useEffect(() => {
         if (targetBrand && !targetBrand.categories.find(c => c.id === targetCategoryId)) {
             if (targetBrand.categories.length > 0) {
@@ -1682,6 +1760,13 @@ const MoveProductModal = ({ product, allBrands, currentBrandId, currentCategoryI
                                 {targetCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
+                    </div>
+
+                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex items-start gap-3">
+                         <Info size={16} className="text-orange-500 shrink-0 mt-0.5" />
+                         <p className="text-[10px] text-orange-700 leading-relaxed font-bold uppercase">
+                             Moving this product will transfer all specifications and media to the selected category.
+                         </p>
                     </div>
                 </div>
                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
@@ -1737,6 +1822,40 @@ const TVModelEditor = ({ model, onSave, onClose }: { model: TVModel, onSave: (m:
                                 setDraft(prev => ({ ...prev, videoUrls: [...prev.videoUrls, ...newUrls] }));
                             }} 
                         />
+                        
+                        <div className="grid grid-cols-1 gap-3 mt-4">
+                            {draft.videoUrls.map((url, idx) => (
+                                <div key={idx} className="flex items-center gap-4 bg-white p-3 rounded-lg border border-slate-200 group">
+                                    <div className="w-16 h-10 bg-slate-900 rounded flex items-center justify-center shrink-0">
+                                        <Video size={16} className="text-white opacity-50" />
+                                    </div>
+                                    <div className="flex-1 overflow-hidden">
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">Video {idx + 1}</div>
+                                        <div className="text-xs font-mono truncate text-slate-700">{url.split('/').pop()}</div>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        {idx > 0 && <button onClick={() => {
+                                            const newUrls = [...draft.videoUrls];
+                                            [newUrls[idx], newUrls[idx-1]] = [newUrls[idx-1], newUrls[idx]];
+                                            setDraft({ ...draft, videoUrls: newUrls });
+                                        }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"><ChevronDown size={14} className="rotate-180"/></button>}
+                                        
+                                        {idx < draft.videoUrls.length - 1 && <button onClick={() => {
+                                            const newUrls = [...draft.videoUrls];
+                                            [newUrls[idx], newUrls[idx+1]] = [newUrls[idx+1], newUrls[idx]];
+                                            setDraft({ ...draft, videoUrls: newUrls });
+                                        }} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"><ChevronDown size={14} /></button>}
+                                        
+                                        <button onClick={() => {
+                                            setDraft({ ...draft, videoUrls: draft.videoUrls.filter((_, i) => i !== idx) });
+                                        }} className="p-1.5 bg-red-50 border border-red-100 text-red-500 hover:bg-red-100 rounded ml-2"><Trash2 size={14} /></button>
+                                    </div>
+                                </div>
+                            ))}
+                            {draft.videoUrls.length === 0 && (
+                                <div className="text-center py-6 text-slate-400 text-xs italic">No videos uploaded for this model yet.</div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -1814,7 +1933,9 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
 
     const handleAddOrUpdate = () => {
         if (!newName || !newPin) return alert("Name and PIN required");
+        
         let updatedList = [...admins];
+
         if (editingId) {
             updatedList = updatedList.map(a => a.id === editingId ? { ...a, name: newName, pin: newPin, permissions: newPermissions } : a);
         } else {
@@ -1826,6 +1947,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
                 permissions: newPermissions
             });
         }
+        
         onUpdate(updatedList);
         resetForm();
     };
@@ -1854,6 +1976,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {/* Form Column */}
                 <div className="xl:col-span-2 bg-slate-50 p-6 rounded-xl border border-slate-200">
                     <div className="flex justify-between items-center mb-6">
                          <h4 className="font-bold text-slate-900 uppercase text-xs flex items-center gap-2">
@@ -1917,6 +2040,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
                     </div>
                 </div>
 
+                {/* List Column */}
                 <div className="space-y-4">
                     <h4 className="font-bold text-slate-900 uppercase text-xs mb-2">Active Admins ({admins.length})</h4>
                     <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 pb-20">
@@ -1959,6 +2083,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
     );
 };
 
+// --- ZIP HELPER FUNCTIONS ---
 const importZip = async (file: File, onProgress?: (msg: string) => void): Promise<Brand[]> => {
     const zip = new JSZip();
     let loadedZip;
@@ -1969,8 +2094,11 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
     }
     
     const newBrands: Record<string, Brand> = {};
+    
+    // Helper: Normalize path to avoid Windows/Mac slash issues
     const getCleanPath = (filename: string) => filename.replace(/\\/g, '/');
 
+    // 1. Detect Root Wrapper (e.g. user zipped a folder "Backup" containing Brands)
     const validFiles = Object.keys(loadedZip.files).filter(path => {
         return !loadedZip.files[path].dir && !path.includes('__MACOSX') && !path.includes('.DS_Store');
     });
@@ -1983,10 +2111,12 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
             const allHaveRoot = validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'));
             if (allHaveRoot) {
                 rootPrefix = possibleRoot + '/';
+                console.log("Import: Stripping root folder:", rootPrefix);
             }
         }
     }
 
+    // Helper: Determine MIME type
     const getMimeType = (filename: string) => {
         const ext = filename.split('.').pop()?.toLowerCase();
         if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
@@ -1999,19 +2129,27 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
         return 'application/octet-stream';
     };
 
+    // Helper: Process Asset (Upload to Cloud if available to save JSON size)
     const processAsset = async (zipObj: any, filename: string): Promise<string> => {
         const blob = await zipObj.async("blob");
+        
+        // Try Cloud Upload First (To keep JSON small)
         if (supabase) {
              try {
                  const mimeType = getMimeType(filename);
+                 // Sanitize filename
                  const safeName = filename.replace(/[^a-z0-9._-]/gi, '_');
+                 // Create File object
                  const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType });
+                 // Upload sequentially (this function is called inside sequential loop)
                  const url = await uploadFileToStorage(fileToUpload);
                  return url;
              } catch (e) {
-                 console.warn(`Asset upload failed. Fallback to Base64.`);
+                 console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e);
              }
         }
+
+        // Fallback Base64 (Only if offline or upload failed)
         return new Promise(resolve => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
@@ -2019,6 +2157,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
         });
     };
 
+    // Iterate files
     const filePaths = Object.keys(loadedZip.files);
     let processedCount = 0;
     
@@ -2027,19 +2166,28 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
         const fileObj = loadedZip.files[rawPath];
         if (fileObj.dir) continue;
         if (path.includes('__MACOSX') || path.includes('.DS_Store')) continue;
+
+        // Remove Root Prefix if detected
         if (rootPrefix && path.startsWith(rootPrefix)) {
             path = path.substring(rootPrefix.length);
         }
+
+        // SKIP SYSTEM BACKUP FOLDERS in Inventory Import
         if (path.startsWith('_System_Backup/')) continue;
         if (path.includes('store_config')) continue;
 
+        // Path: Brand/Category/Product/File.ext OR Brand/BrandFile.ext
         const parts = path.split('/').filter(p => p.trim() !== '');
+        
+        // Skip root files if any (files not inside a Brand folder)
         if (parts.length < 2) continue;
 
         processedCount++;
         if (onProgress && processedCount % 5 === 0) onProgress(`Processing item ${processedCount}/${validFiles.length}...`);
 
         const brandName = parts[0];
+
+        // Init Brand
         if (!newBrands[brandName]) {
             newBrands[brandName] = {
                 id: generateId('brand'),
@@ -2047,26 +2195,36 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                 categories: []
             };
         }
+
+        // Handle Brand Assets (Level 2: Brand/brand_logo.png)
         if (parts.length === 2) {
              const fileName = parts[1].toLowerCase();
+             // Parse brand logo
              if (fileName.includes('brand_logo') || fileName.includes('logo')) {
                   const url = await processAsset(fileObj, parts[1]);
                   newBrands[brandName].logoUrl = url;
              }
+             // Parse Brand JSON metadata if exists
              if (fileName.endsWith('.json') && fileName.includes('brand')) {
                  try {
                      const text = await fileObj.async("text");
                      const meta = JSON.parse(text);
                      if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor;
+                     // Allow ID overwrite if restoring backup
                      if (meta.id) newBrands[brandName].id = meta.id; 
                  } catch(e) {}
              }
              continue;
         }
+
+        // Require Product Depth for rest (Brand/Category/Product/File)
         if (parts.length < 4) continue;
+
         const categoryName = parts[1];
         const productName = parts[2];
-        const fileName = parts.slice(3).join('/'); 
+        const fileName = parts.slice(3).join('/'); // In case of subfolders inside product (e.g. gallery)
+
+        // Init Category
         let category = newBrands[brandName].categories.find(c => c.name === categoryName);
         if (!category) {
             category = {
@@ -2077,6 +2235,8 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
             };
             newBrands[brandName].categories.push(category);
         }
+
+        // Init Product
         let product = category.products.find(p => p.name === productName);
         if (!product) {
             product = {
@@ -2094,12 +2254,15 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
             };
             category.products.push(product);
         }
+
         const lowerFile = fileName.toLowerCase();
+        
+        // Handle Details JSON - Deep Merge
         if (fileName.endsWith('.json') && (fileName.includes('details') || fileName.includes('product'))) {
              try {
                  const text = await fileObj.async("text");
                  const meta = JSON.parse(text);
-                 if (meta.id) product.id = meta.id;
+                 if (meta.id) product.id = meta.id; // Restore ID
                  if (meta.name) product.name = meta.name;
                  if (meta.description) product.description = meta.description;
                  if (meta.sku) product.sku = meta.sku;
@@ -2109,8 +2272,9 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                  if (meta.boxContents) product.boxContents = meta.boxContents;
                  if (meta.terms) product.terms = meta.terms;
                  if (meta.dateAdded) product.dateAdded = meta.dateAdded;
-             } catch(e) {}
+             } catch(e) { console.warn("Failed to parse JSON for " + productName); }
         }
+        // Handle Images
         else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
              const url = await processAsset(fileObj, parts.slice(3).join('_'));
              if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
@@ -2119,10 +2283,12 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
                  product.galleryUrls = [...(product.galleryUrls || []), url];
              }
         }
+        // Handle Videos
         else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
             const url = await processAsset(fileObj, parts.slice(3).join('_'));
             product.videoUrls = [...(product.videoUrls || []), url];
         }
+        // Handle Manuals
         else if (lowerFile.endsWith('.pdf')) {
              const url = await processAsset(fileObj, parts.slice(3).join('_'));
              product.manuals?.push({
@@ -2134,19 +2300,29 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
              });
         }
     }
+
     return Object.values(newBrands);
 };
 
+// Fix: Implemented missing downloadZip function
 const downloadZip = async (data: StoreData | null) => {
     if (!data) return;
     const zip = new JSZip();
+    
+    // Add the main store config as JSON
     const dataJson = JSON.stringify(data, null, 2);
     zip.file("store_config.json", dataJson);
+    
+    // Create folder structure for visual backup (Documentation for user)
     const backupFolder = zip.folder("_System_Backup");
     if (backupFolder) {
         backupFolder.file("export_info.txt", `Kiosk Pro Backup\nGenerated: ${new Date().toISOString()}`);
     }
+
+    // Generate the zip file
     const content = await zip.generateAsync({ type: "blob" });
+    
+    // Trigger download
     const url = URL.createObjectURL(content);
     const link = document.createElement("a");
     link.href = url;
@@ -2159,6 +2335,7 @@ const downloadZip = async (data: StoreData | null) => {
 
 export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => void, onRefresh: () => void }) => {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
+  
   const [activeTab, setActiveTab] = useState<string>('inventory');
   const [activeSubTab, setActiveSubTab] = useState<string>('brands'); 
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
@@ -2170,8 +2347,11 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [showGuide, setShowGuide] = useState(false);
   const [selectedTVBrand, setSelectedTVBrand] = useState<TVBrand | null>(null);
   const [editingTVModel, setEditingTVModel] = useState<TVModel | null>(null);
+  
+  // History State
   const [historyTab, setHistoryTab] = useState<'brands' | 'catalogues' | 'deletedItems'>('deletedItems');
   const [historySearch, setHistorySearch] = useState('');
+  
   const [localData, setLocalData] = useState<StoreData | null>(storeData);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [importProcessing, setImportProcessing] = useState(false);
@@ -2187,7 +2367,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       { id: 'fleet', label: 'Fleet', icon: Tablet },
       { id: 'history', label: 'History', icon: History },
       { id: 'settings', label: 'Settings', icon: Settings },
-      { id: 'guide', label: 'System Guide', icon: BookOpen } 
+      { id: 'guide', label: 'System Guide', icon: BookOpen } // New Tab
   ].filter(tab => tab.id === 'guide' || currentUser?.permissions[tab.id as keyof AdminPermissions]);
 
   useEffect(() => {
@@ -2222,6 +2402,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const handleLocalUpdate = (newData: StoreData) => {
       setLocalData(newData);
       setHasUnsavedChanges(true);
+      
       if (selectedBrand) {
           const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id);
           if (updatedBrand) setSelectedBrand(updatedBrand);
@@ -2272,15 +2453,25 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const removeFleetMember = async (id: string) => {
       const kiosk = localData?.fleet?.find(f => f.id === id);
       if(!kiosk) return;
-      if(confirm(`Archive and remove device "${kiosk.name}"?`) && supabase) {
+
+      if(confirm(`Archive and remove device "${kiosk.name}" from live monitoring?`) && supabase) {
+          // 1. Archive the device data
           const newArchive = addToArchive('device', kiosk.name, kiosk);
+          
+          // 2. Update local data state
           const updatedData = { ...localData!, archive: newArchive };
+          
+          // 3. Delete from live table
           await supabase.from('kiosks').delete().eq('id', id);
+          
+          // 4. Force cloud sync of config (archive)
           onUpdateData(updatedData);
+          
           onRefresh();
       }
   };
 
+  // ARCHIVE HANDLERS
   const addToArchive = (type: 'product' | 'pricelist' | 'tv_model' | 'device' | 'other', name: string, data: any) => {
       if (!localData) return;
       const now = new Date().toISOString();
@@ -2291,11 +2482,13 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
           data,
           deletedAt: now
       };
+      
       const currentArchive = localData.archive || { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} };
       const newArchive = {
           ...currentArchive,
           deletedItems: [newItem, ...(currentArchive.deletedItems || [])]
       };
+      
       return newArchive;
   };
 
@@ -2323,10 +2516,12 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
   const handleMoveProduct = (product: Product, targetBrandId: string, targetCategoryId: string) => {
       if (!localData || !selectedBrand || !selectedCategory) return;
+      
       const updatedSourceCat = {
           ...selectedCategory,
           products: selectedCategory.products.filter(p => p.id !== product.id)
       };
+      
       let newBrands = localData.brands.map(b => {
           if (b.id === selectedBrand.id) {
               return {
@@ -2336,6 +2531,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
           }
           return b;
       });
+
       newBrands = newBrands.map(b => {
           if (b.id === targetBrandId) {
               return {
@@ -2350,6 +2546,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
           }
           return b;
       });
+
       handleLocalUpdate({ ...localData, brands: newBrands });
       setMovingProduct(null);
   };
@@ -2360,6 +2557,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
       if (diffDays === 0) return 'Today';
       if (diffDays === 1) return 'Yesterday';
       if (diffDays < 7) return `${diffDays} days ago`;
@@ -2373,15 +2571,21 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const brands = Array.isArray(localData.brands) 
       ? [...localData.brands].sort((a, b) => a.name.localeCompare(b.name)) 
       : [];
+
   const tvBrands = Array.isArray(localData.tv?.brands)
       ? [...localData.tv!.brands].sort((a, b) => a.name.localeCompare(b.name))
       : [];
+
+  // Filter Logic for History
   const archivedBrands = (localData.archive?.brands || []).filter(b => 
-      b.name.toLowerCase().includes(historySearch.toLowerCase())
+      b.name.toLowerCase().includes(historySearch.toLowerCase()) || 
+      b.id.toLowerCase().includes(historySearch.toLowerCase())
   );
+  
   const archivedCatalogues = (localData.archive?.catalogues || []).filter(c => 
       c.title.toLowerCase().includes(historySearch.toLowerCase())
   );
+
   const archivedGenericItems = (localData.archive?.deletedItems || []).filter(i =>
       i.name.toLowerCase().includes(historySearch.toLowerCase())
   );
@@ -2394,7 +2598,11 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                      <Settings className="text-blue-500" size={24} />
                      <div><h1 className="text-lg font-black uppercase tracking-widest leading-none">Admin Hub</h1></div>
                  </div>
+                 
                  <div className="flex items-center gap-4">
+                     <div className="text-xs font-bold text-slate-400 uppercase hidden md:block">
+                         Hello, {currentUser.name}
+                     </div>
                      <button 
                          onClick={handleGlobalSave}
                          disabled={!hasUnsavedChanges}
@@ -2408,10 +2616,16 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                          {hasUnsavedChanges ? 'Save Changes' : 'Saved'}
                      </button>
                  </div>
+
                  <div className="flex items-center gap-3">
+                     <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>
+                         {isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}
+                         <span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span>
+                     </div>
                      <button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button>
                      <button onClick={() => setCurrentUser(null)} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2">
                         <LogOut size={16} />
+                        <span className="text-[10px] font-bold uppercase hidden md:inline">Logout</span>
                      </button>
                  </div>
             </div>
@@ -2431,7 +2645,10 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
         )}
 
         <main className="flex-1 overflow-y-auto p-2 md:p-8 relative pb-40 md:pb-8">
+            {/* Guide Tab */}
             {activeTab === 'guide' && <SystemDocumentation />}
+
+            {/* Inventory Tab */}
             {activeTab === 'inventory' && (
                 !selectedBrand ? (
                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 animate-fade-in">
@@ -2442,9 +2659,11 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                            <div key={brand.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all group relative flex flex-col h-full">
                                <div className="flex-1 bg-slate-50 flex items-center justify-center p-2 relative aspect-square">
                                    {brand.logoUrl ? <img src={brand.logoUrl} className="max-h-full max-w-full object-contain" /> : <span className="text-4xl font-black text-slate-200">{brand.name.charAt(0)}</span>}
+                                   <button onClick={(e) => { e.stopPropagation(); if(confirm("Move to archive?")) { const now = new Date().toISOString(); handleLocalUpdate({...localData, brands: brands.filter(b=>b.id!==brand.id), archive: {...localData.archive!, brands: [...(localData.archive?.brands||[]), brand], deletedAt: {...localData.archive?.deletedAt, [brand.id]: now} }}); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12}/></button>
                                </div>
                                <div className="p-2 md:p-4">
                                    <h3 className="font-black text-slate-900 text-xs md:text-lg uppercase tracking-tight mb-1 truncate">{brand.name}</h3>
+                                   <p className="text-[10px] md:text-xs text-slate-500 font-bold mb-2 md:mb-4">{brand.categories.length} Categories</p>
                                    <button onClick={() => setSelectedBrand(brand)} className="w-full bg-slate-900 text-white py-1.5 md:py-2 rounded-lg font-bold text-[10px] md:text-xs uppercase hover:bg-blue-600 transition-colors">Manage</button>
                                </div>
                            </div>
@@ -2452,16 +2671,20 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                    </div>
                ) : !selectedCategory ? (
                    <div className="animate-fade-in">
-                       <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-xl md:text-2xl font-black uppercase text-slate-900 flex-1">{selectedBrand.name}</h2></div>
+                       <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-xl md:text-2xl font-black uppercase text-slate-900 flex-1">{selectedBrand.name}</h2><FileUpload label="Brand Logo" currentUrl={selectedBrand.logoUrl} onUpload={(url: any) => { const updated = {...selectedBrand, logoUrl: url}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }} /></div>
                        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
                            <button onClick={() => { const name = prompt("Category Name:"); if(name) { const updated = {...selectedBrand, categories: [...selectedBrand.categories, { id: generateId('c'), name, icon: 'Box', products: [] }]}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); } }} className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-4 text-slate-400 hover:border-blue-500 hover:text-blue-500 aspect-square"><Plus size={24} /><span className="font-bold text-[10px] uppercase mt-2 text-center">New Category</span></button>
                            {selectedBrand.categories.map(cat => (
                                <button key={cat.id} onClick={() => setSelectedCategory(cat)} className="bg-white p-2 md:p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md text-left group relative aspect-square flex flex-col justify-center">
                                    <Box size={20} className="mb-2 md:mb-4 text-slate-400 mx-auto md:mx-0" />
                                    <h3 className="font-black text-slate-900 uppercase text-[10px] md:text-sm text-center md:text-left truncate w-full">{cat.name}</h3>
+                                   <p className="text-[9px] md:text-xs text-slate-500 font-bold text-center md:text-left">{cat.products.length} Products</p>
+                                   <div onClick={(e)=>{e.stopPropagation(); const newName = prompt("Rename Category:", cat.name); if(newName && newName.trim() !== "") { const updated = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === cat.id ? {...c, name: newName.trim()} : c)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-8 md:top-2 md:right-8 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-500 rounded transition-all"><Edit2 size={12}/></div>
+                                   <div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ const updated={...selectedBrand, categories: selectedBrand.categories.filter(c=>c.id!==cat.id)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-1 md:top-2 md:right-2 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded"><Trash2 size={12}/></div>
                                 </button>
                             ))}
                        </div>
+                       <div className="mt-8 border-t border-slate-200 pt-8"><h3 className="font-bold text-slate-900 uppercase text-sm mb-4">Brand Catalogues</h3><CatalogueManager catalogues={localData.catalogues?.filter(c => c.brandId === selectedBrand.id) || []} brandId={selectedBrand.id} onSave={(c) => { const otherCatalogues = (localData.catalogues || []).filter(cat => cat.brandId !== selectedBrand.id); handleLocalUpdate({ ...localData, catalogues: [...otherCatalogues, ...c] }); }} /></div>
                    </div>
                ) : (
                    <div className="animate-fade-in h-full flex flex-col">
@@ -2472,11 +2695,26 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                    <div className="aspect-square bg-slate-50 relative flex items-center justify-center p-2 md:p-4">
                                        {product.imageUrl ? <img src={product.imageUrl} className="max-w-full max-h-full object-contain" /> : <Box size={24} className="text-slate-300" />}
                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                                           <button onClick={() => setEditingProduct(product)} className="p-1.5 md:p-2 bg-white text-blue-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50">Edit</button>
+                                           <div className="flex gap-2">
+                                                <button onClick={() => setEditingProduct(product)} className="p-1.5 md:p-2 bg-white text-blue-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50">Edit</button>
+                                                <button onClick={() => setMovingProduct(product)} className="p-1.5 md:p-2 bg-white text-orange-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-orange-50" title="Move Category">Move</button>
+                                           </div>
+                                           <button onClick={() => { 
+                                               if(confirm(`Delete product "${product.name}"?`)) { 
+                                                   const updatedCat = {...selectedCategory, products: selectedCategory.products.filter(p => p.id !== product.id)}; 
+                                                   const updatedBrand = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c)}; 
+                                                   
+                                                   // Add to archive
+                                                   const newArchive = addToArchive('product', product.name, product);
+                                                   
+                                                   handleLocalUpdate({...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b), archive: newArchive}); 
+                                               } 
+                                           }} className="p-1.5 md:p-2 bg-white text-red-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-red-50 w-[80%]">Delete</button>
                                        </div>
                                    </div>
                                    <div className="p-2 md:p-4">
                                        <h4 className="font-bold text-slate-900 text-[10px] md:text-sm truncate uppercase">{product.name}</h4>
+                                       <p className="text-[9px] md:text-xs text-slate-500 font-mono truncate">{product.sku || 'No SKU'}</p>
                                    </div>
                                </div>
                             ))}
@@ -2504,6 +2742,9 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             {activeTab === 'tv' && (
                 !selectedTVBrand ? (
                     <div className="animate-fade-in max-w-6xl mx-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-black text-slate-900 uppercase">TV Video Management</h2>
+                        </div>
                         <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             <button onClick={() => { const name = prompt("Brand Name:"); if(name) { const newBrand = { id: generateId('tvb'), name, models: [] }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: [...(localData.tv?.brands || []), newBrand] } as TVConfig }); }}} className="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center p-4 min-h-[160px] text-indigo-400 hover:border-indigo-500 hover:text-indigo-600 transition-all group">
                                 <Plus size={32} className="mb-2" /><span className="font-bold uppercase text-xs tracking-wider text-center">Add TV Brand</span>
@@ -2511,11 +2752,13 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                             {tvBrands.map(brand => (
                                 <div key={brand.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-lg transition-all relative">
                                     <div className="flex-1 bg-slate-50 flex items-center justify-center p-4 aspect-square">
-                                        <Tv size={32} className="text-slate-300" />
+                                        {brand.logoUrl ? <img src={brand.logoUrl} className="max-full max-h-full object-contain" /> : <Tv size={32} className="text-slate-300" />}
                                     </div>
                                     <div className="p-4 bg-white border-t border-slate-100">
                                         <h3 className="font-black text-slate-900 text-sm uppercase truncate mb-1">{brand.name}</h3>
+                                        <p className="text-xs text-slate-500 font-bold">{brand.models?.length || 0} Models</p>
                                     </div>
+                                    <button onClick={(e) => { e.stopPropagation(); if(confirm("Delete TV Brand?")) { handleLocalUpdate({...localData, tv: { ...localData.tv, brands: tvBrands.filter(b => b.id !== brand.id) } as TVConfig }); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity z-20"><Trash2 size={14}/></button>
                                     <button onClick={() => setSelectedTVBrand(brand)} className="absolute inset-0 w-full h-full opacity-0 z-10" />
                                 </div>
                             ))}
@@ -2523,71 +2766,650 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                     </div>
                 ) : (
                     <div className="animate-fade-in max-w-5xl mx-auto">
-                        <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedTVBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50"><ArrowLeft size={20} /></button><h2 className="text-2xl font-black uppercase text-slate-900 flex-1">{selectedTVBrand.name}</h2></div>
+                        <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedTVBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50"><ArrowLeft size={20} /></button><h2 className="text-2xl font-black uppercase text-slate-900 flex-1">{selectedTVBrand.name} <span className="text-slate-400 font-bold ml-2 text-lg">TV Config</span></h2></div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="space-y-6">
+                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                    <h4 className="font-bold text-slate-900 uppercase text-xs mb-4">Brand Identity</h4>
+                                    <div className="space-y-4">
+                                        <InputField label="Brand Name" val={selectedTVBrand.name} onChange={(e: any) => { const updated = { ...selectedTVBrand, name: e.target.value }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); }} />
+                                        <FileUpload label="Brand Logo" currentUrl={selectedTVBrand.logoUrl} onUpload={(url: any) => { const updated = { ...selectedTVBrand, logoUrl: url }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); }} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="md:col-span-2">
+                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                    <div className="flex justify-between items-center mb-6"><h4 className="font-bold text-slate-900 uppercase text-xs">TV Models</h4><button onClick={() => setEditingTVModel({ id: generateId('tvm'), name: '', videoUrls: [] })} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] uppercase flex items-center gap-1"><Plus size={12} /> Add Model</button></div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {(selectedTVBrand.models || []).map((model) => (
+                                            <div key={model.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden group">
+                                                <div className="p-4 flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shrink-0 border border-slate-200">{model.imageUrl ? <img src={model.imageUrl} className="w-full h-full object-cover rounded-lg" /> : <Monitor size={20} className="text-slate-300" />}</div>
+                                                    <div className="flex-1 min-w-0"><div className="font-bold text-slate-900 text-sm truncate">{model.name}</div><div className="text-[10px] font-bold text-slate-500 uppercase">{model.videoUrls?.length || 0} Videos</div></div>
+                                                </div>
+                                                <div className="flex border-t border-slate-200 divide-x divide-slate-200">
+                                                    <button onClick={() => setEditingTVModel(model)} className="flex-1 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-50 transition-colors">Edit / Videos</button>
+                                                    <button onClick={() => { if (confirm("Delete this model?")) { const updated = { ...selectedTVBrand, models: selectedTVBrand.models.filter(m => m.id !== model.id) }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); } }} className="flex-1 py-2 text-[10px] font-bold uppercase text-red-500 hover:bg-red-50 transition-colors">Delete</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )
             )}
 
-            {activeTab === 'screensaver' && (
-                <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-20">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                             <div className="grid grid-cols-2 gap-4 mb-6"><InputField label="Idle Wait (sec)" val={localData.screensaverSettings?.idleTimeout||60} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, idleTimeout: parseInt(e.target.value)}})} /><InputField label="Slide Duration (sec)" val={localData.screensaverSettings?.imageDuration||8} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, imageDuration: parseInt(e.target.value)}})} /></div>
-                         </div>
-                     </div>
+            {activeTab === 'marketing' && (
+                <div className="max-w-5xl mx-auto">
+                    {activeSubTab === 'catalogues' && (
+                        <CatalogueManager catalogues={(localData.catalogues || []).filter(c => !c.brandId)} onSave={(c) => { const brandCatalogues = (localData.catalogues || []).filter(c => c.brandId); handleLocalUpdate({ ...localData, catalogues: [...brandCatalogues, ...c] }); }} />
+                    )}
+                    {activeSubTab === 'hero' && (
+                        <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <InputField label="Title" val={localData.hero.title} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, title: e.target.value}})} />
+                                    <InputField label="Subtitle" val={localData.hero.subtitle} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, subtitle: e.target.value}})} />
+                                    <InputField label="Website URL" val={localData.hero.websiteUrl || ''} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, websiteUrl: e.target.value}})} placeholder="https://example.com" />
+                                </div>
+                                <div className="space-y-4">
+                                    <FileUpload label="Background Image" currentUrl={localData.hero.backgroundImageUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, backgroundImageUrl: url}})} />
+                                    <FileUpload label="Brand Logo" currentUrl={localData.hero.logoUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, logoUrl: url}})} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeSubTab === 'ads' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {['homeBottomLeft', 'homeBottomRight', 'screensaver'].map(zone => (
+                                <div key={zone} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                    <h4 className="font-bold uppercase text-xs mb-1">{zone.replace('home', '')}</h4>
+                                    <p className="text-[10px] text-slate-400 mb-4 uppercase font-bold tracking-wide">{zone.includes('Side') ? 'Size: 1080x1920 (Portrait)' : zone.includes('screensaver') ? 'Mixed Media' : 'Size: 1920x1080 (Landscape)'}</p>
+                                    <FileUpload label="Upload Media" accept="image/*,video/*" allowMultiple onUpload={(urls:any, type:any) => { const newAds = (Array.isArray(urls)?urls:[urls]).map(u=>({id:generateId('ad'), type, url:u, dateAdded: new Date().toISOString()})); handleLocalUpdate({...localData, ads: {...localData.ads, [zone]: [...((localData.ads as any)[zone] || []), ...newAds]} as any}); }} />
+                                    <div className="grid grid-cols-3 gap-2 mt-4">
+                                        {((localData.ads as any)[zone] || []).map((ad: any, idx: number) => (
+                                            <div key={ad.id} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                                                {ad.type === 'video' ? <video src={ad.url} className="w-full h-full object-cover opacity-60" /> : <img src={ad.url} alt="Ad" className="w-full h-full object-cover" />}
+                                                <button onClick={() => { const currentAds = (localData.ads as any)[zone]; const newAdsList = currentAds.filter((_: any, i: number) => i !== idx); handleLocalUpdate({ ...localData, ads: { ...localData.ads, [zone]: newAdsList } as any }); }} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"><Trash2 size={10} /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
             
             {activeTab === 'fleet' && (
                 <div className="animate-fade-in max-w-7xl mx-auto pb-24">
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                       {localData.fleet?.map(kiosk => (
-                           <div key={kiosk.id} className="bg-slate-950 border-2 rounded-[2rem] p-5 shadow-2xl flex flex-col text-white">
-                               <h4 className="font-black uppercase text-base">{kiosk.name}</h4>
-                               <div className="mt-4 flex gap-2">
-                                   <button onClick={() => setEditingKiosk(kiosk)} className="flex-1 bg-slate-900 hover:bg-blue-600 text-slate-400 p-2 rounded-2xl">Edit</button>
-                                   <button onClick={() => removeFleetMember(kiosk.id)} className="w-12 bg-slate-900 hover:bg-red-600 text-slate-700 p-2 rounded-2xl"><Lock size={12}/></button>
+                   <div className="flex items-center justify-between mb-8">
+                       <div className="flex items-center gap-3">
+                           <div className="bg-slate-900 p-2.5 rounded-2xl shadow-xl shadow-blue-500/10 border border-slate-800"><Radio className="text-blue-500 animate-pulse" size={24}/></div>
+                           <div>
+                               <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none">Command Center</h2>
+                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Live Fleet Telemetry</p>
+                           </div>
+                       </div>
+                       <div className="flex items-center gap-4 bg-slate-950 p-2 rounded-2xl border border-slate-800 shadow-2xl">
+                           <div className="px-4 py-2 border-r border-slate-800">
+                               <div className="text-[8px] font-black text-slate-500 uppercase mb-0.5 tracking-widest">Active Units</div>
+                               <div className="text-lg font-black text-blue-400 font-mono leading-none">{localData.fleet?.length || 0}</div>
+                           </div>
+                           <div className="px-4 py-2">
+                               <div className="text-[8px] font-black text-slate-500 uppercase mb-0.5 tracking-widest">Health</div>
+                               <div className="text-lg font-black text-green-400 font-mono leading-none">100%</div>
+                           </div>
+                       </div>
+                   </div>
+
+                   {/* Device Categories Loop */}
+                   {['kiosk', 'mobile', 'tv'].map((type) => {
+                       const devices = localData.fleet?.filter(k => 
+                           k.deviceType === type || (type === 'kiosk' && !k.deviceType)
+                       ) || [];
+
+                       if (devices.length === 0) return null;
+
+                       const config = {
+                           kiosk: { label: 'Interactive Terminals', icon: <Tablet size={18} className="text-blue-500" />, color: 'blue' },
+                           mobile: { label: 'Handheld Units', icon: <Smartphone size={18} className="text-purple-500" />, color: 'purple' },
+                           tv: { label: 'Display Walls', icon: <Tv size={18} className="text-indigo-500" />, color: 'indigo' }
+                       }[type as 'kiosk' | 'mobile' | 'tv'];
+
+                       return (
+                           <div key={type} className="mb-12 last:mb-0">
+                               <div className="flex items-center gap-3 mb-6">
+                                   <div className={`p-2 rounded-xl bg-slate-900 border border-slate-800 shadow-lg`}>
+                                       {config.icon}
+                                   </div>
+                                   <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">{config.label}</h3>
+                                   <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent mx-4"></div>
+                                   <span className="text-[10px] font-black bg-white text-slate-400 px-3 py-1 rounded-full border border-slate-200 uppercase tracking-widest">
+                                       {devices.length} Units
+                                   </span>
+                               </div>
+
+                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                   {devices.map(kiosk => {
+                                       const isOnline = (new Date().getTime() - new Date(kiosk.last_seen).getTime()) < 350000;
+                                       return (
+                                           <div key={kiosk.id} className={`group relative bg-slate-950 border-2 rounded-[2rem] overflow-hidden transition-all duration-500 hover:-translate-y-1 shadow-2xl flex flex-col ${isOnline ? 'border-blue-500/50 shadow-blue-500/10' : 'border-slate-800 grayscale opacity-60'}`}>
+                                               
+                                               {/* Online Status Glow effect */}
+                                               {isOnline && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.8)] rounded-full"></div>}
+
+                                               {/* Telemetry Header */}
+                                               <div className="p-5 flex justify-between items-start">
+                                                   <div className="flex-1 min-w-0">
+                                                       <div className="flex items-center gap-2 mb-1.5">
+                                                           <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,1)] animate-pulse' : 'bg-slate-700'}`}></div>
+                                                           <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${isOnline ? 'text-blue-400' : 'text-slate-500'}`}>
+                                                               {isOnline ? 'Active Pulse' : 'Offline'}
+                                                           </span>
+                                                       </div>
+                                                       <h4 className="font-black text-white uppercase text-base leading-none tracking-tight truncate mb-1 group-hover:text-blue-400 transition-colors">
+                                                           {kiosk.name}
+                                                       </h4>
+                                                       <div className="text-[9px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                                            <MapPin size={10} className="text-slate-700" /> {kiosk.assignedZone || 'UNASSIGNED'}
+                                                       </div>
+                                                   </div>
+                                                   <div className="shrink-0 flex flex-col items-end gap-2">
+                                                       <SignalStrengthBars strength={kiosk.wifiStrength || 0} />
+                                                       <div className="text-[8px] font-black text-slate-600 uppercase font-mono">{kiosk.ipAddress?.split(' | ')[0] || '--'}</div>
+                                                   </div>
+                                               </div>
+                                               
+                                               {/* Dashboard Stats */}
+                                               <div className="px-5 py-4 grid grid-cols-2 gap-3 bg-black/40 border-y border-white/5">
+                                                   <div className="p-2.5 rounded-2xl bg-white/5 border border-white/5">
+                                                       <div className="text-[8px] font-black text-slate-500 uppercase mb-1 flex items-center gap-1.5">
+                                                           <Clock size={10} className="text-blue-500" /> Sync Age
+                                                       </div>
+                                                       <div className="text-xs font-bold text-slate-300 truncate">{formatRelativeTime(kiosk.last_seen)}</div>
+                                                   </div>
+                                                   <div className="p-2.5 rounded-2xl bg-white/5 border border-white/5">
+                                                       <div className="text-[8px] font-black text-slate-500 uppercase mb-1 flex items-center gap-1.5">
+                                                           <Terminal size={10} className="text-purple-500" /> Version
+                                                       </div>
+                                                       <div className="text-xs font-mono font-black text-slate-300">v{kiosk.version || '1.0.0'}</div>
+                                                   </div>
+                                               </div>
+
+                                               {/* Command Center Action Bar */}
+                                               <div className="mt-auto p-3 flex gap-2">
+                                                   <button 
+                                                       onClick={() => setEditingKiosk(kiosk)} 
+                                                       className="flex-1 bg-slate-900 hover:bg-blue-600 text-slate-400 hover:text-white p-2.5 rounded-2xl transition-all border border-slate-800 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 group/btn"
+                                                   >
+                                                       <Edit2 size={12} className="group-hover/btn:scale-110 transition-transform" /> <span className="hidden sm:inline">Modify</span>
+                                                   </button>
+                                                   
+                                                   {supabase && isOnline && (
+                                                       <button 
+                                                           onClick={async () => { if(confirm("Initiate Remote System Reset?")) await supabase.from('kiosks').update({restart_requested: true}).eq('id', kiosk.id); }} 
+                                                           className="flex-1 bg-slate-900 hover:bg-orange-600 text-orange-500 hover:text-white p-2.5 rounded-2xl transition-all border border-slate-800 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 group/btn"
+                                                       >
+                                                           <Power size={12} /> <span className="hidden sm:inline">Reset</span>
+                                                       </button>
+                                                   )}
+                                                   
+                                                   <button 
+                                                       onClick={() => removeFleetMember(kiosk.id)} 
+                                                       className="w-12 bg-slate-900 hover:bg-red-600 text-slate-700 hover:text-white p-2.5 rounded-2xl transition-all border border-slate-800 flex items-center justify-center shadow-lg group/btn" 
+                                                       title="De-Authorize Device"
+                                                   >
+                                                       <Lock size={12} className="group-hover/btn:rotate-12 transition-transform" />
+                                                   </button>
+                                               </div>
+                                               
+                                               {/* Device Hardware ID Watermark */}
+                                               <div className="absolute bottom-1 right-5 text-[7px] font-mono font-black text-slate-800 uppercase pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity">
+                                                   UUID: {kiosk.id}
+                                               </div>
+                                           </div>
+                                       );
+                                   })}
                                </div>
                            </div>
-                       ))}
-                   </div>
+                       );
+                   })}
+                   
+                   {localData.fleet?.length === 0 && (
+                       <div className="p-20 text-center flex flex-col items-center justify-center gap-6 animate-fade-in border-2 border-dashed border-slate-200 rounded-[3rem] bg-white/50">
+                           <div className="w-20 h-20 bg-slate-100 rounded-[2.5rem] flex items-center justify-center text-slate-300">
+                               <Radio size={40} />
+                           </div>
+                           <div>
+                               <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">Awaiting Transmissions</h3>
+                               <p className="text-slate-500 font-medium text-sm">Initialize your first device to begin fleet telemetry monitoring.</p>
+                           </div>
+                       </div>
+                   )}
                 </div>
             )}
             
+            {activeTab === 'screensaver' && (
+                <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-20">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Clock size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Timing & Schedule</h3></div>
+                             <div className="grid grid-cols-2 gap-4 mb-6"><InputField label="Idle Wait (sec)" val={localData.screensaverSettings?.idleTimeout||60} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, idleTimeout: parseInt(e.target.value)}})} /><InputField label="Slide Duration (sec)" val={localData.screensaverSettings?.imageDuration||8} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, imageDuration: parseInt(e.target.value)}})} /></div>
+                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><div className="flex justify-between items-center mb-4"><label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Active Hours (Sleep Mode)</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, enableSleepMode: !localData.screensaverSettings?.enableSleepMode}})} className={`w-8 h-4 rounded-full transition-colors relative ${localData.screensaverSettings?.enableSleepMode ? 'bg-green-500' : 'bg-slate-300'}`}><div className={`w-2 h-2 bg-white rounded-full absolute top-1 transition-all ${localData.screensaverSettings?.enableSleepMode ? 'left-5' : 'left-1'}`}></div></button></div><div className={`grid grid-cols-2 gap-4 transition-opacity ${localData.screensaverSettings?.enableSleepMode ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}><div><label className="block text-[10px] font-bold text-slate-400 mb-1">Start Time</label><input type="time" value={localData.screensaverSettings?.activeHoursStart || '08:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursStart: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div><div><label className="block text-[10px] font-bold text-slate-400 mb-1">End Time</label><input type="time" value={localData.screensaverSettings?.activeHoursEnd || '20:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursEnd: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div></div></div>
+                         </div>
+                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Content & Behavior</h3></div>
+                             <div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}})} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div>
+                         </div>
+                     </div>
+
+                     {/* Audio Diagnostic Panel */}
+                     <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 text-blue-500"><Volume size={120} /></div>
+                        <div className="relative z-10">
+                            <h3 className="text-white font-black uppercase text-sm tracking-[0.2em] mb-4 flex items-center gap-3">
+                                <Volume2 className="text-blue-400" /> Audio Policy Diagnostic
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <p className="text-slate-400 text-sm leading-relaxed font-medium">
+                                        Browser security prevents <strong className="text-white">Unmuted Video</strong> from playing automatically until a user interacts with the app.
+                                    </p>
+                                    <div className="flex gap-4">
+                                        <div className={`flex-1 p-4 rounded-2xl border ${!localData.screensaverSettings?.muteVideos ? 'bg-green-900/30 border-green-500 text-green-400' : 'bg-slate-800 border-slate-700 text-slate-500 opacity-50'}`}>
+                                            <div className="text-[10px] font-black uppercase mb-1">Status</div>
+                                            <div className="font-bold">Sound Requested</div>
+                                        </div>
+                                        <div className={`flex-1 p-4 rounded-2xl border ${isCloudConnected ? 'bg-blue-900/30 border-blue-500 text-blue-400' : 'bg-red-900/30 border-red-500 text-red-400'}`}>
+                                            <div className="text-[10px] font-black uppercase mb-1">Autoplay</div>
+                                            <div className="font-bold">Managed</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-black/40 rounded-2xl p-6 border border-white/5">
+                                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Fixing Muted Videos:</h4>
+                                    <ul className="space-y-3">
+                                        <li className="flex items-start gap-3 text-xs font-medium text-slate-300">
+                                            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-black shrink-0">1</div>
+                                            <span>Turn <strong className="text-blue-400">"Mute Videos"</strong> toggle to <strong className="text-blue-400">OFF</strong> above.</span>
+                                        </li>
+                                        <li className="flex items-start gap-3 text-xs font-medium text-slate-300">
+                                            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-black shrink-0">2</div>
+                                            <span>Touch the kiosk screen once after it reloads to "Unlock" the sound engine.</span>
+                                        </li>
+                                        <li className="flex items-start gap-3 text-xs font-medium text-slate-300">
+                                            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-black shrink-0">3</div>
+                                            <span>The screensaver will now play unmuted audio in the next loop.</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                     </div>
+                </div>
+            )}
+            
+            {activeTab === 'history' && (
+               <div className="max-w-6xl mx-auto space-y-6">
+                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                       <h2 className="text-2xl font-black text-slate-900 uppercase">Archive Management</h2>
+                       <div className="flex gap-2">
+                            <button 
+                                onClick={() => { if(confirm("Permanently clear ALL archived history?")) handleLocalUpdate({...localData, archive: { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }}) }} 
+                                className="text-red-500 font-bold uppercase text-xs flex items-center gap-2 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2 rounded-lg transition-colors"
+                            >
+                                <Trash2 size={14}/> Wipe History
+                            </button>
+                       </div>
+                   </div>
+
+                   <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm min-h-[500px] flex flex-col">
+                       {/* Toolbar */}
+                       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between gap-4">
+                           <div className="flex items-center gap-2 bg-slate-200/50 p-1 rounded-lg self-start overflow-x-auto max-w-full">
+                               <button onClick={() => setHistoryTab('deletedItems')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'deletedItems' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>All Items</button>
+                               <button onClick={() => setHistoryTab('brands')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'brands' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Deleted Brands</button>
+                               <button onClick={() => setHistoryTab('catalogues')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'catalogues' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Deleted Pamphlets</button>
+                           </div>
+                           <div className="relative">
+                               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                               <input 
+                                  type="text" 
+                                  placeholder="Search Archives..." 
+                                  className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold w-full md:w-64 focus:border-blue-500 outline-none"
+                                  value={historySearch}
+                                  onChange={(e) => setHistorySearch(e.target.value)}
+                               />
+                           </div>
+                       </div>
+
+                       {/* List Content */}
+                       <div className="flex-1 overflow-y-auto">
+                           {historyTab === 'deletedItems' ? (
+                               archivedGenericItems.length === 0 ? (
+                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                                       <Archive size={48} className="mb-4 opacity-20" />
+                                       <span className="text-xs font-bold uppercase tracking-widest">No Deleted Items Found</span>
+                                   </div>
+                               ) : (
+                                   <table className="w-full text-left">
+                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                           <tr>
+                                               <th className="px-6 py-3">Type</th>
+                                               <th className="px-6 py-3">Name</th>
+                                               <th className="px-6 py-3">Deleted Date</th>
+                                               <th className="px-6 py-3 text-right">Data</th>
+                                           </tr>
+                                       </thead>
+                                       <tbody className="divide-y divide-slate-100 text-sm">
+                                           {archivedGenericItems.map(item => (
+                                               <tr key={item.id} className="hover:bg-slate-50 group">
+                                                   <td className="px-6 py-4">
+                                                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                                                           item.type === 'product' ? 'bg-blue-50 text-blue-700' :
+                                                           item.type === 'pricelist' ? 'bg-green-50 text-green-700' :
+                                                           item.type === 'device' ? 'bg-purple-50 text-purple-700' :
+                                                           'bg-slate-100 text-slate-600'
+                                                       }`}>
+                                                           {item.type}
+                                                       </span>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <div className="font-bold text-slate-900">{item.name}</div>
+                                                       <div className="text-[10px] text-slate-400 font-mono">{item.id}</div>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <div className="text-xs font-bold text-slate-600">
+                                                           {formatRelativeTime(item.deletedAt)}
+                                                       </div>
+                                                       <div className="text-[10px] text-slate-400">
+                                                           {new Date(item.deletedAt).toLocaleTimeString()}
+                                                       </div>
+                                                   </td>
+                                                   <td className="px-6 py-4 text-right">
+                                                       <button 
+                                                            onClick={() => {
+                                                                const json = JSON.stringify(item.data, null, 2);
+                                                                const blob = new Blob([json], {type: "application/json"});
+                                                                const url = URL.createObjectURL(blob);
+                                                                const a = document.createElement('a');
+                                                                a.href = url;
+                                                                a.download = `${item.name}-recovered.json`;
+                                                                a.click();
+                                                            }}
+                                                            className="text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase inline-flex items-center gap-1 transition-colors border border-slate-200"
+                                                       >
+                                                           <Download size={12} /> JSON
+                                                       </button>
+                                                   </td>
+                                               </tr>
+                                           ))}
+                                       </tbody>
+                                   </table>
+                               )
+                           ) : historyTab === 'brands' ? (
+                               archivedBrands.length === 0 ? (
+                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                                       <Archive size={48} className="mb-4 opacity-20" />
+                                       <span className="text-xs font-bold uppercase tracking-widest">No Archived Brands Found</span>
+                                   </div>
+                               ) : (
+                                   <table className="w-full text-left">
+                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                           <tr>
+                                               <th className="px-6 py-3">Brand Name</th>
+                                               <th className="px-6 py-3">Metadata</th>
+                                               <th className="px-6 py-3">Deleted Date</th>
+                                               <th className="px-6 py-3 text-right">Actions</th>
+                                           </tr>
+                                       </thead>
+                                       <tbody className="divide-y divide-slate-100 text-sm">
+                                           {archivedBrands.map(b => (
+                                               <tr key={b.id} className="hover:bg-slate-50 group">
+                                                   <td className="px-6 py-4">
+                                                       <div className="font-bold text-slate-900">{b.name}</div>
+                                                       <div className="text-[10px] text-slate-400 font-mono">{b.id}</div>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
+                                                           <Box size={12} /> {b.categories.length} Categories
+                                                       </div>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <div className="text-xs font-bold text-slate-600">
+                                                           {localData.archive?.deletedAt?.[b.id] ? formatRelativeTime(localData.archive.deletedAt[b.id]) : 'Unknown'}
+                                                       </div>
+                                                       <div className="text-[10px] text-slate-400">
+                                                           {localData.archive?.deletedAt?.[b.id] ? new Date(localData.archive.deletedAt[b.id]).toLocaleTimeString() : ''}
+                                                       </div>
+                                                   </td>
+                                                   <td className="px-6 py-4 text-right">
+                                                       <button onClick={() => restoreBrand(b)} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold uppercase inline-flex items-center gap-1 transition-colors">
+                                                           <RotateCcw size={14} /> Restore
+                                                       </button>
+                                                   </td>
+                                               </tr>
+                                           ))}
+                                       </tbody>
+                                   </table>
+                               )
+                           ) : (
+                               archivedCatalogues.length === 0 ? (
+                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                                       <Archive size={48} className="mb-4 opacity-20" />
+                                       <span className="text-xs font-bold uppercase tracking-widest">No Archived Pamphlets Found</span>
+                                   </div>
+                               ) : (
+                                   <table className="w-full text-left">
+                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                           <tr>
+                                               <th className="px-6 py-3">Title</th>
+                                               <th className="px-6 py-3">Type</th>
+                                               <th className="px-6 py-3">Expiration Info</th>
+                                               <th className="px-6 py-3 text-right">Actions</th>
+                                           </tr>
+                                       </thead>
+                                       <tbody className="divide-y divide-slate-100 text-sm">
+                                           {archivedCatalogues.map(c => (
+                                               <tr key={c.id} className="hover:bg-slate-50 group">
+                                                   <td className="px-6 py-4">
+                                                       <div className="font-bold text-slate-900">{c.title}</div>
+                                                       <div className="text-[10px] text-slate-400 font-mono">{c.id}</div>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${c.brandId ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
+                                                           {c.brandId ? 'Brand Catalogue' : 'Global Pamphlet'}
+                                                       </span>
+                                                   </td>
+                                                   <td className="px-6 py-4">
+                                                       <div className="text-xs font-bold text-slate-600">
+                                                           {c.endDate ? `Expired: ${new Date(c.endDate).toLocaleDateString()}` : 'Manual Delete'}
+                                                       </div>
+                                                       <div className="text-[10px] text-slate-400">
+                                                           Deleted: {localData.archive?.deletedAt?.[c.id] ? formatRelativeTime(localData.archive.deletedAt[c.id]) : 'N/A'}
+                                                       </div>
+                                                   </td>
+                                                   <td className="px-6 py-4 text-right">
+                                                       <button onClick={() => restoreCatalogue(c)} className="text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg text-xs font-bold uppercase inline-flex items-center gap-1 transition-colors">
+                                                           <RotateCcw size={14} /> Restore
+                                                       </button>
+                                                   </td>
+                                               </tr>
+                                           ))}
+                                       </tbody>
+                                   </table>
+                               )
+                           )}
+                       </div>
+                   </div>
+               </div>
+            )}
+
             {activeTab === 'settings' && (
                <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
+                   
+                   {/* BRANDING SECTION */}
                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> System Data & Backup</h3>
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                           <button 
-                               onClick={async () => {
-                                   setExportProcessing(true);
-                                   try { await downloadZip(localData); } finally { setExportProcessing(false); }
-                               }}
-                               disabled={exportProcessing}
-                               className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs"
-                           >
-                               {exportProcessing ? 'Exporting...' : 'Download Backup'}
-                           </button>
-                           <label className="w-full py-4 bg-slate-800 text-white rounded-xl font-bold uppercase text-xs flex items-center justify-center cursor-pointer">
-                               {importProcessing ? importProgress || 'Importing...' : 'Import Data from ZIP'}
-                               <input 
-                                 type="file" 
-                                 accept=".zip" 
-                                 className="hidden" 
-                                 disabled={importProcessing}
-                                 onChange={async (e) => {
-                                     if(e.target.files && e.target.files[0]) {
-                                         setImportProcessing(true);
-                                         try {
-                                             const newBrands = await importZip(e.target.files[0], (msg) => setImportProgress(msg));
-                                             handleLocalUpdate({ ...localData, brands: [...localData.brands, ...newBrands] });
-                                         } finally { setImportProcessing(false); setImportProgress(''); }
-                                     }
-                                 }}
-                               />
-                           </label>
+                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
+                           <ImageIcon size={20} className="text-blue-500" /> System Branding
+                       </h3>
+                       <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                           <FileUpload 
+                               label="Main Company Logo (PDFs & Header)" 
+                               currentUrl={localData.companyLogoUrl} 
+                               onUpload={(url: string) => handleLocalUpdate({...localData, companyLogoUrl: url})} 
+                           />
+                           <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                               This logo is used at the top of the Kiosk App and as the primary branding on all exported PDF Pricelists.
+                           </p>
                        </div>
+                   </div>
+
+                   {/* GLOBAL SYSTEM PIN */}
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2">
+                           <Lock size={20} className="text-red-500" /> Device Setup Security
+                       </h3>
+                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center gap-4">
+                           <div className="flex-1">
+                               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Global Setup PIN</label>
+                               <input 
+                                   type="text" 
+                                   value={localData.systemSettings?.setupPin || '0000'} 
+                                   onChange={(e) => handleLocalUpdate({
+                                       ...localData,
+                                       systemSettings: { ...localData.systemSettings, setupPin: e.target.value }
+                                   })}
+                                   className="w-full md:w-64 p-3 border border-slate-300 rounded-xl bg-white font-mono font-bold text-lg tracking-widest text-center"
+                                   placeholder="0000"
+                                   maxLength={8}
+                               />
+                               <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                                   This PIN is required on all new devices (Kiosk, Mobile, TV) to complete the setup process. Default: 0000.
+                               </p>
+                           </div>
+                           <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100 text-yellow-800 text-xs max-w-xs">
+                               <strong>Security Note:</strong> Changing this PIN will require all future device setups to use the new code. Existing active devices are not affected.
+                           </div>
+                       </div>
+                   </div>
+
+                   {/* ZIP BACKUP SECTION */}
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                       <div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500 pointer-events-none"><Database size={120} /></div>
+                       <h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> System Data & Backup</h3>
+                       
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                           <div className="space-y-4">
+                               <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-xs">
+                                   <strong>Export System Backup:</strong> Downloads a full archive including Inventory, Marketing, TV Config, Fleet logs, and History.
+                                   <div className="mt-2 text-blue-600 font-bold">Use this to edit offline or migrate data.</div>
+                               </div>
+                               <button 
+                                   onClick={async () => {
+                                       setExportProcessing(true);
+                                       try {
+                                           await downloadZip(localData);
+                                       } catch (e) {
+                                           console.error(e);
+                                           alert("Export Failed: " + (e as Error).message);
+                                       } finally {
+                                           setExportProcessing(false);
+                                       }
+                                   }}
+                                   disabled={exportProcessing}
+                                   className={`w-full py-4 ${exportProcessing ? 'bg-blue-800 cursor-wait' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25`}
+                               >
+                                   {exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} 
+                                   {exportProcessing ? 'Packaging All Assets...' : 'Download Full System Backup (.zip)'}
+                               </button>
+                           </div>
+
+                           <div className="space-y-4">
+                               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-xs">
+                                   <strong>Import Structure:</strong> Upload a ZIP file to auto-populate the system.
+                                   <ul className="list-disc pl-4 mt-2 space-y-1 text-[10px] text-slate-500 font-bold">
+                                       <li>Folder Structure: <code>Brand/Category/Product/</code></li>
+                                       <li>Place images (.jpg/.png) & manuals (.pdf) inside product folders.</li>
+                                       <li>Images & PDFs are uploaded to Cloud Storage sequentially.</li>
+                                   </ul>
+                               </div>
+                               <label className={`w-full py-4 ${importProcessing ? 'bg-slate-300 cursor-wait' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl relative overflow-hidden`}>
+                                   {importProcessing ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16} />} 
+                                   <span className="relative z-10">{importProcessing ? importProgress || 'Processing...' : 'Import Data from ZIP'}</span>
+                                   <input 
+                                     type="file" 
+                                     accept=".zip" 
+                                     className="hidden" 
+                                     disabled={importProcessing}
+                                     onChange={async (e) => {
+                                         if(e.target.files && e.target.files[0]) {
+                                             if(confirm("This will merge imported data into your current inventory. Continue?")) {
+                                                 setImportProcessing(true);
+                                                 setImportProgress('Initializing...');
+                                                 try {
+                                                     const newBrands = await importZip(e.target.files[0], (msg) => setImportProgress(msg));
+                                                     // Merge Logic: Add new brands, or merge categories if brand exists
+                                                     let mergedBrands = [...localData.brands];
+                                                     
+                                                     newBrands.forEach(nb => {
+                                                         const existingBrandIndex = mergedBrands.findIndex(b => b.name === nb.name);
+                                                         if (existingBrandIndex > -1) {
+                                                             // Merge Brand Assets if present
+                                                             if (nb.logoUrl) {
+                                                                 mergedBrands[existingBrandIndex].logoUrl = nb.logoUrl;
+                                                             }
+                                                             if (nb.themeColor) {
+                                                                 mergedBrands[existingBrandIndex].themeColor = nb.themeColor;
+                                                             }
+
+                                                             // Merge Categories
+                                                             nb.categories.forEach(nc => {
+                                                                 const existingCatIndex = mergedBrands[existingBrandIndex].categories.findIndex(c => c.name === nc.name);
+                                                                 if (existingCatIndex > -1) {
+                                                                     // Merge Products
+                                                                     const existingProducts = mergedBrands[existingBrandIndex].categories[existingCatIndex].products;
+                                                                     // Add only new products based on name
+                                                                     const uniqueNewProducts = nc.products.filter(np => !existingProducts.find(ep => ep.name === np.name));
+                                                                     mergedBrands[existingBrandIndex].categories[existingCatIndex].products = [...existingProducts, ...uniqueNewProducts];
+                                                                 } else {
+                                                                     mergedBrands[existingBrandIndex].categories.push(nc);
+                                                                 }
+                                                             });
+                                                         } else {
+                                                             mergedBrands.push(nb);
+                                                         }
+                                                     });
+                                                     
+                                                     handleLocalUpdate({ ...localData, brands: mergedBrands });
+                                                     alert(`Import Successful! Processed ${newBrands.length} brands.`);
+                                                 } catch(err) {
+                                                     console.error(err);
+                                                     alert("Failed to read ZIP file. Ensure structure is correct.");
+                                                 } finally {
+                                                     setImportProcessing(false);
+                                                     setImportProgress('');
+                                                 }
+                                             }
+                                         }
+                                     }}
+                                   />
+                               </label>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><UserCog size={20} className="text-blue-500"/> Admin Access Control</h3><AdminManager admins={localData.admins || []} onUpdate={(admins) => handleLocalUpdate({ ...localData, admins })} currentUser={currentUser} /></div>
+
+                   <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg text-white">
+                        <div className="flex items-center gap-3 mb-6"><CloudLightning size={24} className="text-yellow-400" /><h3 className="font-black uppercase text-sm tracking-wider">System Operations</h3></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <button onClick={() => setShowGuide(true)} className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors border border-slate-600"><BookOpen size={24} className="text-blue-400"/><div className="text-left"><div className="font-bold text-sm">Setup Guide</div><div className="text-[10px] text-slate-400 font-mono uppercase">Docs & Scripts</div></div></button>
+                             <button onClick={async () => { if(confirm("WARNING: This will wipe ALL local data and reset to defaults. Continue?")) { const d = await resetStoreData(); setLocalData(d); window.location.reload(); } }} className="p-4 bg-red-900/30 hover:bg-red-900/50 rounded-xl flex items-center gap-3 transition-colors border border-red-900/50 text-red-300"><AlertCircle size={24} /><div className="text-left"><div className="font-bold text-sm">Factory Reset</div><div className="text-[10px] text-red-400 font-mono uppercase">Clear Local Data</div></div></button>
+                        </div>
                    </div>
                </div>
             )}
@@ -2597,13 +3419,19 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in">
                 <ProductEditor product={editingProduct} onSave={(p) => { 
                     if (!selectedBrand || !selectedCategory) return;
-                    const newProducts = !selectedCategory.products.find(x => x.id === p.id) ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x);
+                    if (p.sku && checkSkuDuplicate(p.sku, p.id)) { alert(`SKU "${p.sku}" is already used by another product.`); return; }
+                    const isNew = !selectedCategory.products.find(x => x.id === p.id);
+                    const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x);
                     const updatedCat = { ...selectedCategory, products: newProducts };
                     const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) };
                     handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b) });
                     setEditingProduct(null);
                 }} onCancel={() => setEditingProduct(null)} />
             </div>
+        )}
+
+        {movingProduct && (
+            <MoveProductModal product={movingProduct} allBrands={brands} currentBrandId={selectedBrand?.id || ''} currentCategoryId={selectedCategory?.id || ''} onClose={() => setMovingProduct(null)} onMove={(product, targetBrand, targetCategory) => handleMoveProduct(product, targetBrand, targetCategory)} />
         )}
 
         {editingKiosk && (
@@ -2615,6 +3443,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
         )}
         
         {showGuide && <SetupGuide onClose={() => setShowGuide(false)} />}
+        
     </div>
   );
 };
