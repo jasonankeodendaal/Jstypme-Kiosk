@@ -463,7 +463,7 @@ const MOCK_BRANDS: Brand[] = [
             sku: 'RAZ-BLD16',
             name: 'Razer Blade 16',
             description: 'Uncompromising power and portability. The most powerful gaming laptop in its class.',
-            specs: { 'GPU': 'RTX 4090', 'CPU': 'Intel Core i9-14900HX', 'Display': 'Dual Mode Mini-LED' },
+            specs: { 'GPU': 'RTX 4090', 'CPU': 'Inter Core i9-14900HX', 'Display': 'Dual Mode Mini-LED' },
             features: ['CNC aluminum unibody', 'Chroma RGB', 'THX Spatial Audio'],
             dimensions: [{ width: '355 mm', height: '244 mm', depth: '21.9 mm', weight: '2.45 kg' }],
             imageUrl: 'https://images.unsplash.com/photo-1593640408182-31c70c8268f5?w=800&auto=format&fit=crop'
@@ -571,8 +571,6 @@ const DEFAULT_DATA: StoreData = {
   ads: {
     homeBottomLeft: [],
     homeBottomRight: [],
-    homeSideVertical: [],
-    homeSideLeftVertical: [],
     screensaver: []
   },
   fleet: [],
@@ -600,8 +598,6 @@ const migrateData = (data: any): StoreData => {
     if (!data.hero) data.hero = { ...DEFAULT_DATA.hero };
     if (!data.ads) {
         data.ads = { ...DEFAULT_DATA.ads };
-    } else {
-        if (!data.ads.homeSideLeftVertical) data.ads.homeSideLeftVertical = [];
     }
     if (!data.screensaverSettings) data.screensaverSettings = { ...DEFAULT_DATA.screensaverSettings };
     if (!data.about) data.about = { ...DEFAULT_DATA.about };

@@ -1,3 +1,4 @@
+
 export interface DimensionSet {
   label?: string; // e.g. "Device", "Stand", "Box 1"
   width: string;
@@ -132,8 +133,6 @@ export interface AdItem {
 export interface AdConfig {
   homeBottomLeft: AdItem[];
   homeBottomRight: AdItem[];
-  homeSideVertical: AdItem[];
-  homeSideLeftVertical: AdItem[];
   screensaver: AdItem[];
 }
 
