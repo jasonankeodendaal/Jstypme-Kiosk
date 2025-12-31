@@ -10,8 +10,12 @@ export default defineConfig({
       targets: ['chrome >= 37'],
       additionalLegacyPolyfills: [
         'regenerator-runtime/runtime',
-        'core-js/modules/es.promise.js',
-        'core-js/modules/es.array.iterator.js'
+        'core-js/stable/promise',
+        'core-js/stable/array/iterator',
+        'core-js/stable/map',
+        'core-js/stable/set',
+        'core-js/stable/object/assign',
+        'core-js/stable/symbol'
       ],
       renderLegacyChunks: true,
       modernPolyfills: true,
@@ -33,6 +37,7 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
+        // Force non-module format for legacy compatibility
         format: 'iife',
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -43,5 +48,9 @@ export default defineConfig({
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),
     'global': 'window'
+  },
+  server: {
+    // Force esbuild to transpile everything to ES5 during dev for testing on old tablets
+    host: true
   }
 });

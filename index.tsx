@@ -1,5 +1,8 @@
 
-// CRITICAL: Polyfills must be the first thing imported
+/**
+ * CRITICAL: Polyfills MUST be imported first.
+ * These handle ES6+ features on Chrome 37.
+ */
 import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 
@@ -20,10 +23,11 @@ var hideLoader = function() {
 };
 
 if (rootElement) {
-    // Hide the loader immediately
+    // Hide the loader as soon as JS execution reaches this point
     hideLoader();
 
     try {
+        // Use createRoot (React 18+) with polyfilled Map/Set
         var root = ReactDOM.createRoot(rootElement);
         root.render(
             <React.StrictMode>
@@ -43,6 +47,7 @@ if (rootElement) {
                     '<p style="color: #fca5a5; font-weight: bold; margin-bottom: 10px;">The React engine failed to boot:</p>',
                     '<pre style="font-size:11px; color:#fecaca; white-space: pre-wrap; word-break: break-all;">' + errStack + '</pre>',
                 '</div>',
+                '<p style="margin-top:20px; font-size:12px; opacity:0.6;">Tip: Ensure the tablet system WebView is updated to at least v37.</p>',
             '</div>'
         ].join('');
     }

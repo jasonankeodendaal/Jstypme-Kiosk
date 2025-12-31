@@ -7,34 +7,41 @@
     <meta name="theme-color" content="#0f172a" />
     <title>Kiosk Pro Showcase</title>
     
-    <!-- 1. BASE SYSTEM POLYFILLS (CRITICAL) -->
+    <!-- 1. SYSTEM POLYFILLS FOR CHROME 37 (CRITICAL) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-promise/4.2.8/es6-promise.auto.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.19/fetch.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.14.1/runtime.min.js"></script>
+    <!-- Core JS 3.x is vital for React 18+ on old engines -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/3.32.2/minified.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/intersection-observer@0.12.2/intersection-observer.js"></script>
-
+    
     <script>
-      // Global Shims for old engines
       (function() {
         window.appStarted = false;
+        // Map/Set Polyfill check for older engines
         if (typeof window.globalThis === 'undefined') { window.globalThis = window; }
         if (typeof window.global === 'undefined') { window.global = window; }
         window.process = { env: { NODE_ENV: 'production' } };
         
-        // Watchdog Timer: If app doesn't hide loader in 8s, show error
+        // Global Error Catcher for older browsers
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            var loaderText = document.getElementById('loader-text');
+            if (loaderText) {
+                loaderText.style.color = '#ef4444';
+                loaderText.innerHTML = "KERNEL PANIC: " + msg + "<br><span style='font-size:8px; opacity:0.6'>L" + lineNo + ":" + columnNo + " " + url + "</span>";
+            }
+            return false;
+        };
+
         window.onload = function() {
             setTimeout(function() {
                 if (!window.appStarted) {
                     var text = document.getElementById('loader-text');
-                    var spinner = document.querySelector('.spinner');
                     if (text) {
                         text.style.color = '#ef4444';
-                        text.innerHTML = "KERNEL TIMEOUT: SCRIPT FAILED TO BOOT.<br><span style='font-size:8px; opacity:0.6'>Check network or browser console for syntax errors.</span>";
+                        text.innerHTML = "TIMEOUT: SCRIPT FAILED TO MOUNT.<br><span style='font-size:8px; opacity:0.6'>Ensure tablet date/time is correct and network is stable.</span>";
                     }
-                    if (spinner) spinner.style.borderColor = '#ef4444';
                 }
-            }, 8000);
+            }, 10000);
         };
       })();
     </script>
@@ -58,19 +65,19 @@
   <script type="importmap">
 {
   "imports": {
-    "core-js/": "https://esm.sh/core-js@^3.47.0/",
-    "regenerator-runtime/": "https://esm.sh/regenerator-runtime@^0.14.1/",
-    "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "jszip": "https://esm.sh/jszip@^3.10.1",
-    "xlsx": "https://esm.sh/xlsx@^0.18.5",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
-    "jspdf": "https://esm.sh/jspdf@^3.0.4",
-    "pdfjs-dist": "https://esm.sh/pdfjs-dist@^5.4.530",
+    "react": "https://esm.sh/react@^19.2.3",
     "vite": "https://esm.sh/vite@^7.3.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "jspdf": "https://esm.sh/jspdf@^3.0.4",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
+    "pdfjs-dist": "https://esm.sh/pdfjs-dist@^5.4.530",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "jszip": "https://esm.sh/jszip@^3.10.1",
+    "regenerator-runtime/": "https://esm.sh/regenerator-runtime@^0.14.1/",
+    "core-js/": "https://esm.sh/core-js@^3.47.0/",
     "@vitejs/plugin-legacy": "https://esm.sh/@vitejs/plugin-legacy@^7.2.1"
   }
 }
@@ -79,22 +86,26 @@
   <body>
     <div id="system-loader">
         <div class="spinner"></div>
-        <div id="loader-text" style="color:#64748b; font-weight:800; font-size:10px; margin-top:20px; letter-spacing: 0.2em; text-transform: uppercase; text-align: center;">
+        <div id="loader-text" style="color:#64748b; font-weight:800; font-size:10px; margin-top:20px; letter-spacing: 0.2em; text-transform: uppercase; text-align: center; max-width: 80%;">
             Initializing Firmware...
         </div>
     </div>
 
     <div id="root"></div>
 
-    <!-- Main Entry Point -->
+    <!-- 
+      Note: Chrome 37 fails on type="module". 
+      In a real Vite build, plugin-legacy handles this replacement.
+    -->
     <script type="module" src="/index.tsx"></script>
 
     <script>
-        // Emergency Compatibility Check
+        // Emergency Driver Check
         setTimeout(function() {
             var requirements = {
                 'Promise': typeof Promise !== 'undefined',
-                'Fetch': typeof fetch !== 'undefined'
+                'Fetch': typeof fetch !== 'undefined',
+                'Map': typeof Map !== 'undefined'
             };
             var missing = [];
             for (var key in requirements) {
@@ -104,10 +115,10 @@
                 var loader = document.getElementById('system-loader');
                 if (loader) loader.style.display = 'none';
                 document.getElementById('root').innerHTML = '<div style="padding:40px; color:#ef4444; background:#0f172a; height:100vh; font-family:sans-serif;">' +
-                    '<h1 style="font-weight:900;">FIRMWARE ERROR</h1>' +
-                    '<p style="color:white;">Missing drivers: ' + missing.join(', ') + '</p></div>';
+                    '<h1 style="font-weight:900;">DRIVER ERROR</h1>' +
+                    '<p style="color:white;">Missing legacy drivers: ' + missing.join(', ') + '</p><p style="color:#64748b; font-size:12px;">This tablet requires a modern WebView update.</p></div>';
             }
-        }, 500);
+        }, 1000);
     </script>
   </body>
 </html>
