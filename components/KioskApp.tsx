@@ -183,6 +183,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
   const [zoom, setZoom] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -412,7 +413,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
             // Grid Lines (Ultra Thin)
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.05);
-            doc.line(line1, currentY + rowHeight - 4, line6, currentY + rowHeight - 4);
+            doc.line(margin, currentY + rowHeight - 4, line6, currentY + rowHeight - 4);
             doc.line(line1, currentY - 4, line1, currentY + rowHeight - 4);
             if (hasImages) doc.line(line2, currentY - 4, line2, currentY + rowHeight - 4);
             doc.line(line3, currentY - 4, line3, currentY + rowHeight - 4);
@@ -527,7 +528,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                       <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
                       {hasImages && (
                         <td className="p-1 border-r border-slate-100 text-center">
-                          <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden">
+                          <div 
+                            className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-2 hover:ring-blue-400 transition-all"
+                            onClick={(e) => { e.stopPropagation(); if(item.imageUrl) setEnlargedImage(item.imageUrl); }}
+                          >
                              {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-contain" alt="" /> : <ImageIcon size={16} className="text-slate-100" />}
                           </div>
                         </td>
@@ -549,6 +553,31 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">OFFICIAL KIOSK PRO DOCUMENT • VAT INCL.</p>
         </div>
       </div>
+
+      {enlargedImage && (
+        <div 
+          className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4 md:p-12 animate-fade-in cursor-zoom-out"
+          onClick={(e) => { e.stopPropagation(); setEnlargedImage(null); }}
+        >
+          <button className="absolute top-6 right-6 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all shadow-xl border border-white/10 z-[160]">
+             <X size={32} strokeWidth={3} />
+          </button>
+          
+          <div className="relative w-full h-full flex items-center justify-center group" onClick={e => e.stopPropagation()}>
+             <img 
+               src={enlargedImage} 
+               className="max-w-full max-h-full object-contain shadow-[0_30px_100px_rgba(0,0,0,0.8)] rounded-xl border border-white/5 animate-pop-dynamic"
+               alt="Enlarged product"
+               onClick={() => setEnlargedImage(null)}
+             />
+             
+             {/* Dynamic Indicator */}
+             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 pointer-events-none opacity-60">
+                 Tap to Dismiss
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
