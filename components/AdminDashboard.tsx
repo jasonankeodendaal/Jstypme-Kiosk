@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
@@ -541,7 +542,7 @@ const SystemDocumentation = () => {
                                 <div className="absolute inset-0 p-8 flex flex-col justify-between pointer-events-none">
                                      <div className="flex justify-between items-start">
                                          <div className="bg-blue-600 px-4 py-2 rounded-xl text-white font-black uppercase text-[10px] tracking-widest shadow-xl">LIVE: TV CHANNEL</div>
-                                         <div className="bg-black/50 px-4 py-2 rounded-xl text-slate-300 font-mono text-[10px] backdrop-blur-md border border-white/10">1080P • 60FPS</div>
+                                         <div className="bg-black/50 px-4 py-2 rounded-xl text-slate-300 font-mono text-[10px] backdrop-blur-md border border-white/10">1130 DPI Vector)</div>
                                      </div>
                                      <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                                          <div className="w-2/3 h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,1)]"></div>
@@ -3004,6 +3005,50 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Content & Behavior</h3></div>
                              <div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}})} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div>
                          </div>
+                     </div>
+
+                     {/* Audio Diagnostic Panel */}
+                     <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 text-blue-500"><Volume size={120} /></div>
+                        <div className="relative z-10">
+                            <h3 className="text-white font-black uppercase text-sm tracking-[0.2em] mb-4 flex items-center gap-3">
+                                <Volume2 className="text-blue-400" /> Audio Policy Diagnostic
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <p className="text-slate-400 text-sm leading-relaxed font-medium">
+                                        Browser security prevents <strong className="text-white">Unmuted Video</strong> from playing automatically until a user interacts with the app.
+                                    </p>
+                                    <div className="flex gap-4">
+                                        <div className={`flex-1 p-4 rounded-2xl border ${!localData.screensaverSettings?.muteVideos ? 'bg-green-900/30 border-green-500 text-green-400' : 'bg-slate-800 border-slate-700 text-slate-500 opacity-50'}`}>
+                                            <div className="text-[10px] font-black uppercase mb-1">Status</div>
+                                            <div className="font-bold">Sound Requested</div>
+                                        </div>
+                                        <div className={`flex-1 p-4 rounded-2xl border ${isCloudConnected ? 'bg-blue-900/30 border-blue-500 text-blue-400' : 'bg-red-900/30 border-red-500 text-red-400'}`}>
+                                            <div className="text-[10px] font-black uppercase mb-1">Autoplay</div>
+                                            <div className="font-bold">Managed</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-black/40 rounded-2xl p-6 border border-white/5">
+                                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Fixing Muted Videos:</h4>
+                                    <ul className="space-y-3">
+                                        <li className="flex items-start gap-3 text-xs font-medium text-slate-300">
+                                            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-black shrink-0">1</div>
+                                            <span>Turn <strong className="text-blue-400">"Mute Videos"</strong> toggle to <strong className="text-blue-400">OFF</strong> above.</span>
+                                        </li>
+                                        <li className="flex items-start gap-3 text-xs font-medium text-slate-300">
+                                            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-black shrink-0">2</div>
+                                            <span>Touch the kiosk screen once after it reloads to "Unlock" the sound engine.</span>
+                                        </li>
+                                        <li className="flex items-start gap-3 text-xs font-medium text-slate-300">
+                                            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-black shrink-0">3</div>
+                                            <span>The screensaver will now play unmuted audio in the next loop.</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                      </div>
                 </div>
             )}

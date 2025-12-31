@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { FlatProduct, AdItem, Catalogue, ScreensaverSettings } from '../types';
-import { Moon } from 'lucide-react';
+import { Moon, Volume2, VolumeX } from 'lucide-react';
 
 interface ScreensaverProps {
   products: FlatProduct[];
@@ -26,6 +26,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSleepMode, setIsSleepMode] = useState(false);
+  const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
   
   // Animation State
   const [animationEffect, setAnimationEffect] = useState('effect-ken-burns');
@@ -82,23 +83,29 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       return () => clearInterval(interval);
   }, [config.activeHoursStart, config.activeHoursEnd, config.enableSleepMode]);
 
+  // Audio Unlock Checker
+  useEffect(() => {
+    // Hidden mechanism to check if audio engine is ready
+    const handleTouch = () => {
+        setIsAudioUnlocked(true);
+        window.removeEventListener('click', handleTouch);
+        window.removeEventListener('touchstart', handleTouch);
+    };
+    window.addEventListener('click', handleTouch);
+    window.addEventListener('touchstart', handleTouch);
+    return () => {
+        window.removeEventListener('click', handleTouch);
+        window.removeEventListener('touchstart', handleTouch);
+    };
+  }, []);
+
   // Helper to determine if item should be included based on age
   const shouldIncludeItem = (dateString?: string): boolean => {
-      // If no date, treat as new/important
       if (!dateString) return true;
-      
       const addedDate = new Date(dateString);
       const now = new Date();
-      
-      // Calculate age in months
       const monthsOld = (now.getFullYear() - addedDate.getFullYear()) * 12 + (now.getMonth() - addedDate.getMonth());
-      
-      // Aging Logic: If older than 6 months, apply probabilistic filtering
-      if (monthsOld >= 6) {
-          // 25% chance to show up in any given playlist generation cycle if > 6 months old
-          return Math.random() < 0.25; 
-      }
-      
+      if (monthsOld >= 6) return Math.random() < 0.25; 
       return true;
   };
 
@@ -217,7 +224,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
     // Pick a random animation effect for this slide
     const imageEffects = ['effect-ken-burns', 'effect-pop-dynamic', 'effect-twist-enter', 'effect-circle-reveal', 'effect-pan-tilt'];
-    const videoEffects = ['effect-fade-in', 'effect-zoom-soft']; // Videos get subtler effects
+    const videoEffects = ['effect-fade-in', 'effect-zoom-soft']; 
     
     if (currentItem.type === 'image') {
         setAnimationEffect(imageEffects[Math.floor(Math.random() * imageEffects.length)]);
@@ -230,7 +237,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   useEffect(() => {
     if (isSleepMode || !currentItem || playlist.length === 0) return;
 
-    // Clear previous timer
     if (timerRef.current) clearTimeout(timerRef.current);
 
     if (currentItem.type === 'image') {
@@ -241,41 +247,35 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     } else {
         // Video Handling
         if (videoRef.current) {
-            // Reset to beginning
             videoRef.current.currentTime = 0;
-            videoRef.current.muted = config.muteVideos;
+            // Attempt unmuted play only if requested and engine is unlocked
+            // Otherwise force mute to guarantee autoplay
+            const shouldMute = config.muteVideos || !isAudioUnlocked;
+            videoRef.current.muted = shouldMute;
             
             const playPromise = videoRef.current.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    console.warn("Autoplay prevented:", error);
-                    
-                    // Fallback: Mute and try again if it wasn't muted
-                    if (!videoRef.current!.muted) {
-                         console.log("Retrying playback with Mute...");
-                         videoRef.current!.muted = true;
-                         videoRef.current!.play().catch(e => {
-                             console.error("Muted playback failed:", e);
-                             nextSlide(); // Skip
-                         });
-                    } else {
-                        nextSlide(); // Skip
+                    console.warn("Autoplay prevented or failed:", error);
+                    // Critical Fallback: Always mute and retry if first attempt failed
+                    if (videoRef.current) {
+                        videoRef.current.muted = true;
+                        videoRef.current.play().catch(e => nextSlide());
                     }
                 });
             }
         }
         
-        // Safety timeout in case 'onEnded' doesn't fire
         timerRef.current = window.setTimeout(() => {
-            console.warn("Video timeout reached (stuck?), skipping.");
+            console.warn("Video timeout reached, skipping.");
             nextSlide();
-        }, 180000); // 3 minutes max per video
+        }, 180000); 
     }
 
     return () => {
         if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [currentIndex, currentItem, animationEffect, config.imageDuration, playlist.length, isSleepMode]);
+  }, [currentIndex, currentItem, animationEffect, config.imageDuration, playlist.length, isSleepMode, isAudioUnlocked]);
 
   // Sleep Mode Render
   if (isSleepMode) {
@@ -314,114 +314,65 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       className="fixed inset-0 z-[100] bg-black cursor-pointer flex items-center justify-center overflow-hidden"
     >
       <style>{`
-        /* Standard Ken Burns (Slow Zoom) */
-        .effect-ken-burns {
-          animation: kenBurns 20s ease-out forwards;
-        }
-        @keyframes kenBurns {
-          0% { transform: scale(1); filter: brightness(0.8); }
-          100% { transform: scale(1.15); filter: brightness(1); }
-        }
-
-        /* Pop Dynamic (Scale Bounce) */
-        .effect-pop-dynamic {
-          animation: popDynamic 8s ease-out forwards;
-          transform-origin: center center;
-        }
-        @keyframes popDynamic {
-          0% { opacity: 0; transform: scale(0.5); }
-          20% { opacity: 1; transform: scale(1.05); }
-          40% { transform: scale(0.95); }
-          100% { transform: scale(1); }
-        }
-
-        /* Twist Enter (Rotate & Scale) */
-        .effect-twist-enter {
-          animation: twistEnter 10s ease-out forwards;
-        }
-        @keyframes twistEnter {
-          0% { opacity: 0; transform: scale(1.5) rotate(-10deg); filter: blur(10px); }
-          20% { opacity: 1; transform: scale(1) rotate(0deg); filter: blur(0px); }
-          100% { transform: scale(1.1) rotate(2deg); }
-        }
-
-        /* Circle Reveal (Clip Path) */
-        .effect-circle-reveal {
-          animation: circleReveal 8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-        @keyframes circleReveal {
-          0% { clip-path: circle(0% at 50% 50%); transform: scale(1.2); }
-          30% { clip-path: circle(150% at 50% 50%); transform: scale(1); }
-          100% { clip-path: circle(150% at 50% 50%); transform: scale(1.05); }
-        }
-
-        /* Pan Tilt (3D Effect) */
-        .effect-pan-tilt {
-            animation: panTilt 12s ease-in-out forwards;
-        }
-        @keyframes panTilt {
-            0% { transform: perspective(1000px) rotateY(-5deg) scale(1.1); opacity: 0; }
-            20% { opacity: 1; }
-            100% { transform: perspective(1000px) rotateY(5deg) scale(1.2); opacity: 1; }
-        }
-
-        /* Video Effects */
-        .effect-fade-in {
-            animation: fadeInVideo 1s ease-out forwards;
-        }
+        .effect-ken-burns { animation: kenBurns 20s ease-out forwards; }
+        @keyframes kenBurns { 0% { transform: scale(1); filter: brightness(0.8); } 100% { transform: scale(1.15); filter: brightness(1); } }
+        .effect-pop-dynamic { animation: popDynamic 8s ease-out forwards; transform-origin: center center; }
+        @keyframes popDynamic { 0% { opacity: 0; transform: scale(0.5); } 20% { opacity: 1; transform: scale(1.05); } 40% { transform: scale(0.95); } 100% { transform: scale(1); } }
+        .effect-twist-enter { animation: twistEnter 10s ease-out forwards; }
+        @keyframes twistEnter { 0% { opacity: 0; transform: scale(1.5) rotate(-10deg); filter: blur(10px); } 20% { opacity: 1; transform: scale(1) rotate(0deg); filter: blur(0px); } 100% { transform: scale(1.1) rotate(2deg); } }
+        .effect-circle-reveal { animation: circleReveal 8s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes circleReveal { 0% { clip-path: circle(0% at 50% 50%); transform: scale(1.2); } 30% { clip-path: circle(150% at 50% 50%); transform: scale(1); } 100% { clip-path: circle(150% at 50% 50%); transform: scale(1.05); } }
+        .effect-pan-tilt { animation: panTilt 12s ease-in-out forwards; }
+        @keyframes panTilt { 0% { transform: perspective(1000px) rotateY(-5deg) scale(1.1); opacity: 0; } 20% { opacity: 1; } 100% { transform: perspective(1000px) rotateY(5deg) scale(1.2); opacity: 1; } }
+        .effect-fade-in { animation: fadeInVideo 1s ease-out forwards; }
         @keyframes fadeInVideo { from { opacity: 0; } to { opacity: 1; } }
-
-        .effect-zoom-soft {
-            animation: zoomSoft 20s linear forwards;
-        }
+        .effect-zoom-soft { animation: zoomSoft 20s linear forwards; }
         @keyframes zoomSoft { from { transform: scale(1); } to { transform: scale(1.1); } }
-
-        /* Text Overlays */
         .slide-up { animation: slideUp 0.8s ease-out forwards 0.3s; opacity: 0; }
         .slide-up-delay { animation: slideUp 0.8s ease-out forwards 0.5s; opacity: 0; }
-        
-        @keyframes slideUp {
-          0% { transform: translateY(40px); opacity: 0; }
-          100% { transform: translateY(0); opacity: 1; }
-        }
-
-        /* Background Parallax (Moves opposite to main image slightly) */
-        .bg-parallax {
-            animation: bgParallax 20s linear infinite alternate;
-        }
-        @keyframes bgParallax {
-            0% { transform: scale(1.2) translate(-2%, -2%); }
-            100% { transform: scale(1.2) translate(2%, 2%); }
-        }
+        @keyframes slideUp { 0% { transform: translateY(40px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        .bg-parallax { animation: bgParallax 20s linear infinite alternate; }
+        @keyframes bgParallax { 0% { transform: scale(1.2) translate(-2%, -2%); } 100% { transform: scale(1.2) translate(2%, 2%); } }
       `}</style>
 
-      {/* Background Ambience Layer - Blurred version of current image */}
       <div 
         key={`bg-${currentItem.id}`} 
         className="absolute inset-0 z-0 bg-cover bg-center opacity-40 transition-all duration-1000 bg-parallax blur-2xl"
         style={{ backgroundImage: `url(${currentItem.url})` }}
       />
       
-      {/* Texture Overlay */}
       <div className="absolute inset-0 z-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay pointer-events-none"></div>
-      
-      {/* Dark Overlay to make text readable */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/60 z-10" />
 
       {/* Main Content Layer */}
       <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center p-8 md:p-24 overflow-hidden perspective-1000">
          
          {currentItem.type === 'video' ? (
-             <video 
-               ref={videoRef}
-               src={currentItem.url} 
-               className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl rounded-sm ${animationEffect}`}
-               muted={config.muteVideos} 
-               autoPlay
-               playsInline
-               onEnded={nextSlide} 
-               onError={handleMediaError} 
-             />
+             <>
+                 <video 
+                    ref={videoRef}
+                    src={currentItem.url} 
+                    className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl rounded-sm ${animationEffect}`}
+                    muted={config.muteVideos || !isAudioUnlocked} 
+                    autoPlay
+                    playsInline
+                    onEnded={nextSlide} 
+                    onError={handleMediaError} 
+                 />
+                 {/* Visual Audio Status Indicator for Admin testing */}
+                 {!config.muteVideos && !isAudioUnlocked && (
+                     <div className="absolute top-8 right-8 bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse">
+                         <VolumeX size={16} />
+                         <span className="text-[10px] font-black uppercase tracking-widest">Audio Locked (Touch Screen)</span>
+                     </div>
+                 )}
+                 {!config.muteVideos && isAudioUnlocked && (
+                     <div className="absolute top-8 right-8 bg-blue-600/60 border border-blue-400/20 px-4 py-2 rounded-full flex items-center gap-2 text-white">
+                         <Volume2 size={16} />
+                         <span className="text-[10px] font-black uppercase tracking-widest">Audio Active</span>
+                     </div>
+                 )}
+             </>
          ) : (
              <div className={`w-full h-full flex items-center justify-center relative`}>
                 <img 
@@ -434,7 +385,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
              </div>
          )}
 
-         {/* Enhanced Overlay Info - UPDATED: Much smaller text sizes and constrained widths */}
          {config.showInfoOverlay && (currentItem.title || currentItem.subtitle) && (
              <div className="absolute bottom-12 left-8 md:bottom-20 md:left-20 max-w-[80%] md:max-w-[70%] pointer-events-none z-30">
                 {currentItem.title && (
@@ -447,20 +397,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 )}
                 
                 <div className="flex flex-wrap gap-2 sm:gap-4 items-center slide-up-delay">
+                    {/* Fix: Closed truncated div and added missing default export */}
                     {currentItem.subtitle && (
-                        <div className="bg-white/10 backdrop-blur-md border-l-2 sm:border-l-4 border-blue-500 px-3 sm:px-5 py-2 sm:py-3 shadow-xl rounded-r-lg">
-                            <h2 className="text-sm sm:text-lg md:text-2xl font-bold text-white tracking-wide uppercase leading-tight">
+                        <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl">
+                            <p className="text-white text-sm md:text-xl font-bold uppercase tracking-widest drop-shadow-md">
                                 {currentItem.subtitle}
-                            </h2>
-                        </div>
-                    )}
-                    
-                    {(currentItem.startDate || currentItem.endDate) && (
-                        <div className="bg-blue-900/80 border border-blue-400/30 px-3 sm:px-5 py-2 sm:py-3 rounded-lg shadow-xl">
-                            <p className="text-xs sm:text-sm md:text-lg text-white font-mono font-bold uppercase tracking-widest">
-                                {currentItem.startDate && formatDate(currentItem.startDate)}
-                                {currentItem.startDate && currentItem.endDate && ` — `}
-                                {currentItem.endDate && formatDate(currentItem.endDate)}
                             </p>
                         </div>
                     )}
