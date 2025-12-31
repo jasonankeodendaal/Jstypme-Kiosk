@@ -8,7 +8,6 @@
     <title>Kiosk Pro Showcase</title>
     
     <!-- 1. CRITICAL LEGACY POLYFILLS (LOADED FIRST & SYNC) -->
-    <!-- We use older, more stable versions of polyfills that Chrome 37 prefers -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-shim/0.35.6/es6-shim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-promise/4.2.8/es6-promise.auto.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.19/fetch.min.js"></script>
@@ -18,12 +17,34 @@
     <script>
       (function() {
         window.appStarted = false;
-        // Fix for missing globalThis in Chrome 37
+        
+        // --- CRITICAL KIOSK DIAGNOSTIC: SYSTEM CLOCK CHECK ---
+        // If the clock is before 2024, SSL/HSTS will fail.
+        var currentYear = new Date().getFullYear();
+        if (currentYear < 2024) {
+            window.onload = function() {
+                var loader = document.getElementById('system-loader');
+                if (loader) loader.style.display = 'none';
+                document.body.innerHTML = [
+                    '<div style="padding:40px; color:white; background:#7f1d1d; height:100vh; font-family: sans-serif; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">',
+                        '<div style="font-size:60px; margin-bottom:20px;">⏰</div>',
+                        '<h1 style="font-weight:900; font-size: 28px; margin-bottom:10px;">SYSTEM CLOCK EXPIRED</h1>',
+                        '<p style="max-width:400px; line-height:1.5; opacity:0.8;">The tablet clock is set to <b>' + currentYear + '</b>. This prevents a secure connection (SSL/HSTS) to the cloud server.</p>',
+                        '<div style="margin-top:30px; padding:20px; border: 2px dashed rgba(255,255,255,0.3); border-radius:15px;">',
+                            '<p style="font-weight:bold; margin-bottom:10px; color:#fca5a5;">REQUIRED ACTION:</p>',
+                            '<p style="font-size:14px;">Go to Android Settings &rarr; Date & Time &rarr; Set to <b>Automatic</b> or current date.</p>',
+                        '</div>',
+                        '<button onclick="window.location.reload()" style="margin-top:30px; padding:15px 30px; background:white; color:#7f1d1d; border:none; border-radius:10px; font-weight:900; text-transform:uppercase; letter-spacing:1px;">Retry Connection</button>',
+                    '</div>'
+                ].join('');
+            };
+            return; // Halt execution
+        }
+
         if (typeof window.globalThis === 'undefined') { window.globalThis = window; }
         if (typeof window.global === 'undefined') { window.global = window; }
         window.process = { env: { NODE_ENV: 'production' } };
         
-        // Global Error Catcher
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             var loaderText = document.getElementById('loader-text');
             if (loaderText) {
@@ -109,7 +130,6 @@
                 if (!requirements[key]) { missing.push(key); }
             }
             if (missing.length > 0) {
-                // If the app hasn't started yet and we are missing essentials
                 if (!window.appStarted) {
                     var loader = document.getElementById('system-loader');
                     if (loader) loader.style.display = 'none';
