@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Brand, Catalogue, HeroConfig, AdConfig, AdItem } from '../types';
 import { BookOpen, Globe, ChevronRight, X, Grid } from 'lucide-react';
@@ -128,6 +127,20 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(11);
   
+  // Ad Visibility Check - Be more conservative on narrow screens
+  const [isWideLayout, setIsWideLayout] = useState(false);
+
+  useEffect(() => {
+    const handleCheckWidth = () => {
+        setIsWideLayout(window.innerWidth > 1200);
+    };
+    handleCheckWidth();
+    window.addEventListener('resize', handleCheckWidth);
+    return () => window.removeEventListener('resize', handleCheckWidth);
+  }, []);
+
+  const showSideAds = isWideLayout && deviceType !== 'mobile';
+
   // Dynamic Responsive Limit: Adjusted to show more rows of smaller logos
   useEffect(() => {
     const handleResize = () => {
@@ -256,8 +269,17 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 p-4 md:p-12 max-w-[1700px] mx-auto w-full flex flex-col gap-10">
+      <div className="flex-1 p-4 md:p-12 max-w-[1700px] mx-auto w-full flex flex-col xl:flex-row gap-10">
         
+        {/* Left Column (Wide Only) */}
+        {showSideAds && (
+            <div className="hidden xl:block w-72 shrink-0">
+                {ads && (
+                    <AdUnit items={ads.homeSideLeftVertical} className="h-full w-full min-h-[600px] sticky top-8" />
+                )}
+            </div>
+        )}
+
         {/* Center Column (Brands + Bottom Ads) */}
         <div className="flex-1 flex flex-col gap-12">
             
@@ -308,6 +330,15 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                 </div>
             )}
         </div>
+
+        {/* Right Column (Wide Only) */}
+        {showSideAds && (
+            <div className="hidden xl:block w-72 shrink-0">
+                {ads && (
+                    <AdUnit items={ads.homeSideVertical} className="h-full w-full min-h-[600px] sticky top-8" />
+                )}
+            </div>
+        )}
       </div>
 
       {/* ALL BRANDS MODAL - Reduced logo sizes here too */}
