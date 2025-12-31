@@ -848,7 +848,9 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
   };
 
   const updateItem = (id: string, field: keyof PricelistItem, val: string) => {
-    setItems(items.map(item => item.id === id ? { ...item, [field]: val } : item));
+    // ENFORCE UPPERCASE ON DESCRIPTION
+    const finalVal = field === 'description' ? val.toUpperCase() : val;
+    setItems(items.map(item => item.id === id ? { ...item, [field]: finalVal } : item));
   };
 
   const handlePriceBlur = (id: string, field: 'normalPrice' | 'promoPrice', value: string) => {
@@ -952,7 +954,8 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             return {
                 id: generateId('imp'),
                 sku: String(row[sIdx] || '').trim().toUpperCase(),
-                description: String(row[dIdx] || '').trim(),
+                // ENFORCE UPPERCASE ON IMPORT
+                description: String(row[dIdx] || '').trim().toUpperCase(),
                 normalPrice: formatImported(row[nIdx]),
                 promoPrice: row[pIdx] ? formatImported(row[pIdx]) : '',
                 imageUrl: ''
@@ -1083,7 +1086,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
                     </div>
                   </td>
                   <td className="p-2"><input value={item.sku} onChange={(e) => updateItem(item.id, 'sku', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="SKU-123" /></td>
-                  <td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="Product details..." /></td>
+                  <td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm uppercase" placeholder="PRODUCT DETAILS..." /></td>
                   <td className="p-2"><input value={item.normalPrice} onBlur={(e) => handlePriceBlur(item.id, 'normalPrice', e.target.value)} onChange={(e) => updateItem(item.id, 'normalPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-black text-sm" placeholder="R 999" /></td>
                   <td className="p-2"><input value={item.promoPrice} onBlur={(e) => handlePriceBlur(item.id, 'promoPrice', e.target.value)} onChange={(e) => updateItem(item.id, 'promoPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-red-500 outline-none font-black text-sm text-red-600" placeholder="R 799" /></td>
                   <td className="p-2 text-center">
