@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -2824,7 +2823,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                     )}
                     {activeSubTab === 'ads' && (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {['homeBottomLeft', 'homeBottomRight', 'homeSideVertical', 'homeSideLeftVertical', 'screensaver'].map(zone => (
+                            {['homeBottomLeft', 'homeBottomRight', 'screensaver'].map(zone => (
                                 <div key={zone} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                                     <h4 className="font-bold uppercase text-xs mb-1">{zone.replace('home', '')}</h4>
                                     <p className="text-[10px] text-slate-400 mb-4 uppercase font-bold tracking-wide">{zone.includes('Side') ? 'Size: 1080x1920 (Portrait)' : zone.includes('screensaver') ? 'Mixed Media' : 'Size: 1920x1080 (Landscape)'}</p>
