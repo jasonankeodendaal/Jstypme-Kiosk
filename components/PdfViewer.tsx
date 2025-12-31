@@ -1,13 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Robust reference for Vite/ESM/Legacy environments
-const pdfjs: any = pdfjsLib;
-
-if (pdfjs.GlobalWorkerOptions) {
-  pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-}
 
 interface PdfViewerProps {
   url: string;
@@ -22,7 +15,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
@@ -51,6 +43,13 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
       try {
         setLoading(true); setError(null); setPageNum(1);
         if (loadingTaskRef.current) loadingTaskRef.current.destroy().catch(() => {});
+
+        // DYNAMIC LIBRARY LOADING
+        const pdfjs = await import('pdfjs-dist');
+        if (pdfjs.GlobalWorkerOptions) {
+           pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        }
+
         const loadingTask = pdfjs.getDocument({
             url,
             cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
@@ -60,7 +59,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
         });
         loadingTaskRef.current = loadingTask;
         const doc = await loadingTask.promise;
-        if (loadingTaskRef.current === loadingTask) { setPdf(doc); setLoading(false); }
+        setPdf(doc); 
+        setLoading(false); 
       } catch (err: any) {
         if (err?.message !== 'Loading aborted') { setError("Unable to load document."); setLoading(false); }
       }
@@ -147,7 +147,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
               {pdf && (
                   <div className="hidden md:flex items-center gap-2 bg-slate-800 rounded-lg p-1 ml-4 border border-slate-700">
                       <button onClick={handleFit} className={`p-1.5 rounded transition-colors ${scale === 0 ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Auto Fit"><Maximize size={16}/></button>
-                      <div className="w-[1px] h-4 bg-slate-700 mx-1"></div>
                       <button onClick={handleZoomOut} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><ZoomOut size={16}/></button>
                       <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><ZoomIn size={16}/></button>
                   </div>
@@ -174,16 +173,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
                   <span className="font-bold uppercase tracking-widest text-xs">Opening Document...</span>
               </div>
           )}
-          {error && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <div className="bg-slate-800 p-8 rounded-2xl border border-red-500/50 text-center max-w-md shadow-2xl">
-                    <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-                    <p className="font-bold text-lg mb-6 text-white">{error}</p>
-                    <button onClick={onClose} className="bg-white text-slate-900 px-8 py-3 rounded-xl font-bold uppercase text-xs">Close Viewer</button>
-                </div>
-              </div>
-          )}
-          
           <div className="min-w-full min-h-full flex items-center justify-center p-8 md:p-12 pointer-events-none">
              <div className={`relative shadow-2xl transition-opacity duration-500 pointer-events-auto ${loading ? 'opacity-0' : 'opacity-100'}`}>
                   <canvas ref={canvasRef} className="bg-white rounded shadow-inner" />
@@ -203,11 +192,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
                    <span className="text-white font-black text-xl">{pageNum} <span className="text-slate-500 text-sm">/ {pdf.numPages}</span></span>
                </div>
                <button disabled={pageNum >= pdf.numPages} onClick={() => changePage(1)} className="p-3 bg-blue-600 hover:bg-blue-500 rounded-full text-white disabled:opacity-20 transition-all shadow-lg active:scale-95"><ChevronRight size={24} /></button>
-               <div className="flex md:hidden items-center gap-2 bg-slate-800 rounded-lg p-1 ml-4 border border-slate-700">
-                    <button onClick={handleZoomOut} className="p-2 text-slate-300"><ZoomOut size={20}/></button>
-                    <button onClick={handleFit} className={`p-2 ${scale === 0 ? 'text-blue-400' : 'text-slate-500'}`}><Maximize size={20}/></button>
-                    <button onClick={handleZoomIn} className="p-2 text-slate-300"><ZoomIn size={20}/></button>
-               </div>
            </div>
        )}
     </div>

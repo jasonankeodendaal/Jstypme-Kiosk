@@ -1,7 +1,8 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { FlatProduct, AdItem, Catalogue, ScreensaverSettings } from '../types';
 import { Moon, Volume2, VolumeX } from 'lucide-react';
+import { isLegacyEngine } from '../services/kioskService';
 
 interface ScreensaverProps {
   products: FlatProduct[];
@@ -28,8 +29,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const [isSleepMode, setIsSleepMode] = useState(false);
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
   
+  // Performance detection
+  const isLegacy = useMemo(() => isLegacyEngine(), []);
+  
   // Animation State
-  const [animationEffect, setAnimationEffect] = useState('effect-ken-burns');
+  const [animationEffect, setAnimationEffect] = useState(isLegacy ? 'effect-fade-in' : 'effect-ken-burns');
   
   const timerRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -71,7 +75,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           if (startMinutes < endMinutes) {
               isActive = currentMinutes >= startMinutes && currentMinutes < endMinutes;
           } else {
-              // Night shift scenario
               isActive = currentMinutes >= startMinutes || currentMinutes < endMinutes;
           }
           
@@ -79,13 +82,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       };
 
       checkTime();
-      const interval = setInterval(checkTime, 60000); // Check every minute
+      const interval = setInterval(checkTime, 60000);
       return () => clearInterval(interval);
   }, [config.activeHoursStart, config.activeHoursEnd, config.enableSleepMode]);
 
-  // Audio Unlock Checker
   useEffect(() => {
-    // Hidden mechanism to check if audio engine is ready
     const handleTouch = () => {
         setIsAudioUnlocked(true);
         window.removeEventListener('click', handleTouch);
@@ -99,7 +100,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     };
   }, []);
 
-  // Helper to determine if item should be included based on age
   const shouldIncludeItem = (dateString?: string): boolean => {
       if (!dateString) return true;
       const addedDate = new Date(dateString);
@@ -109,15 +109,12 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       return true;
   };
 
-  // 1. Build & Shuffle Playlist
   useEffect(() => {
     const list: PlaylistItem[] = [];
 
-    // Add Custom Ads - Multiplied by 3 to ensure "Special Marketing" frequency
     if (config.showCustomAds) {
         ads.forEach((ad, i) => {
           if (shouldIncludeItem(ad.dateAdded)) {
-            // Push 3 copies of each ad to increase frequency in the shuffle
             for(let c=0; c<3; c++) {
                 list.push({
                     id: `ad-${ad.id}-${i}-${c}`,
@@ -132,7 +129,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         });
     }
 
-    // Add Pamphlets
     if (config.showPamphlets) {
         pamphlets.forEach((pamphlet) => {
            if (pamphlet.pages && pamphlet.pages.length > 0) {
@@ -151,7 +147,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         });
     }
 
-    // Add Products
     products.forEach((p) => {
         if (!shouldIncludeItem(p.dateAdded)) return;
 
@@ -193,7 +188,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         }
     });
 
-    // Robust Shuffle
     for (let i = list.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [list[i], list[j]] = [list[j], list[i]];
@@ -203,13 +197,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     setCurrentIndex(0);
   }, [products.length, ads.length, pamphlets.length, config.showProductImages, config.showProductVideos, config.showCustomAds, config.showPamphlets]);
 
-  // Helper to move to next slide
   const nextSlide = () => {
       setCurrentIndex((prev) => (prev + 1) % playlist.length);
   };
 
   const handleMediaError = () => {
-      console.warn("Media failed to load:", playlist[currentIndex]?.url);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(() => {
           nextSlide();
@@ -218,11 +210,14 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
   const currentItem = playlist[currentIndex];
 
-  // 2. Effect Selector
   useEffect(() => {
     if (!currentItem) return;
 
-    // Pick a random animation effect for this slide
+    if (isLegacy) {
+        setAnimationEffect('effect-fade-in');
+        return;
+    }
+
     const imageEffects = ['effect-ken-burns', 'effect-pop-dynamic', 'effect-twist-enter', 'effect-circle-reveal', 'effect-pan-tilt'];
     const videoEffects = ['effect-fade-in', 'effect-zoom-soft']; 
     
@@ -231,9 +226,8 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     } else {
         setAnimationEffect(videoEffects[Math.floor(Math.random() * videoEffects.length)]);
     }
-  }, [currentItem?.id]);
+  }, [currentItem?.id, isLegacy]);
 
-  // 3. Playback Logic
   useEffect(() => {
     if (isSleepMode || !currentItem || playlist.length === 0) return;
 
@@ -245,19 +239,14 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             nextSlide();
         }, duration);
     } else {
-        // Video Handling
         if (videoRef.current) {
             videoRef.current.currentTime = 0;
-            // Attempt unmuted play only if requested and engine is unlocked
-            // Otherwise force mute to guarantee autoplay
             const shouldMute = config.muteVideos || !isAudioUnlocked;
             videoRef.current.muted = shouldMute;
             
             const playPromise = videoRef.current.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    console.warn("Autoplay prevented or failed:", error);
-                    // Critical Fallback: Always mute and retry if first attempt failed
                     if (videoRef.current) {
                         videoRef.current.muted = true;
                         videoRef.current.play().catch(e => nextSlide());
@@ -267,7 +256,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         }
         
         timerRef.current = window.setTimeout(() => {
-            console.warn("Video timeout reached, skipping.");
             nextSlide();
         }, 180000); 
     }
@@ -277,7 +265,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     };
   }, [currentIndex, currentItem, animationEffect, config.imageDuration, playlist.length, isSleepMode, isAudioUnlocked]);
 
-  // Sleep Mode Render
   if (isSleepMode) {
       return (
           <div 
@@ -293,18 +280,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       );
   }
 
-  // Initial buffer
   if (playlist.length === 0) return (
       <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center cursor-pointer" onClick={onWake}>
           <div className="text-white opacity-30 text-xs font-mono">...</div>
       </div>
   );
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-  };
 
   const objectFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
 
@@ -324,7 +304,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         @keyframes circleReveal { 0% { clip-path: circle(0% at 50% 50%); transform: scale(1.2); } 30% { clip-path: circle(150% at 50% 50%); transform: scale(1); } 100% { clip-path: circle(150% at 50% 50%); transform: scale(1.05); } }
         .effect-pan-tilt { animation: panTilt 12s ease-in-out forwards; }
         @keyframes panTilt { 0% { transform: perspective(1000px) rotateY(-5deg) scale(1.1); opacity: 0; } 20% { opacity: 1; } 100% { transform: perspective(1000px) rotateY(5deg) scale(1.2); opacity: 1; } }
-        .effect-fade-in { animation: fadeInVideo 1s ease-out forwards; }
+        .effect-fade-in { animation: fadeInVideo 1.2s ease-out forwards; }
         @keyframes fadeInVideo { from { opacity: 0; } to { opacity: 1; } }
         .effect-zoom-soft { animation: zoomSoft 20s linear forwards; }
         @keyframes zoomSoft { from { transform: scale(1); } to { transform: scale(1.1); } }
@@ -335,13 +315,16 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         @keyframes bgParallax { 0% { transform: scale(1.2) translate(-2%, -2%); } 100% { transform: scale(1.2) translate(2%, 2%); } }
       `}</style>
 
+      {/* BACKGROUND LAYER: Blur is removed on legacy engines to save GPU cycles */}
       <div 
         key={`bg-${currentItem.id}`} 
-        className="absolute inset-0 z-0 bg-cover bg-center opacity-40 transition-all duration-1000 bg-parallax blur-2xl"
+        className={`absolute inset-0 z-0 bg-cover bg-center opacity-40 transition-all duration-1000 ${isLegacy ? '' : 'bg-parallax blur-2xl'}`}
         style={{ backgroundImage: `url(${currentItem.url})` }}
       />
       
-      <div className="absolute inset-0 z-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay pointer-events-none"></div>
+      {!isLegacy && (
+          <div className="absolute inset-0 z-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay pointer-events-none"></div>
+      )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/60 z-10" />
 
       {/* Main Content Layer */}
@@ -359,7 +342,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     onEnded={nextSlide} 
                     onError={handleMediaError} 
                  />
-                 {/* Visual Audio Status Indicator for Admin testing */}
                  {!config.muteVideos && !isAudioUnlocked && (
                      <div className="absolute top-8 right-8 bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse">
                          <VolumeX size={16} />
@@ -392,14 +374,13 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                         <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white uppercase tracking-tighter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] mb-2 leading-tight opacity-95 break-words">
                             {currentItem.title}
                         </h1>
-                        <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-blue-500 mt-2 sm:mt-4 mb-4 sm:mb-6 rounded-full"></div>
+                        {!isLegacy && <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-blue-500 mt-2 sm:mt-4 mb-4 sm:mb-6 rounded-full"></div>}
                     </div>
                 )}
                 
                 <div className="flex flex-wrap gap-2 sm:gap-4 items-center slide-up-delay">
-                    {/* Fix: Closed truncated div and added missing default export */}
                     {currentItem.subtitle && (
-                        <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl">
+                        <div className={`bg-white/10 ${isLegacy ? '' : 'backdrop-blur-md'} border border-white/20 px-4 py-2 rounded-xl`}>
                             <p className="text-white text-sm md:text-xl font-bold uppercase tracking-widest drop-shadow-md">
                                 {currentItem.subtitle}
                             </p>

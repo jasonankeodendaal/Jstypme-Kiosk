@@ -15,6 +15,30 @@ export const getEnv = (key: string, fallback: string) => {
   return fallback;
 };
 
+/**
+ * Utility to run non-critical tasks only when the browser is idle.
+ * Essential for older hardware to prevent UI stutter.
+ */
+export const runPoliteTask = (task: () => void) => {
+    if (typeof (window as any).requestIdleCallback === 'function') {
+        (window as any).requestIdleCallback(task, { timeout: 2000 });
+    } else {
+        // Fallback for very old engines (Chrome < 47)
+        setTimeout(task, 1000);
+    }
+};
+
+/**
+ * Detects if the device has a legacy/slow engine (e.g. Android 5.0 WebView).
+ */
+export const isLegacyEngine = (): boolean => {
+    const ua = navigator.userAgent;
+    // Detect Chrome < 60 or very old Firefox
+    const isOldChrome = /Chrome\/([1-5][0-9])\./.test(ua);
+    const isOldAndroid = /Android\s([1-5])\./.test(ua);
+    return isOldChrome || isOldAndroid || !('requestIdleCallback' in window);
+};
+
 const SUPABASE_URL = getEnv('VITE_SUPABASE_URL', 
     getEnv('NEXT_PUBLIC_SUPABASE_URL', 
         getEnv('SUPABASE_URL', 'YOUR_SUPABASE_PROJECT_URL')
@@ -34,8 +58,6 @@ export const initSupabase = () => {
   if (SUPABASE_URL && SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.length > 10) {
     try {
       // FIX: Explicitly pass the bound fetch polyfill to the Supabase client.
-      // Chrome 37's native fetch (if any) or missing fetch causes connection failures.
-      // Binding to window ensures we use the whatwg-fetch polyfill injected in index.html.
       supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: {
           fetch: window.fetch.bind(window)
