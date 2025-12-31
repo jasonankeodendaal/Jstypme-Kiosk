@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
@@ -42,7 +43,7 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
   </svg>
 );
 
-// --- SETUP SCREEN ---
+// --- SETUP SCREEN (LEGACY OPTIMIZED) ---
 const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComplete: () => void }) => {
     const [step, setStep] = useState(1);
     const [shopName, setShopName] = useState('');
@@ -54,22 +55,22 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
     const handleNext = async () => {
         setError('');
         if (step === 1) {
-            if (!shopName.trim()) return setError('Please enter a name for this location.');
+            if (!shopName.trim()) return setError('Enter location name.');
             setStep(2);
         } else if (step === 2) {
             setStep(3);
         } else if (step === 3) {
             const systemPin = storeData.systemSettings?.setupPin || '0000';
-            if (pin !== systemPin) return setError('Invalid Setup PIN. Consult Admin.');
+            if (pin !== systemPin) return setError('Invalid PIN.');
             
             setIsProcessing(true);
             try {
                 await provisionKioskId();
                 const success = await completeKioskSetup(shopName.trim(), deviceType);
                 if (success) onComplete();
-                else setError('Setup failed. Local storage error.');
+                else setError('Storage error.');
             } catch (e) {
-                setError('Cloud registration failed.');
+                setError('Sync failed.');
             } finally {
                 setIsProcessing(false);
             }
@@ -77,35 +78,34 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
     };
 
     return (
-        <div className="fixed inset-0 z-[300] bg-slate-900 flex items-center justify-center p-4">
-            <div className="bg-white rounded-[2rem] w-full max-w-lg overflow-hidden shadow-2xl animate-fade-in border border-white/20">
-                <div className="bg-slate-900 text-white p-6 md:p-8 text-center relative">
-                    <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                    <div className="relative z-10 flex flex-col items-center">
-                        <div className="bg-blue-600 p-3 rounded-2xl shadow-xl mb-4">
-                            <Store size={32} />
+        <div className="fixed inset-0 z-[300] bg-[#0f172a] flex flex-col items-center justify-center p-4">
+            <div className="bg-white rounded-lg w-full max-w-lg shadow-2xl overflow-hidden border-2 border-white">
+                <div className="bg-[#1e293b] text-white p-6 text-center">
+                    <div className="flex flex-col items-center">
+                        <div className="bg-blue-600 p-2 rounded-lg mb-3">
+                            <Store size={28} />
                         </div>
-                        <h1 className="text-2xl font-black uppercase tracking-tight mb-1">Device Provisioning</h1>
-                        <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest">Kiosk Pro v2.8 • System Initialization</p>
+                        <h1 style={{fontSize: '24px', fontWeight: 900}} className="uppercase tracking-tight">System Setup</h1>
+                        <p style={{color: '#94a3b8', fontSize: '10px', fontWeight: 'bold'}} className="uppercase tracking-widest mt-1">Kiosk Firmware v2.8</p>
                     </div>
                 </div>
 
-                <div className="p-6 md:p-8">
-                    <div className="flex justify-center gap-2 mb-8">
+                <div className="p-6">
+                    <div className="flex justify-center gap-2 mb-6">
                         {[1, 2, 3].map(s => (
-                            <div key={s} className={`h-1 rounded-full transition-all duration-500 ${step >= s ? 'w-10 bg-blue-600' : 'w-3 bg-slate-200'}`}></div>
+                            <div key={s} className={`h-2 rounded-full transition-all ${step >= s ? 'w-12 bg-blue-600' : 'w-4 bg-slate-200'}`}></div>
                         ))}
                     </div>
 
-                    <div className="min-h-[180px]">
+                    <div style={{minHeight: '200px'}}>
                         {step === 1 && (
                             <div className="animate-fade-in">
-                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Step 01: Location Identity</label>
-                                <h2 className="text-xl font-black text-slate-900 mb-4 leading-tight">What is the name of this shop or zone?</h2>
+                                <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">01. Device Location</label>
+                                <h2 style={{color: '#000', fontSize: '18px', fontWeight: 900}} className="mb-4">Where is this tablet located?</h2>
                                 <input 
                                     autoFocus
-                                    className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold text-base text-slate-900 transition-all uppercase placeholder:normal-case shadow-sm"
-                                    placeholder="e.g. Waterfront Mall - Tech Hub"
+                                    className="w-full p-4 bg-white border-2 border-slate-400 rounded-lg outline-none focus:border-blue-600 font-bold text-lg text-black uppercase"
+                                    placeholder="e.g. Front Desk"
                                     value={shopName}
                                     onChange={(e) => setShopName(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleNext()}
@@ -115,22 +115,22 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
                         {step === 2 && (
                             <div className="animate-fade-in">
-                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Step 02: Hardware Profile</label>
-                                <h2 className="text-xl font-black text-slate-900 mb-4 leading-tight">Select the primary display type.</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">02. Display Mode</label>
+                                <h2 style={{color: '#000', fontSize: '18px', fontWeight: 900}} className="mb-4">Hardware Profile</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                                     {[
-                                        { id: 'kiosk', icon: <Tablet size={20}/>, label: 'Kiosk', desc: 'Interactive Stand' },
-                                        { id: 'mobile', icon: <Smartphone size={20}/>, label: 'Mobile', desc: 'Handheld Unit' },
-                                        { id: 'tv', icon: <Tv size={20}/>, label: 'TV Wall', desc: 'Non-Interactive' }
+                                        { id: 'kiosk', icon: <Tablet size={20}/>, label: 'Kiosk' },
+                                        { id: 'mobile', icon: <Smartphone size={20}/>, label: 'Handheld' },
+                                        { id: 'tv', icon: <Tv size={20}/>, label: 'TV Display' }
                                     ].map(type => (
                                         <button 
                                             key={type.id}
                                             onClick={() => setDeviceType(type.id as any)}
-                                            className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-1 group ${deviceType === type.id ? 'bg-blue-50 border-blue-600 shadow-md' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                                            style={{borderWidth: '3px'}}
+                                            className={`p-3 rounded-lg transition-all flex flex-col items-center gap-1 ${deviceType === type.id ? 'bg-blue-600 border-blue-800 text-white shadow-lg' : 'bg-slate-50 border-slate-200 text-slate-500'}`}
                                         >
-                                            <div className={`${deviceType === type.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`}>{type.icon}</div>
-                                            <div className={`font-black uppercase text-[10px] ${deviceType === type.id ? 'text-blue-600' : 'text-slate-900'}`}>{type.label}</div>
-                                            <div className="text-[8px] font-bold text-slate-400 uppercase">{type.desc}</div>
+                                            <div>{type.icon}</div>
+                                            <div style={{fontWeight: 900}} className="uppercase text-xs">{type.label}</div>
                                         </button>
                                     ))}
                                 </div>
@@ -139,40 +139,37 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
                         {step === 3 && (
                             <div className="animate-fade-in text-center">
-                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Step 03: Security Authorization</label>
-                                <h2 className="text-xl font-black text-slate-900 mb-4 leading-tight">Enter System Setup PIN</h2>
-                                <div className="max-w-[200px] mx-auto">
-                                    <input 
-                                        autoFocus
-                                        type="password"
-                                        maxLength={8}
-                                        className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-mono font-bold text-2xl text-center tracking-[0.5em] text-slate-900 transition-all shadow-sm"
-                                        placeholder="****"
-                                        value={pin}
-                                        onChange={(e) => setPin(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleNext()}
-                                    />
-                                </div>
-                                <p className="text-slate-400 text-[10px] font-medium mt-3">Required to register device with Cloud Fleet</p>
+                                <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">03. Security PIN</label>
+                                <h2 style={{color: '#000', fontSize: '18px', fontWeight: 900}} className="mb-4">Authorized Admin Entry</h2>
+                                <input 
+                                    autoFocus
+                                    type="password"
+                                    maxLength={8}
+                                    className="w-full max-w-[200px] p-4 bg-white border-2 border-slate-400 rounded-lg outline-none focus:border-blue-600 font-mono font-bold text-3xl text-center tracking-[0.5em] text-black"
+                                    placeholder="****"
+                                    value={pin}
+                                    onChange={(e) => setPin(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+                                />
                             </div>
                         )}
                     </div>
 
-                    {error && <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold uppercase flex items-center gap-2 border border-red-100"><X size={14}/> {error}</div>}
+                    {error && <div style={{background: '#fee2e2', color: '#b91c1c', border: '1px solid #f87171'}} className="mt-4 p-3 rounded-lg text-xs font-black uppercase flex items-center gap-2"> {error}</div>}
 
                     <div className="mt-8 flex gap-3">
                         {step > 1 && (
-                            <button onClick={() => setStep(step - 1)} className="px-6 py-4 bg-slate-100 text-slate-500 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">Back</button>
+                            <button onClick={() => setStep(step - 1)} className="px-6 py-4 bg-slate-200 text-black rounded-lg font-black uppercase text-xs tracking-widest">Back</button>
                         )}
                         <button 
                             onClick={handleNext}
                             disabled={isProcessing}
-                            className="flex-1 bg-slate-900 text-white p-4 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-lg hover:bg-blue-600 transition-all active:scale-95 disabled:opacity-50"
+                            className="flex-1 bg-blue-600 text-white p-4 rounded-lg font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg"
                         >
                             {isProcessing ? (
                                 <><Loader2 className="animate-spin" size={14} /> Syncing...</>
                             ) : (
-                                <>{step === 3 ? 'Complete Setup' : 'Continue'} <ChevronRight size={14} /></>
+                                <>{step === 3 ? 'Start Application' : 'Next Step'} <ChevronRight size={14} /></>
                             )}
                         </button>
                     </div>
