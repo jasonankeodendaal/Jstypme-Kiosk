@@ -218,12 +218,14 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     } else {
         if (videoRef.current) {
             // IF config says "Mute Off" AND global interaction has occurred, play with sound
-            videoRef.current.muted = config.muteVideos || !isAudioUnlocked;
+            // Otherwise, we MUST use muted=true for browser autoplay compliance
+            const isMuted = config.muteVideos || !isAudioUnlocked;
+            videoRef.current.muted = isMuted;
             
             const playPromise = videoRef.current.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    // Fallback: Mute and play if unmuted still blocked
+                    // Force mute fallback if unmuted is still blocked by Firefox policy
                     if (videoRef.current) {
                         videoRef.current.muted = true;
                         videoRef.current.play().catch(() => {
@@ -233,6 +235,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 });
             }
         }
+        // Safety timeout for video stall in Firefox
         timerRef.current = window.setTimeout(() => {
             nextSlide();
         }, 180000); 
@@ -320,8 +323,8 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     src={currentItem.url} 
                     className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl rounded-sm ${animationEffect}`}
                     muted={config.muteVideos || !isAudioUnlocked} 
-                    autoPlay
-                    playsInline
+                    autoPlay={true}
+                    playsInline={true}
                     decoding="async"
                     onEnded={nextSlide} 
                     onError={handleMediaError} 

@@ -1,5 +1,5 @@
 
-// Service Worker for Kiosk Pro v5
+// Service Worker for Kiosk Pro v5.1 (Firefox Optimized)
 const CACHE_NAME = 'kiosk-pro-v5';
 
 const PRECACHE_URLS = [
@@ -33,36 +33,58 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Helper for Range Requests (Critical for Video/Audio playback)
+/**
+ * Enhanced Range Request Handler
+ * Specifically tuned for Firefox and Chrome's media probe behaviors.
+ */
 const handleRangeRequest = async (request) => {
   const cache = await caches.open(CACHE_NAME);
-  const cachedResponse = await cache.match(request);
+  let response = await cache.match(request);
 
-  if (cachedResponse) {
-    const rangeHeader = request.headers.get('Range');
-    if (rangeHeader) {
-      const arrayBuffer = await cachedResponse.arrayBuffer();
+  // If not in cache, fetch from network and try to cache it
+  if (!response) {
+    try {
+      response = await fetch(request);
+      // We only cache successful full responses or opaque responses
+      if (response.status === 200 || response.type === 'opaque') {
+        const copy = response.clone();
+        cache.put(request, copy);
+      }
+    } catch (e) {
+      return new Response(null, { status: 404 });
+    }
+  }
+
+  const rangeHeader = request.headers.get('Range');
+  if (rangeHeader && response.status !== 206) {
+    try {
+      const arrayBuffer = await response.arrayBuffer();
       const bytes = rangeHeader.replace(/bytes=/, "").split("-");
       const start = parseInt(bytes[0], 10);
-      const end = bytes[1] ? parseInt(bytes[1], 10) : arrayBuffer.byteLength - 1;
+      const total = arrayBuffer.byteLength;
+      const end = bytes[1] ? parseInt(bytes[1], 10) : total - 1;
       
       const chunk = arrayBuffer.slice(start, end + 1);
+      
+      // Firefox requires these specific headers to consider a 206 valid
       return new Response(chunk, {
         status: 206,
         statusText: 'Partial Content',
         headers: new Headers({
-          'Content-Range': `bytes ${start}-${end}/${arrayBuffer.byteLength}`,
+          'Content-Type': response.headers.get('Content-Type') || 'video/mp4',
           'Accept-Ranges': 'bytes',
-          'Content-Length': chunk.byteLength,
-          'Content-Type': cachedResponse.headers.get('Content-Type'),
+          'Content-Range': `bytes ${start}-${end}/${total}`,
+          'Content-Length': chunk.byteLength.toString(),
+          'Access-Control-Allow-Origin': '*',
         }),
       });
+    } catch (e) {
+      // If slicing fails, return original response
+      return response;
     }
-    return cachedResponse;
   }
 
-  // Fallback to network
-  return fetch(request);
+  return response;
 };
 
 self.addEventListener('fetch', (event) => {
@@ -70,58 +92,41 @@ self.addEventListener('fetch', (event) => {
   const isMedia = event.request.destination === 'video' || 
                   event.request.destination === 'audio' || 
                   url.pathname.toLowerCase().endsWith('.mp4') || 
-                  url.pathname.toLowerCase().endsWith('.pdf');
+                  url.pathname.toLowerCase().endsWith('.webm');
 
-  // Handle Range Requests for Media
-  if (isMedia && event.request.headers.get('Range')) {
+  // Handle Media Requests (Always check for Ranges)
+  if (isMedia) {
     event.respondWith(handleRangeRequest(event.request));
     return;
   }
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
-        .catch(() => {
-          return caches.match('/index.html');
-        })
+      fetch(event.request).catch(() => caches.match('/index.html'))
     );
     return;
   }
 
-  const isImage = event.request.destination === 'image';
-  const isFont = event.request.destination === 'font';
-
-  if (isMedia || isImage || isFont) {
+  // Assets (Images/Fonts) - Cache First
+  if (event.request.destination === 'image' || event.request.destination === 'font') {
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) return cachedResponse;
-        
-        return fetch(event.request).then((response) => {
-          const isOpaque = response.type === 'opaque';
-          const isOk = response.status === 200;
-          
-          if (!response || (!isOk && !isOpaque)) return response;
-
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-          return response;
-        }).catch(() => null);
+      caches.match(event.request).then((cached) => {
+        return cached || fetch(event.request).then(res => {
+          if (res.status === 200) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then(c => c.put(event.request, copy));
+          }
+          return res;
+        });
       })
     );
     return;
   }
 
-  // Network First for everything else
+  // Everything else: Network First
   event.respondWith(
     fetch(event.request)
-      .then((response) => {
-        if (!response || response.status !== 200) return response;
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
-        return response;
-      })
+      .then(res => res)
       .catch(() => caches.match(event.request))
   );
 });

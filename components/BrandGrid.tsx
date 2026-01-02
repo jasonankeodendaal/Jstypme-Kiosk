@@ -16,7 +16,7 @@ interface BrandGridProps {
   deviceType?: string;
 }
 
-// Improved AdUnit with robust playback logic
+// Improved AdUnit with robust playback logic for Firefox
 const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -39,9 +39,11 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                 setCurrentIndex(prev => (prev + 1) % items!.length);
             }, 6000);
         } else {
+            // Note: autoPlay attribute is also on the tag
             if(videoRef.current) {
-                videoRef.current.play().catch(e => console.warn("Ad auto-play failed", e));
+                videoRef.current.play().catch(() => {});
             }
+            // Fallback safety if video stalls
             timeoutRef.current = window.setTimeout(() => {
                 setCurrentIndex(prev => (prev + 1) % items!.length);
             }, 180000);
@@ -51,17 +53,6 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
     }, [currentIndex, activeItem, items]);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (activeItem?.type === 'video' && videoRef.current) {
-                if (videoRef.current.paused && !videoRef.current.ended && videoRef.current.readyState > 2) {
-                    videoRef.current.play().catch(() => {});
-                }
-            }
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [activeItem]);
 
     if (!items || items.length === 0) return (
        <div className={`relative overflow-hidden rounded-xl border border-slate-200/50 bg-slate-50/50 ${className}`}></div>
@@ -85,10 +76,9 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                     <video 
                         ref={videoRef}
                         src={activeItem!.url} 
-                        muted 
-                        playsInline
-                        autoPlay
-                        decoding="async"
+                        muted={true} // Explicit boolean
+                        autoPlay={true}
+                        playsInline={true}
                         loop={items.length === 1}
                         className="w-full h-full object-cover"
                         onEnded={handleVideoEnded}
@@ -98,7 +88,6 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                         src={activeItem!.url} 
                         alt="Advertisement" 
                         loading="lazy"
-                        decoding="async"
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                     />
                 )}
@@ -256,7 +245,6 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                         src={brand.logoUrl} 
                         alt={brand.name} 
                         loading="lazy"
-                        decoding="async"
                         className="w-full h-full object-contain filter grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 p-1 md:p-3"
                       />
                     ) : (
@@ -325,7 +313,6 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                             src={brand.logoUrl} 
                             alt={brand.name} 
                             loading="lazy"
-                            decoding="async"
                             className="w-full h-full object-contain drop-shadow-sm group-hover:drop-shadow-lg"
                           />
                         ) : (
