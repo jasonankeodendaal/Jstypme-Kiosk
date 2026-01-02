@@ -1,5 +1,5 @@
 
-// Service Worker for Kiosk Pro
+// Service Worker for Kiosk Pro v5
 const CACHE_NAME = 'kiosk-pro-v5';
 
 const PRECACHE_URLS = [
@@ -33,67 +33,95 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Helper for Range Requests (Critical for Video/Audio playback)
+const handleRangeRequest = async (request) => {
+  const cache = await caches.open(CACHE_NAME);
+  const cachedResponse = await cache.match(request);
+
+  if (cachedResponse) {
+    const rangeHeader = request.headers.get('Range');
+    if (rangeHeader) {
+      const arrayBuffer = await cachedResponse.arrayBuffer();
+      const bytes = rangeHeader.replace(/bytes=/, "").split("-");
+      const start = parseInt(bytes[0], 10);
+      const end = bytes[1] ? parseInt(bytes[1], 10) : arrayBuffer.byteLength - 1;
+      
+      const chunk = arrayBuffer.slice(start, end + 1);
+      return new Response(chunk, {
+        status: 206,
+        statusText: 'Partial Content',
+        headers: new Headers({
+          'Content-Range': `bytes ${start}-${end}/${arrayBuffer.byteLength}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunk.byteLength,
+          'Content-Type': cachedResponse.headers.get('Content-Type'),
+        }),
+      });
+    }
+    return cachedResponse;
+  }
+
+  // Fallback to network
+  return fetch(request);
+};
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const isMedia = event.request.destination === 'video' || 
                   event.request.destination === 'audio' || 
-                  url.pathname.endsWith('.mp4') || 
-                  url.pathname.endsWith('.pdf');
+                  url.pathname.toLowerCase().endsWith('.mp4') || 
+                  url.pathname.toLowerCase().endsWith('.pdf');
 
-  // SPECIAL HANDLING FOR MEDIA RANGE REQUESTS (Necessary for Android Audio)
-  if (isMedia && event.request.headers.get('range')) {
+  // Handle Range Requests for Media
+  if (isMedia && event.request.headers.get('Range')) {
     event.respondWith(handleRangeRequest(event.request));
     return;
   }
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/index.html'))
+      fetch(event.request)
+        .catch(() => {
+          return caches.match('/index.html');
+        })
     );
     return;
   }
 
-  // Standard Caching Strategy
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200) return response;
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-        return response;
-      });
-    })
-  );
-});
+  const isImage = event.request.destination === 'image';
+  const isFont = event.request.destination === 'font';
 
-async function handleRangeRequest(request) {
-  const cache = await caches.open(CACHE_NAME);
-  let response = await cache.match(request);
+  if (isMedia || isImage || isFont) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+        
+        return fetch(event.request).then((response) => {
+          const isOpaque = response.type === 'opaque';
+          const isOk = response.status === 200;
+          
+          if (!response || (!isOk && !isOpaque)) return response;
 
-  if (!response) {
-    response = await fetch(request);
-    // Don't cache range requests directly, but we might want to cache the full file
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        }).catch(() => null);
+      })
+    );
+    return;
   }
 
-  const range = request.headers.get('range');
-  const buffer = await response.arrayBuffer();
-  
-  const parts = range.replace(/bytes=/, "").split("-");
-  const start = parseInt(parts[0], 10);
-  const end = parts[1] ? parseInt(parts[1], 10) : buffer.byteLength - 1;
-  const chunk = buffer.slice(start, end + 1);
-
-  return new Response(chunk, {
-    status: 206,
-    statusText: 'Partial Content',
-    headers: new Headers({
-      'Content-Range': `bytes ${start}-${end}/${buffer.byteLength}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': chunk.byteLength,
-      'Content-Type': response.headers.get('Content-Type'),
-    }),
-  });
-}
+  // Network First for everything else
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        if (!response || response.status !== 200) return response;
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
+  );
+});
