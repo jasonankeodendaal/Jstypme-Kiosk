@@ -1,4 +1,3 @@
-
 export interface DimensionSet {
   label?: string; // e.g. "Device", "Stand", "Box 1"
   width: string;
@@ -146,7 +145,6 @@ export interface ScreensaverSettings {
   showCustomAds: boolean;
   // New Enhanced Controls
   displayStyle?: 'contain' | 'cover';
-  videoDisplayStyle?: 'contain' | 'cover';
   showInfoOverlay?: boolean;
   activeHoursStart?: string; // e.g. "08:00"
   activeHoursEnd?: string;   // e.g. "20:00"

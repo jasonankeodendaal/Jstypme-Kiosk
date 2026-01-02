@@ -14,7 +14,6 @@ interface BrandGridProps {
   screensaverEnabled: boolean;
   onToggleScreensaver: () => void;
   deviceType?: string;
-  onLaunchBrowser?: (url: string, title?: string) => void;
 }
 
 // Improved AdUnit with robust playback logic for Firefox
@@ -80,7 +79,7 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                         key={`ad-vid-${activeItem!.url}`}
                         src={activeItem!.url} 
                         muted={true} 
-                        autoPlay={true} 
+                        autoPlay={true}
                         playsInline={true}
                         loop={items.length === 1}
                         className="w-full h-full object-cover"
@@ -116,7 +115,7 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
     );
 };
 
-const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewGlobalCatalog, onExport, screensaverEnabled, onToggleScreensaver, deviceType, onLaunchBrowser }) => {
+const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewGlobalCatalog, onExport, screensaverEnabled, onToggleScreensaver, deviceType }) => {
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(11);
   
@@ -188,14 +187,16 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                         </button>
                      )}
                      {heroConfig?.websiteUrl && (
-                         <button 
-                            onClick={() => onLaunchBrowser ? onLaunchBrowser(heroConfig.websiteUrl!, "Store Website") : window.open(heroConfig.websiteUrl, '_blank')}
+                         <a 
+                            href={heroConfig.websiteUrl}
+                            target="_blank" 
+                            rel="noopener noreferrer"
                             className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 md:px-8 md:py-3.5 rounded-lg md:rounded-2xl font-bold uppercase tracking-widest text-[9px] md:text-base border border-white/20 hover:-translate-y-1 transition-all flex items-center gap-1.5 md:gap-3 shadow-lg"
                          >
                             <Globe size={14} className="md:size-auto" /> 
                             <span className="hidden md:block">Visit Website</span>
                             <span className="md:hidden">Web</span>
-                         </button>
+                         </a>
                      )}
                 </div>
             </div>

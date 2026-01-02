@@ -24,8 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import InternalBrowser from './InternalBrowser';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus, ChevronLeft, Command } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 const isRecent = (dateString?: string) => {
@@ -184,9 +183,9 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: PricelistItem, hasImages: boolean, onEnlarge: (url: string) => void }) => (
     <tr className="excel-row border-b border-slate-100 transition-colors group" style={{ willChange: 'transform' }}>
         {hasImages && (
-            <td className="p-0 border-r border-slate-100 text-center">
+            <td className="p-1 border-r border-slate-100 text-center">
                 <div 
-                    className="w-6 h-6 md:w-7 md:h-7 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-1 hover:ring-blue-400 transition-all"
+                    className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-1 hover:ring-blue-400 transition-all"
                     onClick={(e) => { e.stopPropagation(); if(item.imageUrl) onEnlarge(item.imageUrl); }}
                 >
                     {item.imageUrl ? (
@@ -198,13 +197,13 @@ const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: Priceli
                             alt="" 
                         />
                     ) : (
-                        <ImageIcon size={10} className="text-slate-100" />
+                        <ImageIcon size={16} className="text-slate-100" />
                     )}
                 </div>
             </td>
         )}
-        <td className="sku-cell border-r border-slate-100"><span className="sku-font font-black text-slate-900 uppercase tracking-tighter block truncate">{item.sku || ''}</span></td>
-        <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-800 uppercase tracking-tighter group-hover:text-[#c0810d] transition-colors block truncate">{item.description}</span></td>
+        <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
+        <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">{item.description}</span></td>
         <td className="price-cell text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900">{item.normalPrice || ''}</span></td>
         <td className="price-cell text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter">{item.promoPrice}</span>) : (<span className="font-bold text-slate-900">{item.normalPrice || ''}</span>)}</td>
     </tr>
@@ -216,9 +215,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const [isExporting, setIsExporting] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   
-  // Virtualization State - ROW HEIGHT REDUCED TO 34px FOR NARROW ROWS
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 50 });
-  const ROW_HEIGHT = 34; 
+  // Virtualization State
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 40 }); // Increased window for smoother fast scrolling
+  const ROW_HEIGHT = 48; 
 
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -243,8 +242,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
     const virtualTop = scrollTop / zoom;
     const virtualHeight = containerHeight / zoom;
 
-    const start = Math.max(0, Math.floor(virtualTop / ROW_HEIGHT) - 10);
-    const end = Math.min((pricelist.items?.length || 0), Math.ceil((virtualTop + virtualHeight) / ROW_HEIGHT) + 20);
+    const start = Math.max(0, Math.floor(virtualTop / ROW_HEIGHT) - 10); // Larger buffer for speed
+    const end = Math.min((pricelist.items?.length || 0), Math.ceil((virtualTop + virtualHeight) / ROW_HEIGHT) + 15);
 
     setVisibleRange(prev => {
         if (prev.start === start && prev.end === end) return prev;
@@ -256,6 +255,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    // Use passive scroll listener for better performance
     const handleScroll = () => {
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
         requestRef.current = requestAnimationFrame(updateVisibleRange);
@@ -315,11 +315,194 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
       setIsDragging(false);
   };
 
+  const loadImageForPDF = async (url: string): Promise<{ imgData: string, format: string, width: number, height: number } | null> => {
+    if (!url) return null;
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous"; 
+        img.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width; canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) { resolve(null); return; }
+                ctx.drawImage(img, 0, 0);
+                resolve({ imgData: canvas.toDataURL('image/png'), format: 'PNG', width: img.width, height: img.height });
+            } catch (err) { resolve(null); }
+        };
+        img.onerror = () => resolve(null);
+        img.src = url;
+    });
+  };
+
   const handleExportPDF = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsExporting(true);
-    // ... PDF Logic exists but omitted for brevity to focus on UI request ...
-    setIsExporting(false);
+    try {
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 8; 
+        const innerWidth = pageWidth - (margin * 2);
+        
+        const mediaW = hasImages ? 14 : 0;
+        const skuW = hasImages ? 20 : 22;
+        const normalW = 20; 
+        const promoW = 20; 
+        const descW = innerWidth - mediaW - skuW - normalW - promoW;
+
+        const line1 = margin;
+        const line2 = line1 + mediaW;
+        const line3 = line2 + skuW;
+        const line4 = line3 + descW;
+        const line5 = line4 + normalW;
+        const line6 = line1 + innerWidth;
+
+        const mediaX = line1 + 1;
+        const skuX = line2 + 1.5;
+        const descX = line3 + 1.5;
+        const normalPriceX = line5 - 1.5; 
+        const promoPriceX = line6 - 1.5;  
+        
+        const skuMaxW = skuW - 3;
+        const descMaxW = descW - 3;
+
+        const [brandAsset, companyAsset] = await Promise.all([
+            brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
+            companyLogo ? loadImageForPDF(companyLogo) : Promise.resolve(null)
+        ]);
+
+        const drawHeader = () => {
+            let topY = 8;
+            if (brandAsset) {
+                const h = 12; const w = h * (brandAsset.width / brandAsset.height);
+                doc.addImage(brandAsset.imgData, brandAsset.format, margin, topY, w, h);
+            } else if (brandName) {
+                doc.setTextColor(30, 41, 59); doc.setFontSize(20); doc.setFont('helvetica', 'black');
+                doc.text(brandName.toUpperCase(), margin, topY + 8);
+            }
+            if (companyAsset) {
+                const h = 7; const w = h * (companyAsset.width / companyAsset.height);
+                doc.addImage(companyAsset.imgData, companyAsset.format, pageWidth - margin - w, topY, w, h);
+            }
+            doc.setTextColor(0, 0, 0); doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+            doc.text("PRICE LIST", margin, topY + 18);
+            doc.setTextColor(30, 41, 59); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+            doc.text(pricelist.title.toUpperCase(), margin, topY + 23);
+            
+            const boxW = 32; const boxH = 6; const boxX = pageWidth - margin - boxW; const boxY = topY + 13;
+            doc.setFillColor(30, 41, 59); doc.rect(boxX, boxY, boxW, boxH, 'F');
+            doc.setTextColor(255, 255, 255); doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
+            doc.text(`${pricelist.month} ${pricelist.year}`.toUpperCase(), boxX + (boxW/2), boxY + 4, { align: 'center' });
+            
+            doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
+            doc.line(margin, topY + 26, pageWidth - margin, topY + 26);
+            return topY + 32;
+        };
+
+        const drawTableHeaders = (startY: number) => {
+            const headerHeight = 6;
+            doc.setFillColor(113, 113, 122); 
+            doc.rect(margin, startY - 4.5, pageWidth - (margin * 2), headerHeight, 'F');
+            
+            doc.setTextColor(255, 255, 255); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+            if (hasImages) doc.text("MEDIA", mediaX, startY);
+            doc.text("SKU", skuX, startY); 
+            doc.text("DESCRIPTION", descX, startY);
+            doc.text("NORMAL", normalPriceX, startY, { align: 'right' });
+            doc.text("PROMO", promoPriceX, startY, { align: 'right' });
+
+            return startY + 4;
+        };
+
+        const drawTextFit = (text: string, x: number, y: number, maxWidth: number, baseSize: number, align: 'left' | 'right' = 'left'): number => {
+            let currentSize = baseSize;
+            doc.setFontSize(currentSize);
+            while (doc.getTextWidth(text) > maxWidth && currentSize > 5.5) { 
+                currentSize -= 0.5;
+                doc.setFontSize(currentSize);
+            }
+            if (doc.getTextWidth(text) > maxWidth) {
+                const lines = doc.splitTextToSize(text, maxWidth);
+                doc.text(lines, x, y, { align });
+                return lines.length;
+            }
+            doc.text(text, x, y, { align });
+            return 1;
+        };
+
+        let currentY = drawHeader();
+        currentY = drawTableHeaders(currentY);
+        
+        const items = pricelist.items || [];
+        const baseRowHeight = hasImages ? 9 : 6; 
+        const footerMargin = 12;
+
+        for (let index = 0; index < items.length; index++) {
+            const item = items[index];
+            doc.setFontSize(6.5);
+            const skuLines = doc.splitTextToSize(item.sku || '', skuMaxW).length;
+            doc.setFontSize(7.5);
+            const descLines = doc.splitTextToSize(item.description.toUpperCase(), descMaxW).length;
+            
+            const maxLines = Math.max(skuLines, descLines);
+            const contentHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 3.0) : baseRowHeight;
+            const rowHeight = Math.max(contentHeight, hasImages ? 9.5 : 6);
+
+            if (currentY + rowHeight > pageHeight - footerMargin) {
+                doc.addPage();
+                currentY = drawHeader();
+                currentY = drawTableHeaders(currentY);
+            }
+            
+            if (index % 2 !== 0) {
+                doc.setFillColor(250, 250, 250); doc.rect(margin, currentY - 3.5, pageWidth - (margin * 2), rowHeight, 'F');
+            }
+
+            if (hasImages && item.imageUrl) {
+                const asset = await loadImageForPDF(item.imageUrl);
+                if (asset) {
+                   const imgDim = 7.5;
+                   doc.addImage(asset.imgData, asset.format, mediaX, currentY - 2.8, imgDim, imgDim);
+                }
+            }
+
+            doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal');
+            drawTextFit(item.sku || '', skuX, currentY, skuMaxW, 6.5);
+            
+            doc.setFont('helvetica', 'bold');
+            drawTextFit(item.description.toUpperCase(), descX, currentY, descMaxW, 7.5);
+            
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
+            drawTextFit(item.normalPrice || '', normalPriceX, currentY, normalW - 3, 7.5, 'right');
+            
+            if (item.promoPrice) {
+                doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
+                drawTextFit(item.promoPrice, promoPriceX, currentY, promoW - 3, 8.0, 'right');
+            } else {
+                doc.setTextColor(0, 0, 0);
+                drawTextFit(item.normalPrice || '', promoPriceX, currentY, promoW - 3, 7.5, 'right');
+            }
+
+            doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.04);
+            doc.line(margin, currentY + rowHeight - 3.5, line6, currentY + rowHeight - 3.5);
+            doc.line(line1, currentY - 3.5, line1, currentY + rowHeight - 3.5);
+            if (hasImages) doc.line(line2, currentY - 3.5, line2, currentY + rowHeight - 3.5);
+            doc.line(line3, currentY - 3.5, line3, currentY + rowHeight - 3.5);
+            doc.line(line4, currentY - 3.5, line4, currentY + rowHeight - 3.5);
+            doc.line(line5, currentY - 3.5, line5, currentY + rowHeight - 3.5);
+            doc.line(line6, currentY - 3.5, line6, currentY + rowHeight - 3.5);
+
+            currentY += rowHeight;
+        }
+
+        const totalPages = doc.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i); doc.setFontSize(6); doc.setTextColor(148, 163, 184);
+            doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 6, { align: 'center' });
+        }
+        doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
+    } catch (err) { alert("Unable to generate PDF."); } finally { setIsExporting(false); }
   };
 
   const handleZoomIn = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.min(prev + 0.25, 2.5)); };
@@ -339,8 +522,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           .print-hidden { display: none !important; }
           .viewer-container { box-shadow: none !important; border: none !important; }
           .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
-          .spreadsheet-table th { position: static !important; background: #71717a !important; color: #fff !important; border: 0.5pt solid #cbd5e1 !important; padding: 2pt !important; font-size: 7pt !important; }
-          .spreadsheet-table td { border: 0.2pt solid #e2e8f0 !important; color: #000 !important; padding: 2pt !important; font-size: 7pt !important; }
+          .spreadsheet-table th { position: static !important; background: #71717a !important; color: #fff !important; border: 0.5pt solid #cbd5e1 !important; padding: 4pt !important; font-size: 8pt !important; }
+          .spreadsheet-table td { border: 0.2pt solid #e2e8f0 !important; color: #000 !important; padding: 4pt !important; font-size: 8pt !important; }
         }
         
         .table-scroll {
@@ -357,45 +540,47 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           backface-visibility: hidden;
         }
 
-        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #334155; color: white; box-shadow: inset 0 -1px 0 #1e293b; white-space: nowrap; height: 32px; padding: 0 4px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
+        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; height: 40px; padding: 0 4px; }
         
         .excel-row { 
           height: ${ROW_HEIGHT}px;
           transform: translate3d(0,0,0);
           will-change: transform;
-          contain: content;
+          contain: content; /* Significant optimization for large lists */
         }
         
         .excel-row:nth-child(even) { background-color: #f8fafc; }
-        .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; letter-spacing: -0.05em; }
-        .sku-cell { word-break: break-all; line-height: 1; font-size: 8px; padding: 1px 4px; }
-        .desc-cell { line-height: 1; font-size: 9px; padding: 1px 6px; }
-        .price-cell { font-size: 10px; font-weight: 900; padding: 1px 4px; }
+        .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        .sku-cell { word-break: break-all; line-height: 1.1; font-size: clamp(8px, 1.2vw, 11px); padding: 4px; }
+        .desc-cell { line-height: 1.1; font-size: clamp(8px, 1.3vw, 12px); padding: 4px 6px; }
+        .price-cell { font-size: clamp(9px, 1.4vw, 14px); font-weight: 900; padding: 4px; }
         .shrink-title { font-size: clamp(0.75rem, 2.5vw, 1.5rem); }
       `}</style>
 
       <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-[2rem] shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block`} onClick={e => e.stopPropagation()}>
-        <div className={`print-hidden p-3 md:p-5 text-white flex justify-between items-center shrink-0 z-20 bg-[#c0810d]`}>
+        <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 z-20 bg-[#c0810d]`}>
           <div className="flex items-center gap-4 overflow-hidden">
-             <div className="hidden md:flex bg-white/10 p-2 rounded-xl border border-white/10 shadow-inner"><RIcon size={20} className="text-white" /></div>
+             <div className="hidden md:flex bg-white/10 p-2 rounded-xl border border-white/10 shadow-inner"><RIcon size={24} className="text-white" /></div>
              <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-sm md:text-xl font-black uppercase tracking-tight leading-none shrink-title truncate">{pricelist.title}</h2>
+                  <h2 className="text-sm md:text-2xl font-black uppercase tracking-tight leading-none shrink-title truncate">{pricelist.title}</h2>
+                  {isNewlyUpdated && (<span className="hidden sm:inline bg-white text-[#c0810d] px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-md"><Sparkles size={10} fill="currentColor" /> NEW</span>)}
                 </div>
-                <p className="text-yellow-100 font-bold uppercase tracking-widest text-[7px] md:text-[10px] mt-0.5">{pricelist.month} {pricelist.year}</p>
+                <p className="text-yellow-100 font-bold uppercase tracking-widest text-[8px] md:text-xs mt-1">{pricelist.month} {pricelist.year}</p>
              </div>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
-             <div className="hidden lg:flex items-center gap-2 bg-black/30 p-1 rounded-full border border-white/10 backdrop-blur-md">
-                <button onClick={handleZoomOut} className="p-1 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={14} className="scale-x-[-1]"/></button>
-                <span className="text-[9px] font-black uppercase tracking-widest min-w-[35px] text-center">{Math.round(zoom * 100)}%</span>
-                <button onClick={handleZoomIn} className="p-1 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={14}/></button>
+             <div className="hidden lg:flex items-center gap-3 bg-black/30 p-1.5 rounded-full border border-white/10 backdrop-blur-md">
+                <button onClick={handleZoomOut} className="p-1.5 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={16} className="scale-x-[-1]"/></button>
+                <span className="text-[10px] font-black uppercase tracking-widest min-w-[40px] text-center">{Math.round(zoom * 100)}%</span>
+                <button onClick={handleZoomIn} className="p-1.5 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={16}/></button>
              </div>
-             <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-2 bg-[#0f172a] text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-black text-[9px] md:text-[10px] uppercase shadow-2xl hover:bg-black transition-all active:scale-95 group disabled:opacity-50">
-                <FileDown size={14} className="text-blue-400 group-hover:text-white" />
-                <span className="hidden md:inline">{isExporting ? 'Generating...' : 'PDF'}</span>
+             <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-2 bg-[#0f172a] text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-2xl hover:bg-black transition-all active:scale-95 group disabled:opacity-50 min-w-[100px] md:min-w-[180px] justify-center border border-white/5">
+                {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={18} className="text-blue-400 group-hover:text-white" />}
+                <span className="hidden md:inline">{isExporting ? 'Generating...' : 'SAVE AS PDF'}</span>
+                <span className="md:hidden">{isExporting ? '...' : 'PDF'}</span>
              </button>
-             <button onClick={onClose} className="p-1.5 bg-white/20 rounded-full hover:bg-white/30 transition-colors border border-white/5"><X size={18}/></button>
+             <button onClick={onClose} className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors border border-white/5"><X size={20}/></button>
           </div>
         </div>
 
@@ -403,7 +588,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             ref={scrollContainerRef}
             onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleDragEnd} onMouseLeave={handleDragEnd}
             onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleDragEnd}
-            className={`table-scroll flex-1 overflow-auto bg-slate-100/50 relative p-0 md:p-2 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
+            className={`table-scroll flex-1 overflow-auto bg-slate-100/50 relative p-0 md:p-4 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
         >
           <div className="min-w-full min-h-full flex items-start justify-center">
             <div 
@@ -413,34 +598,81 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 width: zoom > 1 ? 'max-content' : '100%',
                 willChange: 'transform'
               }} 
-              className={`select-none relative bg-white shadow-xl rounded-lg overflow-hidden print:transform-none ${!isDragging ? 'transition-transform duration-200' : ''}`}
+              className={`select-none relative bg-white shadow-xl rounded-xl overflow-hidden print:transform-none ${!isDragging ? 'transition-transform duration-200' : ''}`}
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
-                  <tr className="print:bg-[#334155] bg-[#334155]">
-                      {hasImages && <th className="p-1 text-center w-[8%] text-white">Ref</th>}
-                      <th className={`p-1 border-r border-white/10 text-white ${hasImages ? 'w-[15%]' : 'w-[18%]'}`}>SKU</th>
-                      <th className={`p-1 border-r border-white/10 text-white ${hasImages ? 'w-[45%]' : 'w-[52%]'}`}>Description</th>
-                      <th className="p-1 border-r border-white/10 text-right w-[15%] text-white">Normal</th>
-                      <th className="p-1 text-right w-[15%] text-white">Promo</th>
+                  <tr className="hidden print:table-row border-none">
+                      <th colSpan={hasImages ? 5 : 4} className="p-0 border-none bg-white">
+                          <div className="w-full px-10 pt-10 pb-6 text-left">
+                              <div className="flex justify-between items-start mb-10">
+                                  <div className="flex flex-col gap-6">
+                                      {brandLogo ? <img src={brandLogo} alt="Brand" className="h-20 object-contain self-start" /> : brandName ? <h2 className="text-6xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2> : null}
+                                      <div><h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mt-4">Price List</h1><p className="text-xl font-bold text-slate-900 uppercase tracking-[0.2em] mt-3">{pricelist.title}</p></div>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-6 text-right">
+                                      {companyLogo && <img src={companyLogo} alt="Company" className="h-14 object-contain" />}
+                                      <div><div className="bg-slate-900 text-white px-6 py-2 rounded-xl text-lg font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div><p className="text-[10px] font-bold text-slate-400 uppercase mt-4">Document REF: {pricelist.id.substring(0,10).toUpperCase()}</p></div>
+                                  </div>
+                              </div>
+                              <div className="h-1 bg-slate-200 w-full rounded-full mb-10"></div>
+                          </div>
+                      </th>
+                  </tr>
+                  <tr className="print:bg-[#71717a] bg-[#71717a]">
+                      {hasImages && <th className="p-2 md:p-3 text-[10px] md:text-xs font-black uppercase tracking-tight border-r border-white/10 w-[10%] text-white">Media</th>}
+                      <th className={`p-2 md:p-3 text-[10px] md:text-xs font-black uppercase tracking-tight border-r border-white/10 text-white ${hasImages ? 'w-[15%]' : 'w-[18%]'}`}>SKU</th>
+                      <th className={`p-2 md:p-3 text-[10px] md:text-xs font-black uppercase tracking-tight border-r border-white/10 text-white ${hasImages ? 'w-[45%]' : 'w-[52%]'}`}>Description</th>
+                      <th className="p-2 md:p-3 text-[10px] md:text-xs font-black uppercase tracking-tight border-r border-white/10 text-right w-[15%] text-white">Normal</th>
+                      <th className="p-2 md:p-3 text-[10px] md:text-xs font-black uppercase tracking-tight text-right w-[15%] text-white">Promo</th>
                   </tr>
                   </thead>
                   <tbody className="print:table-row-group">
                   {topPadding > 0 && <tr><td colSpan={hasImages ? 5 : 4} style={{ height: topPadding }} /></tr>}
+                  
                   {visibleItems.map((item) => (
-                      <PricelistRow key={item.id} item={item} hasImages={hasImages} onEnlarge={(url) => setEnlargedImage(url)} />
+                      <PricelistRow 
+                        key={item.id} 
+                        item={item} 
+                        hasImages={hasImages} 
+                        onEnlarge={(url) => setEnlargedImage(url)} 
+                      />
                   ))}
+
                   {bottomPadding > 0 && <tr><td colSpan={hasImages ? 5 : 4} style={{ height: bottomPadding }} /></tr>}
                   </tbody>
               </table>
+              {zoom > 1.2 && !isDragging && (<div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5"><Grip size={120} className="text-black" /></div>)}
             </div>
           </div>
+        </div>
+        <div className="p-3 md:p-4 bg-white border-t border-slate-100 flex justify-between items-center shrink-0 print:hidden z-10">
+          <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">ITEMS: {(pricelist.items || []).length}</span>
+          <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">OFFICIAL KIOSK PRO DOCUMENT • VAT INCL.</p>
         </div>
       </div>
 
       {enlargedImage && (
-        <div className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-fade-in cursor-zoom-out" onClick={() => setEnlargedImage(null)}>
-          <img src={enlargedImage} className="max-w-full max-h-full object-contain shadow-2xl rounded-xl border border-white/5 animate-pop-dynamic" alt="Enlarged" />
+        <div 
+          className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4 md:p-12 animate-fade-in cursor-zoom-out"
+          onClick={(e) => { e.stopPropagation(); setEnlargedImage(null); }}
+        >
+          <button className="absolute top-6 right-6 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all shadow-xl border border-white/10 z-[160]">
+             <X size={32} strokeWidth={3} />
+          </button>
+          
+          <div className="relative w-full h-full flex items-center justify-center group" onClick={e => e.stopPropagation()}>
+             <img 
+               src={enlargedImage} 
+               className="max-w-full max-h-full object-contain shadow-[0_30px_100px_rgba(0,0,0,0.8)] rounded-xl border border-white/5 animate-pop-dynamic"
+               alt="Enlarged product"
+               onClick={() => setEnlargedImage(null)}
+             />
+             
+             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 pointer-events-none opacity-60">
+                 Tap to Dismiss
+             </div>
+          </div>
         </div>
       )}
     </div>
@@ -513,104 +745,29 @@ const ComparisonModal = ({ products, onClose, onShowDetail }: { products: Produc
     );
 };
 
-// --- REDESIGNED UNIVERSAL SEARCH MODAL ---
 const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: StoreData, onClose: () => void, onSelectProduct: (p: Product) => void }) => {
     const [query, setQuery] = useState('');
     const [filterBrand, setFilterBrand] = useState('all');
-    
+    const [filterCategory, setFilterCategory] = useState('all');
+    const [filterHasVideo, setFilterHasVideo] = useState(false);
     const allFlattenedProducts = useMemo(() => storeData.brands.flatMap(b => b.categories.flatMap(c => c.products.map(p => ({...p, brandName: b.name, brandId: b.id, categoryName: c.name, categoryId: c.id})))), [storeData]);
-    
     const results = useMemo(() => {
         const lower = query.toLowerCase().trim();
-        if (!lower && filterBrand === 'all') return [];
         return allFlattenedProducts.filter(p => {
-            const matchesQuery = !lower || p.name.toLowerCase().includes(lower) || (p.sku && p.sku.toLowerCase().includes(lower));
+            const matchesQuery = !lower || p.name.toLowerCase().includes(lower) || (p.sku && p.sku.toLowerCase().includes(lower)) || p.description.toLowerCase().includes(lower);
             const matchesBrand = filterBrand === 'all' || p.brandId === filterBrand;
-            return matchesQuery && matchesBrand;
-        }).sort((a,b) => a.name.localeCompare(b.name)).slice(0, 40);
-    }, [query, filterBrand, allFlattenedProducts]);
+            const matchesCat = filterCategory === 'all' || p.categoryName === filterCategory;
+            const matchesVideo = !filterHasVideo || (p.videoUrl || (p.videoUrls && p.videoUrls.length > 0));
+            return matchesQuery && matchesBrand && matchesCat && matchesVideo;
+        }).sort((a,b) => a.name.localeCompare(b.name));
+    }, [query, filterBrand, filterCategory, filterHasVideo, allFlattenedProducts]);
 
     return (
-        <div className="fixed inset-0 z-[120] bg-slate-950/80 backdrop-blur-xl flex flex-col items-center pt-12 md:pt-24 p-4 animate-fade-in" onClick={onClose}>
-            <div className="w-full max-w-3xl bg-white rounded-3xl shadow-[0_30px_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[85vh] border border-white/20" onClick={e => e.stopPropagation()}>
-                {/* Modern Command Search Bar */}
-                <div className="p-4 md:p-6 border-b border-slate-100 flex flex-col gap-4 bg-slate-50/50">
-                    <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600 w-5 h-5 group-focus-within:scale-110 transition-transform" />
-                        <input 
-                            autoFocus 
-                            type="text" 
-                            placeholder="Find any product or SKU code..." 
-                            className="w-full bg-white text-slate-900 placeholder:text-slate-400 text-lg md:text-xl font-black uppercase tracking-tight py-4 pl-12 pr-12 border-2 border-slate-200 focus:border-blue-500 rounded-2xl outline-none transition-all shadow-sm"
-                            value={query} 
-                            onChange={(e) => setQuery(e.target.value)} 
-                        />
-                        {query && <button onClick={() => setQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full"><X size={16}/></button>}
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-2">
-                             <Command size={14} className="text-slate-400" />
-                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Universal Discovery Engine</span>
-                         </div>
-                         <div className="flex gap-2">
-                             <select 
-                                value={filterBrand} 
-                                onChange={e => setFilterBrand(e.target.value)}
-                                className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider outline-none focus:border-blue-500 shadow-xs"
-                             >
-                                 <option value="all">All Manufacturers</option>
-                                 {storeData.brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                             </select>
-                         </div>
-                    </div>
-                </div>
-
-                {/* Results Area */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white no-scrollbar">
-                    {results.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {results.map(p => (
-                                <button 
-                                    key={p.id} 
-                                    onClick={() => { onSelectProduct(p); onClose(); }}
-                                    className="flex items-center gap-4 p-3 bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 rounded-2xl text-left transition-all group"
-                                >
-                                    <div className="w-16 h-16 bg-white rounded-xl overflow-hidden flex items-center justify-center p-2 shrink-0 border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
-                                        {p.imageUrl ? <img src={p.imageUrl} className="max-w-full max-h-full object-contain" /> : <Package size={24} className="text-slate-200" />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-0.5">
-                                            <span className="text-[8px] font-black uppercase text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-md">{p.brandName}</span>
-                                            <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest">{p.categoryName}</span>
-                                        </div>
-                                        <h4 className="font-black text-slate-900 uppercase text-xs md:text-sm truncate group-hover:text-blue-900 transition-colors">{p.name}</h4>
-                                        <div className="text-[9px] font-mono font-bold text-slate-400 flex items-center gap-1 mt-1">
-                                            <Tag size={8} /> {p.sku || 'N/A'}
-                                        </div>
-                                    </div>
-                                    <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
-                                </button>
-                            ))}
-                        </div>
-                    ) : query ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-slate-400 opacity-50">
-                            <Search size={48} strokeWidth={1} className="mb-4" />
-                            <p className="font-black uppercase text-xs tracking-widest">No matching assets found</p>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-slate-300">
-                             <div className="bg-slate-50 p-6 rounded-full mb-4"><Search size={32} /></div>
-                             <p className="text-[10px] font-black uppercase tracking-[0.2em] max-w-xs text-center leading-loose">Enter search criteria above to scan the global product registry</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Footer Status */}
-                <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-[9px] font-black text-slate-400 uppercase tracking-widest px-6">
-                    <span>Scan results: {results.length} units</span>
-                    <button onClick={onClose} className="hover:text-slate-900 transition-colors">Dismiss Control Panel</button>
-                </div>
+        <div className="fixed inset-0 z-[120] bg-slate-900/95 backdrop-blur-xl flex flex-col animate-fade-in" onClick={onClose}>
+            <div className="p-6 md:p-12 max-w-6xl mx-auto w-full flex flex-col h-full" onClick={e => e.stopPropagation()}>
+                <div className="shrink-0 mb-8"><div className="relative group"><Search className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-500 w-8 h-8 group-focus-within:scale-110 transition-transform" /><input autoFocus type="text" placeholder="Find any product, SKU, or feature..." className="w-full bg-white/10 text-white placeholder:text-slate-500 text-3xl md:text-5xl font-black uppercase tracking-tight py-6 pl-20 pr-20 border-b-4 border-white/10 outline-none focus:border-blue-500 transition-all rounded-t-3xl" value={query} onChange={(e) => setQuery(e.target.value)} /><button onClick={onClose} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-2"><X size={40} /></button></div></div>
+                <div className="shrink-0 flex wrap gap-4 mb-8"><div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10"><div className="p-2 bg-blue-600 rounded-lg text-white"><Filter size={16} /></div><select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className="bg-transparent text-white font-black uppercase text-xs outline-none cursor-pointer pr-4"><option value="all" className="bg-slate-900">All Brands</option>{storeData.brands.map(b => <option key={b.id} value={b.id} className="bg-slate-900">{b.name}</option>)}</select></div><div className="flex items-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/10"><div className="p-2 bg-purple-600 rounded-lg text-white"><LayoutGrid size={16} /></div><select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="bg-transparent text-white font-black uppercase text-xs outline-none cursor-pointer pr-4"><option value="all" className="bg-slate-900">All Categories</option>{Array.from(new Set(allFlattenedProducts.map(p => p.categoryName))).sort().map(c => (<option key={c} value={c} className="bg-slate-900">{c}</option>))}</select></div></div>
+                <div className="flex-1 overflow-y-auto no-scrollbar pb-20"><div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">{results.map(p => (<button key={p.id} onClick={() => { onSelectProduct(p); onClose(); }} className="group bg-white rounded-3xl overflow-hidden flex flex-col text-left transition-all hover:scale-105 active:scale-95 shadow-xl border-4 border-transparent hover:border-blue-500"><div className="aspect-square bg-white relative flex items-center justify-center p-4">{p.imageUrl ? <img src={p.imageUrl} className="max-w-full max-h-full object-contain" /> : <Package size={48} className="text-slate-100" />}</div><div className="p-4 bg-slate-50/50 flex-1 flex flex-col"><h4 className="font-black text-slate-900 uppercase text-xs leading-tight mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">{p.name}</h4><div className="mt-auto text-[9px] font-mono font-bold text-slate-400">{p.sku || 'N/A'}</div></div></button>))}</div></div>
             </div>
         </div>
     );
@@ -642,7 +799,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [compareProductIds, setCompareProductIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
-  const [activeBrowser, setActiveBrowser] = useState<{ url: string, title?: string } | null>(null);
   
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
 
@@ -671,7 +827,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     if (timerRef.current) clearTimeout(timerRef.current);
     if (screensaverEnabled && deviceType === 'kiosk' && isSetup) {
       timerRef.current = window.setTimeout(() => {
-        setIsIdle(true); setActiveProduct(null); setActiveCategory(null); setActiveBrand(null); setShowFlipbook(false); setViewingPdf(null); setViewingManualList(null); setShowPricelistModal(false); setShowGlobalSearch(false); setShowCompareModal(false); setCompareProductIds([]); setActiveBrowser(null);
+        setIsIdle(true); setActiveProduct(null); setActiveCategory(null); setActiveBrand(null); setShowFlipbook(false); setViewingPdf(null); setViewingManualList(null); setShowPricelistModal(false); setShowGlobalSearch(false); setShowCompareModal(false); setCompareProductIds([]);
       }, idleTimeout);
     }
   }, [screensaverEnabled, idleTimeout, deviceType, isSetup]);
@@ -746,7 +902,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
            </div>
        </header>
        <div className="flex-1 relative flex flex-col min-h-0 print:overflow-visible" style={{ zoom: zoomLevel }}>
-         {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={storeData.catalogues || []} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} deviceType={deviceType} onLaunchBrowser={(url, title) => setActiveBrowser({url, title})} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} selectedForCompare={compareProductIds} onToggleCompare={toggleCompareProduct} onStartCompare={() => setShowCompareModal(true)} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} />}
+         {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={storeData.catalogues || []} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} deviceType={deviceType} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} selectedForCompare={compareProductIds} onToggleCompare={toggleCompareProduct} onStartCompare={() => setShowCompareModal(true)} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} />}
        </div>
        <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[7px] md:text-[10px] print:hidden">
           <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
@@ -796,13 +952,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
             companyLogo={storeData.companyLogoUrl || storeData.hero.logoUrl}
             brandLogo={activePricelistBrand?.logoUrl}
             brandName={activePricelistBrand?.name}
-          />
-       )}
-       {activeBrowser && (
-          <InternalBrowser 
-             url={activeBrowser.url} 
-             title={activeBrowser.title} 
-             onClose={() => setActiveBrowser(null)} 
           />
        )}
     </div>
