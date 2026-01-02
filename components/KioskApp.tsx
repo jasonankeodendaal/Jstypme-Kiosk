@@ -181,7 +181,7 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
 // --- OPTIMIZED ROW COMPONENT ---
 const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: PricelistItem, hasImages: boolean, onEnlarge: (url: string) => void }) => (
-    <tr className="excel-row border-b border-slate-100 transition-colors group">
+    <tr className="excel-row border-b border-slate-100 transition-colors group" style={{ willChange: 'transform' }}>
         {hasImages && (
             <td className="p-1 border-r border-slate-100 text-center">
                 <div 
@@ -216,8 +216,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   
   // Virtualization State
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 30 });
-  const ROW_HEIGHT = 48; // Fixed height in pixels
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 40 }); // Increased window for smoother fast scrolling
+  const ROW_HEIGHT = 48; 
 
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -238,11 +238,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
     const scrollTop = container.scrollTop;
     const containerHeight = container.clientHeight;
     
+    // Account for zoom in virtual position
     const virtualTop = scrollTop / zoom;
     const virtualHeight = containerHeight / zoom;
 
-    const start = Math.max(0, Math.floor(virtualTop / ROW_HEIGHT) - 5);
-    const end = Math.min((pricelist.items?.length || 0), Math.ceil((virtualTop + virtualHeight) / ROW_HEIGHT) + 5);
+    const start = Math.max(0, Math.floor(virtualTop / ROW_HEIGHT) - 10); // Larger buffer for speed
+    const end = Math.min((pricelist.items?.length || 0), Math.ceil((virtualTop + virtualHeight) / ROW_HEIGHT) + 15);
 
     setVisibleRange(prev => {
         if (prev.start === start && prev.end === end) return prev;
@@ -254,12 +255,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    // Use passive scroll listener for better performance
     const handleScroll = () => {
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
         requestRef.current = requestAnimationFrame(updateVisibleRange);
     };
 
-    container.addEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', handleScroll, { passive: true });
     updateVisibleRange(); 
 
     return () => {
@@ -340,14 +342,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 8; // Aggressive margins to save space
+        const margin = 8; 
         const innerWidth = pageWidth - (margin * 2);
         
-        // Dynamic Column Shrinking
         const mediaW = hasImages ? 14 : 0;
         const skuW = hasImages ? 20 : 22;
-        const normalW = 20; // Reduced from 24
-        const promoW = 20; // Reduced from 24
+        const normalW = 20; 
+        const promoW = 20; 
         const descW = innerWidth - mediaW - skuW - normalW - promoW;
 
         const line1 = margin;
@@ -417,7 +418,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const drawTextFit = (text: string, x: number, y: number, maxWidth: number, baseSize: number, align: 'left' | 'right' = 'left'): number => {
             let currentSize = baseSize;
             doc.setFontSize(currentSize);
-            while (doc.getTextWidth(text) > maxWidth && currentSize > 5.5) { // Shrink even more
+            while (doc.getTextWidth(text) > maxWidth && currentSize > 5.5) { 
                 currentSize -= 0.5;
                 doc.setFontSize(currentSize);
             }
@@ -434,7 +435,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         currentY = drawTableHeaders(currentY);
         
         const items = pricelist.items || [];
-        const baseRowHeight = hasImages ? 9 : 6; // Reduced row heights
+        const baseRowHeight = hasImages ? 9 : 6; 
         const footerMargin = 12;
 
         for (let index = 0; index < items.length; index++) {
@@ -445,7 +446,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             const descLines = doc.splitTextToSize(item.description.toUpperCase(), descMaxW).length;
             
             const maxLines = Math.max(skuLines, descLines);
-            // Tight line spacing for wrapped text
             const contentHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 3.0) : baseRowHeight;
             const rowHeight = Math.max(contentHeight, hasImages ? 9.5 : 6);
 
@@ -546,6 +546,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           height: ${ROW_HEIGHT}px;
           transform: translate3d(0,0,0);
           will-change: transform;
+          contain: content; /* Significant optimization for large lists */
         }
         
         .excel-row:nth-child(even) { background-color: #f8fafc; }
@@ -680,7 +681,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
 export const CreatorPopup = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => (
   <div className={`fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 transition-all duration-300 ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={onClose}>
-    <div className="relative w-full max-w-xs md:max-w-sm rounded-3xl overflow-hidden shadow-2xl border border-white/20 aspect-[4/5] flex flex-col items-center justify-center text-center p-6 bg-slate-900" onClick={e => e.stopPropagation()}>
+    <div className="relative w-full max-xs md:max-w-sm rounded-3xl overflow-hidden shadow-2xl border border-white/20 aspect-[4/5] flex flex-col items-center justify-center text-center p-6 bg-slate-900" onClick={e => e.stopPropagation()}>
       <div className="absolute inset-0 bg-[url('https://i.ibb.co/dsh2c2hp/unnamed.jpg')] bg-cover bg-center opacity-30"></div>
       <div className="relative z-10">
         <img src="https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png" alt="Logo" className="w-24 h-24 mx-auto mb-4" />

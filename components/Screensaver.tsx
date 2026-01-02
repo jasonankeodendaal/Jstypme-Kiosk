@@ -92,7 +92,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   };
 
   // 1. Build & Shuffle Playlist
-  // FIXED: Added specific boolean flags to dependency array to ensure playlist rebuilds on setting changes
   useEffect(() => {
     const list: PlaylistItem[] = [];
 
@@ -241,9 +240,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 });
             }
         }
+        // Extended safety fallback to 10 minutes to ensure full playback of long videos
+        // while still protecting against stuck playback states.
         timerRef.current = window.setTimeout(() => {
             nextSlide();
-        }, 180000); 
+        }, 600000); 
     }
 
     return () => {
