@@ -43,7 +43,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       showProductVideos: true,
       showPamphlets: true,
       showCustomAds: true,
-      displayStyle: 'contain',
+      displayStyle: 'contain', // Default to shrink-to-fit
       showInfoOverlay: true,
       enableSleepMode: false,
       activeHoursStart: '08:00',
@@ -203,15 +203,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = e.currentTarget;
     if (watchdogRef.current) clearTimeout(watchdogRef.current);
-    
-    // Set a dynamic watchdog to force skip if the video duration is exceeded
-    // (Duration in seconds * 1000) + 5 second safety buffer
     const durationMs = (video.duration * 1000) + 5000;
-    
     watchdogRef.current = window.setTimeout(() => {
-      console.warn("Screensaver Watchdog: Video exceeded duration without ended event, skipping.");
+      console.warn("Screensaver Watchdog: Video exceeded duration, skipping.");
       nextSlide();
-    }, isFinite(durationMs) ? durationMs : 60000); // Fallback to 60s if duration is NaN/Infinity
+    }, isFinite(durationMs) ? durationMs : 60000);
   };
 
   const currentItem = playlist[currentIndex];
@@ -239,7 +235,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             nextSlide();
         }, duration);
     } else {
-        // Video specific playback trigger
         if (videoRef.current) {
             const isMuted = config.muteVideos || !isAudioUnlocked;
             videoRef.current.muted = isMuted;
@@ -256,10 +251,8 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 });
             }
 
-            // Initial safety watchdog if metadata takes too long to load (15 seconds)
             watchdogRef.current = window.setTimeout(() => {
                 if (videoRef.current && videoRef.current.readyState < 1) {
-                    console.warn("Screensaver Watchdog: Video failed to load metadata, skipping.");
                     nextSlide();
                 }
             }, 15000); 
@@ -292,7 +285,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       </div>
   );
 
-  // Use object-contain for 'shrink to fit' behavior
   const objectFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
 
   return (
@@ -308,30 +300,30 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             perspective: 1000px;
         }
 
-        /* Adjusted animations to maintain shrink-to-fit by scaling within safe bounds (0.85 to 1.0) */
+        /* Animations constrained to 1.0 max scale to guarantee "shrink-to-fit" */
         .effect-smooth-zoom { animation: smoothZoom 15s ease-out forwards; }
         @keyframes smoothZoom { 
-            0% { transform: scale(0.9) translate3d(0,0,0); opacity: 0.8; } 
-            100% { transform: scale(1) translate3d(0,0,0); opacity: 1; } 
+            0% { transform: scale(0.92) translate3d(0,0,0); opacity: 0.8; } 
+            100% { transform: scale(1.0) translate3d(0,0,0); opacity: 1; } 
         }
         
         .effect-subtle-drift { animation: subtleDrift 20s linear forwards; }
         @keyframes subtleDrift {
-            0% { transform: scale(0.95) translate3d(-1%, -1%, 0); }
-            100% { transform: scale(0.95) translate3d(1%, 1%, 0); }
+            0% { transform: scale(0.98) translate3d(-1%, -1%, 0); }
+            100% { transform: scale(0.98) translate3d(1%, 1%, 0); }
         }
         
         .effect-soft-scale { animation: softScale 10s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         @keyframes softScale {
-            0% { transform: scale(0.85) translate3d(0,0,0); opacity: 0; }
+            0% { transform: scale(0.9) translate3d(0,0,0); opacity: 0; }
             20% { opacity: 1; }
-            100% { transform: scale(0.95) translate3d(0,0,0); }
+            100% { transform: scale(1.0) translate3d(0,0,0); }
         }
         
         .effect-gentle-pan { animation: gentlePan 12s ease-in-out forwards; }
         @keyframes gentlePan {
-            0% { transform: translate3d(-10px, 0, 0) scale(0.95); }
-            100% { transform: translate3d(10px, 0, 0) scale(0.95); }
+            0% { transform: translate3d(-15px, 0, 0) scale(0.98); }
+            100% { transform: translate3d(15px, 0, 0) scale(0.98); }
         }
         
         .effect-fade-in { animation: fadeInVideo 1.2s ease-out forwards; }
@@ -341,22 +333,30 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             image-rendering: -webkit-optimize-contrast;
             -webkit-user-drag: none;
             user-select: none;
-            contain: strict;
+            contain: content;
         }
 
         .slide-up { animation: slideUp 0.8s ease-out forwards 0.3s; opacity: 0; }
         @keyframes slideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+
+        .letterbox-blur {
+            filter: blur(60px) brightness(0.4);
+            transform: scale(1.2);
+            transition: opacity 1s ease-in-out;
+        }
       `}</style>
 
+      {/* Cinematic Letterbox Aura Background */}
       <div 
         key={`bg-${currentItem.id}`} 
-        className="absolute inset-0 z-0 bg-cover bg-center opacity-30 transition-opacity duration-1000"
+        className="absolute inset-0 z-0 bg-cover bg-center letterbox-blur opacity-50"
         style={{ backgroundImage: `url(${currentItem.url})` }}
       />
       
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60 z-10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 z-10" />
 
-      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center p-4 md:p-12 overflow-hidden">
+      {/* Main Content: Max-constrained for absolute shrink-to-fit */}
+      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center overflow-hidden">
          
          {currentItem.type === 'video' ? (
              <>
@@ -375,7 +375,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                  {!config.muteVideos && !isAudioUnlocked && (
                      <div className="absolute top-8 right-8 bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse">
                          <VolumeX size={16} />
-                         <span className="text-[10px] font-black uppercase tracking-widest">Sound Managed</span>
+                         <span className="text-[10px] font-black uppercase tracking-widest">Muted</span>
                      </div>
                  )}
              </>
@@ -393,19 +393,19 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
          )}
 
          {config.showInfoOverlay && (currentItem.title || currentItem.subtitle) && (
-             <div className="absolute bottom-12 left-8 md:bottom-20 md:left-20 max-w-[80%] md:max-w-[70%] pointer-events-none z-30">
+             <div className="absolute bottom-12 left-10 md:bottom-20 md:left-20 max-w-[80%] md:max-w-[70%] pointer-events-none z-30">
                 {currentItem.title && (
                     <div className="slide-up">
-                        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white uppercase tracking-tighter drop-shadow-lg mb-2 leading-tight">
+                        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white uppercase tracking-tighter drop-shadow-2xl mb-2 leading-tight">
                             {currentItem.title}
                         </h1>
-                        <div className="h-1 w-16 bg-blue-500 mt-2 mb-4 rounded-full"></div>
+                        <div className="h-1.5 w-20 bg-blue-600 mt-2 mb-4 rounded-full shadow-lg shadow-blue-600/50"></div>
                     </div>
                 )}
                 
                 {currentItem.subtitle && (
-                    <div className="bg-white/10 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl w-fit slide-up">
-                        <p className="text-white text-xs md:text-xl font-bold uppercase tracking-widest">
+                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 px-5 py-2.5 rounded-2xl w-fit slide-up shadow-2xl">
+                        <p className="text-white text-xs md:text-xl font-black uppercase tracking-[0.2em]">
                             {currentItem.subtitle}
                         </p>
                     </div>
