@@ -1,7 +1,7 @@
 
-import React, { useEffect, useState, useRef, memo, useCallback } from 'react';
+import React, { useEffect, useState, useRef, memo } from 'react';
 import { FlatProduct, AdItem, Catalogue, ScreensaverSettings } from '../types';
-import { Moon, Volume2, VolumeX, Pointer, Music, Loader2 } from 'lucide-react';
+import { Moon, Volume2, VolumeX, Pointer, Music } from 'lucide-react';
 
 interface ScreensaverProps {
   products: FlatProduct[];
@@ -38,7 +38,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({
   const [isSleepMode, setIsSleepMode] = useState(false);
   const [localAudioUnlocked, setLocalAudioUnlocked] = useState(globalAudioUnlocked);
   const [isAutoplayBlocked, setIsAutoplayBlocked] = useState(false);
-  const [isVideoLoading, setIsVideoLoading] = useState(false);
   
   const [animationEffect, setAnimationEffect] = useState('effect-ken-burns');
   
@@ -62,11 +61,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({
       activeHoursEnd: '20:00',
       ...settings
   };
-
-  const nextSlide = useCallback(() => {
-    if (playlist.length === 0) return;
-    setCurrentIndex((prev) => (prev + 1) % playlist.length);
-  }, [playlist.length]);
 
   useEffect(() => {
       if (!config.enableSleepMode) {
@@ -96,6 +90,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({
       if (onAudioUnlock) onAudioUnlock();
       setIsAutoplayBlocked(false);
       
+      // Force immediate unmuting of currently playing video
       if (videoRef.current && !config.muteVideos) {
           videoRef.current.muted = false;
           videoRef.current.play().catch(() => {});
@@ -150,6 +145,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({
     setCurrentIndex(0);
   }, [products.length, ads.length, pamphlets.length, config.showProductImages, config.showProductVideos]);
 
+  const nextSlide = () => {
+      if (playlist.length === 0) return;
+      setCurrentIndex((prev) => (prev + 1) % playlist.length);
+  };
+
   const currentItem = playlist[currentIndex];
 
   useEffect(() => {
@@ -159,10 +159,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({
     setAnimationEffect(currentItem.type === 'image' 
         ? imageEffects[Math.floor(Math.random() * imageEffects.length)]
         : videoEffects[Math.floor(Math.random() * videoEffects.length)]);
-    
-    if (currentItem.type === 'video') {
-        setIsVideoLoading(true);
-    }
   }, [currentItem?.id]);
 
   useEffect(() => {
@@ -172,39 +168,27 @@ const Screensaver: React.FC<ScreensaverProps> = ({
     if (currentItem.type === 'image') {
         timerRef.current = window.setTimeout(nextSlide, (config.imageDuration || 8) * 1000);
     } else {
-        // Safe play sequence
-        const attemptPlay = async () => {
-            if (!videoRef.current) return;
+        if (videoRef.current) {
+            // Respect hardware-unlock state
+            const shouldBeMuted = config.muteVideos || !isUnlocked;
+            videoRef.current.muted = shouldBeMuted;
             
-            // 1. Initial State: Set muted based on hardware unlock to increase play success
-            videoRef.current.muted = config.muteVideos || !isUnlocked;
-            
-            try {
-                await videoRef.current.play();
-                setIsAutoplayBlocked(false);
-            } catch (err) {
-                // 2. Fallback: Browser blocked sound. Force muted play.
-                if (videoRef.current) {
-                    videoRef.current.muted = true;
-                    try {
-                        await videoRef.current.play();
-                        if (!config.muteVideos && !isUnlocked) {
-                            setIsAutoplayBlocked(true);
-                        }
-                    } catch (finalErr) {
-                        console.error("Video failed to play even in muted mode:", finalErr);
-                        nextSlide();
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    // Browser blocked autoplay with sound
+                    if (videoRef.current) {
+                        videoRef.current.muted = true;
+                        videoRef.current.play().catch(() => nextSlide());
+                        if (!config.muteVideos) setIsAutoplayBlocked(true);
                     }
-                }
+                });
             }
-        };
-
-        attemptPlay();
-        // Emergency watchdog: If video hangs without ending, skip after 3 minutes
+        }
         timerRef.current = window.setTimeout(nextSlide, 180000); 
     }
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [currentIndex, currentItem, isSleepMode, isUnlocked, config.muteVideos, nextSlide]);
+  }, [currentIndex, currentItem, isSleepMode, isUnlocked, config.muteVideos]);
 
   if (isSleepMode) {
       return (
@@ -256,27 +240,16 @@ const Screensaver: React.FC<ScreensaverProps> = ({
 
       <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center p-4 md:p-24 overflow-hidden">
          {currentItem.type === 'video' ? (
-             <div className="relative w-full h-full flex items-center justify-center">
-                 {isVideoLoading && (
-                     <div className="absolute inset-0 z-10 flex items-center justify-center">
-                         <Loader2 size={48} className="text-blue-500 animate-spin opacity-30" />
-                     </div>
-                 )}
-                 <video 
-                    ref={videoRef}
-                    src={currentItem.url} 
-                    className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl rounded-sm ${animationEffect} ${isVideoLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-700`}
-                    muted={config.muteVideos || !isUnlocked} 
-                    autoPlay
-                    playsInline
-                    onLoadedData={() => setIsVideoLoading(false)}
-                    onEnded={nextSlide} 
-                    onError={() => {
-                        console.error("Media source error for:", currentItem.url);
-                        nextSlide();
-                    }} 
-                 />
-             </div>
+             <video 
+                ref={videoRef}
+                src={currentItem.url} 
+                className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl rounded-sm ${animationEffect}`}
+                muted={config.muteVideos || !isUnlocked} 
+                autoPlay
+                playsInline
+                onEnded={nextSlide} 
+                onError={() => nextSlide()} 
+             />
          ) : (
             <img 
               src={currentItem.url} 

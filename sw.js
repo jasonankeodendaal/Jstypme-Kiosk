@@ -1,6 +1,6 @@
 
 // Service Worker for Kiosk Pro
-const CACHE_NAME = 'kiosk-pro-v6';
+const CACHE_NAME = 'kiosk-pro-v5';
 
 const PRECACHE_URLS = [
   '/',
@@ -40,7 +40,7 @@ self.addEventListener('fetch', (event) => {
                   url.pathname.endsWith('.mp4') || 
                   url.pathname.endsWith('.pdf');
 
-  // OPTIMIZED MEDIA RANGE REQUESTS (Memory Efficient for Android)
+  // SPECIAL HANDLING FOR MEDIA RANGE REQUESTS (Necessary for Android Audio)
   if (isMedia && event.request.headers.get('range')) {
     event.respondWith(handleRangeRequest(event.request));
     return;
@@ -74,30 +74,26 @@ async function handleRangeRequest(request) {
   let response = await cache.match(request);
 
   if (!response) {
-    // If not in cache, let the browser handle the range request directly against the network
-    return fetch(request);
+    response = await fetch(request);
+    // Don't cache range requests directly, but we might want to cache the full file
   }
 
-  // CRITICAL FIX: Use Blob instead of arrayBuffer to prevent memory exhaustion
-  const rangeHeader = request.headers.get('range');
-  const fullBlob = await response.blob();
-  const totalSize = fullBlob.size;
+  const range = request.headers.get('range');
+  const buffer = await response.arrayBuffer();
   
-  const parts = rangeHeader.replace(/bytes=/, "").split("-");
+  const parts = range.replace(/bytes=/, "").split("-");
   const start = parseInt(parts[0], 10);
-  const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
-  
-  // Use lazy slicing (doesn't load into RAM)
-  const chunk = fullBlob.slice(start, end + 1);
+  const end = parts[1] ? parseInt(parts[1], 10) : buffer.byteLength - 1;
+  const chunk = buffer.slice(start, end + 1);
 
   return new Response(chunk, {
     status: 206,
     statusText: 'Partial Content',
     headers: new Headers({
-      'Content-Range': `bytes ${start}-${end}/${totalSize}`,
+      'Content-Range': `bytes ${start}-${end}/${buffer.byteLength}`,
       'Accept-Ranges': 'bytes',
-      'Content-Length': chunk.size.toString(),
-      'Content-Type': response.headers.get('Content-Type') || 'video/mp4',
+      'Content-Length': chunk.byteLength,
+      'Content-Type': response.headers.get('Content-Type'),
     }),
   });
 }
