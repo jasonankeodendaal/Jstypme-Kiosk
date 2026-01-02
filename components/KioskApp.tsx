@@ -43,7 +43,7 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
   </svg>
 );
 
-// --- SETUP SCREEN (LEGACY OPTIMIZED) ---
+// --- SETUP SCREEN ---
 const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComplete: () => void }) => {
     const [step, setStep] = useState(1);
     const [shopName, setShopName] = useState('');
@@ -185,7 +185,7 @@ const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: Priceli
         {hasImages && (
             <td className="p-1 border-r border-slate-100 text-center">
                 <div 
-                    className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-2 hover:ring-blue-400 transition-all"
+                    className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-1 hover:ring-blue-400 transition-all"
                     onClick={(e) => { e.stopPropagation(); if(item.imageUrl) onEnlarge(item.imageUrl); }}
                 >
                     {item.imageUrl ? (
@@ -215,6 +215,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const [isExporting, setIsExporting] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   
+  // Virtualization State
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 30 });
+  const ROW_HEIGHT = 48; // Fixed height in pixels
+
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
@@ -227,18 +231,53 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
     return pricelist.items?.some(item => item.imageUrl && item.imageUrl.trim() !== '') || false;
   }, [pricelist.items]);
 
+  const updateVisibleRange = useCallback(() => {
+    if (!scrollContainerRef.current) return;
+    
+    const container = scrollContainerRef.current;
+    // Calculation must account for scale factor if scrolling the scaled element
+    // However, table-scroll contains the scaled div, so scrollTop is in unscaled pixels relative to window
+    const scrollTop = container.scrollTop;
+    const containerHeight = container.clientHeight;
+    
+    // Convert current scroll position to "table coordinates" based on zoom
+    const virtualTop = scrollTop / zoom;
+    const virtualHeight = containerHeight / zoom;
+
+    const start = Math.max(0, Math.floor(virtualTop / ROW_HEIGHT) - 5);
+    const end = Math.min((pricelist.items?.length || 0), Math.ceil((virtualTop + virtualHeight) / ROW_HEIGHT) + 5);
+
+    setVisibleRange(prev => {
+        if (prev.start === start && prev.end === end) return prev;
+        return { start, end };
+    });
+  }, [pricelist.items?.length, zoom]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+        if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        requestRef.current = requestAnimationFrame(updateVisibleRange);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    updateVisibleRange(); // Initial calc
+
+    return () => {
+        container.removeEventListener('scroll', handleScroll);
+        if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+  }, [updateVisibleRange]);
+
   const onDragMove = useCallback((clientX: number, clientY: number) => {
     if (!isDragging || !scrollContainerRef.current) return;
     
-    if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    
-    requestRef.current = requestAnimationFrame(() => {
-        if (!scrollContainerRef.current) return;
-        const dx = clientX - startPos.x;
-        const dy = clientY - startPos.y;
-        scrollContainerRef.current.scrollLeft = scrollPos.left - dx;
-        scrollContainerRef.current.scrollTop = scrollPos.top - dy;
-    });
+    const dx = clientX - startPos.x;
+    const dy = clientY - startPos.y;
+    scrollContainerRef.current.scrollLeft = scrollPos.left - dx;
+    scrollContainerRef.current.scrollTop = scrollPos.top - dy;
   }, [isDragging, startPos, scrollPos]);
 
   const onDragStart = (clientX: number, clientY: number) => {
@@ -275,7 +314,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const handleDragEnd = () => {
       setIsDragging(false);
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
   };
 
   const loadImageForPDF = async (url: string): Promise<{ imgData: string, format: string, width: number, height: number } | null> => {
@@ -305,17 +343,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 10; // Reduced margin for more width
+        const margin = 10;
         const innerWidth = pageWidth - (margin * 2);
         
-        // --- COMPACT LAYOUT DEFINITIONS ---
         const mediaW = hasImages ? 15 : 0;
         const skuW = hasImages ? 22 : 25;
         const normalW = 24;
         const promoW = 24;
         const descW = innerWidth - mediaW - skuW - normalW - promoW;
 
-        // Vertical boundary lines
         const line1 = margin;
         const line2 = line1 + mediaW;
         const line3 = line2 + skuW;
@@ -323,14 +359,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const line5 = line4 + normalW;
         const line6 = line1 + innerWidth;
 
-        // Content anchors
         const mediaX = line1 + 1.5;
         const skuX = line2 + 1.5;
         const descX = line3 + 1.5;
         const normalPriceX = line5 - 1.5; 
         const promoPriceX = line6 - 1.5;  
         
-        // Split text max widths
         const skuMaxW = skuW - 3;
         const descMaxW = descW - 3;
 
@@ -451,7 +485,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 drawTextFit(item.normalPrice || '', promoPriceX, currentY, promoW - 3, 7.5, 'right');
             }
 
-            // Grid Lines (Ultra Thin)
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.05);
             doc.line(margin, currentY + rowHeight - 4, line6, currentY + rowHeight - 4);
             doc.line(line1, currentY - 4, line1, currentY + rowHeight - 4);
@@ -475,6 +508,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const handleZoomIn = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.min(prev + 0.25, 2.5)); };
   const handleZoomOut = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.max(prev - 0.25, 1)); };
+
+  const items = pricelist.items || [];
+  const visibleItems = items.slice(visibleRange.start, visibleRange.end);
+  const topPadding = visibleRange.start * ROW_HEIGHT;
+  const bottomPadding = Math.max(0, (items.length - visibleRange.end) * ROW_HEIGHT);
 
   return (
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block overflow-hidden print:overflow-visible" onClick={onClose}>
@@ -501,15 +539,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           width: 100%;
           transform: translate3d(0,0,0);
           backface-visibility: hidden;
-          will-change: transform;
         }
 
-        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; padding: 8px 4px; }
+        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; height: 40px; padding: 0 4px; }
         
         .excel-row { 
-          transform: translate3d(0,0,0); 
-          content-visibility: auto; 
-          contain-intrinsic-size: 1px 40px; 
+          height: ${ROW_HEIGHT}px;
+          transform: translate3d(0,0,0);
           will-change: transform;
         }
         
@@ -592,7 +628,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   </tr>
                   </thead>
                   <tbody className="print:table-row-group">
-                  {(pricelist.items || []).map((item) => (
+                  {/* Virtual Top Spacer */}
+                  {topPadding > 0 && <tr><td colSpan={hasImages ? 5 : 4} style={{ height: topPadding }} /></tr>}
+                  
+                  {visibleItems.map((item) => (
                       <PricelistRow 
                         key={item.id} 
                         item={item} 
@@ -600,6 +639,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                         onEnlarge={(url) => setEnlargedImage(url)} 
                       />
                   ))}
+
+                  {/* Virtual Bottom Spacer */}
+                  {bottomPadding > 0 && <tr><td colSpan={hasImages ? 5 : 4} style={{ height: bottomPadding }} /></tr>}
                   </tbody>
               </table>
               {zoom > 1.2 && !isDragging && (<div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5"><Grip size={120} className="text-black" /></div>)}
@@ -629,7 +671,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                onClick={() => setEnlargedImage(null)}
              />
              
-             {/* Dynamic Indicator */}
              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 pointer-events-none opacity-60">
                  Tap to Dismiss
              </div>
@@ -761,18 +802,15 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [compareProductIds, setCompareProductIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
   
-  // GLOBAL AUDIO UNLOCK STATE
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
 
   const timerRef = useRef<number | null>(null);
   const idleTimeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
   
-  // Global listener to unlock audio context on very first interaction
   useEffect(() => {
     const unlockAudio = () => {
         if (!isAudioUnlocked) {
             setIsAudioUnlocked(true);
-            // Optional: Play a short silent buffer to "warm up" the hardware
             const silentCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
             const buffer = silentCtx.createBuffer(1, 1, 22050);
             const source = silentCtx.createBufferSource();
