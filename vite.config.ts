@@ -11,12 +11,8 @@ export default defineConfig({
       additionalLegacyPolyfills: [
         'regenerator-runtime/runtime',
         'core-js/stable/promise',
-        'core-js/stable/array/iterator',
         'core-js/stable/map',
-        'core-js/stable/set',
-        'core-js/stable/object/assign',
-        'core-js/stable/symbol',
-        'core-js/stable/string/starts-with'
+        'core-js/stable/set'
       ],
       renderLegacyChunks: true,
       modernPolyfills: true,
@@ -27,32 +23,30 @@ export default defineConfig({
     target: 'es5',
     cssTarget: 'chrome37',
     minify: 'terser',
-    chunkSizeWarningLimit: 2000,
+    chunkSizeWarningLimit: 3000,
     terserOptions: {
       ecma: 5,
-      safari10: true,
       compress: {
-        keep_fnames: true,
-        keep_classnames: true,
         drop_console: true,
-        passes: 2
+        passes: 3
       },
       mangle: {
-        keep_fnames: true,
+        keep_fnames: false,
       }
     },
     rollupOptions: {
       output: {
-        // Removed format: 'iife' to allow manualChunks to work.
-        // Vite legacy plugin will handle the single-file fallback for old browsers automatically.
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-utils': ['lucide-react', '@supabase/supabase-js'],
-          'heavy-pdf': ['pdfjs-dist', 'jspdf'],
-          'heavy-data': ['xlsx', 'jszip']
+        entryFileNames: 'assets/main-[hash].js',
+        chunkFileNames: 'assets/chunk-[hash].js',
+        assetFileNames: 'assets/static-[hash].[ext]',
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) return 'v-react';
+            if (id.includes('pdfjs-dist') || id.includes('jspdf')) return 'v-pdf';
+            if (id.includes('xlsx') || id.includes('jszip')) return 'v-data';
+            if (id.includes('lucide-react')) return 'v-icons';
+            return 'v-vendor';
+          }
         }
       }
     }

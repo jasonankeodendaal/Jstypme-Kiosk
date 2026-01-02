@@ -1,12 +1,14 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { KioskApp } from './components/KioskApp';
-import { AdminDashboard } from './components/AdminDashboard';
-import AboutPage from './components/AboutPage';
 import { generateStoreData, saveStoreData } from './services/geminiService';
 import { initSupabase, supabase, getKioskId } from './services/kioskService';
 import { StoreData } from './types';
 import { Loader2 } from 'lucide-react';
+
+// Lazy load heavy route components
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const AboutPage = lazy(() => import('./components/AboutPage'));
 
 const AppIconUpdater = ({ storeData }: { storeData: StoreData }) => {
     const isAdmin = window.location.pathname.startsWith('/admin');
@@ -21,8 +23,8 @@ const AppIconUpdater = ({ storeData }: { storeData: StoreData }) => {
         const updateAppIdentity = async () => {
              const iconLink = document.getElementById('pwa-icon') as HTMLLinkElement;
              const appleLink = document.getElementById('pwa-apple-icon') as HTMLLinkElement;
-             if (iconLink && iconLink.href !== targetIconUrl) iconLink.href = targetIconUrl;
-             if (appleLink && appleLink.href !== targetIconUrl) appleLink.href = targetIconUrl;
+             if (iconLink) iconLink.href = targetIconUrl;
+             if (appleLink) appleLink.href = targetIconUrl;
         };
         if (targetIconUrl) updateAppIdentity();
     }, [targetIconUrl, isAdmin]);
@@ -50,7 +52,6 @@ export default function App() {
       try {
         const data = await generateStoreData();
         if (data) {
-           // Create a new reference to force React state update
            setStoreData({ ...data });
            setLastSyncTime(new Date().toLocaleTimeString());
         }
@@ -66,33 +67,27 @@ export default function App() {
     initSupabase();
     fetchData();
 
-    // 1. Routine Sync (Pulsing) - Pulls every 60s
     const interval = setInterval(() => {
         fetchData(true);
     }, 60000); 
 
-    // 2. Realtime Push (Realtime) - Immediate response to Cloud changes
     if (supabase) {
         const channel = supabase
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
-              console.log("Realtime: Config change detected. Refreshing state...");
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-              syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 200);
+              syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 500);
             }
           )
           .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
             (payload: any) => {
-              // Only trigger if it affects this device or if we are in admin mode
               const isAdminView = window.location.pathname.startsWith('/admin');
               const isMyUpdate = payload.new && payload.new.id === kioskId;
-              const isMyDelete = payload.old && payload.old.id === kioskId;
               
-              if (isAdminView || isMyUpdate || isMyDelete) {
-                  console.log("Realtime: Fleet change detected.");
+              if (isAdminView || isMyUpdate) {
                   if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 200);
+                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 500);
               }
             }
           )
@@ -124,7 +119,7 @@ export default function App() {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-white font-black">
         <Loader2 className="animate-spin mb-4 text-blue-500" size={48} />
-        <div className="tracking-[0.2em] uppercase text-sm">System Initialize</div>
+        <div className="tracking-[0.2em] uppercase text-sm">Initializing...</div>
       </div>
     );
   }
@@ -132,12 +127,16 @@ export default function App() {
   const isAdmin = currentRoute.startsWith('/admin');
 
   return (
-    <>
+    <Suspense fallback={
+        <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-white">
+            <Loader2 className="animate-spin text-blue-500" size={32} />
+        </div>
+    }>
       {storeData && <AppIconUpdater storeData={storeData} />}
       {isSyncing && (
          <div className="fixed top-12 right-4 z-[200] bg-slate-900 text-white px-3 py-1.5 rounded-lg shadow-2xl flex items-center gap-2 border border-white/10 animate-fade-in">
             <Loader2 className="animate-spin text-blue-400" size={12} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Syncing Cloud</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Cloud Sync</span>
          </div>
       )}
       
@@ -159,6 +158,6 @@ export default function App() {
           onSyncRequest={() => fetchData(true)}
         />
       )}
-    </>
+    </Suspense>
   );
 }
