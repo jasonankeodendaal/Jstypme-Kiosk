@@ -44,6 +44,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       showPamphlets: true,
       showCustomAds: true,
       displayStyle: 'contain',
+      videoDisplayStyle: 'contain',
       showInfoOverlay: true,
       enableSleepMode: false,
       activeHoursStart: '08:00',
@@ -268,7 +269,8 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       </div>
   );
 
-  const objectFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
+  const imageFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
+  const videoFitClass = config.videoDisplayStyle === 'cover' ? 'object-cover' : 'object-contain';
 
   return (
     <div 
@@ -343,7 +345,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     ref={videoRef}
                     key={`vid-el-${currentItem.url}`}
                     src={currentItem.url} 
-                    className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl ${animationEffect}`}
+                    className={`w-full h-full max-w-full max-h-full ${videoFitClass} shadow-2xl ${animationEffect}`}
                     muted={config.muteVideos || !isAudioUnlocked} 
                     autoPlay={true}
                     playsInline={true}
@@ -362,7 +364,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 <img 
                   src={currentItem.url} 
                   alt="Screensaver" 
-                  className={`max-w-full max-h-full w-auto h-auto shadow-2xl ${animationEffect}`}
+                  className={`max-w-full max-h-full w-auto h-auto shadow-2xl ${imageFitClass} ${animationEffect}`}
                   loading="eager"
                   decoding="async"
                   onError={handleMediaError}

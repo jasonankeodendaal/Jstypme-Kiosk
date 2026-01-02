@@ -1,3 +1,4 @@
+
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand } from "../types";
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
@@ -537,7 +538,9 @@ const DEFAULT_DATA: StoreData = {
     showProductImages: true,
     showProductVideos: true,
     showPamphlets: true,
-    showCustomAds: true
+    showCustomAds: true,
+    displayStyle: 'contain',
+    videoDisplayStyle: 'contain'
   },
   catalogues: [],
   pricelists: [
@@ -598,7 +601,13 @@ const migrateData = (data: any): StoreData => {
     if (!data.ads) {
         data.ads = { ...DEFAULT_DATA.ads };
     }
-    if (!data.screensaverSettings) data.screensaverSettings = { ...DEFAULT_DATA.screensaverSettings };
+    if (!data.screensaverSettings) {
+        data.screensaverSettings = { ...DEFAULT_DATA.screensaverSettings };
+    } else {
+        if (!data.screensaverSettings.videoDisplayStyle) {
+            data.screensaverSettings.videoDisplayStyle = 'contain';
+        }
+    }
     if (!data.about) data.about = { ...DEFAULT_DATA.about };
     
     if (!data.admins || !Array.isArray(data.admins) || data.admins.length === 0) {
