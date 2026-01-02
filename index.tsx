@@ -1,18 +1,11 @@
 
 /**
- * CRITICAL: Polyfills MUST be imported first.
+ * Polyfills are handled by index.html for legacy compatibility.
+ * Redundant imports removed to improve boot speed.
  */
-import 'core-js/stable';
-import 'regenerator-runtime/runtime';
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-
-// Explicitly patch Map/Set if they exist but aren't global (happens in some WebViews)
-if (typeof (window as any).Map === 'undefined') {
-    console.error("Critical: Map polyfill failed to attach to window.");
-}
 
 // Signal to index.html watchdog that we have arrived
 (window as any).appStarted = true;

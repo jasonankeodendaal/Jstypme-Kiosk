@@ -27,13 +27,15 @@ export default defineConfig({
     target: 'es5',
     cssTarget: 'chrome37',
     minify: 'terser',
+    chunkSizeWarningLimit: 1000,
     terserOptions: {
       ecma: 5,
       safari10: true,
       compress: {
         keep_fnames: true,
         keep_classnames: true,
-        drop_console: false,
+        drop_console: true, // Optimized for speed
+        passes: 2
       },
       mangle: {
         keep_fnames: true,
@@ -44,7 +46,13 @@ export default defineConfig({
         format: 'iife',
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-utils': ['lucide-react', '@supabase/supabase-js'],
+          'heavy-pdf': ['pdfjs-dist', 'jspdf'],
+          'heavy-data': ['xlsx', 'jszip']
+        }
       }
     }
   },

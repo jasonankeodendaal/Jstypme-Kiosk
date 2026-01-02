@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+
+import React, { useEffect, useState, useRef, useMemo, memo } from 'react';
 import { Brand, Catalogue, HeroConfig, AdConfig, AdItem } from '../types';
 import { BookOpen, Globe, ChevronRight, X, Grid } from 'lucide-react';
 
@@ -21,7 +22,6 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
     const videoRef = useRef<HTMLVideoElement>(null);
     const timeoutRef = useRef<number | null>(null);
 
-    // If items change, reset to 0
     useEffect(() => {
         setCurrentIndex(0);
     }, [items?.length]);
@@ -30,25 +30,21 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
 
     useEffect(() => {
         if (!activeItem) return;
-        if (items && items.length <= 1 && activeItem.type !== 'video') return; // Static image doesn't need rotation logic if alone
+        if (items && items.length <= 1 && activeItem.type !== 'video') return;
 
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
         if (activeItem.type === 'image') {
-            // Display Image for 6 seconds then switch
             timeoutRef.current = window.setTimeout(() => {
                 setCurrentIndex(prev => (prev + 1) % items!.length);
             }, 6000);
         } else {
-            // For Video, we rely on onEnded, but add a safety timeout
-            // Try to play
             if(videoRef.current) {
                 videoRef.current.play().catch(e => console.warn("Ad auto-play failed", e));
             }
             timeoutRef.current = window.setTimeout(() => {
-                console.warn("Video timeout in AdUnit, forcing next.");
                 setCurrentIndex(prev => (prev + 1) % items!.length);
-            }, 180000); // 3 min max safety
+            }, 180000);
         }
 
         return () => {
@@ -56,17 +52,14 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
         };
     }, [currentIndex, activeItem, items]);
 
-    // Watchdog Timer for Video Freezing
     useEffect(() => {
         const interval = setInterval(() => {
             if (activeItem?.type === 'video' && videoRef.current) {
-                // If paused but not ended, and has source, force play
                 if (videoRef.current.paused && !videoRef.current.ended && videoRef.current.readyState > 2) {
-                    console.log("AdUnit Watchdog: Restarting frozen video...");
                     videoRef.current.play().catch(() => {});
                 }
             }
-        }, 5000); // Check every 5 seconds
+        }, 5000);
         return () => clearInterval(interval);
     }, [activeItem]);
 
@@ -78,7 +71,6 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
         if (items.length > 1) {
             setCurrentIndex(prev => (prev + 1) % items.length);
         } else if (videoRef.current) {
-            // Explicitly handle single video loop
             videoRef.current.currentTime = 0;
             videoRef.current.play().catch(e => {});
         }
@@ -96,7 +88,8 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                         muted 
                         playsInline
                         autoPlay
-                        loop={items.length === 1} // Important for single video stability
+                        decoding="async"
+                        loop={items.length === 1}
                         className="w-full h-full object-cover"
                         onEnded={handleVideoEnded}
                     />
@@ -104,6 +97,8 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                     <img 
                         src={activeItem!.url} 
                         alt="Advertisement" 
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                     />
                 )}
@@ -127,16 +122,15 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(11);
   
-  // Dynamic Responsive Limit: Adjusted to show more rows of smaller logos
   useEffect(() => {
     const handleResize = () => {
         const width = window.innerWidth;
         if (width < 640) {
             setDisplayLimit(11); 
         } else if (width < 1024) {
-            setDisplayLimit(19); // More logos per row
+            setDisplayLimit(19);
         } else {
-            setDisplayLimit(23); // More logos per row
+            setDisplayLimit(23);
         }
     };
 
@@ -148,20 +142,12 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
   const globalPamphlets = allCatalogs?.filter(c => !c.brandId) || [];
   const mainPamphlet = globalPamphlets[0]; 
 
-  // Sort brands alphabetically
   const sortedBrands = useMemo(() => {
       return [...brands].sort((a, b) => a.name.localeCompare(b.name));
   }, [brands]);
 
-  // Limit visible brands based on screen size
   const visibleBrands = sortedBrands.slice(0, displayLimit);
   const hasMoreBrands = sortedBrands.length > displayLimit;
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-  };
 
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-y-auto animate-fade-in pb-40 md:pb-24">
@@ -170,7 +156,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
       <div className="bg-slate-900 text-white relative overflow-hidden shrink-0 min-h-[20vh] md:min-h-[35vh] flex flex-col">
         {heroConfig?.backgroundImageUrl ? (
             <div className="absolute inset-0 z-0">
-                <img src={heroConfig.backgroundImageUrl} alt="" className="w-full h-full object-cover opacity-40 blur-sm scale-105" />
+                <img src={heroConfig.backgroundImageUrl} alt="" className="w-full h-full object-cover opacity-40 blur-sm scale-105" loading="eager" />
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/80 to-slate-900/30"></div>
             </div>
         ) : (
@@ -180,7 +166,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         <div className="relative z-10 flex-1 flex flex-row items-center justify-center p-4 md:p-12 gap-4 md:gap-12 max-w-7xl mx-auto w-full">
             <div className="flex-1 flex flex-col justify-center text-left space-y-1 md:space-y-6 max-w-[60%] md:max-w-2xl shrink-0 h-full">
                 {heroConfig?.logoUrl && (
-                    <img src={heroConfig.logoUrl} alt="Logo" className="h-10 md:h-32 object-contain mb-2 md:mb-6 mr-auto drop-shadow-md" />
+                    <img src={heroConfig.logoUrl} alt="Logo" className="h-10 md:h-32 object-contain mb-2 md:mb-6 mr-auto drop-shadow-md" loading="eager" />
                 )}
                 <div>
                    <h1 className="text-xl md:text-6xl font-black tracking-tight leading-none md:leading-tight mb-1">
@@ -231,6 +217,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                                     src={mainPamphlet.thumbnailUrl || mainPamphlet.pages[0]} 
                                     className="w-full h-full object-cover rounded-r-sm md:rounded-r-2xl book-cover border-l-2 md:border-l-[6px] border-slate-200"
                                     alt={`${mainPamphlet.title} Cover`}
+                                    loading="eager"
                                 />
                              ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 font-bold uppercase text-[10px]">No Cover</div>
@@ -246,7 +233,6 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         </div>
       </div>
 
-      {/* Featured Brands Title */}
       <div className="w-full bg-white pt-10 pb-6 text-center border-b border-slate-100">
             <h2 className="text-xl md:text-4xl font-black text-slate-900 uppercase tracking-[0.2em] inline-block px-10 pb-2 relative">
                 Featured Brands
@@ -254,13 +240,8 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             </h2>
       </div>
 
-      {/* Main Content Area */}
       <div className="flex-1 p-4 md:p-12 max-w-[1700px] mx-auto w-full flex flex-col gap-10">
-        
-        {/* Center Column (Brands + Bottom Ads) */}
         <div className="flex-1 flex flex-col gap-12">
-            
-            {/* Grid - Logos reduced size from 180px to 130px */}
             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-6 w-full place-items-center">
               {visibleBrands.map((brand) => (
                 <button
@@ -274,6 +255,8 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                       <img 
                         src={brand.logoUrl} 
                         alt={brand.name} 
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-contain filter grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 p-1 md:p-3"
                       />
                     ) : (
@@ -285,7 +268,6 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                 </button>
               ))}
 
-              {/* VIEW ALL BUTTON - Smaller to match brands */}
               {hasMoreBrands && (
                 <button
                   onClick={() => setShowAllBrands(true)}
@@ -299,7 +281,6 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
               )}
             </div>
 
-            {/* Bottom Ads Area - Only on larger vertical space */}
             {deviceType !== 'mobile' && ads && (
                 <div className="grid grid-cols-2 gap-6 mt-12 w-full">
                     <AdUnit items={ads.homeBottomLeft} className="aspect-[2.2/1] w-full" />
@@ -309,7 +290,6 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         </div>
       </div>
 
-      {/* ALL BRANDS MODAL - Reduced logo sizes here too */}
       {showAllBrands && (
         <div className="fixed inset-0 z-[60] bg-white/98 p-6 md:p-20 animate-fade-in flex flex-col backdrop-blur-sm">
             <div className="flex justify-between items-center mb-12 shrink-0 max-w-7xl mx-auto w-full">
@@ -339,12 +319,13 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                       className="group flex flex-col items-center justify-center w-full p-2 md:p-4 transition-all duration-500 hover:-translate-y-1.5 rounded-3xl hover:bg-blue-50 border border-transparent hover:border-blue-100"
                       title={brand.name}
                     >
-                      {/* Container reduced from 32 to 24 (96px) */}
                       <div className="relative w-16 h-16 md:w-24 md:h-24 flex items-center justify-center transition-all duration-500 group-hover:scale-110 mb-3">
                         {brand.logoUrl ? (
                           <img 
                             src={brand.logoUrl} 
                             alt={brand.name} 
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-contain drop-shadow-sm group-hover:drop-shadow-lg"
                           />
                         ) : (
@@ -364,4 +345,4 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
   );
 };
 
-export default BrandGrid;
+export default memo(BrandGrid);
