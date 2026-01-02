@@ -36,10 +36,21 @@ const isRecent = (dateString?: string) => {
 };
 
 const RIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M7 5v14" />
-    <path d="M7 5h5.5a4.5(4.5 0 0 1 0 9H7" />
-    <path d="M11.5 14L17 19" />
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="3" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M7 21V3h7a5 5 0 0 1 0 10H7" />
+    <path d="M13 13l5 8" />
+    <path d="M10 8h4" />
   </svg>
 );
 
@@ -980,7 +991,8 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        <div className="flex-1 relative flex flex-col min-h-0 print:overflow-visible" style={{ zoom: zoomLevel }}>
          {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={storeData.catalogues || []} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} deviceType={deviceType} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} selectedForCompare={compareProductIds} onToggleCompare={toggleCompareProduct} onStartCompare={() => setShowCompareModal(true)} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} />}
        </div>
-       <footer className="shrink-0 bg-white border-t border-slate-200 text-slate-500 h-8 flex items-center justify-between px-2 md:px-6 z-50 text-[7px] md:text-[10px] print:hidden">
+       <footer className="relative shrink-0 bg-white border-t border-slate-200 text-slate-500 h-10 flex items-center justify-between px-2 md:px-6 z-50 text-[7px] md:text-[10px] print:hidden">
+          {/* Left: Device Telemetry */}
           <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
               <div className="flex items-center gap-1 shrink-0">
                   <div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -995,17 +1007,23 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                   <span className="font-bold uppercase text-slate-400">Sync: {lastSyncTime || '--:--'}</span>
               </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0 ml-2">
-              {pricelistBrands.length > 0 && (
+
+          {/* Absolute Center: Primary Pricelist Trigger (Upgraded) */}
+          {pricelistBrands.length > 0 && (
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center">
                   <button 
                     onClick={() => { setSelectedBrandForPricelist(pricelistBrands[0]?.id || null); setShowPricelistModal(true); }} 
-                    className="bg-blue-600 hover:bg-blue-700 text-white w-5 h-5 rounded flex items-center justify-center shadow-sm active:scale-95 transition-all" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all border-2 border-white ring-8 ring-blue-600/5 group" 
                     title="Pricelists"
                   >
-                    <RIcon size={10} className="text-white" />
+                    <RIcon size={16} className="text-white group-hover:scale-110 transition-transform" />
                   </button>
-              )}
-              <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest text-[8px] md:text-[10px]">
+              </div>
+          )}
+
+          {/* Right: Creator Info */}
+          <div className="flex items-center gap-4 shrink-0 ml-2">
+              <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:text-blue-600 transition-colors">
                   <span>JSTYP</span>
               </button>
           </div>
