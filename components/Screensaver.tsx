@@ -28,8 +28,8 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSleepMode, setIsSleepMode] = useState(false);
   
-  // Animation State
-  const [animationEffect, setAnimationEffect] = useState('effect-ken-burns');
+  // Animation State - Updated to performant set
+  const [animationEffect, setAnimationEffect] = useState('effect-smooth-zoom');
   
   const timerRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -51,7 +51,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       ...settings
   };
 
-  // Check Active Hours for Sleep Mode
   useEffect(() => {
       if (!config.enableSleepMode || !config.activeHoursStart || !config.activeHoursEnd) {
           setIsSleepMode(false);
@@ -91,13 +90,13 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       return true;
   };
 
-  // 1. Build & Shuffle Playlist
   useEffect(() => {
     const list: PlaylistItem[] = [];
 
     if (config.showCustomAds) {
         ads.forEach((ad, i) => {
           if (shouldIncludeItem(ad.dateAdded)) {
+            // Marketing weight: Add ads 3 times to the shuffle pool
             for(let c=0; c<3; c++) {
                 list.push({
                     id: `ad-${ad.id}-${i}-${c}`,
@@ -205,12 +204,13 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
   useEffect(() => {
     if (!currentItem) return;
-    const imageEffects = ['effect-ken-burns', 'effect-pop-dynamic', 'effect-twist-enter', 'effect-circle-reveal', 'effect-pan-tilt'];
-    const videoEffects = ['effect-fade-in', 'effect-zoom-soft']; 
+    // GPU-STABLE EFFECTS ONLY: No blur, no filters, no clip-path
+    const imageEffects = ['effect-smooth-zoom', 'effect-subtle-drift', 'effect-soft-scale', 'effect-gentle-pan'];
+    const videoEffects = ['effect-fade-in']; 
     if (currentItem.type === 'image') {
         setAnimationEffect(imageEffects[Math.floor(Math.random() * imageEffects.length)]);
     } else {
-        setAnimationEffect(videoEffects[Math.floor(Math.random() * videoEffects.length)]);
+        setAnimationEffect(videoEffects[0]);
     }
   }, [currentItem?.id]);
 
@@ -230,7 +230,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             
             const playPromise = videoRef.current.play();
             if (playPromise !== undefined) {
-                playPromise.catch(error => {
+                playPromise.catch(() => {
                     if (videoRef.current) {
                         videoRef.current.muted = true;
                         videoRef.current.play().catch(() => {
@@ -240,8 +240,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 });
             }
         }
-        // Extended safety fallback to 10 minutes to ensure full playback of long videos
-        // while still protecting against stuck playback states.
         timerRef.current = window.setTimeout(() => {
             nextSlide();
         }, 600000); 
@@ -278,49 +276,66 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       className="fixed inset-0 z-[100] bg-black cursor-pointer flex items-center justify-center overflow-hidden"
     >
       <style>{`
-        /* Hardware Accelerated Animations */
-        .effect-ken-burns, .effect-pop-dynamic, .effect-twist-enter, .effect-circle-reveal, .effect-pan-tilt, .effect-fade-in, .effect-zoom-soft {
+        /* HIGH PERFORMANCE HARDWARE ACCELERATED ANIMATIONS */
+        /* We avoid: filters (blur/brightness), clip-path, and complex rotations */
+        
+        .effect-smooth-zoom, .effect-subtle-drift, .effect-soft-scale, .effect-gentle-pan, .effect-fade-in {
             will-change: transform, opacity;
             transform: translate3d(0,0,0);
             backface-visibility: hidden;
+            perspective: 1000px;
         }
 
-        .effect-ken-burns { animation: kenBurns 20s ease-out forwards; }
-        @keyframes kenBurns { 0% { transform: scale(1) translate3d(0,0,0); filter: brightness(0.8); } 100% { transform: scale(1.15) translate3d(0,0,0); filter: brightness(1); } }
+        .effect-smooth-zoom { animation: smoothZoom 15s ease-out forwards; }
+        @keyframes smoothZoom { 
+            0% { transform: scale(1) translate3d(0,0,0); opacity: 0.8; } 
+            100% { transform: scale(1.1) translate3d(0,0,0); opacity: 1; } 
+        }
         
-        .effect-pop-dynamic { animation: popDynamic 8s ease-out forwards; transform-origin: center center; }
-        @keyframes popDynamic { 0% { opacity: 0; transform: scale(0.5) translate3d(0,0,0); } 20% { opacity: 1; transform: scale(1.05) translate3d(0,0,0); } 40% { transform: scale(0.95) translate3d(0,0,0); } 100% { transform: scale(1) translate3d(0,0,0); } }
+        .effect-subtle-drift { animation: subtleDrift 20s linear forwards; }
+        @keyframes subtleDrift {
+            0% { transform: scale(1.05) translate3d(-1%, -1%, 0); }
+            100% { transform: scale(1.05) translate3d(1%, 1%, 0); }
+        }
         
-        .effect-twist-enter { animation: twistEnter 10s ease-out forwards; }
-        @keyframes twistEnter { 0% { opacity: 0; transform: scale(1.5) rotate(-10deg) translate3d(0,0,0); filter: blur(10px); } 20% { opacity: 1; transform: scale(1) rotate(0deg) translate3d(0,0,0); filter: blur(0px); } 100% { transform: scale(1.1) rotate(2deg) translate3d(0,0,0); } }
+        .effect-soft-scale { animation: softScale 10s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes softScale {
+            0% { transform: scale(0.95) translate3d(0,0,0); opacity: 0; }
+            20% { opacity: 1; }
+            100% { transform: scale(1) translate3d(0,0,0); }
+        }
         
-        .effect-circle-reveal { animation: circleReveal 8s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-        @keyframes circleReveal { 0% { clip-path: circle(0% at 50% 50%); transform: scale(1.2) translate3d(0,0,0); } 30% { clip-path: circle(150% at 50% 50%); transform: scale(1) translate3d(0,0,0); } 100% { clip-path: circle(150% at 50% 50%); transform: scale(1.05) translate3d(0,0,0); } }
+        .effect-gentle-pan { animation: gentlePan 12s ease-in-out forwards; }
+        @keyframes gentlePan {
+            0% { transform: translate3d(-20px, 0, 0) scale(1.05); }
+            100% { transform: translate3d(20px, 0, 0) scale(1.05); }
+        }
         
-        .effect-pan-tilt { animation: panTilt 12s ease-in-out forwards; }
-        @keyframes panTilt { 0% { transform: perspective(1000px) rotateY(-5deg) scale(1.1) translate3d(0,0,0); opacity: 0; } 20% { opacity: 1; } 100% { transform: perspective(1000px) rotateY(5deg) scale(1.2) translate3d(0,0,0); opacity: 1; } }
-        
-        .effect-fade-in { animation: fadeInVideo 1s ease-out forwards; }
+        .effect-fade-in { animation: fadeInVideo 1.2s ease-out forwards; }
         @keyframes fadeInVideo { from { opacity: 0; } to { opacity: 1; } }
-        
-        .effect-zoom-soft { animation: zoomSoft 20s linear forwards; }
-        @keyframes zoomSoft { from { transform: scale(1) translate3d(0,0,0); } to { transform: scale(1.1) translate3d(0,0,0); } }
-        
-        .slide-up { animation: slideUp 0.8s ease-out forwards 0.3s; opacity: 0; will-change: transform, opacity; }
-        .slide-up-delay { animation: slideUp 0.8s ease-out forwards 0.5s; opacity: 0; will-change: transform, opacity; }
-        @keyframes slideUp { 0% { transform: translateY(40px) translate3d(0,0,0); opacity: 0; } 100% { transform: translateY(0) translate3d(0,0,0); opacity: 1; } }
+
+        /* Optimize image rendering on mobile GPUs */
+        img, video {
+            image-rendering: -webkit-optimize-contrast;
+            -webkit-user-drag: none;
+            user-select: none;
+            contain: strict;
+        }
+
+        .slide-up { animation: slideUp 0.8s ease-out forwards 0.3s; opacity: 0; }
+        @keyframes slideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
       `}</style>
 
+      {/* Simplified Background Blur for Speed */}
       <div 
         key={`bg-${currentItem.id}`} 
-        className="absolute inset-0 z-0 bg-cover bg-center opacity-40 transition-all duration-1000 blur-2xl"
-        style={{ backgroundImage: `url(${currentItem.url})`, transform: 'translate3d(0,0,0)' }}
+        className="absolute inset-0 z-0 bg-cover bg-center opacity-30 transition-opacity duration-1000"
+        style={{ backgroundImage: `url(${currentItem.url})` }}
       />
       
-      <div className="absolute inset-0 z-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay pointer-events-none"></div>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/60 z-10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60 z-10" />
 
-      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center p-8 md:p-24 overflow-hidden perspective-1000">
+      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center p-8 md:p-24 overflow-hidden">
          
          {currentItem.type === 'video' ? (
              <>
@@ -328,11 +343,10 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     ref={videoRef}
                     key={`vid-el-${currentItem.url}`}
                     src={currentItem.url} 
-                    className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl rounded-sm ${animationEffect}`}
+                    className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl ${animationEffect}`}
                     muted={config.muteVideos || !isAudioUnlocked} 
                     autoPlay={true}
                     playsInline={true}
-                    decoding="async"
                     onEnded={nextSlide} 
                     onError={handleMediaError} 
                  />
@@ -344,12 +358,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                  )}
              </>
          ) : (
-             <div className={`w-full h-full flex items-center justify-center relative`}>
+             <div className="w-full h-full flex items-center justify-center relative">
                 <img 
                   src={currentItem.url} 
                   alt="Screensaver" 
-                  className={`max-w-full max-h-full w-auto h-auto shadow-[0_20px_50px_rgba(0,0,0,0.5)] ${animationEffect}`}
-                  style={{ borderRadius: '4px' }}
+                  className={`max-w-full max-h-full w-auto h-auto shadow-2xl ${animationEffect}`}
                   loading="eager"
                   decoding="async"
                   onError={handleMediaError}
@@ -361,22 +374,20 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
              <div className="absolute bottom-12 left-8 md:bottom-20 md:left-20 max-w-[80%] md:max-w-[70%] pointer-events-none z-30">
                 {currentItem.title && (
                     <div className="slide-up">
-                        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white uppercase tracking-tighter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] mb-2 leading-tight opacity-95 break-words">
+                        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white uppercase tracking-tighter drop-shadow-lg mb-2 leading-tight">
                             {currentItem.title}
                         </h1>
-                        <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-blue-500 mt-2 sm:mt-4 mb-4 sm:mb-6 rounded-full"></div>
+                        <div className="h-1 w-16 bg-blue-500 mt-2 mb-4 rounded-full"></div>
                     </div>
                 )}
                 
-                <div className="flex flex-wrap gap-2 sm:gap-4 items-center slide-up-delay">
-                    {currentItem.subtitle && (
-                        <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl">
-                            <p className="text-white text-sm md:text-xl font-bold uppercase tracking-widest drop-shadow-md">
-                                {currentItem.subtitle}
-                            </p>
-                        </div>
-                    )}
-                </div>
+                {currentItem.subtitle && (
+                    <div className="bg-white/10 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl w-fit slide-up">
+                        <p className="text-white text-xs md:text-xl font-bold uppercase tracking-widest">
+                            {currentItem.subtitle}
+                        </p>
+                    </div>
+                )}
              </div>
          )}
       </div>
