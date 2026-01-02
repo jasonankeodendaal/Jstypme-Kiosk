@@ -1,4 +1,3 @@
-
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand } from "../types";
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
@@ -571,8 +570,6 @@ const DEFAULT_DATA: StoreData = {
   ads: {
     homeBottomLeft: [],
     homeBottomRight: [],
-    homeSideVertical: [],
-    homeSideLeftVertical: [],
     screensaver: []
   },
   fleet: [],
@@ -600,8 +597,6 @@ const migrateData = (data: any): StoreData => {
     if (!data.hero) data.hero = { ...DEFAULT_DATA.hero };
     if (!data.ads) {
         data.ads = { ...DEFAULT_DATA.ads };
-    } else {
-        if (!data.ads.homeSideLeftVertical) data.ads.homeSideLeftVertical = [];
     }
     if (!data.screensaverSettings) data.screensaverSettings = { ...DEFAULT_DATA.screensaverSettings };
     if (!data.about) data.about = { ...DEFAULT_DATA.about };
