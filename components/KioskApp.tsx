@@ -448,7 +448,23 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           .spreadsheet-table th { position: static !important; background: #71717a !important; color: #fff !important; border: 0.5pt solid #cbd5e1 !important; padding: 4pt !important; font-size: 8pt !important; }
           .spreadsheet-table td { border: 0.2pt solid #e2e8f0 !important; color: #000 !important; padding: 4pt !important; font-size: 8pt !important; }
         }
-        .spreadsheet-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 100%; }
+        
+        /* Performance Optimizations for Large Tables */
+        .table-scroll {
+          -webkit-overflow-scrolling: touch;
+          will-change: scroll-position;
+        }
+
+        .spreadsheet-table { 
+          border-collapse: separate; 
+          border-spacing: 0; 
+          table-layout: fixed; 
+          width: 100%;
+          transform: translate3d(0,0,0); /* Force GPU Layer */
+          backface-visibility: hidden;
+          will-change: transform;
+        }
+
         .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; padding: 8px 4px; }
         .excel-row:nth-child(even) { background-color: #f8fafc; }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
@@ -493,8 +509,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         >
           <div className="min-w-full min-h-full flex items-start justify-center">
             <div 
-              style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: zoom > 1 ? 'max-content' : '100%' }} 
-              className="transition-transform duration-200 print:transform-none select-none relative bg-white shadow-xl rounded-xl overflow-hidden"
+              style={{ 
+                transform: `translate3d(0,0,0) scale(${zoom})`, 
+                transformOrigin: 'top left', 
+                width: zoom > 1 ? 'max-content' : '100%' 
+              }} 
+              className={`select-none relative bg-white shadow-xl rounded-xl overflow-hidden print:transform-none ${!isDragging ? 'transition-transform duration-200' : ''}`}
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
