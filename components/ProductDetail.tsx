@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Product } from '../types';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
-import { ChevronLeft, Info, PlayCircle, FileText, Check, Box as BoxIcon, ChevronRight as RightArrow, ChevronLeft as LeftArrow, X, Image as ImageIcon, Tag, Layers, Ruler, Package, LayoutGrid, Settings, BookOpen } from 'lucide-react';
+import { ChevronLeft, Info, PlayCircle, FileText, Check, Box as BoxIcon, ChevronRight as RightArrow, ChevronLeft as LeftArrow, X, Image as ImageIcon, Tag, Layers, Ruler, Package, LayoutGrid, Settings, BookOpen, Video, Download, ChevronRight } from 'lucide-react';
 
 interface ProductDetailProps {
   product: Product;
@@ -48,6 +48,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
     });
     return media;
   }, [product]);
+
+  const allVideos = useMemo(() => {
+      return allMedia.filter(m => m.type === 'video');
+  }, [allMedia]);
 
   const allManuals = useMemo(() => {
       const mans = product.manuals || [];
@@ -115,15 +119,15 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
       {/* SINGLE SCROLLABLE CONTAINER */}
       <div className="flex-1 overflow-y-auto scroll-smooth no-scrollbar pb-32">
         
-        {/* COMPACT MEDIA SHOWCASE (SHRUNK TO 45vh) */}
-        <div className="w-full min-h-[30vh] md:min-h-[45vh] bg-slate-900 relative group flex items-center justify-center overflow-hidden border-b border-slate-100 shadow-sm">
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/20 z-10 pointer-events-none"></div>
+        {/* COMPACT MEDIA SHOWCASE (REDUCED HEIGHT) */}
+        <div className="w-full h-[30vh] md:h-[35vh] bg-slate-50 relative group flex items-center justify-center overflow-hidden border-b border-slate-100 shadow-sm">
+            <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/10 z-10 pointer-events-none"></div>
             
             {currentMedia ? (
             currentMedia.type === 'image' ? (
                 <img 
                 src={currentMedia.url} 
-                className="w-full h-full object-contain p-4 md:p-8 bg-white cursor-zoom-in" 
+                className="w-full h-full object-contain p-4 md:p-6 bg-white cursor-zoom-in" 
                 alt={product.name} 
                 onClick={() => handleEnlargeMedia(currentMediaIndex)} 
                 />
@@ -138,7 +142,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                     playsInline 
                 />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                    <PlayCircle size={48} className="text-white/50 group-hover:text-white/80 transition-all scale-100 group-hover:scale-110" />
+                    <PlayCircle size={40} className="text-white/50 group-hover:text-white/80 transition-all scale-100 group-hover:scale-110" />
                 </div>
                 </div>
             )
@@ -149,20 +153,26 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
             </div>
             )}
 
-            {/* Tiny Gallery Navigation */}
+            {/* TINY NAVIGATION ARROWS */}
             {allMedia.length > 1 && (
             <>
-                <button onClick={handlePrevMedia} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-blue-600 text-white p-1.5 rounded-lg shadow-2xl z-30 transition-all border border-white/10 active:scale-90">
+                <button 
+                  onClick={handlePrevMedia} 
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-blue-600 hover:text-white text-slate-900 w-8 h-8 rounded-full shadow-lg z-30 transition-all border border-slate-200 active:scale-90 flex items-center justify-center"
+                >
                     <LeftArrow size={14} strokeWidth={3} />
                 </button>
-                <button onClick={handleNextMedia} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-blue-600 text-white p-1.5 rounded-lg shadow-2xl z-30 transition-all border border-white/10 active:scale-90">
+                <button 
+                  onClick={handleNextMedia} 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-blue-600 hover:text-white text-slate-900 w-8 h-8 rounded-full shadow-lg z-30 transition-all border border-slate-200 active:scale-90 flex items-center justify-center"
+                >
                     <RightArrow size={14} strokeWidth={3} />
                 </button>
                 
                 {/* Slim Media Progress Bar */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1 z-20 pointer-events-none">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-20 pointer-events-none">
                 {allMedia.map((_, i) => (
-                    <div key={i} className={`h-1 rounded-full transition-all shadow-md ${i === currentMediaIndex ? 'w-6 bg-blue-600' : 'w-1.5 bg-slate-300'}`} />
+                    <div key={i} className={`h-1 rounded-full transition-all shadow-md ${i === currentMediaIndex ? 'w-4 bg-blue-600' : 'w-1 bg-slate-300'}`} />
                 ))}
                 </div>
             </>
@@ -173,86 +183,113 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
             {allMedia.length > 0 && (
                 <button 
                 onClick={(e) => { e.stopPropagation(); setShowGalleryModal(true); }}
-                className="bg-black/60 hover:bg-black/80 text-white px-3 py-1.5 rounded-lg text-[8px] font-black uppercase flex items-center gap-1.5 shadow-2xl border border-white/10 backdrop-blur-md transition-all"
+                className="bg-black/60 hover:bg-black/80 text-white px-2 py-1 rounded-lg text-[7px] font-black uppercase flex items-center gap-1 shadow-2xl border border-white/10 backdrop-blur-md transition-all"
                 >
-                <LayoutGrid size={12} /> GALLERY
+                <LayoutGrid size={10} /> GALLERY
                 </button>
             )}
             </div>
         </div>
 
         {/* CONTENT AREA */}
-        <div className="max-w-6xl mx-auto px-6 py-8 md:px-16 md:py-12">
+        <div className="max-w-6xl mx-auto px-6 py-6 md:px-16">
             {/* Title & Description */}
-            <div className="mb-12 border-b border-slate-100 pb-12">
-              <div className="flex flex-wrap items-center gap-2 mb-6">
+            <div className="mb-8 border-b border-slate-100 pb-8">
+              <div className="flex flex-wrap items-center gap-2 mb-4">
                 {product.sku && (
-                  <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-500 text-[8px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest border border-slate-200">
+                  <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-widest border border-slate-200">
                     <Tag size={10} /> SKU: {product.sku}
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 text-[8px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest border border-blue-100">
+                <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-widest border border-blue-100">
                   Data Sheet Verified
                 </span>
               </div>
-              <h1 className="text-3xl md:text-5xl font-black text-slate-900 leading-none uppercase tracking-tighter mb-6">{product.name}</h1>
-              <p className="text-base md:text-lg text-slate-600 leading-relaxed font-medium max-w-4xl">{product.description || "No specific description available."}</p>
+              <h1 className="text-2xl md:text-4xl font-black text-slate-900 leading-none uppercase tracking-tighter mb-4">{product.name}</h1>
+              <p className="text-sm md:text-base text-slate-600 leading-relaxed font-medium max-w-4xl">{product.description || "No specific description available."}</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16">
-              {/* Left Column: Docs & Features */}
-              <div className="space-y-12">
-                {/* MANUALS */}
-                {allManuals.length > 0 && (
-                  <div className="bg-blue-50/50 rounded-[2rem] p-8 border border-blue-100 shadow-sm">
-                    <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                      <BookOpen size={16} className="text-blue-500" /> Documentation
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      {allManuals.map(manual => (
-                        <button 
-                          key={manual.id}
-                          onClick={() => openManual(manual)} 
-                          className="w-full flex flex-col bg-white hover:bg-slate-50 text-slate-700 p-3 rounded-2xl transition-all border border-blue-100 hover:shadow-xl group"
-                        >
-                          <div className="w-full aspect-[3/4] bg-slate-100 rounded-xl mb-3 overflow-hidden border border-slate-100 relative">
-                            {manual.thumbnailUrl ? (
-                              <img src={manual.thumbnailUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                <FileText size={32} />
-                              </div>
-                            )}
-                            {manual.pdfUrl && (
-                              <div className="absolute top-2 right-2 bg-red-500 text-white text-[8px] font-black px-2 py-1 rounded-md shadow-lg">PDF</div>
-                            )}
-                          </div>
-                          <span className="text-[9px] font-black uppercase text-center leading-tight line-clamp-1 px-1">{manual.title}</span>
-                        </button>
-                      ))}
+            {/* DEDICATED SECTION: Product Videos, Manuals & Docs */}
+            {(allVideos.length > 0 || allManuals.length > 0) && (
+              <div className="mb-12 bg-slate-50 p-6 md:p-8 rounded-[2rem] border border-slate-200">
+                <h2 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                  <Download size={16} className="text-blue-600" /> Product Videos, Manuals & Docs
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Videos Sub-section */}
+                  {allVideos.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <Video size={14} /> Available Multimedia
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {allVideos.map((vid, idx) => (
+                          <button 
+                            key={idx}
+                            onClick={() => handleEnlargeMedia(allMedia.indexOf(vid))}
+                            className="group relative aspect-video bg-black rounded-xl overflow-hidden border border-slate-200 shadow-sm"
+                          >
+                            <video src={vid.url} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <PlayCircle size={24} className="text-white shadow-xl" />
+                            </div>
+                            <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[7px] px-1.5 py-0.5 rounded font-black uppercase">Video {idx+1}</div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* FEATURES */}
-                {product.features.length > 0 && (
-                  <div>
-                    <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                      <Check size={16} className="text-green-500" /> Highlights
-                    </h3>
-                    <div className="space-y-3">
-                      {product.features.map((f, i) => (
-                        <div key={i} className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm transition-all hover:translate-x-1">
-                          <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
-                          <span className="text-sm md:text-base font-bold text-slate-700 leading-tight">{f}</span>
-                        </div>
-                      ))}
+                  {/* Manuals Sub-section */}
+                  {allManuals.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <FileText size={14} /> PDF Manuals & Docs
+                      </h3>
+                      <div className="grid grid-cols-1 gap-2">
+                        {allManuals.map(manual => (
+                          <button 
+                            key={manual.id}
+                            onClick={() => openManual(manual)}
+                            className="flex items-center gap-3 p-3 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl transition-all group"
+                          >
+                            <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                              <FileText size={20} />
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                              <div className="text-[10px] font-black uppercase text-slate-900 truncate leading-tight">{manual.title}</div>
+                              <div className="text-[8px] font-bold text-slate-400 uppercase">{manual.pdfUrl ? 'Official Document' : 'Image Gallery'}</div>
+                            </div>
+                            <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-500" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
+            )}
 
-              {/* Right Column: Specs & Dimensions */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16">
+              {/* Features Section */}
+              {product.features.length > 0 && (
+                <div>
+                  <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                    <Check size={16} className="text-green-500" /> Key Features
+                  </h3>
+                  <div className="space-y-3">
+                    {product.features.map((f, i) => (
+                      <div key={i} className="flex items-start gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm transition-all hover:translate-x-1">
+                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></div>
+                        <span className="text-sm font-bold text-slate-700 leading-tight">{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Specs & Dimensions Section */}
               <div className="space-y-12">
                 {/* SPECS */}
                 {product.specs && Object.keys(product.specs).length > 0 && (
@@ -262,9 +299,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {Object.entries(product.specs).map(([key, value], idx) => (
-                        <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
-                          <span className="block text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">{key}</span>
-                          <span className="block text-xs md:text-sm font-black text-slate-900 leading-tight">{value}</span>
+                        <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3 shadow-sm">
+                          <span className="block text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{key}</span>
+                          <span className="block text-xs font-black text-slate-900 leading-tight">{value}</span>
                         </div>
                       ))}
                     </div>
@@ -275,17 +312,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                 {dimensionSets.length > 0 && (
                   <div>
                     <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                      <Ruler size={16} className="text-orange-500" /> Sizing Info
+                      <Ruler size={16} className="text-orange-500" /> Dimensions
                     </h3>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {dimensionSets.map((dims, i) => (
-                        <div key={i} className="bg-orange-50/30 p-6 rounded-3xl border border-orange-100 shadow-sm">
-                          <div className="text-[8px] font-black text-orange-400 uppercase tracking-widest mb-4 border-b border-orange-100 pb-2">{dims.label || `Package ${i+1}`}</div>
-                          <div className="grid grid-cols-4 gap-4 text-center">
-                            <div><span className="block text-[7px] text-slate-400 font-black uppercase mb-1">H</span><span className="block text-xs font-black text-slate-900">{dims.height || '-'}</span></div>
-                            <div><span className="block text-[7px] text-slate-400 font-black uppercase mb-1">W</span><span className="block text-xs font-black text-slate-900">{dims.width || '-'}</span></div>
-                            <div><span className="block text-[7px] text-slate-400 font-black uppercase mb-1">D</span><span className="block text-xs font-black text-slate-900">{dims.depth || '-'}</span></div>
-                            <div><span className="block text-[7px] text-slate-400 font-black uppercase mb-1">KG</span><span className="block text-xs font-black text-slate-900">{dims.weight || '-'}</span></div>
+                        <div key={i} className="bg-orange-50/30 p-4 rounded-2xl border border-orange-100 shadow-sm">
+                          <div className="text-[8px] font-black text-orange-400 uppercase tracking-widest mb-3 border-b border-orange-100 pb-1.5">{dims.label || `Unit ${i+1}`}</div>
+                          <div className="grid grid-cols-4 gap-2 text-center">
+                            <div><span className="block text-[7px] text-slate-400 font-black uppercase mb-0.5">H</span><span className="block text-[10px] font-black text-slate-900">{dims.height || '-'}</span></div>
+                            <div><span className="block text-[7px] text-slate-400 font-black uppercase mb-0.5">W</span><span className="block text-[10px] font-black text-slate-900">{dims.width || '-'}</span></div>
+                            <div><span className="block text-[7px] text-slate-400 font-black uppercase mb-0.5">D</span><span className="block text-[10px] font-black text-slate-900">{dims.depth || '-'}</span></div>
+                            <div><span className="block text-[7px] text-slate-400 font-black uppercase mb-0.5">KG</span><span className="block text-[10px] font-black text-slate-900">{dims.weight || '-'}</span></div>
                           </div>
                         </div>
                       ))}
@@ -298,17 +335,17 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
       </div>
 
       {/* BOTTOM ACTION BAR (FLOATING) */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-xl z-40 animate-slide-up">
-        <div className="bg-white/90 backdrop-blur-2xl border border-slate-200/50 rounded-[1.5rem] p-3 md:p-4 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.2)] flex justify-between items-center">
-          <div className="hidden md:flex flex-col ml-3">
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Viewing Model</span>
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-tight truncate max-w-[150px]">{product.name}</span>
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg z-40 animate-slide-up">
+        <div className="bg-white/90 backdrop-blur-2xl border border-slate-200/50 rounded-2xl p-3 shadow-2xl flex justify-between items-center">
+          <div className="hidden md:flex flex-col ml-3 min-w-0">
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Viewing Asset</span>
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-tight truncate pr-4">{product.name}</span>
           </div>
           <button 
             onClick={onBack} 
-            className="w-full md:w-auto bg-slate-900 text-white px-10 py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-black transition-all shadow-xl active:scale-95"
+            className="w-full md:w-auto bg-slate-900 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
           >
-            Back to Directory
+            <ChevronLeft size={16} /> Exit to Menu
           </button>
         </div>
       </div>
