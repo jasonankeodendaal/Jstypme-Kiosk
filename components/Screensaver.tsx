@@ -28,10 +28,10 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSleepMode, setIsSleepMode] = useState(false);
   
-  // Animation State - Updated to performant set
   const [animationEffect, setAnimationEffect] = useState('effect-smooth-zoom');
   
   const timerRef = useRef<number | null>(null);
+  const watchdogRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Default config
@@ -96,7 +96,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     if (config.showCustomAds) {
         ads.forEach((ad, i) => {
           if (shouldIncludeItem(ad.dateAdded)) {
-            // Marketing weight: Add ads 3 times to the shuffle pool
             for(let c=0; c<3; c++) {
                 list.push({
                     id: `ad-${ad.id}-${i}-${c}`,
@@ -195,16 +194,30 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const handleMediaError = (e: any) => {
       if (e.target?.error?.name === 'AbortError') return;
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (watchdogRef.current) clearTimeout(watchdogRef.current);
       timerRef.current = window.setTimeout(() => {
           nextSlide();
-      }, 3000); 
+      }, 2000); 
+  };
+
+  const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    if (watchdogRef.current) clearTimeout(watchdogRef.current);
+    
+    // Set a dynamic watchdog to force skip if the video duration is exceeded
+    // (Duration in seconds * 1000) + 5 second safety buffer
+    const durationMs = (video.duration * 1000) + 5000;
+    
+    watchdogRef.current = window.setTimeout(() => {
+      console.warn("Screensaver Watchdog: Video exceeded duration without ended event, skipping.");
+      nextSlide();
+    }, isFinite(durationMs) ? durationMs : 60000); // Fallback to 60s if duration is NaN/Infinity
   };
 
   const currentItem = playlist[currentIndex];
 
   useEffect(() => {
     if (!currentItem) return;
-    // GPU-STABLE EFFECTS ONLY: No blur, no filters, no clip-path
     const imageEffects = ['effect-smooth-zoom', 'effect-subtle-drift', 'effect-soft-scale', 'effect-gentle-pan'];
     const videoEffects = ['effect-fade-in']; 
     if (currentItem.type === 'image') {
@@ -216,7 +229,9 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
   useEffect(() => {
     if (isSleepMode || !currentItem || playlist.length === 0) return;
+    
     if (timerRef.current) clearTimeout(timerRef.current);
+    if (watchdogRef.current) clearTimeout(watchdogRef.current);
 
     if (currentItem.type === 'image') {
         const duration = (config.imageDuration && config.imageDuration > 0) ? config.imageDuration * 1000 : 8000;
@@ -224,6 +239,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             nextSlide();
         }, duration);
     } else {
+        // Video specific playback trigger
         if (videoRef.current) {
             const isMuted = config.muteVideos || !isAudioUnlocked;
             videoRef.current.muted = isMuted;
@@ -234,19 +250,27 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     if (videoRef.current) {
                         videoRef.current.muted = true;
                         videoRef.current.play().catch(() => {
-                            timerRef.current = window.setTimeout(nextSlide, 2000);
+                            nextSlide();
                         });
                     }
                 });
             }
+
+            // Initial safety watchdog if metadata takes too long to load (15 seconds)
+            watchdogRef.current = window.setTimeout(() => {
+                if (videoRef.current && videoRef.current.readyState < 1) {
+                    console.warn("Screensaver Watchdog: Video failed to load metadata, skipping.");
+                    nextSlide();
+                }
+            }, 15000); 
+        } else {
+            timerRef.current = window.setTimeout(nextSlide, 5000);
         }
-        timerRef.current = window.setTimeout(() => {
-            nextSlide();
-        }, 600000); 
     }
 
     return () => {
         if (timerRef.current) clearTimeout(timerRef.current);
+        if (watchdogRef.current) clearTimeout(watchdogRef.current);
     };
   }, [currentIndex, currentItem, config.imageDuration, playlist.length, isSleepMode, isAudioUnlocked, config.muteVideos]);
 
@@ -276,9 +300,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       className="fixed inset-0 z-[100] bg-black cursor-pointer flex items-center justify-center overflow-hidden"
     >
       <style>{`
-        /* HIGH PERFORMANCE HARDWARE ACCELERATED ANIMATIONS */
-        /* We avoid: filters (blur/brightness), clip-path, and complex rotations */
-        
         .effect-smooth-zoom, .effect-subtle-drift, .effect-soft-scale, .effect-gentle-pan, .effect-fade-in {
             will-change: transform, opacity;
             transform: translate3d(0,0,0);
@@ -314,7 +335,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         .effect-fade-in { animation: fadeInVideo 1.2s ease-out forwards; }
         @keyframes fadeInVideo { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Optimize image rendering on mobile GPUs */
         img, video {
             image-rendering: -webkit-optimize-contrast;
             -webkit-user-drag: none;
@@ -326,7 +346,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         @keyframes slideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
       `}</style>
 
-      {/* Simplified Background Blur for Speed */}
       <div 
         key={`bg-${currentItem.id}`} 
         className="absolute inset-0 z-0 bg-cover bg-center opacity-30 transition-opacity duration-1000"
@@ -341,7 +360,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
              <>
                  <video 
                     ref={videoRef}
-                    key={`vid-el-${currentItem.url}`}
+                    key={`vid-el-${currentItem.url}-${currentIndex}`}
                     src={currentItem.url} 
                     className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl ${animationEffect}`}
                     muted={config.muteVideos || !isAudioUnlocked} 
@@ -349,6 +368,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     playsInline={true}
                     onEnded={nextSlide} 
                     onError={handleMediaError} 
+                    onLoadedMetadata={handleLoadedMetadata}
                  />
                  {!config.muteVideos && !isAudioUnlocked && (
                      <div className="absolute top-8 right-8 bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse">

@@ -1,5 +1,5 @@
 
-// Service Worker for Kiosk Pro v5.1 (Firefox Optimized)
+// Service Worker for Kiosk Pro v5.2 (Firefox Stability Enhanced)
 const CACHE_NAME = 'kiosk-pro-v5';
 
 const PRECACHE_URLS = [
@@ -34,21 +34,23 @@ self.addEventListener('activate', (event) => {
 });
 
 /**
- * Enhanced Range Request Handler
- * Specifically tuned for Firefox and Chrome's media probe behaviors.
+ * Enhanced Range Request Handler for Firefox.
+ * Fixes freezing issues where Firefox media probe hangs on partial content.
  */
 const handleRangeRequest = async (request) => {
   const cache = await caches.open(CACHE_NAME);
   let response = await cache.match(request);
 
-  // If not in cache, fetch from network and try to cache it
   if (!response) {
     try {
       response = await fetch(request);
-      // We only cache successful full responses or opaque responses
-      if (response.status === 200 || response.type === 'opaque') {
+      // Only cache full successful responses
+      if (response.status === 200) {
         const copy = response.clone();
         cache.put(request, copy);
+      } else if (response.status === 206) {
+          // If network returns 206 directly, just pass it through without caching
+          return response;
       }
     } catch (e) {
       return new Response(null, { status: 404 });
@@ -56,7 +58,7 @@ const handleRangeRequest = async (request) => {
   }
 
   const rangeHeader = request.headers.get('Range');
-  if (rangeHeader && response.status !== 206) {
+  if (rangeHeader) {
     try {
       const arrayBuffer = await response.arrayBuffer();
       const bytes = rangeHeader.replace(/bytes=/, "").split("-");
@@ -64,9 +66,15 @@ const handleRangeRequest = async (request) => {
       const total = arrayBuffer.byteLength;
       const end = bytes[1] ? parseInt(bytes[1], 10) : total - 1;
       
+      if (start >= total || end >= total) {
+          return new Response(null, { 
+              status: 416, 
+              headers: { 'Content-Range': `bytes */${total}` } 
+          });
+      }
+
       const chunk = arrayBuffer.slice(start, end + 1);
       
-      // Firefox requires these specific headers to consider a 206 valid
       return new Response(chunk, {
         status: 206,
         statusText: 'Partial Content',
@@ -76,11 +84,12 @@ const handleRangeRequest = async (request) => {
           'Content-Range': `bytes ${start}-${end}/${total}`,
           'Content-Length': chunk.byteLength.toString(),
           'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-cache'
         }),
       });
     } catch (e) {
-      // If slicing fails, return original response
-      return response;
+      // Fallback to network if slicing fails
+      return fetch(request);
     }
   }
 
@@ -94,7 +103,6 @@ self.addEventListener('fetch', (event) => {
                   url.pathname.toLowerCase().endsWith('.mp4') || 
                   url.pathname.toLowerCase().endsWith('.webm');
 
-  // Handle Media Requests (Always check for Ranges)
   if (isMedia) {
     event.respondWith(handleRangeRequest(event.request));
     return;
@@ -107,26 +115,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets (Images/Fonts) - Cache First
-  if (event.request.destination === 'image' || event.request.destination === 'font') {
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        return cached || fetch(event.request).then(res => {
-          if (res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(event.request, copy));
-          }
-          return res;
-        });
-      })
-    );
-    return;
-  }
-
-  // Everything else: Network First
+  // Standard Assets
   event.respondWith(
-    fetch(event.request)
-      .then(res => res)
-      .catch(() => caches.match(event.request))
+    caches.match(event.request).then((cached) => {
+      return cached || fetch(event.request).then(res => {
+        if (res.status === 200 && event.request.method === 'GET') {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(event.request, copy));
+        }
+        return res;
+      });
+    })
   );
 });

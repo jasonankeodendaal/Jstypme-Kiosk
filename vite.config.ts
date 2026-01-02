@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     legacy({
-      targets: ['chrome >= 37', 'android >= 5'],
+      targets: ['chrome >= 37', 'android >= 5', 'firefox >= 60'],
       additionalLegacyPolyfills: [
         'regenerator-runtime/runtime',
         'core-js/stable/promise',
@@ -43,8 +43,6 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Removed format: 'iife' to allow manualChunks to work.
-        // Vite legacy plugin will handle the single-file fallback for old browsers automatically.
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',

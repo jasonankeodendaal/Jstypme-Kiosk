@@ -305,22 +305,6 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
         </div>
       </div>
 
-      {/* BOTTOM ACTION BAR (FLOATING) */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-4xl z-40 animate-slide-up">
-        <div className="bg-white/90 backdrop-blur-2xl border border-slate-200/50 rounded-[2.5rem] p-4 md:p-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] flex justify-between items-center">
-          <div className="hidden md:flex flex-col ml-4">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Current Product</span>
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-tight truncate max-w-[200px]">{product.name}</span>
-          </div>
-          <button 
-            onClick={onBack} 
-            className="w-full md:w-auto bg-slate-900 text-white px-12 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-sm hover:bg-black transition-all shadow-xl active:scale-95"
-          >
-            Return to Directory
-          </button>
-        </div>
-      </div>
-
       {/* MEDIA ENLARGED MODAL */}
       {showEnlargedMedia && enlargedMedia && (
         <div className="fixed inset-0 z-[110] bg-black/98 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowEnlargedMedia(false)}>
