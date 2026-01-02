@@ -448,7 +448,23 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           .spreadsheet-table th { position: static !important; background: #71717a !important; color: #fff !important; border: 0.5pt solid #cbd5e1 !important; padding: 4pt !important; font-size: 8pt !important; }
           .spreadsheet-table td { border: 0.2pt solid #e2e8f0 !important; color: #000 !important; padding: 4pt !important; font-size: 8pt !important; }
         }
-        .spreadsheet-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 100%; }
+        
+        /* Performance Optimizations for Large Tables */
+        .table-scroll {
+          -webkit-overflow-scrolling: touch;
+          will-change: scroll-position;
+        }
+
+        .spreadsheet-table { 
+          border-collapse: separate; 
+          border-spacing: 0; 
+          table-layout: fixed; 
+          width: 100%;
+          transform: translate3d(0,0,0); /* Force GPU Layer */
+          backface-visibility: hidden;
+          will-change: transform;
+        }
+
         .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; padding: 8px 4px; }
         .excel-row:nth-child(even) { background-color: #f8fafc; }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
@@ -493,8 +509,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         >
           <div className="min-w-full min-h-full flex items-start justify-center">
             <div 
-              style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: zoom > 1 ? 'max-content' : '100%' }} 
-              className="transition-transform duration-200 print:transform-none select-none relative bg-white shadow-xl rounded-xl overflow-hidden"
+              style={{ 
+                transform: `translate3d(0,0,0) scale(${zoom})`, 
+                transformOrigin: 'top left', 
+                width: zoom > 1 ? 'max-content' : '100%' 
+              }} 
+              className={`select-none relative bg-white shadow-xl rounded-xl overflow-hidden print:transform-none ${!isDragging ? 'transition-transform duration-200' : ''}`}
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
@@ -702,9 +722,32 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [compareProductIds, setCompareProductIds] = useState<string[]>([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
+  
+  // GLOBAL AUDIO UNLOCK STATE
+  const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
+
   const timerRef = useRef<number | null>(null);
   const idleTimeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
   
+  // Global listener to unlock audio context on very first interaction
+  useEffect(() => {
+    const unlockAudio = () => {
+        if (!isAudioUnlocked) {
+            setIsAudioUnlocked(true);
+            // Optional: Play a short silent buffer to "warm up" the hardware
+            const silentCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const buffer = silentCtx.createBuffer(1, 1, 22050);
+            const source = silentCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(silentCtx.destination);
+            source.start(0);
+        }
+    };
+    window.addEventListener('touchstart', unlockAudio, { once: true });
+    window.addEventListener('mousedown', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
+  }, [isAudioUnlocked]);
+
   const resetIdleTimer = useCallback(() => {
     setIsIdle(false);
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -757,7 +800,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   
   return (
     <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full">
-       {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProductsFlat} ads={storeData.ads?.screensaver || []} pamphlets={storeData.catalogues || []} onWake={resetIdleTimer} settings={storeData.screensaverSettings} />}
+       {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProductsFlat} ads={storeData.ads?.screensaver || []} pamphlets={storeData.catalogues || []} onWake={resetIdleTimer} settings={storeData.screensaverSettings} isAudioUnlocked={isAudioUnlocked} />}
        <header className="shrink-0 h-10 bg-slate-900 text-white flex items-center justify-between px-2 md:px-4 z-50 border-b border-slate-800 shadow-md print:hidden">
            <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
                {storeData.companyLogoUrl ? <img src={storeData.companyLogoUrl} className="h-4 md:h-6 object-contain" alt="" /> : <Store size={16} className="text-blue-500" />}
