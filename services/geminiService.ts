@@ -377,7 +377,7 @@ const MOCK_BRANDS: Brand[] = [
   },
   {
     id: 'b-garmin',
-    name: 'Garmin',
+    name: 'Watch',
     logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Garmin_logo.svg/1200px-Garmin_logo.svg.png',
     categories: [
       {

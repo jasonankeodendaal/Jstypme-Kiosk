@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { FlatProduct, AdItem, Catalogue, ScreensaverSettings } from '../types';
-import { Moon, Volume2, VolumeX, AlertCircle } from 'lucide-react';
+import { Moon, Volume2, VolumeX } from 'lucide-react';
 
 interface ScreensaverProps {
   products: FlatProduct[];
@@ -27,7 +27,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSleepMode, setIsSleepMode] = useState(false);
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
-  const [playbackError, setPlaybackError] = useState<string | null>(null);
   
   // Animation State
   const [animationEffect, setAnimationEffect] = useState('effect-ken-burns');
@@ -72,6 +71,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           if (startMinutes < endMinutes) {
               isActive = currentMinutes >= startMinutes && currentMinutes < endMinutes;
           } else {
+              // Night shift scenario
               isActive = currentMinutes >= startMinutes || currentMinutes < endMinutes;
           }
           
@@ -79,22 +79,18 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       };
 
       checkTime();
-      const interval = setInterval(checkTime, 60000);
+      const interval = setInterval(checkTime, 60000); // Check every minute
       return () => clearInterval(interval);
   }, [config.activeHoursStart, config.activeHoursEnd, config.enableSleepMode]);
 
-  // Audio Unlock Checker - Persistent for Kiosk Session
+  // Audio Unlock Checker
   useEffect(() => {
+    // Hidden mechanism to check if audio engine is ready
     const handleTouch = () => {
         setIsAudioUnlocked(true);
-        // Persist to window to share across re-mounts if needed
-        (window as any).isKioskAudioUnlocked = true;
+        window.removeEventListener('click', handleTouch);
+        window.removeEventListener('touchstart', handleTouch);
     };
-    
-    if ((window as any).isKioskAudioUnlocked) {
-        setIsAudioUnlocked(true);
-    }
-
     window.addEventListener('click', handleTouch);
     window.addEventListener('touchstart', handleTouch);
     return () => {
@@ -117,15 +113,17 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   useEffect(() => {
     const list: PlaylistItem[] = [];
 
+    // Add Custom Ads - Multiplied by 3 to ensure "Special Marketing" frequency
     if (config.showCustomAds) {
         ads.forEach((ad, i) => {
           if (shouldIncludeItem(ad.dateAdded)) {
+            // Push 3 copies of each ad to increase frequency in the shuffle
             for(let c=0; c<3; c++) {
                 list.push({
                     id: `ad-${ad.id}-${i}-${c}`,
                     type: ad.type,
                     url: ad.url,
-                    title: "Special Promotion",
+                    title: "Sponsored",
                     subtitle: "",
                     dateAdded: ad.dateAdded
                 });
@@ -134,6 +132,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         });
     }
 
+    // Add Pamphlets
     if (config.showPamphlets) {
         pamphlets.forEach((pamphlet) => {
            if (pamphlet.pages && pamphlet.pages.length > 0) {
@@ -143,7 +142,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     type: 'image',
                     url: pamphlet.pages[0],
                     title: pamphlet.title,
-                    subtitle: "Digital Catalogue",
+                    subtitle: "Showcase Catalogue",
                     startDate: pamphlet.startDate,
                     endDate: pamphlet.endDate
                  });
@@ -152,6 +151,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         });
     }
 
+    // Add Products
     products.forEach((p) => {
         if (!shouldIncludeItem(p.dateAdded)) return;
 
@@ -172,7 +172,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     type: 'video',
                     url: p.videoUrl,
                     title: p.brandName,
-                    subtitle: `${p.name} - Official Showcase`,
+                    subtitle: `${p.name} - Official Video`,
                     dateAdded: p.dateAdded
                  });
             }
@@ -184,7 +184,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                             type: 'video',
                             url: url,
                             title: p.brandName,
-                            subtitle: `${p.name} - Visual Tour`,
+                            subtitle: `${p.name} - Video Showcase`,
                             dateAdded: p.dateAdded
                         });
                     }
@@ -193,6 +193,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         }
     });
 
+    // Robust Shuffle
     for (let i = list.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [list[i], list[j]] = [list[j], list[i]];
@@ -202,18 +203,17 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     setCurrentIndex(0);
   }, [products.length, ads.length, pamphlets.length, config.showProductImages, config.showProductVideos, config.showCustomAds, config.showPamphlets]);
 
+  // Helper to move to next slide
   const nextSlide = () => {
       setCurrentIndex((prev) => (prev + 1) % playlist.length);
-      setPlaybackError(null);
   };
 
-  const handleMediaError = (e: any) => {
-      console.error("Screensaver Media Error:", playlist[currentIndex]?.url, e);
-      setPlaybackError("Media Load Failure");
+  const handleMediaError = () => {
+      console.warn("Media failed to load:", playlist[currentIndex]?.url);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(() => {
           nextSlide();
-      }, 3000); 
+      }, 2000); 
   };
 
   const currentItem = playlist[currentIndex];
@@ -221,8 +221,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   // 2. Effect Selector
   useEffect(() => {
     if (!currentItem) return;
+
+    // Pick a random animation effect for this slide
     const imageEffects = ['effect-ken-burns', 'effect-pop-dynamic', 'effect-twist-enter', 'effect-circle-reveal', 'effect-pan-tilt'];
     const videoEffects = ['effect-fade-in', 'effect-zoom-soft']; 
+    
     if (currentItem.type === 'image') {
         setAnimationEffect(imageEffects[Math.floor(Math.random() * imageEffects.length)]);
     } else {
@@ -230,7 +233,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     }
   }, [currentItem?.id]);
 
-  // 3. Playback Logic - FORCED PERSISTENCE
+  // 3. Playback Logic
   useEffect(() => {
     if (isSleepMode || !currentItem || playlist.length === 0) return;
 
@@ -242,41 +245,31 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             nextSlide();
         }, duration);
     } else {
-        // Video Logic - Don't use window timeout for transitions, use onEnded
+        // Video Handling
         if (videoRef.current) {
             videoRef.current.currentTime = 0;
+            // Attempt unmuted play only if requested and engine is unlocked
+            // Otherwise force mute to guarantee autoplay
+            const shouldMute = config.muteVideos || !isAudioUnlocked;
+            videoRef.current.muted = shouldMute;
             
-            // Try playing with sound if allowed
-            const attemptPlay = async () => {
-                if (!videoRef.current) return;
-                
-                // If user hasn't touched yet, we MUST mute to prevent the browser from blocking the play() call
-                videoRef.current.muted = config.muteVideos || !isAudioUnlocked;
-                
-                try {
-                    await videoRef.current.play();
-                } catch (error) {
-                    console.warn("Unmuted autoplay blocked. Falling back to muted playback.");
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.warn("Autoplay prevented or failed:", error);
+                    // Critical Fallback: Always mute and retry if first attempt failed
                     if (videoRef.current) {
                         videoRef.current.muted = true;
-                        await videoRef.current.play().catch(err => {
-                            console.error("Total video block:", err);
-                            setPlaybackError("Playback Blocked by Device");
-                            // ONLY skip if the video literally cannot play even when muted
-                            timerRef.current = window.setTimeout(nextSlide, 2000);
-                        });
+                        videoRef.current.play().catch(e => nextSlide());
                     }
-                }
-            };
-
-            attemptPlay();
+                });
+            }
         }
         
-        // Universal watchdog for stuck videos
         timerRef.current = window.setTimeout(() => {
-            console.warn("Video watchdog triggered.");
+            console.warn("Video timeout reached, skipping.");
             nextSlide();
-        }, 120000); // 2 minutes max
+        }, 180000); 
     }
 
     return () => {
@@ -284,23 +277,34 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     };
   }, [currentIndex, currentItem, animationEffect, config.imageDuration, playlist.length, isSleepMode, isAudioUnlocked]);
 
+  // Sleep Mode Render
   if (isSleepMode) {
       return (
-          <div onClick={onWake} className="fixed inset-0 z-[100] bg-black cursor-pointer flex items-center justify-center">
+          <div 
+             onClick={onWake} 
+             className="fixed inset-0 z-[100] bg-black cursor-pointer flex items-center justify-center"
+          >
               <div className="flex flex-col items-center opacity-30 animate-pulse">
                   <Moon size={48} className="text-blue-500 mb-4" />
-                  <div className="text-white font-mono text-sm uppercase tracking-widest">Sleep Mode Active</div>
-                  <div className="text-white/50 text-xs mt-2 uppercase">Tap to Wake</div>
+                  <div className="text-white font-mono text-sm">Sleep Mode Active</div>
+                  <div className="text-white/50 text-xs mt-2">Tap to Wake</div>
               </div>
           </div>
       );
   }
 
+  // Initial buffer
   if (playlist.length === 0) return (
       <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center cursor-pointer" onClick={onWake}>
-          <div className="text-white opacity-20 text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Initializing Showcase...</div>
+          <div className="text-white opacity-30 text-xs font-mono">...</div>
       </div>
   );
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+  };
 
   const objectFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
 
@@ -331,7 +335,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         @keyframes bgParallax { 0% { transform: scale(1.2) translate(-2%, -2%); } 100% { transform: scale(1.2) translate(2%, 2%); } }
       `}</style>
 
-      {/* Dynamic Blurred Background */}
       <div 
         key={`bg-${currentItem.id}`} 
         className="absolute inset-0 z-0 bg-cover bg-center opacity-40 transition-all duration-1000 bg-parallax blur-2xl"
@@ -339,50 +342,43 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       />
       
       <div className="absolute inset-0 z-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay pointer-events-none"></div>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/70 z-10" />
-
-      {/* Error Overlay */}
-      {playbackError && (
-          <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[60] bg-red-600/20 border border-red-500/30 px-4 py-2 rounded-xl flex items-center gap-2 backdrop-blur-md animate-pulse">
-              <AlertCircle size={16} className="text-red-500" />
-              <span className="text-[10px] font-black text-white uppercase tracking-widest">{playbackError}</span>
-          </div>
-      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/60 z-10" />
 
       {/* Main Content Layer */}
-      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center p-8 md:p-24 overflow-hidden">
+      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center p-8 md:p-24 overflow-hidden perspective-1000">
          
          {currentItem.type === 'video' ? (
-             <div className="w-full h-full flex items-center justify-center relative">
+             <>
                  <video 
                     ref={videoRef}
                     src={currentItem.url} 
-                    className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-[0_30px_100px_rgba(0,0,0,0.6)] rounded-sm ${animationEffect}`}
+                    className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl rounded-sm ${animationEffect}`}
+                    muted={config.muteVideos || !isAudioUnlocked} 
+                    autoPlay
                     playsInline
                     onEnded={nextSlide} 
                     onError={handleMediaError} 
                  />
-                 
-                 {/* Visual Audio Status Indicator */}
+                 {/* Visual Audio Status Indicator for Admin testing */}
                  {!config.muteVideos && !isAudioUnlocked && (
-                     <div className="absolute top-8 right-8 bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse backdrop-blur-md">
+                     <div className="absolute top-8 right-8 bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse">
                          <VolumeX size={16} />
-                         <span className="text-[10px] font-black uppercase tracking-widest">Audio Blocked (Tap Screen to Unlock)</span>
+                         <span className="text-[10px] font-black uppercase tracking-widest">Audio Locked (Touch Screen)</span>
                      </div>
                  )}
                  {!config.muteVideos && isAudioUnlocked && (
-                     <div className="absolute top-8 right-8 bg-blue-600/60 border border-blue-400/20 px-4 py-2 rounded-full flex items-center gap-2 text-white shadow-xl backdrop-blur-md">
+                     <div className="absolute top-8 right-8 bg-blue-600/60 border border-blue-400/20 px-4 py-2 rounded-full flex items-center gap-2 text-white">
                          <Volume2 size={16} />
                          <span className="text-[10px] font-black uppercase tracking-widest">Audio Active</span>
                      </div>
                  )}
-             </div>
+             </>
          ) : (
              <div className={`w-full h-full flex items-center justify-center relative`}>
                 <img 
                   src={currentItem.url} 
                   alt="Screensaver" 
-                  className={`max-w-full max-h-full w-auto h-auto shadow-[0_30px_100px_rgba(0,0,0,0.6)] ${animationEffect}`}
+                  className={`max-w-full max-h-full w-auto h-auto shadow-[0_20px_50px_rgba(0,0,0,0.5)] ${animationEffect}`}
                   style={{ borderRadius: '4px' }}
                   onError={handleMediaError}
                 />
@@ -393,16 +389,17 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
              <div className="absolute bottom-12 left-8 md:bottom-20 md:left-20 max-w-[80%] md:max-w-[70%] pointer-events-none z-30">
                 {currentItem.title && (
                     <div className="slide-up">
-                        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white uppercase tracking-tighter drop-shadow-[0_4px_8px_rgba(0,0,0,1)] mb-2 leading-tight opacity-95 break-words">
+                        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white uppercase tracking-tighter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] mb-2 leading-tight opacity-95 break-words">
                             {currentItem.title}
                         </h1>
-                        <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-blue-500 mt-2 sm:mt-4 mb-4 sm:mb-6 rounded-full shadow-lg shadow-blue-500/50"></div>
+                        <div className="h-1 sm:h-1.5 w-16 sm:w-20 bg-blue-500 mt-2 sm:mt-4 mb-4 sm:mb-6 rounded-full"></div>
                     </div>
                 )}
                 
                 <div className="flex flex-wrap gap-2 sm:gap-4 items-center slide-up-delay">
+                    {/* Fix: Closed truncated div and added missing default export */}
                     {currentItem.subtitle && (
-                        <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl shadow-2xl">
+                        <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl">
                             <p className="text-white text-sm md:text-xl font-bold uppercase tracking-widest drop-shadow-md">
                                 {currentItem.subtitle}
                             </p>
