@@ -253,7 +253,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                         src={brand.logoUrl} 
                         alt={brand.name} 
                         loading="lazy"
-                        className="w-full h-full object-contain filter grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 p-1 md:p-3"
+                        className="w-full h-full object-contain transition-all duration-500 p-1 md:p-3"
                       />
                     ) : (
                       <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-slate-50 text-slate-300 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center text-lg md:text-3xl font-black transition-all duration-500 border-2 border-dashed border-slate-200 group-hover:border-transparent">
