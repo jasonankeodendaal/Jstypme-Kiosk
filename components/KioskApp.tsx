@@ -947,9 +947,14 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full">
        {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProductsFlat} ads={storeData.ads?.screensaver || []} pamphlets={storeData.catalogues || []} onWake={resetIdleTimer} settings={storeData.screensaverSettings} isAudioUnlocked={isAudioUnlocked} />}
        <header className="shrink-0 h-10 bg-slate-900 text-white flex items-center justify-between px-2 md:px-4 z-50 border-b border-slate-800 shadow-md print:hidden">
-           <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
-               {storeData.companyLogoUrl ? <img src={storeData.companyLogoUrl} className="h-4 md:h-6 object-contain" alt="" /> : <Store size={16} className="text-blue-500" />}
-               <button onClick={() => setShowGlobalSearch(true)} className="bg-white/10 hover:bg-blue-600 transition-colors px-2 py-1 rounded-md flex items-center gap-1.5 md:ml-4 group"><Search size={12} className="text-blue-400 group-hover:text-white" /><span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest hidden md:inline">Universal Search</span></button>
+           <div className="flex items-center flex-1 max-w-xs md:max-w-md overflow-hidden mr-4">
+               <button 
+                   onClick={() => setShowGlobalSearch(true)} 
+                   className="flex items-center gap-3 bg-white/5 hover:bg-blue-600/20 text-slate-400 hover:text-white px-3 md:px-4 py-1 rounded-lg border border-white/5 transition-all group w-full text-left"
+               >
+                   <Search size={12} className="text-blue-500 group-hover:text-blue-400" />
+                   <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate">Inventory Search...</span>
+               </button>
            </div>
            <div className="flex items-center gap-2 md:gap-4">
                {deviceType === 'kiosk' && (
