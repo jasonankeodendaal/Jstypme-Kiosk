@@ -9,7 +9,6 @@ interface ScreensaverProps {
   pamphlets?: Catalogue[];
   onWake: () => void;
   settings?: ScreensaverSettings;
-  isAudioUnlocked?: boolean; // New prop from KioskApp
 }
 
 interface PlaylistItem {
@@ -23,10 +22,11 @@ interface PlaylistItem {
   dateAdded?: string;
 }
 
-const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = [], onWake, settings, isAudioUnlocked = false }) => {
+const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = [], onWake, settings }) => {
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSleepMode, setIsSleepMode] = useState(false);
+  const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
   
   // Animation State
   const [animationEffect, setAnimationEffect] = useState('effect-ken-burns');
@@ -81,6 +81,23 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       const interval = setInterval(checkTime, 60000);
       return () => clearInterval(interval);
   }, [config.activeHoursStart, config.activeHoursEnd, config.enableSleepMode]);
+
+  // Audio Unlock Listener
+  useEffect(() => {
+    const handleTouch = () => {
+        setIsAudioUnlocked(true);
+        if (videoRef.current && !config.muteVideos) {
+            videoRef.current.muted = false;
+            videoRef.current.play().catch(() => {});
+        }
+    };
+    window.addEventListener('click', handleTouch);
+    window.addEventListener('touchstart', handleTouch);
+    return () => {
+        window.removeEventListener('click', handleTouch);
+        window.removeEventListener('touchstart', handleTouch);
+    };
+  }, [config.muteVideos]);
 
   const shouldIncludeItem = (dateString?: string): boolean => {
       if (!dateString) return true;
@@ -217,13 +234,10 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         }, duration);
     } else {
         if (videoRef.current) {
-            // IF config says "Mute Off" AND global interaction has occurred, play with sound
-            videoRef.current.muted = config.muteVideos || !isAudioUnlocked;
-            
+            videoRef.current.muted = config.muteVideos;
             const playPromise = videoRef.current.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    // Fallback: Mute and play if unmuted still blocked
                     if (videoRef.current) {
                         videoRef.current.muted = true;
                         videoRef.current.play().catch(() => {
@@ -241,7 +255,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     return () => {
         if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [currentIndex, currentItem, config.imageDuration, playlist.length, isSleepMode, isAudioUnlocked, config.muteVideos]);
+  }, [currentIndex, currentItem, config.imageDuration, playlist.length, isSleepMode]);
 
   if (isSleepMode) {
       return (
@@ -319,7 +333,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     ref={videoRef}
                     src={currentItem.url} 
                     className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl rounded-sm ${animationEffect}`}
-                    muted={config.muteVideos || !isAudioUnlocked} 
+                    muted={config.muteVideos} 
                     autoPlay
                     playsInline
                     decoding="async"

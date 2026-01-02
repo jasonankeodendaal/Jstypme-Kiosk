@@ -1,6 +1,6 @@
 
-// Service Worker for Kiosk Pro v5
-const CACHE_NAME = 'kiosk-pro-v5';
+// Service Worker for Kiosk Pro
+const CACHE_NAME = 'kiosk-pro-v4';
 
 const PRECACHE_URLS = [
   '/',
@@ -33,51 +33,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Helper for Range Requests (Critical for Video/Audio playback)
-const handleRangeRequest = async (request) => {
-  const cache = await caches.open(CACHE_NAME);
-  const cachedResponse = await cache.match(request);
-
-  if (cachedResponse) {
-    const rangeHeader = request.headers.get('Range');
-    if (rangeHeader) {
-      const arrayBuffer = await cachedResponse.arrayBuffer();
-      const bytes = rangeHeader.replace(/bytes=/, "").split("-");
-      const start = parseInt(bytes[0], 10);
-      const end = bytes[1] ? parseInt(bytes[1], 10) : arrayBuffer.byteLength - 1;
-      
-      const chunk = arrayBuffer.slice(start, end + 1);
-      return new Response(chunk, {
-        status: 206,
-        statusText: 'Partial Content',
-        headers: new Headers({
-          'Content-Range': `bytes ${start}-${end}/${arrayBuffer.byteLength}`,
-          'Accept-Ranges': 'bytes',
-          'Content-Length': chunk.byteLength,
-          'Content-Type': cachedResponse.headers.get('Content-Type'),
-        }),
-      });
-    }
-    return cachedResponse;
-  }
-
-  // Fallback to network
-  return fetch(request);
-};
-
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  const isMedia = event.request.destination === 'video' || 
-                  event.request.destination === 'audio' || 
-                  url.pathname.toLowerCase().endsWith('.mp4') || 
-                  url.pathname.toLowerCase().endsWith('.pdf');
-
-  // Handle Range Requests for Media
-  if (isMedia && event.request.headers.get('Range')) {
-    event.respondWith(handleRangeRequest(event.request));
-    return;
-  }
-
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -88,40 +44,68 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const url = new URL(event.request.url);
+  const isPdf = url.pathname.toLowerCase().endsWith('.pdf');
   const isImage = event.request.destination === 'image';
   const isFont = event.request.destination === 'font';
+  const isMedia = isImage || isFont || isPdf;
 
-  if (isMedia || isImage || isFont) {
+  if (isMedia) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) return cachedResponse;
-        
+        if (cachedResponse) {
+          // If we have a cached version, return it
+          return cachedResponse;
+        }
         return fetch(event.request).then((response) => {
+          // Robust caching check:
+          // 1. Must exist
+          // 2. If it's a standard response, must be 200 OK
+          // 3. If it's an opaque response (cross-origin without CORS), 
+          //    only cache if it's not suspiciously small (usually error fragments)
           const isOpaque = response.type === 'opaque';
           const isOk = response.status === 200;
           
-          if (!response || (!isOk && !isOpaque)) return response;
+          if (!response || (!isOk && !isOpaque)) {
+            return response;
+          }
 
+          // Don't cache very small opaque responses which are often error messages from Supabase
+          if (isOpaque && response.clone().blob().then(b => b.size < 500)) {
+             return response;
+          }
+          
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
           return response;
-        }).catch(() => null);
+        }).catch(() => {
+           // If network fails and not in cache, return null (browser shows broken image icon)
+           return null;
+        });
       })
     );
     return;
   }
 
-  // Network First for everything else
+  // Network First for Data
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (!response || response.status !== 200) return response;
+        if (!response || response.status !== 200) {
+          return response;
+        }
+        
         const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 });
