@@ -9,7 +9,7 @@ interface ScreensaverProps {
   pamphlets?: Catalogue[];
   onWake: () => void;
   settings?: ScreensaverSettings;
-  isAudioUnlocked?: boolean; // New prop from KioskApp
+  isAudioUnlocked?: boolean; 
 }
 
 interface PlaylistItem {
@@ -92,6 +92,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   };
 
   // 1. Build & Shuffle Playlist
+  // FIXED: Added specific boolean flags to dependency array to ensure playlist rebuilds on setting changes
   useEffect(() => {
     const list: PlaylistItem[] = [];
 
@@ -178,7 +179,15 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
     setPlaylist(list);
     setCurrentIndex(0);
-  }, [products.length, ads.length, pamphlets.length, config.showProductImages, config.showProductVideos, config.showCustomAds, config.showPamphlets]);
+  }, [
+    products.length, 
+    ads.length, 
+    pamphlets.length, 
+    config.showProductImages, 
+    config.showProductVideos, 
+    config.showCustomAds, 
+    config.showPamphlets
+  ]);
 
   const nextSlide = () => {
       if (playlist.length === 0) return;
@@ -217,15 +226,12 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         }, duration);
     } else {
         if (videoRef.current) {
-            // IF config says "Mute Off" AND global interaction has occurred, play with sound
-            // Otherwise, we MUST use muted=true for browser autoplay compliance
             const isMuted = config.muteVideos || !isAudioUnlocked;
             videoRef.current.muted = isMuted;
             
             const playPromise = videoRef.current.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    // Force mute fallback if unmuted is still blocked by Firefox policy
                     if (videoRef.current) {
                         videoRef.current.muted = true;
                         videoRef.current.play().catch(() => {
@@ -235,7 +241,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 });
             }
         }
-        // Safety timeout for video stall in Firefox
         timerRef.current = window.setTimeout(() => {
             nextSlide();
         }, 180000); 
@@ -260,7 +265,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
   if (playlist.length === 0) return (
       <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center cursor-pointer" onClick={onWake}>
-          <div className="text-white opacity-30 text-xs font-mono">...</div>
+          <div className="text-white opacity-30 text-xs font-mono">No Items in Playlist</div>
       </div>
   );
 
@@ -320,6 +325,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
              <>
                  <video 
                     ref={videoRef}
+                    key={`vid-el-${currentItem.url}`}
                     src={currentItem.url} 
                     className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl rounded-sm ${animationEffect}`}
                     muted={config.muteVideos || !isAudioUnlocked} 

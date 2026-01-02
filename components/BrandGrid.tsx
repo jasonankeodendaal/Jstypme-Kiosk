@@ -39,8 +39,9 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                 setCurrentIndex(prev => (prev + 1) % items!.length);
             }, 6000);
         } else {
-            // Note: autoPlay attribute is also on the tag
+            // Firefox reinforcement: Ensure muted property is set and play() called
             if(videoRef.current) {
+                videoRef.current.muted = true;
                 videoRef.current.play().catch(() => {});
             }
             // Fallback safety if video stalls
@@ -75,13 +76,20 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                 {activeItem!.type === 'video' ? (
                     <video 
                         ref={videoRef}
+                        key={`ad-vid-${activeItem!.url}`}
                         src={activeItem!.url} 
-                        muted={true} // Explicit boolean
+                        muted={true} 
                         autoPlay={true}
                         playsInline={true}
                         loop={items.length === 1}
                         className="w-full h-full object-cover"
                         onEnded={handleVideoEnded}
+                        onLoadedMetadata={() => {
+                            if (videoRef.current) {
+                                videoRef.current.muted = true;
+                                videoRef.current.play().catch(() => {});
+                            }
+                        }}
                     />
                 ) : (
                     <img 
