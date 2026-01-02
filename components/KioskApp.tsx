@@ -179,6 +179,36 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
     );
 };
 
+// --- OPTIMIZED ROW COMPONENT ---
+const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: PricelistItem, hasImages: boolean, onEnlarge: (url: string) => void }) => (
+    <tr className="excel-row border-b border-slate-100 transition-colors group">
+        {hasImages && (
+            <td className="p-1 border-r border-slate-100 text-center">
+                <div 
+                    className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-2 hover:ring-blue-400 transition-all"
+                    onClick={(e) => { e.stopPropagation(); if(item.imageUrl) onEnlarge(item.imageUrl); }}
+                >
+                    {item.imageUrl ? (
+                        <img 
+                            src={item.imageUrl} 
+                            loading="lazy" 
+                            decoding="async" 
+                            className="w-full h-full object-contain" 
+                            alt="" 
+                        />
+                    ) : (
+                        <ImageIcon size={16} className="text-slate-100" />
+                    )}
+                </div>
+            </td>
+        )}
+        <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
+        <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">{item.description}</span></td>
+        <td className="price-cell text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900">{item.normalPrice || ''}</span></td>
+        <td className="price-cell text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter">{item.promoPrice}</span>) : (<span className="font-bold text-slate-900">{item.normalPrice || ''}</span>)}</td>
+    </tr>
+));
+
 const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, brandName }: { pricelist: Pricelist, onClose: () => void, companyLogo?: string, brandLogo?: string, brandName?: string }) => {
   const isNewlyUpdated = isRecent(pricelist.dateAdded);
   const [zoom, setZoom] = useState(1);
@@ -190,11 +220,26 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef<number | null>(null);
 
   // Check if any items have images
   const hasImages = useMemo(() => {
     return pricelist.items?.some(item => item.imageUrl && item.imageUrl.trim() !== '') || false;
   }, [pricelist.items]);
+
+  const onDragMove = useCallback((clientX: number, clientY: number) => {
+    if (!isDragging || !scrollContainerRef.current) return;
+    
+    if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    
+    requestRef.current = requestAnimationFrame(() => {
+        if (!scrollContainerRef.current) return;
+        const dx = clientX - startPos.x;
+        const dy = clientY - startPos.y;
+        scrollContainerRef.current.scrollLeft = scrollPos.left - dx;
+        scrollContainerRef.current.scrollTop = scrollPos.top - dy;
+    });
+  }, [isDragging, startPos, scrollPos]);
 
   const onDragStart = (clientX: number, clientY: number) => {
     if (zoom <= 1 || !scrollContainerRef.current) return;
@@ -204,14 +249,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
       left: scrollContainerRef.current.scrollLeft, 
       top: scrollContainerRef.current.scrollTop 
     });
-  };
-
-  const onDragMove = (clientX: number, clientY: number) => {
-    if (!isDragging || !scrollContainerRef.current) return;
-    const dx = clientX - startPos.x;
-    const dy = clientY - startPos.y;
-    scrollContainerRef.current.scrollLeft = scrollPos.left - dx;
-    scrollContainerRef.current.scrollTop = scrollPos.top - dy;
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -236,7 +273,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
     onDragMove(e.touches[0].pageX, e.touches[0].pageY);
   };
 
-  const handleDragEnd = () => setIsDragging(false);
+  const handleDragEnd = () => {
+      setIsDragging(false);
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+  };
 
   const loadImageForPDF = async (url: string): Promise<{ imgData: string, format: string, width: number, height: number } | null> => {
     if (!url) return null;
@@ -449,7 +489,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           .spreadsheet-table td { border: 0.2pt solid #e2e8f0 !important; color: #000 !important; padding: 4pt !important; font-size: 8pt !important; }
         }
         
-        /* Performance Optimizations for Large Tables */
         .table-scroll {
           -webkit-overflow-scrolling: touch;
           will-change: scroll-position;
@@ -460,12 +499,20 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           border-spacing: 0; 
           table-layout: fixed; 
           width: 100%;
-          transform: translate3d(0,0,0); /* Force GPU Layer */
+          transform: translate3d(0,0,0);
           backface-visibility: hidden;
           will-change: transform;
         }
 
         .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; padding: 8px 4px; }
+        
+        .excel-row { 
+          transform: translate3d(0,0,0); 
+          content-visibility: auto; 
+          contain-intrinsic-size: 1px 40px; 
+          will-change: transform;
+        }
+        
         .excel-row:nth-child(even) { background-color: #f8fafc; }
         .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
         .sku-cell { word-break: break-all; line-height: 1.1; font-size: clamp(8px, 1.2vw, 11px); padding: 4px; }
@@ -512,7 +559,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
               style={{ 
                 transform: `translate3d(0,0,0) scale(${zoom})`, 
                 transformOrigin: 'top left', 
-                width: zoom > 1 ? 'max-content' : '100%' 
+                width: zoom > 1 ? 'max-content' : '100%',
+                willChange: 'transform'
               }} 
               className={`select-none relative bg-white shadow-xl rounded-xl overflow-hidden print:transform-none ${!isDragging ? 'transition-transform duration-200' : ''}`}
             >
@@ -545,22 +593,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   </thead>
                   <tbody className="print:table-row-group">
                   {(pricelist.items || []).map((item) => (
-                      <tr key={item.id} className="excel-row transition-colors group border-b border-slate-100">
-                      {hasImages && (
-                        <td className="p-1 border-r border-slate-100 text-center">
-                          <div 
-                            className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-2 hover:ring-blue-400 transition-all"
-                            onClick={(e) => { e.stopPropagation(); if(item.imageUrl) setEnlargedImage(item.imageUrl); }}
-                          >
-                             {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-contain" alt="" /> : <ImageIcon size={16} className="text-slate-100" />}
-                          </div>
-                        </td>
-                      )}
-                      <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
-                      <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors">{item.description}</span></td>
-                      <td className="price-cell text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900">{item.normalPrice || ''}</span></td>
-                      <td className="price-cell text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter">{item.promoPrice}</span>) : (<span className="font-bold text-slate-900">{item.normalPrice || ''}</span>)}</td>
-                      </tr>
+                      <PricelistRow 
+                        key={item.id} 
+                        item={item} 
+                        hasImages={hasImages} 
+                        onEnlarge={(url) => setEnlargedImage(url)} 
+                      />
                   ))}
                   </tbody>
               </table>
