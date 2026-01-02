@@ -27,14 +27,14 @@ export default defineConfig({
     target: 'es5',
     cssTarget: 'chrome37',
     minify: 'terser',
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 2000,
     terserOptions: {
       ecma: 5,
       safari10: true,
       compress: {
         keep_fnames: true,
         keep_classnames: true,
-        drop_console: true, // Optimized for speed
+        drop_console: true,
         passes: 2
       },
       mangle: {
@@ -43,7 +43,8 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        format: 'iife',
+        // Removed format: 'iife' to allow manualChunks to work.
+        // Vite legacy plugin will handle the single-file fallback for old browsers automatically.
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
