@@ -1,6 +1,6 @@
 
 // Service Worker for Kiosk Pro
-const CACHE_NAME = 'kiosk-pro-v4';
+const CACHE_NAME = 'kiosk-pro-v5';
 
 const PRECACHE_URLS = [
   '/',
@@ -34,78 +34,66 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  const isMedia = event.request.destination === 'video' || 
+                  event.request.destination === 'audio' || 
+                  url.pathname.endsWith('.mp4') || 
+                  url.pathname.endsWith('.pdf');
+
+  // SPECIAL HANDLING FOR MEDIA RANGE REQUESTS (Necessary for Android Audio)
+  if (isMedia && event.request.headers.get('range')) {
+    event.respondWith(handleRangeRequest(event.request));
+    return;
+  }
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
-        .catch(() => {
-          return caches.match('/index.html');
-        })
+      fetch(event.request).catch(() => caches.match('/index.html'))
     );
     return;
   }
 
-  const url = new URL(event.request.url);
-  const isPdf = url.pathname.toLowerCase().endsWith('.pdf');
-  const isImage = event.request.destination === 'image';
-  const isFont = event.request.destination === 'font';
-  const isMedia = isImage || isFont || isPdf;
-
-  if (isMedia) {
-    event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          // If we have a cached version, return it
-          return cachedResponse;
-        }
-        return fetch(event.request).then((response) => {
-          // Robust caching check:
-          // 1. Must exist
-          // 2. If it's a standard response, must be 200 OK
-          // 3. If it's an opaque response (cross-origin without CORS), 
-          //    only cache if it's not suspiciously small (usually error fragments)
-          const isOpaque = response.type === 'opaque';
-          const isOk = response.status === 200;
-          
-          if (!response || (!isOk && !isOpaque)) {
-            return response;
-          }
-
-          // Don't cache very small opaque responses which are often error messages from Supabase
-          if (isOpaque && response.clone().blob().then(b => b.size < 500)) {
-             return response;
-          }
-          
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-          return response;
-        }).catch(() => {
-           // If network fails and not in cache, return null (browser shows broken image icon)
-           return null;
-        });
-      })
-    );
-    return;
-  }
-
-  // Network First for Data
+  // Standard Caching Strategy
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (!response || response.status !== 200) {
-          return response;
-        }
-        
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) return cachedResponse;
+      return fetch(event.request).then((response) => {
+        if (!response || response.status !== 200) return response;
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, responseToCache);
         });
-        
         return response;
-      })
-      .catch(() => {
-        return caches.match(event.request);
-      })
+      });
+    })
   );
 });
+
+async function handleRangeRequest(request) {
+  const cache = await caches.open(CACHE_NAME);
+  let response = await cache.match(request);
+
+  if (!response) {
+    response = await fetch(request);
+    // Don't cache range requests directly, but we might want to cache the full file
+  }
+
+  const range = request.headers.get('range');
+  const buffer = await response.arrayBuffer();
+  
+  const parts = range.replace(/bytes=/, "").split("-");
+  const start = parseInt(parts[0], 10);
+  const end = parts[1] ? parseInt(parts[1], 10) : buffer.byteLength - 1;
+  const chunk = buffer.slice(start, end + 1);
+
+  return new Response(chunk, {
+    status: 206,
+    statusText: 'Partial Content',
+    headers: new Headers({
+      'Content-Range': `bytes ${start}-${end}/${buffer.byteLength}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunk.byteLength,
+      'Content-Type': response.headers.get('Content-Type'),
+    }),
+  });
+}
