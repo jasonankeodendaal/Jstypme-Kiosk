@@ -205,13 +205,12 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     if (watchdogRef.current) clearTimeout(watchdogRef.current);
     
     // Set a dynamic watchdog to force skip if the video duration is exceeded
-    // (Duration in seconds * 1000) + 5 second safety buffer
     const durationMs = (video.duration * 1000) + 5000;
     
     watchdogRef.current = window.setTimeout(() => {
       console.warn("Screensaver Watchdog: Video exceeded duration without ended event, skipping.");
       nextSlide();
-    }, isFinite(durationMs) ? durationMs : 60000); // Fallback to 60s if duration is NaN/Infinity
+    }, isFinite(durationMs) ? durationMs : 60000); 
   };
 
   const currentItem = playlist[currentIndex];
@@ -239,7 +238,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             nextSlide();
         }, duration);
     } else {
-        // Video specific playback trigger
         if (videoRef.current) {
             const isMuted = config.muteVideos || !isAudioUnlocked;
             videoRef.current.muted = isMuted;
@@ -256,7 +254,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 });
             }
 
-            // Initial safety watchdog if metadata takes too long to load (15 seconds)
             watchdogRef.current = window.setTimeout(() => {
                 if (videoRef.current && videoRef.current.readyState < 1) {
                     console.warn("Screensaver Watchdog: Video failed to load metadata, skipping.");
@@ -292,7 +289,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       </div>
   );
 
-  // Use object-contain for 'shrink to fit' behavior
   const objectFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
 
   return (
@@ -308,30 +304,29 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             perspective: 1000px;
         }
 
-        /* Adjusted animations to maintain shrink-to-fit by scaling within safe bounds (0.85 to 1.0) */
         .effect-smooth-zoom { animation: smoothZoom 15s ease-out forwards; }
         @keyframes smoothZoom { 
-            0% { transform: scale(0.9) translate3d(0,0,0); opacity: 0.8; } 
-            100% { transform: scale(1) translate3d(0,0,0); opacity: 1; } 
+            0% { transform: scale(1.0) translate3d(0,0,0); opacity: 0.8; } 
+            100% { transform: scale(1.1) translate3d(0,0,0); opacity: 1; } 
         }
         
         .effect-subtle-drift { animation: subtleDrift 20s linear forwards; }
         @keyframes subtleDrift {
-            0% { transform: scale(0.95) translate3d(-1%, -1%, 0); }
-            100% { transform: scale(0.95) translate3d(1%, 1%, 0); }
+            0% { transform: scale(1.05) translate3d(-1%, -1%, 0); }
+            100% { transform: scale(1.05) translate3d(1%, 1%, 0); }
         }
         
         .effect-soft-scale { animation: softScale 10s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         @keyframes softScale {
-            0% { transform: scale(0.85) translate3d(0,0,0); opacity: 0; }
+            0% { transform: scale(1.0) translate3d(0,0,0); opacity: 0; }
             20% { opacity: 1; }
-            100% { transform: scale(0.95) translate3d(0,0,0); }
+            100% { transform: scale(1.15) translate3d(0,0,0); }
         }
         
         .effect-gentle-pan { animation: gentlePan 12s ease-in-out forwards; }
         @keyframes gentlePan {
-            0% { transform: translate3d(-10px, 0, 0) scale(0.95); }
-            100% { transform: translate3d(10px, 0, 0) scale(0.95); }
+            0% { transform: translate3d(-15px, 0, 0) scale(1.05); }
+            100% { transform: translate3d(15px, 0, 0) scale(1.05); }
         }
         
         .effect-fade-in { animation: fadeInVideo 1.2s ease-out forwards; }
@@ -356,7 +351,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60 z-10" />
 
-      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center p-4 md:p-12 overflow-hidden">
+      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center overflow-hidden">
          
          {currentItem.type === 'video' ? (
              <>
@@ -384,7 +379,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 <img 
                   src={currentItem.url} 
                   alt="Screensaver" 
-                  className={`max-w-full max-h-full w-auto h-auto object-contain shadow-2xl ${animationEffect}`}
+                  className={`max-w-full max-h-full w-auto h-auto ${objectFitClass} shadow-2xl ${animationEffect}`}
                   loading="eager"
                   decoding="async"
                   onError={handleMediaError}
