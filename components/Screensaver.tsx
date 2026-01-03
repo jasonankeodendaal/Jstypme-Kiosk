@@ -1,13 +1,12 @@
-
-import React, { useEffect, useState, useRef, memo } from 'react';
+import React, { useEffect, useState, useRef, memo, useMemo } from 'react';
 import { FlatProduct, AdItem, Catalogue, ScreensaverSettings } from '../types';
-import { Moon, Volume2, VolumeX } from 'lucide-react';
+import { Moon, VolumeX, Sparkles, MoveUpRight } from 'lucide-react';
 
 interface ScreensaverProps {
   products: FlatProduct[];
   ads: AdItem[];
   pamphlets?: Catalogue[];
-  onWake: () => void;
+  onWake: (targetProductId?: string) => void;
   settings?: ScreensaverSettings;
   isAudioUnlocked?: boolean; 
 }
@@ -18,23 +17,19 @@ interface PlaylistItem {
   url: string;
   title?: string;
   subtitle?: string;
-  startDate?: string;
-  endDate?: string;
-  dateAdded?: string;
+  targetProductId?: string;
+  weight: number;
 }
 
 const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = [], onWake, settings, isAudioUnlocked = false }) => {
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSleepMode, setIsSleepMode] = useState(false);
-  
   const [animationEffect, setAnimationEffect] = useState('effect-smooth-zoom');
   
   const timerRef = useRef<number | null>(null);
-  const watchdogRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Default config - Changed displayStyle to 'contain' by default for "perfect fit"
   const config: ScreensaverSettings = {
       idleTimeout: 60,
       imageDuration: 8,
@@ -48,368 +43,188 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       enableSleepMode: false,
       activeHoursStart: '08:00',
       activeHoursEnd: '20:00',
+      transitionStyle: 'random',
       ...settings
   };
 
   useEffect(() => {
-      if (!config.enableSleepMode || !config.activeHoursStart || !config.activeHoursEnd) {
-          setIsSleepMode(false);
-          return;
-      }
-
+      if (!config.enableSleepMode) { setIsSleepMode(false); return; }
       const checkTime = () => {
           const now = new Date();
           const currentMinutes = now.getHours() * 60 + now.getMinutes();
-          
           const [startH, startM] = config.activeHoursStart!.split(':').map(Number);
           const [endH, endM] = config.activeHoursEnd!.split(':').map(Number);
           const startMinutes = startH * 60 + startM;
           const endMinutes = endH * 60 + endM;
-
-          let isActive = false;
-          if (startMinutes < endMinutes) {
-              isActive = currentMinutes >= startMinutes && currentMinutes < endMinutes;
-          } else {
-              isActive = currentMinutes >= startMinutes || currentMinutes < endMinutes;
-          }
-          
+          const isActive = startMinutes < endMinutes ? (currentMinutes >= startMinutes && currentMinutes < endMinutes) : (currentMinutes >= startMinutes || currentMinutes < endMinutes);
           setIsSleepMode(!isActive);
       };
-
       checkTime();
       const interval = setInterval(checkTime, 60000);
       return () => clearInterval(interval);
   }, [config.activeHoursStart, config.activeHoursEnd, config.enableSleepMode]);
 
-  const shouldIncludeItem = (dateString?: string): boolean => {
-      if (!dateString) return true;
-      const addedDate = new Date(dateString);
-      const now = new Date();
-      const monthsOld = (now.getFullYear() - addedDate.getFullYear()) * 12 + (now.getMonth() - addedDate.getMonth());
-      if (monthsOld >= 6) return Math.random() < 0.25; 
-      return true;
-  };
-
   useEffect(() => {
     const list: PlaylistItem[] = [];
+    const now = new Date();
+
+    const isLive = (start?: string, end?: string) => {
+        if (!start && !end) return true;
+        const s = start ? new Date(start) : null;
+        const e = end ? new Date(end) : null;
+        if (s && now < s) return false;
+        if (e && now > e) return false;
+        return true;
+    };
 
     if (config.showCustomAds) {
-        ads.forEach((ad, i) => {
-          if (shouldIncludeItem(ad.dateAdded)) {
-            for(let c=0; c<3; c++) {
-                list.push({
-                    id: `ad-${ad.id}-${i}-${c}`,
-                    type: ad.type,
-                    url: ad.url,
-                    title: "Sponsored",
-                    subtitle: "",
-                    dateAdded: ad.dateAdded
-                });
-            }
+        ads.forEach((ad) => {
+          if (isLive(ad.startDate, ad.endDate)) {
+              list.push({
+                  id: `ad-${ad.id}`,
+                  type: ad.type,
+                  url: ad.url,
+                  title: "Promotional",
+                  weight: ad.weight || 3,
+                  targetProductId: ad.targetProductId
+              });
           }
         });
     }
 
     if (config.showPamphlets) {
         pamphlets.forEach((pamphlet) => {
-           if (pamphlet.pages && pamphlet.pages.length > 0) {
-               if (!pamphlet.endDate || shouldIncludeItem(pamphlet.startDate)) {
-                  list.push({
+           if (pamphlet.pages?.length > 0 && isLive(pamphlet.startDate, pamphlet.endDate)) {
+               list.push({
                     id: `pamphlet-${pamphlet.id}`,
                     type: 'image',
                     url: pamphlet.pages[0],
                     title: pamphlet.title,
-                    subtitle: "Showcase Catalogue",
-                    startDate: pamphlet.startDate,
-                    endDate: pamphlet.endDate
-                 });
-               }
+                    subtitle: "Catalogue",
+                    weight: 1
+               });
            }
         });
     }
 
     products.forEach((p) => {
-        if (!shouldIncludeItem(p.dateAdded)) return;
-
         if (config.showProductImages && p.imageUrl) {
-            list.push({
-                id: `prod-img-${p.id}`,
-                type: 'image',
-                url: p.imageUrl,
-                title: p.brandName,
-                subtitle: p.name,
-                dateAdded: p.dateAdded
-            });
+            list.push({ id: `prod-img-${p.id}`, type: 'image', url: p.imageUrl, title: p.brandName, subtitle: p.name, weight: 1, targetProductId: p.id });
         }
-        if (config.showProductVideos) {
-            if (p.videoUrl) {
-                 list.push({
-                    id: `prod-vid-${p.id}`,
-                    type: 'video',
-                    url: p.videoUrl,
-                    title: p.brandName,
-                    subtitle: `${p.name} - Official Video`,
-                    dateAdded: p.dateAdded
-                 });
-            }
-            if (p.videoUrls) {
-                p.videoUrls.forEach((url, idx) => {
-                    if (url !== p.videoUrl) {
-                        list.push({
-                            id: `prod-vid-${p.id}-${idx}`,
-                            type: 'video',
-                            url: url,
-                            title: p.brandName,
-                            subtitle: `${p.name} - Video Showcase`,
-                            dateAdded: p.dateAdded
-                        });
-                    }
-                });
-            }
+        if (config.showProductVideos && p.videoUrl) {
+            list.push({ id: `prod-vid-${p.id}`, type: 'video', url: p.videoUrl, title: p.brandName, subtitle: p.name, weight: 1, targetProductId: p.id });
         }
     });
 
-    for (let i = list.length - 1; i > 0; i--) {
+    // Create weighted array
+    const weighted: PlaylistItem[] = [];
+    list.forEach(item => {
+        for(let i=0; i<item.weight; i++) { weighted.push(item); }
+    });
+
+    // Shuffle
+    for (let i = weighted.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [list[i], list[j]] = [list[j], list[i]];
+        [weighted[i], weighted[j]] = [weighted[j], weighted[i]];
     }
 
-    setPlaylist(list);
+    setPlaylist(weighted);
     setCurrentIndex(0);
-  }, [
-    products.length, 
-    ads.length, 
-    pamphlets.length, 
-    config.showProductImages, 
-    config.showProductVideos, 
-    config.showCustomAds, 
-    config.showPamphlets
-  ]);
+  }, [products.length, ads.length, pamphlets.length, config.showProductImages, config.showProductVideos, config.showCustomAds, config.showPamphlets]);
 
   const nextSlide = () => {
       if (playlist.length === 0) return;
       setCurrentIndex((prev) => (prev + 1) % playlist.length);
   };
 
-  const handleMediaError = (e: any) => {
-      if (e.target?.error?.name === 'AbortError') return;
-      if (timerRef.current) clearTimeout(timerRef.current);
-      if (watchdogRef.current) clearTimeout(watchdogRef.current);
-      timerRef.current = window.setTimeout(() => {
-          nextSlide();
-      }, 2000); 
-  };
-
-  const handleLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    const video = e.currentTarget;
-    if (watchdogRef.current) clearTimeout(watchdogRef.current);
-    const durationMs = (video.duration * 1000) + 5000;
-    watchdogRef.current = window.setTimeout(() => {
-      console.warn("Screensaver Watchdog: Video exceeded duration, skipping.");
-      nextSlide();
-    }, isFinite(durationMs) ? durationMs : 60000);
-  };
-
   const currentItem = playlist[currentIndex];
 
   useEffect(() => {
     if (!currentItem) return;
-    const imageEffects = ['effect-smooth-zoom', 'effect-subtle-drift', 'effect-soft-scale', 'effect-gentle-pan'];
-    const videoEffects = ['effect-fade-in']; 
-    if (currentItem.type === 'image') {
-        setAnimationEffect(imageEffects[Math.floor(Math.random() * imageEffects.length)]);
+    const effects = ['effect-smooth-zoom', 'effect-subtle-drift', 'effect-soft-scale', 'effect-gentle-pan'];
+    if (config.transitionStyle !== 'random') {
+        setAnimationEffect(`effect-${config.transitionStyle}`);
     } else {
-        setAnimationEffect(videoEffects[0]);
+        setAnimationEffect(currentItem.type === 'image' ? effects[Math.floor(Math.random() * effects.length)] : 'effect-fade-in');
     }
-  }, [currentItem?.id]);
+  }, [currentItem?.id, config.transitionStyle]);
 
   useEffect(() => {
-    if (isSleepMode || !currentItem || playlist.length === 0) return;
-    
+    if (isSleepMode || !currentItem) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (watchdogRef.current) clearTimeout(watchdogRef.current);
 
     if (currentItem.type === 'image') {
-        const duration = (config.imageDuration && config.imageDuration > 0) ? config.imageDuration * 1000 : 8000;
-        timerRef.current = window.setTimeout(() => {
-            nextSlide();
-        }, duration);
-    } else {
-        if (videoRef.current) {
-            const isMuted = config.muteVideos || !isAudioUnlocked;
-            videoRef.current.muted = isMuted;
-            
-            const playPromise = videoRef.current.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(() => {
-                    if (videoRef.current) {
-                        videoRef.current.muted = true;
-                        videoRef.current.play().catch(() => {
-                            nextSlide();
-                        });
-                    }
-                });
-            }
-
-            watchdogRef.current = window.setTimeout(() => {
-                if (videoRef.current && videoRef.current.readyState < 1) {
-                    nextSlide();
-                }
-            }, 15000); 
-        } else {
-            timerRef.current = window.setTimeout(nextSlide, 5000);
-        }
+        timerRef.current = window.setTimeout(nextSlide, config.imageDuration * 1000);
+    } else if (videoRef.current) {
+        videoRef.current.muted = config.muteVideos || !isAudioUnlocked;
+        videoRef.current.play().catch(() => nextSlide());
     }
 
-    return () => {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        if (watchdogRef.current) clearTimeout(watchdogRef.current);
-    };
-  }, [currentIndex, currentItem, config.imageDuration, playlist.length, isSleepMode, isAudioUnlocked, config.muteVideos]);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [currentIndex, currentItem, config.imageDuration, isSleepMode, isAudioUnlocked, config.muteVideos]);
 
   if (isSleepMode) {
       return (
-          <div onClick={onWake} className="fixed inset-0 z-[100] bg-black cursor-pointer flex items-center justify-center">
+          <div onClick={() => onWake()} className="fixed inset-0 z-[100] bg-black cursor-pointer flex items-center justify-center">
               <div className="flex flex-col items-center opacity-30 animate-pulse">
                   <Moon size={48} className="text-blue-500 mb-4" />
-                  <div className="text-white font-mono text-sm">Sleep Mode Active</div>
-                  <div className="text-white/50 text-xs mt-2">Tap to Wake</div>
+                  <div className="text-white font-mono text-sm uppercase tracking-widest">Sleep Mode</div>
               </div>
           </div>
       );
   }
 
-  if (playlist.length === 0) return (
-      <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center cursor-pointer" onClick={onWake}>
-          <div className="text-white opacity-30 text-xs font-mono">No Items in Playlist</div>
-      </div>
-  );
-
-  // Forced object-contain for "shrink to fit perfectly"
-  const objectFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
+  if (playlist.length === 0) return <div className="fixed inset-0 z-[100] bg-black" onClick={() => onWake()} />;
 
   return (
     <div 
-      onClick={onWake}
+      onClick={() => onWake(currentItem.targetProductId)}
       className="fixed inset-0 z-[100] bg-black cursor-pointer flex items-center justify-center overflow-hidden"
     >
       <style>{`
-        .effect-smooth-zoom, .effect-subtle-drift, .effect-soft-scale, .effect-gentle-pan, .effect-fade-in {
-            will-change: transform, opacity;
-            transform: translate3d(0,0,0);
-            backface-visibility: hidden;
-            perspective: 1000px;
-        }
-
         .effect-smooth-zoom { animation: smoothZoom 15s ease-out forwards; }
-        @keyframes smoothZoom { 
-            0% { transform: scale(1.0) translate3d(0,0,0); opacity: 0.8; } 
-            100% { transform: scale(1.1) translate3d(0,0,0); opacity: 1; } 
-        }
-        
+        @keyframes smoothZoom { 0% { transform: scale(1.0); opacity: 0.8; } 100% { transform: scale(1.15); opacity: 1; } }
         .effect-subtle-drift { animation: subtleDrift 20s linear forwards; }
-        @keyframes subtleDrift {
-            0% { transform: scale(1.05) translate3d(-2%, -2%, 0); }
-            100% { transform: scale(1.05) translate3d(2%, 2%, 0); }
-        }
-        
-        .effect-soft-scale { animation: softScale 10s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-        @keyframes softScale {
-            0% { transform: scale(1.15) translate3d(0,0,0); opacity: 0; }
-            20% { opacity: 1; }
-            100% { transform: scale(1.0) translate3d(0,0,0); }
-        }
-        
+        @keyframes subtleDrift { 0% { transform: translate(-2%, -2%) scale(1.05); } 100% { transform: translate(2%, 2%) scale(1.05); } }
+        .effect-soft-scale { animation: softScale 10s ease-in-out forwards; }
+        @keyframes softScale { 0% { transform: scale(1.2); opacity: 0; } 20% { opacity: 1; } 100% { transform: scale(1.0); } }
         .effect-gentle-pan { animation: gentlePan 12s ease-in-out forwards; }
-        @keyframes gentlePan {
-            0% { transform: translate3d(-30px, 0, 0) scale(1.1); }
-            100% { transform: translate3d(30px, 0, 0) scale(1.1); }
-        }
-        
-        .effect-fade-in { animation: fadeInVideo 1.2s ease-out forwards; }
-        @keyframes fadeInVideo { from { opacity: 0; } to { opacity: 1; } }
-
-        img, video {
-            image-rendering: -webkit-optimize-contrast;
-            -webkit-user-drag: none;
-            user-select: none;
-            contain: content;
-        }
-
-        .slide-up { animation: slideUp 0.8s ease-out forwards 0.3s; opacity: 0; }
-        @keyframes slideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-
-        .letterbox-blur {
-            filter: blur(60px) brightness(0.4);
-            transform: scale(1.2);
-            transition: opacity 1s ease-in-out;
-            background-size: cover;
-            background-position: center;
-        }
+        @keyframes gentlePan { 0% { transform: translateX(-30px) scale(1.1); } 100% { transform: translateX(30px) scale(1.1); } }
+        .effect-fade-in { animation: fadeIn 1s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .letterbox-blur { filter: blur(80px) brightness(0.3); transform: scale(1.5); transition: opacity 1s; }
       `}</style>
 
-      {/* Cinematic Letterbox Aura Background - uses object-cover to fill all gaps */}
-      <div 
-        key={`bg-${currentItem.id}`} 
-        className="absolute inset-0 z-0 letterbox-blur opacity-60"
-        style={{ backgroundImage: `url(${currentItem.url})` }}
-      />
-      
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 z-10" />
+      <div key={`bg-${currentItem.id}`} className="absolute inset-0 letterbox-blur opacity-50 bg-cover bg-center" style={{ backgroundImage: `url(${currentItem.url})` }} />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20 z-10" />
 
-      {/* Main Content: Uses object-contain to shrink to fit perfectly */}
-      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center overflow-hidden p-4 md:p-12">
-         
+      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center p-4">
          {currentItem.type === 'video' ? (
-             <>
-                 <video 
-                    ref={videoRef}
-                    key={`vid-el-${currentItem.url}-${currentIndex}`}
-                    src={currentItem.url} 
-                    className={`max-w-full max-h-full ${objectFitClass} shadow-2xl ${animationEffect}`}
-                    muted={config.muteVideos || !isAudioUnlocked} 
-                    autoPlay={true}
-                    playsInline={true}
-                    onEnded={nextSlide} 
-                    onError={handleMediaError} 
-                    onLoadedMetadata={handleLoadedMetadata}
-                 />
-                 {!config.muteVideos && !isAudioUnlocked && (
-                     <div className="absolute top-8 right-8 bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse">
-                         <VolumeX size={16} />
-                         <span className="text-[10px] font-black uppercase tracking-widest">Muted</span>
-                     </div>
-                 )}
-             </>
+             <video ref={videoRef} src={currentItem.url} className={`max-w-full max-h-full ${config.displayStyle === 'cover' ? 'object-cover' : 'object-contain'} shadow-2xl ${animationEffect}`} muted={config.muteVideos || !isAudioUnlocked} playsInline onEnded={nextSlide} />
          ) : (
-             <img 
-               src={currentItem.url} 
-               alt="Screensaver" 
-               className={`max-w-full max-h-full ${objectFitClass} shadow-2xl ${animationEffect}`}
-               loading="eager"
-               decoding="async"
-               onError={handleMediaError}
-             />
+             <img src={currentItem.url} className={`max-w-full max-h-full ${config.displayStyle === 'cover' ? 'object-cover' : 'object-contain'} shadow-2xl ${animationEffect}`} loading="eager" />
          )}
 
-         {config.showInfoOverlay && (currentItem.title || currentItem.subtitle) && (
-             <div className="absolute bottom-12 left-10 md:bottom-20 md:left-20 max-w-[80%] md:max-w-[70%] pointer-events-none z-30">
-                {currentItem.title && (
-                    <div className="slide-up">
-                        <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white uppercase tracking-tighter drop-shadow-2xl mb-2 leading-tight">
-                            {currentItem.title}
-                        </h1>
-                        <div className="h-1.5 w-20 bg-blue-600 mt-2 mb-4 rounded-full shadow-lg shadow-blue-600/50"></div>
-                    </div>
-                )}
-                
+         {config.showInfoOverlay && (
+             <div className="absolute bottom-16 left-12 max-w-[80%] pointer-events-none z-30 space-y-2">
+                <h1 className="text-3xl md:text-6xl font-black text-white uppercase tracking-tighter drop-shadow-2xl">{currentItem.title}</h1>
                 {currentItem.subtitle && (
-                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 px-5 py-2.5 rounded-2xl w-fit slide-up shadow-2xl">
-                        <p className="text-white text-xs md:text-xl font-black uppercase tracking-[0.2em]">
-                            {currentItem.subtitle}
-                        </p>
+                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 px-4 py-2 rounded-xl w-fit flex items-center gap-3">
+                        <p className="text-white text-xs md:text-sm font-black uppercase tracking-[0.2em]">{currentItem.subtitle}</p>
+                        {currentItem.targetProductId && <Sparkles size={14} className="text-blue-400 animate-pulse" />}
                     </div>
                 )}
+                {currentItem.targetProductId && (
+                    <div className="flex items-center gap-2 text-blue-400 text-[10px] font-black uppercase tracking-widest mt-4">
+                        <MoveUpRight size={14} /> Tap to explore product
+                    </div>
+                )}
+             </div>
+         )}
+
+         {!config.muteVideos && !isAudioUnlocked && (
+             <div className="absolute top-8 right-8 bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50">
+                 <VolumeX size={16} /> <span className="text-[10px] font-black uppercase">Muted</span>
              </div>
          )}
       </div>
