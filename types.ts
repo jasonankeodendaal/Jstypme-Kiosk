@@ -23,12 +23,15 @@ export interface Product {
   specs: Record<string, string>;
   features: string[];
   boxContents?: string[]; 
+  // Changed to Array for multiple dimension sets
   dimensions: DimensionSet[]; 
   imageUrl: string;
   galleryUrls?: string[]; 
   videoUrl?: string; // Legacy support
   videoUrls?: string[]; // Support for multiple videos
+  // New Multiple Manuals Support
   manuals?: Manual[];
+  // Legacy support fields (will be migrated)
   manualUrl?: string; 
   manualImages?: string[]; 
   dateAdded?: string; // New: For aging logic
@@ -61,6 +64,7 @@ export interface TVBrand {
   name: string;
   logoUrl?: string;
   models: TVModel[];
+  // Legacy support (to be migrated)
   videoUrls?: string[];
 }
 
@@ -89,6 +93,7 @@ export interface Catalogue {
   pages: string[]; // Legacy support for image-based flipbooks
 }
 
+// New Interface for decoupled Pricelist Brands
 export interface PricelistBrand {
   id: string;
   name: string;
@@ -117,14 +122,18 @@ export interface Pricelist {
   dateAdded?: string; // New: For "New" flag logic
 }
 
+export interface AdSchedule {
+  days: number[]; // 0-6 (Sunday-Saturday)
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+}
+
 export interface AdItem {
   id: string;
   type: 'image' | 'video';
   url: string;
-  dateAdded?: string;
-  startDate?: string; // New: Asset Scheduling
-  endDate?: string;   // New: Asset Scheduling
-  activeDays?: number[]; // New: [0,1,2,3,4,5,6] - 0 is Sunday
+  dateAdded?: string; // New: For aging logic
+  schedule?: AdSchedule; // New: For scheduling
 }
 
 export interface AdConfig {
@@ -141,17 +150,18 @@ export interface ScreensaverSettings {
   showProductVideos: boolean;
   showPamphlets: boolean;
   showCustomAds: boolean;
+  // New Enhanced Controls
   displayStyle?: 'contain' | 'cover';
   showInfoOverlay?: boolean;
   activeHoursStart?: string; // e.g. "08:00"
   activeHoursEnd?: string;   // e.g. "20:00"
   enableSleepMode?: boolean; // Turn screen black outside active hours
-  // New Expanded Controls
-  adWeight?: number; // 0 to 5
-  productWeight?: number; // 0 to 5
-  pamphletWeight?: number; // 0 to 5
+  // New Weighted & Behavior Controls
+  adWeight?: number; // 1-10
+  productWeight?: number; // 1-10
+  newProductWeight?: number; // 1-10
   lockedEffect?: 'random' | 'effect-smooth-zoom' | 'effect-subtle-drift' | 'effect-soft-scale' | 'effect-gentle-pan';
-  wakeBehavior?: 'reset' | 'resume';
+  wakeBehavior?: 'instant' | 'zoom-out';
 }
 
 export interface KioskRegistry {
