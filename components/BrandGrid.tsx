@@ -10,6 +10,7 @@ interface BrandGridProps {
   ads?: AdConfig;
   onSelectBrand: (brand: Brand) => void;
   onViewGlobalCatalog: (catalogue: Catalogue) => void; 
+  onViewWebsite?: (url: string) => void;
   onExport: () => void; 
   screensaverEnabled: boolean;
   onToggleScreensaver: () => void;
@@ -39,12 +40,10 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                 setCurrentIndex(prev => (prev + 1) % items!.length);
             }, 6000);
         } else {
-            // Firefox reinforcement: Ensure muted property is set and play() called
             if(videoRef.current) {
                 videoRef.current.muted = true;
                 videoRef.current.play().catch(() => {});
             }
-            // Fallback safety if video stalls
             timeoutRef.current = window.setTimeout(() => {
                 setCurrentIndex(prev => (prev + 1) % items!.length);
             }, 180000);
@@ -79,7 +78,7 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                         key={`ad-vid-${activeItem!.url}`}
                         src={activeItem!.url} 
                         muted={true} 
-                        autoPlay={true}
+                        autoPlay={true} 
                         playsInline={true}
                         loop={items.length === 1}
                         className="w-full h-full object-cover"
@@ -115,9 +114,9 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
     );
 };
 
-const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewGlobalCatalog, onExport, screensaverEnabled, onToggleScreensaver, deviceType }) => {
+const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewGlobalCatalog, onViewWebsite, onExport, screensaverEnabled, onToggleScreensaver, deviceType }) => {
   const [showAllBrands, setShowAllBrands] = useState(false);
-  const [displayLimit, setDisplayLimit] = useState(11);
+  const [displayLimit, setDisplayLimit] = useState(19);
   
   useEffect(() => {
     const handleResize = () => {
@@ -127,7 +126,8 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
         } else if (width < 1024) {
             setDisplayLimit(19);
         } else {
-            setDisplayLimit(23);
+            // Increased limit for 10-column desktop view
+            setDisplayLimit(29);
         }
     };
 
@@ -187,16 +187,14 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                         </button>
                      )}
                      {heroConfig?.websiteUrl && (
-                         <a 
-                            href={heroConfig.websiteUrl}
-                            target="_blank" 
-                            rel="noopener noreferrer"
+                         <button 
+                            onClick={() => onViewWebsite?.(heroConfig.websiteUrl!)}
                             className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 md:px-8 md:py-3.5 rounded-lg md:rounded-2xl font-bold uppercase tracking-widest text-[9px] md:text-base border border-white/20 hover:-translate-y-1 transition-all flex items-center gap-1.5 md:gap-3 shadow-lg"
                          >
                             <Globe size={14} className="md:size-auto" /> 
                             <span className="hidden md:block">Visit Website</span>
                             <span className="md:hidden">Web</span>
-                         </a>
+                         </button>
                      )}
                 </div>
             </div>
@@ -239,12 +237,13 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
 
       <div className="flex-1 p-4 md:p-12 max-w-[1700px] mx-auto w-full flex flex-col gap-10">
         <div className="flex-1 flex flex-col gap-12">
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-6 w-full place-items-center">
+            {/* Grid updated to support 10 columns (xl:grid-cols-10) and smaller icon sizes (max-w-[100px]) */}
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 md:gap-4 w-full place-items-center">
               {visibleBrands.map((brand) => (
                 <button
                   key={brand.id}
                   onClick={() => onSelectBrand(brand)}
-                  className="group flex flex-col items-center justify-center w-full max-w-[130px] p-1.5 md:p-4 bg-white rounded-3xl shadow-sm hover:shadow-[0_15px_35px_rgba(37,99,235,0.08)] transition-all duration-500 border border-slate-100 hover:border-blue-200 hover:-translate-y-1 aspect-square"
+                  className="group flex flex-col items-center justify-center w-full max-w-[100px] p-1 md:p-3 bg-white rounded-2xl shadow-sm hover:shadow-[0_15px_35px_rgba(37,99,235,0.08)] transition-all duration-500 border border-slate-100 hover:border-blue-200 hover:-translate-y-1 aspect-square"
                   title={brand.name}
                 >
                   <div className="relative w-full h-full flex items-center justify-center transition-all duration-500 group-hover:scale-105">
@@ -253,10 +252,10 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                         src={brand.logoUrl} 
                         alt={brand.name} 
                         loading="lazy"
-                        className="w-full h-full object-contain transition-all duration-500 p-1 md:p-3"
+                        className="w-full h-full object-contain transition-all duration-500 p-1 md:p-2"
                       />
                     ) : (
-                      <div className="w-10 h-10 md:w-16 md:h-16 rounded-full bg-slate-50 text-slate-300 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center text-lg md:text-3xl font-black transition-all duration-500 border-2 border-dashed border-slate-200 group-hover:border-transparent">
+                      <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-slate-50 text-slate-300 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center text-sm md:text-xl font-black transition-all duration-500 border-2 border-dashed border-slate-200 group-hover:border-transparent">
                         {brand.name.charAt(0)}
                       </div>
                     )}
@@ -267,11 +266,11 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
               {hasMoreBrands && (
                 <button
                   onClick={() => setShowAllBrands(true)}
-                  className="group flex flex-col items-center justify-center w-full max-w-[130px] p-1.5 md:p-4 bg-slate-50 rounded-3xl shadow-sm hover:shadow-[0_15px_35px_rgba(37,99,235,0.08)] transition-all duration-500 border border-slate-200 hover:border-blue-500 hover:-translate-y-1 aspect-square"
+                  className="group flex flex-col items-center justify-center w-full max-w-[100px] p-1 md:p-3 bg-slate-50 rounded-2xl shadow-sm hover:shadow-[0_15px_35px_rgba(37,99,235,0.08)] transition-all duration-500 border border-slate-200 hover:border-blue-500 hover:-translate-y-1 aspect-square"
                 >
                    <div className="relative flex flex-col items-center justify-center transition-all duration-500 group-hover:scale-105">
-                       <Grid size={24} className="text-slate-400 group-hover:text-blue-600 mb-1" />
-                       <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest text-slate-500 group-hover:text-blue-700">All Brands</span>
+                       <Grid size={18} className="text-slate-400 group-hover:text-blue-600 mb-0.5" />
+                       <span className="text-[6px] md:text-[8px] font-black uppercase tracking-widest text-slate-500 group-hover:text-blue-700">More</span>
                    </div>
                 </button>
               )}
@@ -315,7 +314,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                       className="group flex flex-col items-center justify-center w-full p-2 md:p-4 transition-all duration-500 hover:-translate-y-1.5 rounded-3xl hover:bg-blue-50 border border-transparent hover:border-blue-100"
                       title={brand.name}
                     >
-                      <div className="relative w-16 h-16 md:w-24 md:h-24 flex items-center justify-center transition-all duration-500 group-hover:scale-110 mb-3">
+                      <div className="relative w-12 h-12 md:w-16 md:h-16 flex items-center justify-center transition-all duration-500 group-hover:scale-110 mb-3">
                         {brand.logoUrl ? (
                           <img 
                             src={brand.logoUrl} 
@@ -324,12 +323,12 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                             className="w-full h-full object-contain drop-shadow-sm group-hover:drop-shadow-lg"
                           />
                         ) : (
-                          <div className="w-full h-full rounded-full bg-slate-100 text-slate-300 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center text-xl font-black transition-all duration-500 shadow-inner">
+                          <div className="w-full h-full rounded-full bg-slate-100 text-slate-300 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center text-sm font-black transition-all duration-500 shadow-inner">
                             {brand.name.charAt(0)}
                           </div>
                         )}
                       </div>
-                      <span className="text-[8px] md:text-xs font-black text-slate-500 uppercase tracking-widest group-hover:text-blue-900 truncate w-full text-center transition-colors px-1">{brand.name}</span>
+                      <span className="text-[7px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-blue-900 truncate w-full text-center transition-colors px-1">{brand.name}</span>
                     </button>
                   ))}
                </div>

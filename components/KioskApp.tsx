@@ -24,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus, ToggleLeft, ToggleRight, Globe } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 const isRecent = (dateString?: string) => {
@@ -873,6 +873,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [flipbookTitle, setFlipbookTitle] = useState<string | undefined>(undefined); 
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
   const [viewingManualList, setViewingManualList] = useState<Pricelist | null>(null);
+  const [viewingWebsite, setViewingWebsite] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
@@ -909,7 +910,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     if (timerRef.current) clearTimeout(timerRef.current);
     if (screensaverEnabled && deviceType === 'kiosk' && isSetup) {
       timerRef.current = window.setTimeout(() => {
-        setIsIdle(true); setActiveProduct(null); setActiveCategory(null); setActiveBrand(null); setShowFlipbook(false); setViewingPdf(null); setViewingManualList(null); setShowPricelistModal(false); setShowGlobalSearch(false); setShowCompareModal(false); setCompareProductIds([]);
+        setIsIdle(true); setActiveProduct(null); setActiveCategory(null); setActiveBrand(null); setShowFlipbook(false); setViewingPdf(null); setViewingManualList(null); setShowPricelistModal(false); setShowGlobalSearch(false); setShowCompareModal(false); setCompareProductIds([]); setViewingWebsite(null);
       }, idleTimeout);
     }
   }, [screensaverEnabled, idleTimeout, deviceType, isSetup]);
@@ -989,7 +990,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
            </div>
        </header>
        <div className="flex-1 relative flex flex-col min-h-0 print:overflow-visible" style={{ zoom: zoomLevel }}>
-         {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={storeData.catalogues || []} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} deviceType={deviceType} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} selectedForCompare={compareProductIds} onToggleCompare={toggleCompareProduct} onStartCompare={() => setShowCompareModal(true)} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} />}
+         {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={storeData.catalogues || []} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onViewWebsite={(url) => setViewingWebsite(url)} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} deviceType={deviceType} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} selectedForCompare={compareProductIds} onToggleCompare={toggleCompareProduct} onStartCompare={() => setShowCompareModal(true)} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} />}
        </div>
        <footer className="relative shrink-0 bg-white border-t border-slate-200 text-slate-500 h-10 flex items-center justify-between px-2 md:px-6 z-50 text-[7px] md:text-[10px] print:hidden">
           {/* Left: Device Telemetry */}
@@ -1047,6 +1048,36 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
             brandLogo={activePricelistBrand?.logoUrl}
             brandName={activePricelistBrand?.name}
           />
+       )}
+       {viewingWebsite && (
+           <div className="fixed inset-0 z-[150] bg-white flex flex-col animate-fade-in print:hidden">
+               <div className="bg-slate-900 text-white p-4 flex justify-between items-center shrink-0 border-b border-white/5 shadow-xl">
+                   <div className="flex items-center gap-4">
+                       <div className="p-2 bg-blue-600 rounded-xl"><Globe size={20} /></div>
+                       <div className="flex flex-col">
+                           <span className="text-xs font-black uppercase tracking-widest leading-none">In-App Browser</span>
+                           <span className="text-[10px] text-slate-400 font-bold uppercase mt-1 truncate max-w-xs">{viewingWebsite.replace(/^https?:\/\//, '')}</span>
+                       </div>
+                   </div>
+                   <button 
+                      onClick={() => setViewingWebsite(null)} 
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-6 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                    >
+                       <X size={16} strokeWidth={3} /> Exit Browser
+                   </button>
+               </div>
+               <div className="flex-1 bg-slate-100 relative">
+                   <iframe 
+                      src={viewingWebsite} 
+                      className="w-full h-full border-none" 
+                      title="Kiosk Web Portal"
+                      sandbox="allow-scripts allow-same-origin allow-forms"
+                   />
+                   <div className="absolute bottom-6 right-6 pointer-events-none opacity-20">
+                       <Globe size={120} className="text-slate-900" />
+                   </div>
+               </div>
+           </div>
        )}
     </div>
   );

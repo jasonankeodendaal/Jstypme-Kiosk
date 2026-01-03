@@ -3,7 +3,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Product } from '../types';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
-import { ChevronLeft, Info, PlayCircle, FileText, Check, Box as BoxIcon, ChevronRight as RightArrow, ChevronLeft as LeftArrow, X, Image as ImageIcon, Tag, Layers, Ruler, Package, LayoutGrid, Settings, BookOpen, Share2, CornerDownRight } from 'lucide-react';
+// Fix: Added ChevronRight to imports from lucide-react
+import { ChevronLeft, ChevronRight, Info, PlayCircle, FileText, Check, Box as BoxIcon, ChevronRight as RightArrow, ChevronLeft as LeftArrow, X, Image as ImageIcon, Tag, Layers, Ruler, Package, LayoutGrid, Settings, BookOpen, CornerDownRight } from 'lucide-react';
 
 interface ProductDetailProps {
   product: Product;
@@ -19,7 +20,6 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
   const [enlargedMediaIndex, setEnlargedMediaIndex] = useState(0);
   const [flipbookData, setFlipbookData] = useState<{ isOpen: boolean, pages: string[], title: string }>({ isOpen: false, pages: [], title: '' });
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
-  const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -111,11 +111,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
             </div>
         )}
 
-        <div className="flex items-center gap-2">
-            <button className={`p-2.5 rounded-xl transition-all ${scrolled ? 'bg-slate-100 text-slate-600' : 'bg-white/90 text-slate-900 shadow-xl'}`}>
-                <Share2 size={16} />
-            </button>
-        </div>
+        <div className="w-10"></div> {/* Spacer for symmetry */}
       </div>
 
       {/* MAIN CONTENT SPLIT */}
@@ -159,7 +155,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                                 <ChevronLeft size={24} strokeWidth={3} />
                             </button>
                             <button onClick={handleNextMedia} className="absolute right-0 top-1/2 -translate-y-1/2 p-3 bg-white/80 hover:bg-white rounded-full shadow-xl transition-all border border-slate-100 lg:opacity-0 lg:group-hover:opacity-100">
-                                <RightArrow size={24} strokeWidth={3} />
+                                <ChevronRight size={24} strokeWidth={3} />
                             </button>
                         </>
                     )}
@@ -296,7 +292,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                                             </div>
                                         </div>
                                         <div className="p-2 bg-slate-50 rounded-lg text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                            <RightArrow size={16} />
+                                            <ChevronRight size={16} />
                                         </div>
                                     </button>
                                 ))}
