@@ -198,12 +198,13 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 };
 
 // --- HIGH PERFORMANCE ROW COMPONENT ---
+// Optimized for minimum layout shift and fast paint
 const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: PricelistItem, hasImages: boolean, onEnlarge: (url: string) => void }) => (
-    <tr className="excel-row border-b border-slate-100 transition-colors group">
+    <tr className="excel-row border-b border-slate-100 transition-none group">
         {hasImages && (
             <td className="p-1 border-r border-slate-100 text-center shrink-cell">
                 <div 
-                    className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-1 hover:ring-blue-400 transition-all print:w-6 print:h-6"
+                    className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-1 hover:ring-blue-400 print:w-6 print:h-6"
                     onClick={(e) => { e.stopPropagation(); if(item.imageUrl) onEnlarge(item.imageUrl); }}
                 >
                     {item.imageUrl ? (
@@ -221,7 +222,7 @@ const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: Priceli
             </td>
         )}
         <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
-        <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors whitespace-normal break-words leading-tight">{item.description}</span></td>
+        <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] whitespace-normal break-words leading-tight">{item.description}</span></td>
         <td className="price-cell text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900">{item.normalPrice || ''}</span></td>
         <td className="price-cell text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter">{item.promoPrice}</span>) : (<span className="font-bold text-slate-900">{item.normalPrice || ''}</span>)}</td>
     </tr>
@@ -239,6 +240,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastUpdateRef = useRef<number>(0);
 
   const hasImages = useMemo(() => {
     return pricelist.items?.some(item => item.imageUrl && item.imageUrl.trim() !== '') || false;
@@ -246,6 +248,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const onDragMove = useCallback((clientX: number, clientY: number) => {
     if (!isDragging || !scrollContainerRef.current) return;
+    
+    // Throttle for smoother performance
+    const now = performance.now();
+    if (now - lastUpdateRef.current < 10) return;
+    lastUpdateRef.current = now;
+
     const dx = clientX - startPos.x;
     const dy = clientY - startPos.y;
     scrollContainerRef.current.scrollLeft = scrollPos.left - dx;
@@ -448,14 +456,33 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           .excel-row { height: auto !important; page-break-inside: avoid !important; display: table-row !important; }
         }
         
-        .spreadsheet-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 100%; transform: translate3d(0,0,0); }
-        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; padding: 12px 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+        .spreadsheet-table { 
+          border-collapse: separate; 
+          border-spacing: 0; 
+          table-layout: fixed; 
+          width: 100%; 
+          transform: translateZ(0); 
+          contain: strict;
+        }
         
-        /* Optimization: content-visibility allows browser to skip rendering off-screen rows */
+        .spreadsheet-table th { 
+          position: sticky; 
+          top: 0; 
+          z-index: 10; 
+          background-color: #71717a; 
+          color: white; 
+          padding: 12px 8px; 
+          font-size: 10px; 
+          font-weight: 900; 
+          text-transform: uppercase; 
+        }
+        
         .excel-row { 
-          height: 44px;
+          height: 48px;
           content-visibility: auto;
-          contain-intrinsic-size: 44px;
+          contain-intrinsic-size: 48px;
+          contain: layout paint;
+          will-change: transform;
         }
         
         .excel-row:nth-child(even) { background-color: #f8fafc; }
@@ -464,6 +491,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         .desc-cell { font-size: clamp(8px, 1.2vw, 12px); padding: 4px 8px; width: auto; }
         .price-cell { font-size: clamp(9px, 1.4vw, 13px); font-weight: 900; padding: 4px; width: 14%; }
         .shrink-cell { width: 40px; }
+        
+        .viewer-scroll-container {
+          overflow: auto;
+          -webkit-overflow-scrolling: touch;
+          transform: translateZ(0);
+          will-change: scroll-position;
+        }
       `}</style>
 
       <div className="viewer-container relative w-full max-w-7xl bg-white rounded-[2rem] shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block" onClick={e => e.stopPropagation()}>
@@ -495,11 +529,16 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             ref={scrollContainerRef}
             onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleDragEnd} onMouseLeave={handleDragEnd}
             onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleDragEnd}
-            className={`flex-1 overflow-auto bg-slate-100/50 relative p-0 md:p-4 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
+            className={`viewer-scroll-container flex-1 bg-slate-100/50 relative p-0 md:p-4 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
         >
           <div className="min-w-full min-h-full flex items-start justify-center">
             <div 
-              style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: zoom > 1 ? 'max-content' : '100%' }} 
+              style={{ 
+                transform: `scale(${zoom})`, 
+                transformOrigin: 'top left', 
+                width: zoom > 1 ? 'max-content' : '100%',
+                willChange: zoom !== 1 ? 'transform' : 'auto'
+              }} 
               className={`select-none relative bg-white shadow-xl rounded-xl overflow-hidden print:transform-none print:shadow-none print:rounded-none`}
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
@@ -512,7 +551,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                         <th className="p-2 md:p-3 price-cell text-right text-white">Promo</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white">
                     {items.map((item) => (
                         <PricelistRow key={item.id} item={item} hasImages={hasImages} onEnlarge={url => setEnlargedImage(url)} />
                     ))}
@@ -666,7 +705,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   // SYSTEM WATCHDOG HEARTBEAT
   useEffect(() => {
     const heartbeat = setInterval(() => {
-        // Fix: Added check for signalAppHeartbeat on window object
         if (window.signalAppHeartbeat) {
             window.signalAppHeartbeat();
         }
