@@ -78,13 +78,15 @@ export default function App() {
     fetchData();
 
     // 1. Background Routine Sync (Pulsing Heartbeat) - Silent
+    // This is the primary sync mechanism for Admin to prevent "reloads"
     const interval = setInterval(() => {
         fetchData(true);
     }, 60000); 
 
-    // 2. Realtime Event Listener - Silent
-    if (supabase) {
-        const channel = supabase
+    // 2. Realtime Event Listener - Disabled for Admin to prevent intrusive updates
+    let channel: any = null;
+    if (supabase && !isAdmin) {
+        channel = supabase
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
@@ -98,21 +100,19 @@ export default function App() {
               const isMyUpdate = payload.new && payload.new.id === kioskId;
               const isMyDelete = payload.old && payload.old.id === kioskId;
               
-              if (isAdmin || isMyUpdate || isMyDelete) {
+              if (isMyUpdate || isMyDelete) {
                   if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
                   syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
               }
             }
           )
           .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-            clearInterval(interval);
-        };
     }
-    
-    return () => clearInterval(interval);
+
+    return () => {
+        if (channel) supabase.removeChannel(channel);
+        clearInterval(interval);
+    };
   }, [fetchData, kioskId, isAdmin]);
 
   const handleUpdateData = async (newData: StoreData) => {
