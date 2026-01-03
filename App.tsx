@@ -48,20 +48,18 @@ export default function App() {
         const data = await generateStoreData();
         if (data) {
            setStoreData(prev => {
-               // 1. Initial Load: Always set data
+               // 1. Initial Load
                if (!prev) return data;
 
-               // 2. Admin Mode logic: 
-               // Background pulses must NOT overwrite storeData because it resets the Admin dashboard state.
-               // We only update the 'fleet' property silently to keep the telemetry live.
+               // 2. Admin Logic: Only sync fleet telemetry to avoid wiping out unsaved form changes
                if (isAdmin && isBackground) {
                    return {
                        ...prev,
-                       fleet: data.fleet || prev.fleet
+                       fleet: data.fleet
                    };
                }
 
-               // 3. Manual Refresh or Kiosk Mode: Full update
+               // 3. Kiosk Logic: Full update, React reconciliation handles smooth transition
                return { ...data };
            });
            setLastSyncTime(new Date().toLocaleTimeString());
@@ -76,27 +74,34 @@ export default function App() {
 
   useEffect(() => {
     initSupabase();
+    // Initial silent fetch
     fetchData();
 
-    // Background Routine Sync - Strictly silent
+    // 1. Background Routine Sync (Pulsing Heartbeat) - Silent
     const interval = setInterval(() => {
         fetchData(true);
-    }, 30000); 
+    }, 60000); 
 
+    // 2. Realtime Event Listener - Silent
     if (supabase) {
         const channel = supabase
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
-              // Realtime updates: still treat as background/silent if we are in admin
+              // Debounce realtime syncs to prevent UI thrashing
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
               syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
             }
           )
           .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
             (payload: any) => {
-              if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-              syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 500);
+              const isMyUpdate = payload.new && payload.new.id === kioskId;
+              const isMyDelete = payload.old && payload.old.id === kioskId;
+              
+              if (isAdmin || isMyUpdate || isMyDelete) {
+                  if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
+                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
+              }
             }
           )
           .subscribe();
@@ -108,22 +113,24 @@ export default function App() {
     }
     
     return () => clearInterval(interval);
-  }, [fetchData, isAdmin]);
+  }, [fetchData, kioskId, isAdmin]);
 
   const handleUpdateData = async (newData: StoreData) => {
+    // Explicit Admin action: show "Updating Cloud" indicator
     setIsSyncing(true);
-    // Directly set state and then save to cloud
-    setStoreData(newData); 
+    setStoreData({ ...newData }); 
     try {
         await saveStoreData(newData);
         setLastSyncTime(new Date().toLocaleTimeString());
     } catch (e: any) {
         console.error("Manual save failed", e);
     } finally {
+        // Keep indicator visible slightly to confirm success
         setTimeout(() => setIsSyncing(false), 500);
     }
   };
 
+  // Critical: Only block the screen on the VERY first boot
   if (isFirstLoad && !storeData) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0f172a] text-white font-black">
@@ -137,6 +144,7 @@ export default function App() {
     <>
       {storeData && <AppIconUpdater storeData={storeData} />}
       
+      {/* Explicit Sync Indicator for Admin saves, hidden for silent pulses */}
       {isSyncing && isAdmin && (
          <div className="fixed top-12 right-4 z-[200] bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg shadow-2xl flex items-center gap-2 border border-white/10 animate-fade-in">
             <Loader2 className="animate-spin text-blue-400" size={12} />
@@ -148,7 +156,7 @@ export default function App() {
         <AdminDashboard 
             storeData={storeData}
             onUpdateData={handleUpdateData}
-            onRefresh={() => fetchData(false)}
+            onRefresh={() => fetchData(false)} // Manual refresh is not silent
         />
       ) : currentRoute === '/about' ? (
         <AboutPage 
