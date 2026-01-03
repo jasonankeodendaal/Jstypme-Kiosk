@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -6,6 +7,7 @@
     <meta name="theme-color" content="#0f172a" />
     <title>Kiosk Pro Showcase</title>
     
+    <!-- 1. CRITICAL LEGACY POLYFILLS (LOADED FIRST & SYNC) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-shim/0.35.6/es6-shim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-promise/4.2.8/es6-promise.auto.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.6.19/fetch.min.js"></script>
@@ -15,28 +17,96 @@
     <script>
       (function() {
         window.appStarted = false;
+        
+        // --- KIOSK ANTI-FREEZE WATCHDOG ---
         var lastHeartbeat = Date.now();
-        window.signalAppHeartbeat = function() { lastHeartbeat = Date.now(); };
-        setInterval(function() { if (Date.now() - lastHeartbeat > 30000) window.location.reload(); }, 5000);
+        window.signalAppHeartbeat = function() {
+            lastHeartbeat = Date.now();
+        };
+
+        // Separate monitoring interval (simulating a worker thread logic)
+        // If main thread freezes for more than 30s, force refresh.
+        var watchdogTimer = setInterval(function() {
+            var now = Date.now();
+            if (now - lastHeartbeat > 30000) {
+                console.error("CRITICAL: Application freeze detected. Rebooting Kiosk Firmware...");
+                window.location.reload();
+            }
+        }, 5000);
+
+        // Daily Maintenance: Hard refresh at 3AM to clear browser heap
+        setInterval(function() {
+            var now = new Date();
+            if (now.getHours() === 3 && now.getMinutes() === 0) {
+                window.location.reload();
+            }
+        }, 60000);
+
+        // --- CRITICAL KIOSK DIAGNOSTIC: SYSTEM CLOCK CHECK ---
+        var currentYear = new Date().getFullYear();
+        if (currentYear < 2024) {
+            window.onload = function() {
+                var loader = document.getElementById('system-loader');
+                if (loader) loader.style.display = 'none';
+                document.body.innerHTML = [
+                    '<div style="padding:40px; color:white; background:#7f1d1d; height:100vh; font-family: sans-serif; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">',
+                        '<div style="font-size:60px; margin-bottom:20px;">⏰</div>',
+                        '<h1 style="font-weight:900; font-size: 28px; margin-bottom:10px;">SYSTEM CLOCK EXPIRED</h1>',
+                        '<p style="max-width:400px; line-height:1.5; opacity:0.8;">The tablet clock is set to <b>' + currentYear + '</b>. This prevents a secure connection (SSL/HSTS) to the cloud server.</p>',
+                        '<div style="margin-top:30px; padding:20px; border: 2px dashed rgba(255,255,255,0.3); border-radius:15px;">',
+                            '<p style="font-weight:bold; margin-bottom:10px; color:#fca5a5;">REQUIRED ACTION:</p>',
+                            '<p style="font-size:14px;">Go to Android Settings &rarr; Date & Time &rarr; Set to <b>Automatic</b> or current date.</p>',
+                        '</div>',
+                        '<button onclick="window.location.reload()" style="margin-top:30px; padding:15px 30px; background:white; color:#7f1d1d; border:none; border-radius:10px; font-weight:900; text-transform:uppercase; letter-spacing:1px;">Retry Connection</button>',
+                    '</div>'
+                ].join('');
+            };
+            return; 
+        }
+
         if (typeof window.globalThis === 'undefined') { window.globalThis = window; }
         if (typeof window.global === 'undefined') { window.global = window; }
-        window.process = { env: { NODE_ENV: 'production', API_KEY: '' } };
+        window.process = { env: { NODE_ENV: 'production' } };
+        
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            var loaderText = document.getElementById('loader-text');
+            if (loaderText) {
+                loaderText.style.color = '#ef4444';
+                loaderText.innerHTML = "BOOT ERROR: " + msg;
+            }
+            return false;
+        };
+
+        window.onload = function() {
+            setTimeout(function() {
+                if (!window.appStarted) {
+                    var text = document.getElementById('loader-text');
+                    if (text) {
+                        text.style.color = '#f59e0b';
+                        text.innerHTML = "SYSTEM HANG DETECTED...<br><span style='font-size:8px; opacity:0.6'>Performing automatic driver reset.</span>";
+                        setTimeout(function() { window.location.reload(); }, 2000);
+                    }
+                }
+            }, 12000);
+        };
       })();
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-      :root { --kiosk-primary: #2563eb; }
       body { font-family: 'Inter', sans-serif; background-color: #0f172a; margin: 0; overflow: hidden; }
       #root { height: 100vh; width: 100vw; }
-      #system-loader { position: fixed; inset: 0; background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-      .spinner { width: 40px; height: 40px; border: 4px solid rgba(59, 130, 246, 0.1); border-left-color: var(--kiosk-primary); border-radius: 50%; animation: spin 1s linear infinite; }
+      #system-loader {
+        position: fixed; inset: 0; background: #0f172a; display: flex; 
+        flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
+      }
+      .spinner {
+        width: 40px; height: 40px; border: 4px solid rgba(59, 130, 246, 0.1);
+        border-left-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;
+      }
       @keyframes spin { to { transform: rotate(360deg); } }
-      .bg-primary { background-color: var(--kiosk-primary) !important; }
-      .text-primary { color: var(--kiosk-primary) !important; }
-      .border-primary { border-color: var(--kiosk-primary) !important; }
     </style>
   <script type="importmap">
 {
@@ -52,9 +122,8 @@
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
     "jspdf": "https://esm.sh/jspdf@^3.0.4",
     "pdfjs-dist": "https://esm.sh/pdfjs-dist@^5.4.530",
-    "@google/genai": "https://esm.sh/@google/genai@^0.2.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "@vitejs/plugin-legacy": "https://esm.sh/@vitejs/plugin-legacy@^7.2.1"
   }
 }
@@ -63,9 +132,38 @@
   <body>
     <div id="system-loader">
         <div class="spinner"></div>
-        <div id="loader-text" style="color:#64748b; font-weight:800; font-size:10px; margin-top:20px; letter-spacing: 0.2em; text-transform: uppercase; text-align: center;">Initializing Firmware...</div>
+        <div id="loader-text" style="color:#64748b; font-weight:800; font-size:10px; margin-top:20px; letter-spacing: 0.2em; text-transform: uppercase; text-align: center; max-width: 80%;">
+            Initializing Firmware...
+        </div>
     </div>
+
     <div id="root"></div>
+
     <script type="module" src="/index.tsx"></script>
+
+    <script>
+        // Relaxed Driver Check for Legacy Engines
+        setTimeout(function() {
+            var requirements = {
+                'Promise': typeof Promise !== 'undefined',
+                'Map': typeof Map !== 'undefined',
+                'Set': typeof Set !== 'undefined'
+            };
+            var missing = [];
+            for (var key in requirements) {
+                if (!requirements[key]) { missing.push(key); }
+            }
+            if (missing.length > 0) {
+                if (!window.appStarted) {
+                    var loader = document.getElementById('system-loader');
+                    if (loader) loader.style.display = 'none';
+                    document.getElementById('root').innerHTML = '<div style="padding:40px; color:#ef4444; background:#0f172a; height:100vh; font-family:sans-serif;">' +
+                        '<h1 style="font-weight:900; font-size:24px;">HARDWARE INCOMPATIBLE</h1>' +
+                        '<p style="color:white; margin-top:10px;">This device is missing internal drivers: <b>' + missing.join(', ') + '</b></p>' +
+                        '<p style="color:#64748b; font-size:12px; margin-top:20px;">The Android 5.0 WebView is too old to support modern apps without manual driver injection.</p></div>';
+                }
+            }
+        }, 5000);
+    </script>
   </body>
 </html>
