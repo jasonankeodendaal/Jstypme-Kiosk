@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
@@ -287,6 +287,8 @@ const PricelistManager = ({ pricelists, pricelistBrands, onSavePricelists, onSav
     );
 };
 
+// ... remaining sub-components like ProductEditor, etc ...
+
 export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => void, onRefresh: () => void }) => {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [activeTab, setActiveTab] = useState<string>('inventory');
@@ -300,43 +302,9 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [localData, setLocalData] = useState<StoreData | null>(storeData);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const logout = useCallback(() => { 
-    localStorage.removeItem('kiosk_admin_session'); 
-    setCurrentUser(null); 
-  }, []);
-
-  // --- ADMIN SESSION TIMEOUT LOGIC ---
-  const timeoutRef = useRef<number | null>(null);
-  const ADMIN_IDLE_TIMEOUT = 5 * 60 * 1000; // 5 Minutes
-
-  const resetAdminTimeout = useCallback(() => {
-    if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
-    if (currentUser) {
-        timeoutRef.current = window.setTimeout(() => {
-            console.log("Admin session timed out. Logging out for security.");
-            logout();
-        }, ADMIN_IDLE_TIMEOUT);
-    }
-  }, [currentUser, logout]);
-
-  useEffect(() => {
-    if (currentUser) {
-        window.addEventListener('mousemove', resetAdminTimeout);
-        window.addEventListener('mousedown', resetAdminTimeout);
-        window.addEventListener('keydown', resetAdminTimeout);
-        window.addEventListener('touchstart', resetAdminTimeout);
-        resetAdminTimeout();
-    }
-    return () => {
-        window.removeEventListener('mousemove', resetAdminTimeout);
-        window.removeEventListener('mousedown', resetAdminTimeout);
-        window.removeEventListener('keydown', resetAdminTimeout);
-        window.removeEventListener('touchstart', resetAdminTimeout);
-        if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
-    };
-  }, [currentUser, resetAdminTimeout]);
-
   // CRITICAL: Prevent reloads/resets when global storeData is updated silently in background.
+  // We only sync the FLEET/TELEMETRY data from the global storeData into our localData.
+  // This keeps the fleet view live without wiping out the user's current form progress.
   useEffect(() => {
     if (storeData && localData) {
         setLocalData(prev => {
@@ -372,6 +340,8 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   if (!localData) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /> Loading...</div>;
   if (!currentUser) return <Auth admins={localData.admins || []} onLogin={setCurrentUser} />;
 
+  const logout = () => { localStorage.removeItem('kiosk_admin_session'); setCurrentUser(null); };
+
   return (
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
         <header className="bg-slate-900 text-white shrink-0 shadow-xl z-20">
@@ -391,7 +361,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                      <div className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase border ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'}`}>
                          {isCloudConnected ? 'Cloud Online' : 'Local Mode'}
                      </div>
-                     <button onClick={logout} className="p-2 bg-red-900/50 text-red-400 rounded-lg" title="Manual Logout"><LogOut size={16} /></button>
+                     <button onClick={logout} className="p-2 bg-red-900/50 text-red-400 rounded-lg"><LogOut size={16} /></button>
                  </div>
             </div>
             <div className="flex overflow-x-auto no-scrollbar">
@@ -436,6 +406,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 </div>
             )}
 
+            {/* Inventory, Marketing etc modules would continue here using localData state */}
             {activeTab === 'inventory' && !selectedBrand && (
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     <button onClick={() => handleLocalUpdate({...localData, brands: [...localData.brands, { id: generateId('b'), name: 'New Brand', categories: [] }]})} className="aspect-square bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-600 transition-all"><Plus size={32}/><span className="text-xs font-black uppercase mt-2">Add Brand</span></button>
