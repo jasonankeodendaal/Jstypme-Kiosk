@@ -198,13 +198,12 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 };
 
 // --- HIGH PERFORMANCE ROW COMPONENT ---
-// Optimized for minimum layout shift and fast paint
 const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: PricelistItem, hasImages: boolean, onEnlarge: (url: string) => void }) => (
-    <tr className="excel-row border-b border-slate-100 transition-none group">
+    <tr className="excel-row border-b border-slate-100 transition-colors group">
         {hasImages && (
             <td className="p-1 border-r border-slate-100 text-center shrink-cell">
                 <div 
-                    className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-1 hover:ring-blue-400 print:w-6 print:h-6"
+                    className="w-8 h-8 md:w-10 md:h-10 bg-white rounded flex items-center justify-center mx-auto overflow-hidden cursor-zoom-in hover:ring-1 hover:ring-blue-400 transition-all print:w-6 print:h-6"
                     onClick={(e) => { e.stopPropagation(); if(item.imageUrl) onEnlarge(item.imageUrl); }}
                 >
                     {item.imageUrl ? (
@@ -222,7 +221,7 @@ const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: Priceli
             </td>
         )}
         <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
-        <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] whitespace-normal break-words leading-tight">{item.description}</span></td>
+        <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors whitespace-normal break-words leading-tight">{item.description}</span></td>
         <td className="price-cell text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900">{item.normalPrice || ''}</span></td>
         <td className="price-cell text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter">{item.promoPrice}</span>) : (<span className="font-bold text-slate-900">{item.normalPrice || ''}</span>)}</td>
     </tr>
@@ -240,7 +239,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const lastUpdateRef = useRef<number>(0);
 
   const hasImages = useMemo(() => {
     return pricelist.items?.some(item => item.imageUrl && item.imageUrl.trim() !== '') || false;
@@ -248,12 +246,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const onDragMove = useCallback((clientX: number, clientY: number) => {
     if (!isDragging || !scrollContainerRef.current) return;
-    
-    // Throttle for smoother performance
-    const now = performance.now();
-    if (now - lastUpdateRef.current < 10) return;
-    lastUpdateRef.current = now;
-
     const dx = clientX - startPos.x;
     const dy = clientY - startPos.y;
     scrollContainerRef.current.scrollLeft = scrollPos.left - dx;
@@ -456,33 +448,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
           .excel-row { height: auto !important; page-break-inside: avoid !important; display: table-row !important; }
         }
         
-        .spreadsheet-table { 
-          border-collapse: separate; 
-          border-spacing: 0; 
-          table-layout: fixed; 
-          width: 100%; 
-          transform: translateZ(0); 
-          contain: strict;
-        }
+        .spreadsheet-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 100%; transform: translate3d(0,0,0); }
+        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; padding: 12px 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
         
-        .spreadsheet-table th { 
-          position: sticky; 
-          top: 0; 
-          z-index: 10; 
-          background-color: #71717a; 
-          color: white; 
-          padding: 12px 8px; 
-          font-size: 10px; 
-          font-weight: 900; 
-          text-transform: uppercase; 
-        }
-        
+        /* Optimization: content-visibility allows browser to skip rendering off-screen rows */
         .excel-row { 
-          height: 48px;
+          height: 44px;
           content-visibility: auto;
-          contain-intrinsic-size: 48px;
-          contain: layout paint;
-          will-change: transform;
+          contain-intrinsic-size: 44px;
         }
         
         .excel-row:nth-child(even) { background-color: #f8fafc; }
@@ -491,13 +464,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         .desc-cell { font-size: clamp(8px, 1.2vw, 12px); padding: 4px 8px; width: auto; }
         .price-cell { font-size: clamp(9px, 1.4vw, 13px); font-weight: 900; padding: 4px; width: 14%; }
         .shrink-cell { width: 40px; }
-        
-        .viewer-scroll-container {
-          overflow: auto;
-          -webkit-overflow-scrolling: touch;
-          transform: translateZ(0);
-          will-change: scroll-position;
-        }
       `}</style>
 
       <div className="viewer-container relative w-full max-w-7xl bg-white rounded-[2rem] shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block" onClick={e => e.stopPropagation()}>
@@ -513,12 +479,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
              </div>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
-             <div className="hidden lg:flex items-center gap-3 bg-black/30 p-1.5 rounded-full border border-white/10">
-                <button onClick={handleZoomOut} className="p-1.5 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={16} className="scale-x-[-1]"/></button>
-                <span className="text-[10px] font-black uppercase tracking-widest min-w-[40px] text-center">{Math.round(zoom * 100)}%</span>
-                <button onClick={handleZoomIn} className="p-1.5 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={16}/></button>
+             {/* Persistently showing zoom controls for all screen sizes */}
+             <div className="flex items-center gap-2 md:gap-3 bg-black/30 p-1 md:p-1.5 rounded-full border border-white/10">
+                <button onClick={handleZoomOut} className="p-1 md:p-1.5 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={14} className="scale-x-[-1] md:w-4 md:h-4"/></button>
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest min-w-[30px] md:min-w-[40px] text-center">{Math.round(zoom * 100)}%</span>
+                <button onClick={handleZoomIn} className="p-1 md:p-1.5 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={14} className="md:w-4 md:h-4"/></button>
              </div>
-             <button onClick={handleExportPDF} disabled={isExporting} className="bg-[#0f172a] text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-2xl hover:bg-black transition-all border border-white/5">
+             <button onClick={handleExportPDF} disabled={isExporting} className="bg-[#0f172a] text-white px-3 md:px-6 py-2 md:py-3 rounded-xl font-black text-[9px] md:text-xs uppercase shadow-2xl hover:bg-black transition-all border border-white/5">
                 {isExporting ? '...' : 'PDF'}
              </button>
              <button onClick={onClose} className="p-2 bg-white/20 rounded-full hover:bg-white/30 border border-white/5"><X size={20}/></button>
@@ -529,16 +496,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             ref={scrollContainerRef}
             onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleDragEnd} onMouseLeave={handleDragEnd}
             onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleDragEnd}
-            className={`viewer-scroll-container flex-1 bg-slate-100/50 relative p-0 md:p-4 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
+            className={`flex-1 overflow-auto bg-slate-100/50 relative p-0 md:p-4 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
         >
           <div className="min-w-full min-h-full flex items-start justify-center">
             <div 
-              style={{ 
-                transform: `scale(${zoom})`, 
-                transformOrigin: 'top left', 
-                width: zoom > 1 ? 'max-content' : '100%',
-                willChange: zoom !== 1 ? 'transform' : 'auto'
-              }} 
+              style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: zoom > 1 ? 'max-content' : '100%' }} 
               className={`select-none relative bg-white shadow-xl rounded-xl overflow-hidden print:transform-none print:shadow-none print:rounded-none`}
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
@@ -551,7 +513,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                         <th className="p-2 md:p-3 price-cell text-right text-white">Promo</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white">
+                  <tbody>
                     {items.map((item) => (
                         <PricelistRow key={item.id} item={item} hasImages={hasImages} onEnlarge={url => setEnlargedImage(url)} />
                     ))}
@@ -854,8 +816,16 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                    </div>
                    <button onClick={() => setViewingWebsite(null)} className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-6 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95"><X size={16} strokeWidth={3} /> Exit Browser</button>
                </div>
-               <div className="flex-1 bg-slate-100 relative">
-                   <iframe src={viewingWebsite} className="w-full h-full border-none" title="Kiosk Web Portal" sandbox="allow-scripts allow-same-origin allow-forms" />
+               <div className="flex-1 bg-white relative overflow-hidden">
+                   {/* Improved iframe implementation for better scaling and correctness */}
+                   <iframe 
+                      src={viewingWebsite} 
+                      className="absolute inset-0 w-full h-full border-none" 
+                      title="Kiosk Web Portal" 
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                      loading="lazy"
+                      importance="high"
+                   />
                </div>
            </div>
        )}
