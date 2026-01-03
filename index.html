@@ -18,8 +18,31 @@
       (function() {
         window.appStarted = false;
         
+        // --- KIOSK ANTI-FREEZE WATCHDOG ---
+        var lastHeartbeat = Date.now();
+        window.signalAppHeartbeat = function() {
+            lastHeartbeat = Date.now();
+        };
+
+        // Separate monitoring interval (simulating a worker thread logic)
+        // If main thread freezes for more than 30s, force refresh.
+        var watchdogTimer = setInterval(function() {
+            var now = Date.now();
+            if (now - lastHeartbeat > 30000) {
+                console.error("CRITICAL: Application freeze detected. Rebooting Kiosk Firmware...");
+                window.location.reload();
+            }
+        }, 5000);
+
+        // Daily Maintenance: Hard refresh at 3AM to clear browser heap
+        setInterval(function() {
+            var now = new Date();
+            if (now.getHours() === 3 && now.getMinutes() === 0) {
+                window.location.reload();
+            }
+        }, 60000);
+
         // --- CRITICAL KIOSK DIAGNOSTIC: SYSTEM CLOCK CHECK ---
-        // If the clock is before 2024, SSL/HSTS will fail.
         var currentYear = new Date().getFullYear();
         if (currentYear < 2024) {
             window.onload = function() {
@@ -38,7 +61,7 @@
                     '</div>'
                 ].join('');
             };
-            return; // Halt execution
+            return; 
         }
 
         if (typeof window.globalThis === 'undefined') { window.globalThis = window; }
@@ -60,10 +83,11 @@
                     var text = document.getElementById('loader-text');
                     if (text) {
                         text.style.color = '#f59e0b';
-                        text.innerHTML = "SLOW BOOT DETECTED...<br><span style='font-size:8px; opacity:0.6'>Older hardware detected. Please wait.</span>";
+                        text.innerHTML = "SYSTEM HANG DETECTED...<br><span style='font-size:8px; opacity:0.6'>Performing automatic driver reset.</span>";
+                        setTimeout(function() { window.location.reload(); }, 2000);
                     }
                 }
-            }, 8000);
+            }, 12000);
         };
       })();
     </script>

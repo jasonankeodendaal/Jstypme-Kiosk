@@ -24,8 +24,15 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus, ToggleLeft, ToggleRight, Globe } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus, ToggleLeft, ToggleRight, Globe, Activity } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+
+// Extend window interface for custom watchdog properties
+declare global {
+  interface Window {
+    signalAppHeartbeat?: () => void;
+  }
+}
 
 const isRecent = (dateString?: string) => {
     if (!dateString) return false;
@@ -190,9 +197,9 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
     );
 };
 
-// --- OPTIMIZED ROW COMPONENT ---
+// --- HIGH PERFORMANCE ROW COMPONENT ---
 const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: PricelistItem, hasImages: boolean, onEnlarge: (url: string) => void }) => (
-    <tr className="excel-row border-b border-slate-100 transition-colors group" style={{ willChange: 'transform' }}>
+    <tr className="excel-row border-b border-slate-100 transition-colors group">
         {hasImages && (
             <td className="p-1 border-r border-slate-100 text-center shrink-cell">
                 <div 
@@ -227,62 +234,18 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [includePhotosInPdf, setIncludePhotosInPdf] = useState(true);
   
-  // Virtualization State
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 40 }); 
-  const ROW_HEIGHT = 44; 
-
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const requestRef = useRef<number | null>(null);
 
-  // Check if any items have images
   const hasImages = useMemo(() => {
     return pricelist.items?.some(item => item.imageUrl && item.imageUrl.trim() !== '') || false;
   }, [pricelist.items]);
 
-  const updateVisibleRange = useCallback(() => {
-    if (!scrollContainerRef.current) return;
-    
-    const container = scrollContainerRef.current;
-    const scrollTop = container.scrollTop;
-    const containerHeight = container.clientHeight;
-    
-    const virtualTop = scrollTop / zoom;
-    const virtualHeight = containerHeight / zoom;
-
-    const start = Math.max(0, Math.floor(virtualTop / ROW_HEIGHT) - 10);
-    const end = Math.min((pricelist.items?.length || 0), Math.ceil((virtualTop + virtualHeight) / ROW_HEIGHT) + 15);
-
-    setVisibleRange(prev => {
-        if (prev.start === start && prev.end === end) return prev;
-        return { start, end };
-    });
-  }, [pricelist.items?.length, zoom]);
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-        if (requestRef.current) cancelAnimationFrame(requestRef.current);
-        requestRef.current = requestAnimationFrame(updateVisibleRange);
-    };
-
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    updateVisibleRange(); 
-
-    return () => {
-        container.removeEventListener('scroll', handleScroll);
-        if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [updateVisibleRange]);
-
   const onDragMove = useCallback((clientX: number, clientY: number) => {
     if (!isDragging || !scrollContainerRef.current) return;
-    
     const dx = clientX - startPos.x;
     const dy = clientY - startPos.y;
     scrollContainerRef.current.scrollLeft = scrollPos.left - dx;
@@ -299,31 +262,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
     });
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    onDragStart(e.pageX, e.pageY);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    onDragMove(e.pageX, e.pageY);
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length !== 1) return;
-    onDragStart(e.touches[0].pageX, e.touches[0].pageY);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || e.touches.length !== 1) return;
-    if (zoom > 1) e.preventDefault();
-    onDragMove(e.touches[0].pageX, e.touches[0].pageY);
-  };
-
-  const handleDragEnd = () => {
-      setIsDragging(false);
-  };
+  const handleMouseDown = (e: React.MouseEvent) => { if (e.button === 0) onDragStart(e.pageX, e.pageY); };
+  const handleMouseMove = (e: React.MouseEvent) => { if (isDragging) onDragMove(e.pageX, e.pageY); };
+  const handleTouchStart = (e: React.TouchEvent) => { if (e.touches.length === 1) onDragStart(e.touches[0].pageX, e.touches[0].pageY); };
+  const handleTouchMove = (e: React.TouchEvent) => { if (isDragging && e.touches.length === 1) { if (zoom > 1) e.preventDefault(); onDragMove(e.touches[0].pageX, e.touches[0].pageY); } };
+  const handleDragEnd = () => setIsDragging(false);
 
   const loadImageForPDF = async (url: string): Promise<{ imgData: string, format: string, width: number, height: number } | null> => {
     if (!url) return null;
@@ -355,10 +298,9 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const margin = 8; 
         const innerWidth = pageWidth - (margin * 2);
         
-        // Dynamic Column Calculation
         const effectiveShowImages = hasImages && includePhotosInPdf;
         const mediaW = effectiveShowImages ? 14 : 0;
-        const skuW = effectiveShowImages ? 20 : 25; // Expand SKU if no images
+        const skuW = effectiveShowImages ? 20 : 25; 
         const normalW = 22; 
         const promoW = 22; 
         const descW = innerWidth - mediaW - skuW - normalW - promoW;
@@ -413,17 +355,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         };
 
         const drawTableHeaders = (startY: number) => {
-            const headerHeight = 6;
             doc.setFillColor(113, 113, 122); 
-            doc.rect(margin, startY - 4.5, pageWidth - (margin * 2), headerHeight, 'F');
-            
+            doc.rect(margin, startY - 4.5, pageWidth - (margin * 2), 6, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
             if (effectiveShowImages) doc.text("MEDIA", mediaX, startY);
             doc.text("SKU", skuX, startY); 
             doc.text("DESCRIPTION", descX, startY);
             doc.text("NORMAL", normalPriceX, startY, { align: 'right' });
             doc.text("PROMO", promoPriceX, startY, { align: 'right' });
-
             return startY + 4;
         };
 
@@ -431,16 +370,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             let currentSize = baseSize;
             doc.setFontSize(currentSize);
             while (doc.getTextWidth(text) > maxWidth && currentSize > 5.5) { 
-                currentSize -= 0.5;
-                doc.setFontSize(currentSize);
+                currentSize -= 0.5; doc.setFontSize(currentSize);
             }
             if (doc.getTextWidth(text) > maxWidth) {
-                const lines = doc.splitTextToSize(text, maxWidth);
-                doc.text(lines, x, y, { align });
-                return lines.length;
+                const lines = doc.splitTextToSize(text, maxWidth); doc.text(lines, x, y, { align }); return lines.length;
             }
-            doc.text(text, x, y, { align });
-            return 1;
+            doc.text(text, x, y, { align }); return 1;
         };
 
         let currentY = drawHeader();
@@ -456,15 +391,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             const skuLines = doc.splitTextToSize(item.sku || '', skuMaxW).length;
             doc.setFontSize(7.5);
             const descLines = doc.splitTextToSize(item.description.toUpperCase(), descMaxW).length;
-            
             const maxLines = Math.max(skuLines, descLines);
             const contentHeight = maxLines > 1 ? (baseRowHeight + (maxLines - 1) * 3.0) : baseRowHeight;
             const rowHeight = Math.max(contentHeight, effectiveShowImages ? 9.5 : 6);
 
             if (currentY + rowHeight > pageHeight - footerMargin) {
-                doc.addPage();
-                currentY = drawHeader();
-                currentY = drawTableHeaders(currentY);
+                doc.addPage(); currentY = drawHeader(); currentY = drawTableHeaders(currentY);
             }
             
             if (index % 2 !== 0) {
@@ -473,18 +405,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
             if (effectiveShowImages && item.imageUrl) {
                 const asset = await loadImageForPDF(item.imageUrl);
-                if (asset) {
-                   const imgDim = 7.5;
-                   doc.addImage(asset.imgData, asset.format, mediaX, currentY - 2.8, imgDim, imgDim);
-                }
+                if (asset) doc.addImage(asset.imgData, asset.format, mediaX, currentY - 2.8, 7.5, 7.5);
             }
 
             doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal');
             drawTextFit(item.sku || '', skuX, currentY, skuMaxW, 6.5);
-            
             doc.setFont('helvetica', 'bold');
             drawTextFit(item.description.toUpperCase(), descX, currentY, descMaxW, 7.5);
-            
             doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
             drawTextFit(item.normalPrice || '', normalPriceX, currentY, normalW - 3, 7.5, 'right');
             
@@ -492,27 +419,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
                 drawTextFit(item.promoPrice, promoPriceX, currentY, promoW - 3, 8.0, 'right');
             } else {
-                doc.setTextColor(0, 0, 0);
-                drawTextFit(item.normalPrice || '', promoPriceX, currentY, promoW - 3, 7.5, 'right');
+                doc.setTextColor(0, 0, 0); drawTextFit(item.normalPrice || '', promoPriceX, currentY, promoW - 3, 7.5, 'right');
             }
 
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.04);
             doc.line(margin, currentY + rowHeight - 3.5, line6, currentY + rowHeight - 3.5);
-            doc.line(line1, currentY - 3.5, line1, currentY + rowHeight - 3.5);
-            if (effectiveShowImages) doc.line(line2, currentY - 3.5, line2, currentY + rowHeight - 3.5);
-            doc.line(line3, currentY - 3.5, line3, currentY + rowHeight - 3.5);
-            doc.line(line4, currentY - 3.5, line4, currentY + rowHeight - 3.5);
-            doc.line(line5, currentY - 3.5, line5, currentY + rowHeight - 3.5);
-            doc.line(line6, currentY - 3.5, line6, currentY + rowHeight - 3.5);
-
             currentY += rowHeight;
         }
 
-        const totalPages = doc.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i); doc.setFontSize(6); doc.setTextColor(148, 163, 184);
-            doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 6, { align: 'center' });
-        }
         doc.save(`${pricelist.title.replace(/\s+/g, '_')}_${pricelist.month}.pdf`);
     } catch (err) { alert("Unable to generate PDF."); } finally { setIsExporting(false); }
   };
@@ -521,136 +435,59 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const handleZoomOut = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.max(prev - 0.25, 1)); };
 
   const items = pricelist.items || [];
-  const visibleItems = items.slice(visibleRange.start, visibleRange.end);
-  const topPadding = visibleRange.start * ROW_HEIGHT;
-  const bottomPadding = Math.max(0, (items.length - visibleRange.end) * ROW_HEIGHT);
 
   return (
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block overflow-hidden print:overflow-visible" onClick={onClose}>
       <style>{`
         @media print {
-          @page { size: portrait; margin: 3mm; }
-          body { 
-            background: white !important; 
-            -webkit-print-color-adjust: exact !important; 
-            print-color-adjust: exact !important; 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            height: auto !important; 
-            width: 100% !important; 
-            overflow: visible !important; 
-            transform: none !important; 
-            zoom: 1 !important; 
-          }
           .print-hidden { display: none !important; }
-          .viewer-container { 
-            box-shadow: none !important; 
-            border: none !important; 
-            display: block !important; 
-            width: 100% !important; 
-            height: auto !important; 
-            position: static !important; 
-            overflow: visible !important; 
-          }
-          .spreadsheet-table { 
-            width: 100% !important; 
-            border-collapse: collapse !important; 
-            table-layout: auto !important; 
-            display: table !important; 
-          }
-          .spreadsheet-table th { 
-            position: static !important; 
-            background: #71717a !important; 
-            color: #fff !important; 
-            border: 0.2pt solid #94a3b8 !important; 
-            padding: 2pt !important; 
-            font-size: 6pt !important; 
-          }
-          .spreadsheet-table td { 
-            border: 0.1pt solid #cbd5e1 !important; 
-            color: #000 !important; 
-            padding: 1.5pt 2pt !important; 
-            font-size: 6.5pt !important; 
-            height: auto !important; 
-            vertical-align: middle !important; 
-            line-height: 1 !important;
-          }
-          .virtual-placeholder { display: none !important; }
-          .excel-row { 
-            height: auto !important; 
-            page-break-inside: avoid !important; 
-            display: table-row !important; 
-          }
-          .shrink-cell { width: 1% !important; white-space: nowrap !important; }
-          .price-cell { font-size: 7pt !important; white-space: nowrap !important; }
-          .desc-cell span { font-size: 6.5pt !important; display: block !important; }
-          .sku-cell span { font-size: 5.5pt !important; }
+          .viewer-container { box-shadow: none !important; border: none !important; display: block !important; width: 100% !important; height: auto !important; position: static !important; overflow: visible !important; }
+          .spreadsheet-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; display: table !important; }
+          .spreadsheet-table th { background: #71717a !important; color: #fff !important; border: 0.2pt solid #94a3b8 !important; padding: 2pt !important; font-size: 6pt !important; }
+          .spreadsheet-table td { border: 0.1pt solid #cbd5e1 !important; color: #000 !important; padding: 1.5pt 2pt !important; font-size: 6.5pt !important; vertical-align: middle !important; line-height: 1 !important; }
+          .excel-row { height: auto !important; page-break-inside: avoid !important; display: table-row !important; }
         }
         
-        .table-scroll { -webkit-overflow-scrolling: touch; will-change: scroll-position; }
-
-        .spreadsheet-table { 
-          border-collapse: separate; 
-          border-spacing: 0; 
-          table-layout: fixed; 
-          width: 100%;
-          transform: translate3d(0,0,0);
-          backface-visibility: hidden;
-        }
-
-        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; box-shadow: inset 0 -1px 0 #3f3f46; white-space: nowrap; height: 40px; padding: 0 4px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+        .spreadsheet-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; width: 100%; transform: translate3d(0,0,0); }
+        .spreadsheet-table th { position: sticky; top: 0; z-index: 10; background-color: #71717a; color: white; padding: 12px 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
         
+        /* Optimization: content-visibility allows browser to skip rendering off-screen rows */
         .excel-row { 
-          height: ${ROW_HEIGHT}px;
-          transform: translate3d(0,0,0);
-          will-change: transform;
-          contain: content;
+          height: 44px;
+          content-visibility: auto;
+          contain-intrinsic-size: 44px;
         }
         
         .excel-row:nth-child(even) { background-color: #f8fafc; }
-        .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-        .sku-cell { word-break: break-all; line-height: 1.1; font-size: clamp(7px, 1.1vw, 10px); padding: 4px; width: 15%; }
-        .desc-cell { line-height: 1.1; font-size: clamp(8px, 1.2vw, 12px); padding: 4px 8px; width: auto; }
+        .sku-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .sku-cell { word-break: break-all; font-size: clamp(7px, 1.1vw, 10px); padding: 4px; width: 15%; }
+        .desc-cell { font-size: clamp(8px, 1.2vw, 12px); padding: 4px 8px; width: auto; }
         .price-cell { font-size: clamp(9px, 1.4vw, 13px); font-weight: 900; padding: 4px; width: 14%; }
         .shrink-cell { width: 40px; }
-        .shrink-title { font-size: clamp(0.75rem, 2.5vw, 1.5rem); }
       `}</style>
 
-      <div className={`viewer-container relative w-full max-w-7xl bg-white rounded-[2rem] shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block`} onClick={e => e.stopPropagation()}>
-        <div className={`print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 z-20 bg-[#c0810d]`}>
+      <div className="viewer-container relative w-full max-w-7xl bg-white rounded-[2rem] shadow-2xl overflow-hidden max-h-full flex flex-col transition-all print:rounded-none print:shadow-none print:max-h-none print:block" onClick={e => e.stopPropagation()}>
+        <div className="print-hidden p-4 md:p-6 text-white flex justify-between items-center shrink-0 z-20 bg-[#c0810d]">
           <div className="flex items-center gap-4 overflow-hidden">
-             <div className="hidden md:flex bg-white/10 p-2 rounded-xl border border-white/10 shadow-inner"><RIcon size={24} className="text-white" /></div>
+             <div className="hidden md:flex bg-white/10 p-2 rounded-xl border border-white/10"><RIcon size={24} className="text-white" /></div>
              <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-sm md:text-2xl font-black uppercase tracking-tight leading-none shrink-title truncate">{pricelist.title}</h2>
-                  {isNewlyUpdated && (<span className="hidden sm:inline bg-white text-[#c0810d] px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-black uppercase flex items-center gap-1 shadow-md"><Sparkles size={10} fill="currentColor" /> NEW</span>)}
+                  <h2 className="text-sm md:text-2xl font-black uppercase tracking-tight leading-none truncate">{pricelist.title}</h2>
+                  {isNewlyUpdated && (<span className="hidden sm:inline bg-white text-[#c0810d] px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-black uppercase shadow-md">NEW</span>)}
                 </div>
                 <p className="text-yellow-100 font-bold uppercase tracking-widest text-[8px] md:text-xs mt-1">{pricelist.month} {pricelist.year}</p>
              </div>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
-             {hasImages && (
-                 <div className="hidden sm:flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-xl border border-white/10 mr-2 group cursor-pointer" onClick={() => setIncludePhotosInPdf(!includePhotosInPdf)}>
-                    <div className="flex flex-col items-end">
-                        <span className="text-[8px] font-black uppercase leading-none text-yellow-100/60">Include Photos</span>
-                        <span className="text-[9px] font-black uppercase leading-none text-white">{includePhotosInPdf ? 'Enabled' : 'Disabled'}</span>
-                    </div>
-                    <button className="text-white transition-all transform active:scale-90">
-                        {includePhotosInPdf ? <ToggleRight size={28} className="text-green-400" /> : <ToggleLeft size={28} className="text-white/40" />}
-                    </button>
-                 </div>
-             )}
-             <div className="hidden lg:flex items-center gap-3 bg-black/30 p-1.5 rounded-full border border-white/10 backdrop-blur-md">
+             <div className="hidden lg:flex items-center gap-3 bg-black/30 p-1.5 rounded-full border border-white/10">
                 <button onClick={handleZoomOut} className="p-1.5 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={16} className="scale-x-[-1]"/></button>
                 <span className="text-[10px] font-black uppercase tracking-widest min-w-[40px] text-center">{Math.round(zoom * 100)}%</span>
                 <button onClick={handleZoomIn} className="p-1.5 hover:bg-white/20 rounded-full transition-colors"><SearchIcon size={16}/></button>
              </div>
-             <button onClick={handleExportPDF} disabled={isExporting} className="flex items-center gap-2 bg-[#0f172a] text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-2xl hover:bg-black transition-all active:scale-95 group disabled:opacity-50 min-w-[100px] md:min-w-[180px] justify-center border border-white/5">
-                {isExporting ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={18} className="text-blue-400 group-hover:text-white" />}
-                <span className="hidden md:inline">{isExporting ? 'Generating...' : 'SAVE AS PDF'}</span>
-                <span className="md:hidden">{isExporting ? '...' : 'PDF'}</span>
+             <button onClick={handleExportPDF} disabled={isExporting} className="bg-[#0f172a] text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-black text-[10px] md:text-xs uppercase shadow-2xl hover:bg-black transition-all border border-white/5">
+                {isExporting ? '...' : 'PDF'}
              </button>
-             <button onClick={onClose} className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors border border-white/5"><X size={20}/></button>
+             <button onClick={onClose} className="p-2 bg-white/20 rounded-full hover:bg-white/30 border border-white/5"><X size={20}/></button>
           </div>
         </div>
 
@@ -658,103 +495,41 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             ref={scrollContainerRef}
             onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleDragEnd} onMouseLeave={handleDragEnd}
             onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleDragEnd}
-            className={`table-scroll flex-1 overflow-auto bg-slate-100/50 relative p-0 md:p-4 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
+            className={`flex-1 overflow-auto bg-slate-100/50 relative p-0 md:p-4 print:p-0 print:overflow-visible ${zoom > 1 ? 'cursor-grab' : 'cursor-default'} ${isDragging ? 'cursor-grabbing' : ''}`}
         >
           <div className="min-w-full min-h-full flex items-start justify-center">
             <div 
-              style={{ 
-                transform: `translate3d(0,0,0) scale(${zoom})`, 
-                transformOrigin: 'top left', 
-                width: zoom > 1 ? 'max-content' : '100%',
-                willChange: 'transform'
-              }} 
-              className={`select-none relative bg-white shadow-xl rounded-xl overflow-hidden print:transform-none print:shadow-none print:rounded-none ${!isDragging ? 'transition-transform duration-200' : ''}`}
+              style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: zoom > 1 ? 'max-content' : '100%' }} 
+              className={`select-none relative bg-white shadow-xl rounded-xl overflow-hidden print:transform-none print:shadow-none print:rounded-none`}
             >
               <table className="spreadsheet-table w-full text-left border-collapse print:table">
                   <thead className="print:table-header-group">
-                  <tr className="hidden print:table-row border-none">
-                      <th colSpan={hasImages ? 5 : 4} className="p-0 border-none bg-white">
-                          <div className="w-full px-4 pt-4 pb-2 text-left">
-                              <div className="flex justify-between items-start mb-4">
-                                  <div className="flex flex-col gap-2">
-                                      {brandLogo ? <img src={brandLogo} alt="Brand" className="h-10 object-contain self-start" /> : brandName ? <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">{brandName}</h2> : null}
-                                      <div><h1 className="text-sm font-black uppercase tracking-tighter text-slate-900 leading-none mt-1">Price List</h1><p className="text-[10px] font-bold text-slate-600 uppercase tracking-[0.1em] mt-0.5">{pricelist.title}</p></div>
-                                  </div>
-                                  <div className="flex flex-col items-end gap-2 text-right">
-                                      {companyLogo && <img src={companyLogo} alt="Company" className="h-6 object-contain" />}
-                                      <div><div className="bg-slate-900 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest inline-block">{pricelist.month} {pricelist.year}</div></div>
-                                  </div>
-                              </div>
-                              <div className="h-0.5 bg-slate-200 w-full rounded-full mb-4"></div>
-                          </div>
-                      </th>
-                  </tr>
-                  <tr className="print:bg-[#71717a] bg-[#71717a]">
-                      {hasImages && <th className="p-2 md:p-3 shrink-cell text-white">Media</th>}
-                      <th className="p-2 md:p-3 sku-cell text-white">SKU</th>
-                      <th className="p-2 md:p-3 desc-cell text-white">Description</th>
-                      <th className="p-2 md:p-3 price-cell text-right text-white">Normal</th>
-                      <th className="p-2 md:p-3 price-cell text-right text-white">Promo</th>
-                  </tr>
+                    <tr className="print:bg-[#71717a] bg-[#71717a]">
+                        {hasImages && <th className="p-2 md:p-3 shrink-cell text-white">Media</th>}
+                        <th className="p-2 md:p-3 sku-cell text-white">SKU</th>
+                        <th className="p-2 md:p-3 desc-cell text-white">Description</th>
+                        <th className="p-2 md:p-3 price-cell text-right text-white">Normal</th>
+                        <th className="p-2 md:p-3 price-cell text-right text-white">Promo</th>
+                    </tr>
                   </thead>
-                  
-                  {/* MAIN INTERACTIVE BODY (Virtualized) */}
-                  <tbody className="print:hidden">
-                    {topPadding > 0 && <tr><td colSpan={hasImages ? 5 : 4} style={{ height: topPadding }} /></tr>}
-                    {visibleItems.map((item) => (
-                        <PricelistRow 
-                            key={item.id} 
-                            item={item} 
-                            hasImages={hasImages} 
-                            onEnlarge={(url) => setEnlargedImage(url)} 
-                        />
-                    ))}
-                    {bottomPadding > 0 && <tr><td colSpan={hasImages ? 5 : 4} style={{ height: bottomPadding }} /></tr>}
-                  </tbody>
-
-                  {/* PRINT BODY (Static, Hidden in App, Visible in Print) */}
-                  <tbody className="hidden print:table-row-group">
+                  <tbody>
                     {items.map((item) => (
-                        <PricelistRow 
-                            key={`print-${item.id}`} 
-                            item={item} 
-                            hasImages={hasImages} 
-                            onEnlarge={() => {}} 
-                        />
+                        <PricelistRow key={item.id} item={item} hasImages={hasImages} onEnlarge={url => setEnlargedImage(url)} />
                     ))}
                   </tbody>
               </table>
-              {zoom > 1.2 && !isDragging && (<div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5"><Grip size={120} className="text-black" /></div>)}
             </div>
           </div>
         </div>
         <div className="p-3 md:p-4 bg-white border-t border-slate-100 flex justify-between items-center shrink-0 print:hidden z-10">
-          <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">ITEMS: {(pricelist.items || []).length}</span>
-          <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">OFFICIAL KIOSK PRO DOCUMENT • VAT INCL.</p>
+          <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">ITEMS: {items.length}</span>
+          <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">OFFICIAL KIOSK PRO DOCUMENT</p>
         </div>
       </div>
 
       {enlargedImage && (
-        <div 
-          className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4 md:p-12 animate-fade-in cursor-zoom-out print:hidden"
-          onClick={(e) => { e.stopPropagation(); setEnlargedImage(null); }}
-        >
-          <button className="absolute top-6 right-6 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all shadow-xl border border-white/10 z-[160]">
-             <X size={32} strokeWidth={3} />
-          </button>
-          
-          <div className="relative w-full h-full flex items-center justify-center group" onClick={e => e.stopPropagation()}>
-             <img 
-               src={enlargedImage} 
-               className="max-w-full max-h-full object-contain shadow-[0_30px_100px_rgba(0,0,0,0.8)] rounded-xl border border-white/5 animate-pop-dynamic"
-               alt="Enlarged product"
-               onClick={() => setEnlargedImage(null)}
-             />
-             
-             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 pointer-events-none opacity-60">
-                 Tap to Dismiss
-             </div>
-          </div>
+        <div className="fixed inset-0 z-[150] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4 animate-fade-in cursor-zoom-out print:hidden" onClick={() => setEnlargedImage(null)}>
+          <img src={enlargedImage} className="max-w-full max-h-full object-contain shadow-2xl rounded-xl" alt="" />
         </div>
       )}
     </div>
@@ -887,6 +662,17 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const timerRef = useRef<number | null>(null);
   const idleTimeout = (storeData?.screensaverSettings?.idleTimeout || 60) * 1000;
+
+  // SYSTEM WATCHDOG HEARTBEAT
+  useEffect(() => {
+    const heartbeat = setInterval(() => {
+        // Fix: Added check for signalAppHeartbeat on window object
+        if (window.signalAppHeartbeat) {
+            window.signalAppHeartbeat();
+        }
+    }, 2000);
+    return () => clearInterval(heartbeat);
+  }, []);
   
   useEffect(() => {
     const unlockAudio = () => {
@@ -960,30 +746,23 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
        {isIdle && screensaverEnabled && deviceType === 'kiosk' && <Screensaver products={allProductsFlat} ads={storeData.ads?.screensaver || []} pamphlets={storeData.catalogues || []} onWake={resetIdleTimer} settings={storeData.screensaverSettings} isAudioUnlocked={isAudioUnlocked} />}
        <header className="shrink-0 h-10 bg-slate-900 text-white flex items-center justify-between px-2 md:px-4 z-50 border-b border-slate-800 shadow-md print:hidden">
            <div className="flex items-center flex-1 max-w-xs md:max-w-md overflow-hidden mr-4">
-               <button 
-                   onClick={() => setShowGlobalSearch(true)} 
-                   className="flex items-center gap-3 bg-white/5 hover:bg-blue-600/20 text-slate-400 hover:text-white px-3 md:px-4 py-1 rounded-lg border border-white/5 transition-all group w-full text-left"
-               >
+               <button onClick={() => setShowGlobalSearch(true)} className="flex items-center gap-3 bg-white/5 hover:bg-blue-600/20 text-slate-400 hover:text-white px-3 md:px-4 py-1 rounded-lg border border-white/5 transition-all group w-full text-left">
                    <Search size={12} className="text-blue-500 group-hover:text-blue-400" />
                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate">Inventory Search...</span>
                </button>
            </div>
            <div className="flex items-center gap-2 md:gap-4">
+               <div className="hidden lg:flex items-center gap-2 px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700">
+                    <Activity size={12} className="text-green-500 animate-pulse" />
+                    <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Watchdog Active</span>
+               </div>
                {deviceType === 'kiosk' && (
-                   <button 
-                       onClick={() => setScreensaverEnabled(!screensaverEnabled)}
-                       className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${screensaverEnabled ? 'bg-green-900/40 text-green-400 border-green-500/30' : 'bg-slate-800 text-slate-500 border-slate-700 opacity-50'}`}
-                       title={screensaverEnabled ? 'Screensaver: ACTIVE' : 'Screensaver: PAUSED'}
-                   >
+                   <button onClick={() => setScreensaverEnabled(!screensaverEnabled)} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${screensaverEnabled ? 'bg-green-900/40 text-green-400 border-green-500/30' : 'bg-slate-800 text-slate-500 border-slate-700 opacity-50'}`}>
                        {screensaverEnabled ? <MonitorPlay size={14} className="animate-pulse" /> : <MonitorStop size={14} />}
-                       <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest hidden sm:inline">
-                           {screensaverEnabled ? 'Screensaver ON' : 'Screensaver OFF'}
-                       </span>
+                       <span className="text-[7px] md:text-[9px] font-black uppercase tracking-widest hidden sm:inline">{screensaverEnabled ? 'Screensaver ON' : 'Screensaver OFF'}</span>
                    </button>
                )}
-               <div className={`flex items-center gap-1 px-1.5 md:px-2 py-0.5 rounded-full ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>
-                   {isCloudConnected ? <Cloud size={8} /> : <HardDrive size={8} />}
-               </div>
+               <div className={`flex items-center gap-1 px-1.5 md:px-2 py-0.5 rounded-full ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}><Cloud size={8} /></div>
                <div className="flex items-center gap-2 border-l border-slate-700 pl-2">
                    <button onClick={() => setZoomLevel(zoomLevel === 1 ? 0.75 : 1)} className={`p-1 rounded flex items-center gap-1 text-[8px] md:text-[10px] font-bold transition-colors ${zoomLevel === 1 ? 'text-blue-400 bg-blue-900/30' : 'text-purple-400 bg-purple-900/30'}`}><ZoomOut size={12} /></button>
                </div>
@@ -993,41 +772,17 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
          {!activeBrand ? <BrandGrid brands={storeData.brands || []} heroConfig={storeData.hero} allCatalogs={storeData.catalogues || []} ads={storeData.ads} onSelectBrand={setActiveBrand} onViewGlobalCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onViewWebsite={(url) => setViewingWebsite(url)} onExport={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} deviceType={deviceType} /> : !activeCategory ? <CategoryGrid brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectCategory={setActiveCategory} onViewCatalog={(c:any) => { if(c.pdfUrl) setViewingPdf({url:c.pdfUrl, title:c.title}); else if(c.pages?.length) { setFlipbookPages(c.pages); setFlipbookTitle(c.title); setShowFlipbook(true); }}} onBack={() => setActiveBrand(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} /> : !activeProduct ? <ProductList category={activeCategory} brand={activeBrand} storeCatalogs={storeData.catalogues || []} onSelectProduct={setActiveProduct} onBack={() => setActiveCategory(null)} onViewCatalog={() => {}} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} selectedForCompare={compareProductIds} onToggleCompare={toggleCompareProduct} onStartCompare={() => setShowCompareModal(true)} /> : <ProductDetail product={activeProduct} onBack={() => setActiveProduct(null)} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} showScreensaverButton={false} />}
        </div>
        <footer className="relative shrink-0 bg-white border-t border-slate-200 text-slate-500 h-10 flex items-center justify-between px-2 md:px-6 z-50 text-[7px] md:text-[10px] print:hidden">
-          {/* Left: Device Telemetry */}
           <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
-              <div className="flex items-center gap-1 shrink-0">
-                  <div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                  <span className="font-bold uppercase whitespace-nowrap">{isOnline ? 'Live' : 'Offline'}</span>
-              </div>
-              <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 shrink-0">
-                  <span className="font-black text-slate-300 uppercase hidden md:inline">ID:</span>
-                  <span className="font-mono font-bold text-slate-600">{kioskId}</span>
-              </div>
-              <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 truncate">
-                  <RefreshCw size={8} className="text-slate-300 hidden md:inline" />
-                  <span className="font-bold uppercase text-slate-400">Sync: {lastSyncTime || '--:--'}</span>
-              </div>
+              <div className="flex items-center gap-1 shrink-0"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase whitespace-nowrap">{isOnline ? 'Live' : 'Offline'}</span></div>
+              <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 shrink-0"><span className="font-black text-slate-300 uppercase hidden md:inline">ID:</span><span className="font-mono font-bold text-slate-600">{kioskId}</span></div>
+              <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 truncate"><RefreshCw size={8} className="text-slate-300 hidden md:inline" /><span className="font-bold uppercase text-slate-400">Sync: {lastSyncTime || '--:--'}</span></div>
           </div>
-
-          {/* Absolute Center: Primary Pricelist Trigger (Upgraded) */}
           {pricelistBrands.length > 0 && (
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center">
-                  <button 
-                    onClick={() => { setSelectedBrandForPricelist(pricelistBrands[0]?.id || null); setShowPricelistModal(true); }} 
-                    className="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all border-2 border-white ring-8 ring-blue-600/5 group" 
-                    title="Pricelists"
-                  >
-                    <RIcon size={16} className="text-white group-hover:scale-110 transition-transform" />
-                  </button>
+                  <button onClick={() => { setSelectedBrandForPricelist(pricelistBrands[0]?.id || null); setShowPricelistModal(true); }} className="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all border-2 border-white ring-8 ring-blue-600/5 group"><RIcon size={16} className="text-white group-hover:scale-110 transition-transform" /></button>
               </div>
           )}
-
-          {/* Right: Creator Info */}
-          <div className="flex items-center gap-4 shrink-0 ml-2">
-              <button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:text-blue-600 transition-colors">
-                  <span>JSTYP</span>
-              </button>
-          </div>
+          <div className="flex items-center gap-4 shrink-0 ml-2"><button onClick={() => setShowCreator(true)} className="flex items-center gap-1 font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:text-blue-600 transition-colors"><span>JSTYP</span></button></div>
        </footer>
        <CreatorPopup isOpen={showCreator} onClose={() => setShowCreator(false)} />
        {showGlobalSearch && <SearchModal storeData={storeData} onSelectProduct={(p) => { setActiveBrand(storeData.brands.find(b => b.id === (p as any).brandId)!); setActiveCategory(storeData.brands.find(b => b.id === (p as any).brandId)!.categories.find(c => c.id === (p as any).categoryId)!); setActiveProduct(p); }} onClose={() => setShowGlobalSearch(false)} />}
@@ -1059,23 +814,10 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                            <span className="text-[10px] text-slate-400 font-bold uppercase mt-1 truncate max-w-xs">{viewingWebsite.replace(/^https?:\/\//, '')}</span>
                        </div>
                    </div>
-                   <button 
-                      onClick={() => setViewingWebsite(null)} 
-                      className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-6 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95"
-                    >
-                       <X size={16} strokeWidth={3} /> Exit Browser
-                   </button>
+                   <button onClick={() => setViewingWebsite(null)} className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-6 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95"><X size={16} strokeWidth={3} /> Exit Browser</button>
                </div>
                <div className="flex-1 bg-slate-100 relative">
-                   <iframe 
-                      src={viewingWebsite} 
-                      className="w-full h-full border-none" 
-                      title="Kiosk Web Portal"
-                      sandbox="allow-scripts allow-same-origin allow-forms"
-                   />
-                   <div className="absolute bottom-6 right-6 pointer-events-none opacity-20">
-                       <Globe size={120} className="text-slate-900" />
-                   </div>
+                   <iframe src={viewingWebsite} className="w-full h-full border-none" title="Kiosk Web Portal" sandbox="allow-scripts allow-same-origin allow-forms" />
                </div>
            </div>
        )}
