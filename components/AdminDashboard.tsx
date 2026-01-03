@@ -4,7 +4,7 @@ import {
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
   Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User
 } from 'lucide-react';
-import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem, ArchivedItem, AdSchedule } from '../types';
+import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem, ArchivedItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
 import { uploadFileToStorage, supabase, checkCloudConnection } from '../services/kioskService';
 import SetupGuide from './SetupGuide';
@@ -1703,7 +1703,7 @@ const KioskEditorModal = ({ kiosk, onSave, onClose }: { kiosk: KioskRegistry, on
                 </div>
                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3">
                     <button onClick={onClose} className="px-4 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
-                    <button onClick={onSave(draft)} className="px-4 py-2 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg">Save Changes</button>
+                    <button onClick={() => onSave(draft)} className="px-4 py-2 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -2350,7 +2350,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [showGuide, setShowGuide] = useState(false);
   const [selectedTVBrand, setSelectedTVBrand] = useState<TVBrand | null>(null);
   const [editingTVModel, setEditingTVModel] = useState<TVModel | null>(null);
-  const [editingAdSchedule, setEditingAdSchedule] = useState<{ zone: string, index: number, schedule: AdSchedule } | null>(null);
   
   // History State
   const [historyTab, setHistoryTab] = useState<'all' | 'delete' | 'restore' | 'update' | 'create'>('all');
@@ -2877,11 +2876,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                         {((localData.ads as any)[zone] || []).map((ad: any, idx: number) => (
                                             <div key={ad.id} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
                                                 {ad.type === 'video' ? <video src={ad.url} className="w-full h-full object-cover opacity-60" /> : <img src={ad.url} alt="Ad" className="w-full h-full object-cover" />}
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                                                    <button onClick={() => setEditingAdSchedule({ zone, index: idx, schedule: ad.schedule || { days: [0,1,2,3,4,5,6], startTime: '00:00', endTime: '23:59' } })} className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-lg" title="Schedule Ad"><Clock size={12}/></button>
-                                                    <button onClick={() => { const currentAds = (localData.ads as any)[zone]; const toDelete = currentAds[idx]; const newAdsList = currentAds.filter((_: any, i: number) => i !== idx); handleLocalUpdate({ ...localData, ads: { ...localData.ads, [zone]: newAdsList } as any, archive: addToArchive('other', `Deleted ad from ${zone}`, toDelete, 'delete') }); }} className="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all shadow-lg"><Trash2 size={12} /></button>
-                                                </div>
-                                                {ad.schedule && <div className="absolute top-1 left-1 bg-blue-500 text-white p-0.5 rounded text-[7px] font-black uppercase">Scheduled</div>}
+                                                <button onClick={() => { const currentAds = (localData.ads as any)[zone]; const toDelete = currentAds[idx]; const newAdsList = currentAds.filter((_: any, i: number) => i !== idx); handleLocalUpdate({ ...localData, ads: { ...localData.ads, [zone]: newAdsList } as any, archive: addToArchive('other', `Deleted ad from ${zone}`, toDelete, 'delete') }); }} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"><Trash2 size={10} /></button>
                                             </div>
                                         ))}
                                     </div>
@@ -3048,70 +3043,10 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Clock size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Timing & Schedule</h3></div>
                              <div className="grid grid-cols-2 gap-4 mb-6"><InputField label="Idle Wait (sec)" val={localData.screensaverSettings?.idleTimeout||60} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, idleTimeout: parseInt(e.target.value)}, archive: addToArchive('other', 'Screensaver Idle Timeout', e.target.value, 'update')})} /><InputField label="Slide Duration (sec)" val={localData.screensaverSettings?.imageDuration||8} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, imageDuration: parseInt(e.target.value)}, archive: addToArchive('other', 'Screensaver Slide Duration', e.target.value, 'update')})} /></div>
                              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><div className="flex justify-between items-center mb-4"><label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Active Hours (Sleep Mode)</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, enableSleepMode: !localData.screensaverSettings?.enableSleepMode}, archive: addToArchive('other', 'Screensaver Sleep Mode Toggle', !localData.screensaverSettings?.enableSleepMode, 'update')})} className={`w-8 h-4 rounded-full transition-colors relative ${localData.screensaverSettings?.enableSleepMode ? 'bg-green-500' : 'bg-slate-300'}`}><div className={`w-2 h-2 bg-white rounded-full absolute top-1 transition-all ${localData.screensaverSettings?.enableSleepMode ? 'left-5' : 'left-1'}`}></div></button></div><div className={`grid grid-cols-2 gap-4 transition-opacity ${localData.screensaverSettings?.enableSleepMode ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}><div><label className="block text-[10px] font-bold text-slate-400 mb-1">Start Time</label><input type="time" value={localData.screensaverSettings?.activeHoursStart || '08:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursStart: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div><div><label className="block text-[10px] font-bold text-slate-400 mb-1">End Time</label><input type="time" value={localData.screensaverSettings?.activeHoursEnd || '20:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursEnd: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div></div></div>
-                             
-                             <div className="mt-8 bg-slate-900 p-6 rounded-2xl border border-slate-800 text-white">
-                                <h4 className="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em] mb-4">Weighted Shuffle Logic</h4>
-                                <div className="space-y-6">
-                                    {[
-                                        { key: 'adWeight', label: 'Marketing Ad Weight', color: 'blue' },
-                                        { key: 'newProductWeight', label: 'New Product Weight', color: 'orange' },
-                                        { key: 'productWeight', label: 'Regular Item Weight', color: 'slate' }
-                                    ].map(w => (
-                                        <div key={w.key}>
-                                            <div className="flex justify-between items-center mb-2">
-                                                <label className="text-[10px] font-bold text-slate-400 uppercase">{w.label}</label>
-                                                <span className={`text-xs font-black text-${w.color}-400`}>{(localData.screensaverSettings as any)[w.key] || 1}x</span>
-                                            </div>
-                                            <input 
-                                                type="range" min="1" max="10" step="1" 
-                                                value={(localData.screensaverSettings as any)[w.key] || 1}
-                                                onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [w.key]: parseInt(e.target.value)}})}
-                                                className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                             </div>
                          </div>
                          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Content & Behavior</h3></div>
-                             <div className="space-y-4">
-                                {[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}, archive: addToArchive('other', `Screensaver Opt: ${opt.label}`, !(localData.screensaverSettings as any)[opt.key], 'update')})} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}
-                             </div>
-
-                             <div className="mt-8 pt-8 border-t border-slate-100 space-y-6">
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Locked Transition Effect</label>
-                                    <select 
-                                        value={localData.screensaverSettings?.lockedEffect || 'random'}
-                                        onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, lockedEffect: e.target.value as any}})}
-                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:border-blue-500"
-                                    >
-                                        <option value="random">Dynamic Random Rotation</option>
-                                        <option value="effect-smooth-zoom">Smooth Zoom (Ken Burns)</option>
-                                        <option value="effect-subtle-drift">Subtle Drift</option>
-                                        <option value="effect-soft-scale">Soft Pulse Scale</option>
-                                        <option value="effect-gentle-pan">Gentle Horizontal Pan</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Wake-on-Touch Behavior</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button 
-                                            onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, wakeBehavior: 'instant'}})}
-                                            className={`p-3 rounded-xl border text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-all ${localData.screensaverSettings?.wakeBehavior !== 'zoom-out' ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
-                                        >
-                                            <Zap size={14}/> Instant Wake
-                                        </button>
-                                        <button 
-                                            onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, wakeBehavior: 'zoom-out'}})}
-                                            className={`p-3 rounded-xl border text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-all ${localData.screensaverSettings?.wakeBehavior === 'zoom-out' ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
-                                        >
-                                            <Maximize size={14}/> Cinematic Fade
-                                        </button>
-                                    </div>
-                                </div>
-                             </div>
+                             <div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}, archive: addToArchive('other', `Screensaver Opt: ${opt.label}`, !(localData.screensaverSettings as any)[opt.key], 'update')})} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div>
                          </div>
                      </div>
 
@@ -3500,9 +3435,11 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
         {editingTVModel && (
             <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updatedTVBrand : b) } as TVConfig, archive: addToArchive('tv_model', m.name, m, isNew ? 'create' : 'update') }); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />
         )}
+        
+        {showGuide && <SetupGuide onClose={() => setShowGuide(false)} />}
+        
+    </div>
+  );
+};
 
-        {editingAdSchedule && (
-            <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
-                    <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                        <h3 className="font-black text-slate-900 uppercase">Ad Scheduling</h3>
+export default AdminDashboard;

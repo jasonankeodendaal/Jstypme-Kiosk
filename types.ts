@@ -122,18 +122,11 @@ export interface Pricelist {
   dateAdded?: string; // New: For "New" flag logic
 }
 
-export interface AdSchedule {
-  days: number[]; // 0-6 (Sunday-Saturday)
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
-}
-
 export interface AdItem {
   id: string;
   type: 'image' | 'video';
   url: string;
   dateAdded?: string; // New: For aging logic
-  schedule?: AdSchedule; // New: For scheduling
 }
 
 export interface AdConfig {
@@ -156,12 +149,6 @@ export interface ScreensaverSettings {
   activeHoursStart?: string; // e.g. "08:00"
   activeHoursEnd?: string;   // e.g. "20:00"
   enableSleepMode?: boolean; // Turn screen black outside active hours
-  // New Weighted & Behavior Controls
-  adWeight?: number; // 1-10
-  productWeight?: number; // 1-10
-  newProductWeight?: number; // 1-10
-  lockedEffect?: 'random' | 'effect-smooth-zoom' | 'effect-subtle-drift' | 'effect-soft-scale' | 'effect-gentle-pan';
-  wakeBehavior?: 'instant' | 'zoom-out';
 }
 
 export interface KioskRegistry {
