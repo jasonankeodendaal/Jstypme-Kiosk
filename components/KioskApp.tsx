@@ -818,13 +818,13 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                </div>
                <div className="flex-1 bg-white relative overflow-hidden">
                    {/* Improved iframe implementation for better scaling and correctness */}
-                   {/* Removed non-standard importance="high" to fix TS error */}
                    <iframe 
                       src={viewingWebsite} 
                       className="absolute inset-0 w-full h-full border-none" 
                       title="Kiosk Web Portal" 
                       sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                       loading="lazy"
+                      importance="high"
                    />
                </div>
            </div>

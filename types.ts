@@ -120,8 +120,6 @@ export interface Pricelist {
   month: string;
   year: string;
   dateAdded?: string; // New: For "New" flag logic
-  version?: string; // Sequential version ID (v01, v02...)
-  history?: Pricelist[]; // Collection of past versions for audit/rollback
 }
 
 export interface AdItem {
