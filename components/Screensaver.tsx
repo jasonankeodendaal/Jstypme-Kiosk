@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef, memo } from 'react';
 import { FlatProduct, AdItem, Catalogue, ScreensaverSettings } from '../types';
 import { Moon, Volume2, VolumeX } from 'lucide-react';
@@ -34,7 +33,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const watchdogRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Default config - Changed displayStyle to 'contain' by default for "perfect fit"
+  // Default config with new fields
   const config: ScreensaverSettings = {
       idleTimeout: 60,
       imageDuration: 8,
@@ -48,6 +47,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       enableSleepMode: false,
       activeHoursStart: '08:00',
       activeHoursEnd: '20:00',
+      adWeight: 3,
+      productWeight: 1,
+      pamphletWeight: 1,
+      lockedEffect: 'random',
+      wakeBehavior: 'reset',
       ...settings
   };
 
@@ -81,6 +85,16 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       return () => clearInterval(interval);
   }, [config.activeHoursStart, config.activeHoursEnd, config.enableSleepMode]);
 
+  const isAssetScheduled = (asset: AdItem): boolean => {
+      const now = new Date();
+      if (asset.startDate && new Date(asset.startDate) > now) return false;
+      if (asset.endDate && new Date(asset.endDate) < now) return false;
+      if (asset.activeDays && asset.activeDays.length > 0) {
+          if (!asset.activeDays.includes(now.getDay())) return false;
+      }
+      return true;
+  };
+
   const shouldIncludeItem = (dateString?: string): boolean => {
       if (!dateString) return true;
       const addedDate = new Date(dateString);
@@ -93,10 +107,10 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   useEffect(() => {
     const list: PlaylistItem[] = [];
 
-    if (config.showCustomAds) {
+    if (config.showCustomAds && (config.adWeight || 0) > 0) {
         ads.forEach((ad, i) => {
-          if (shouldIncludeItem(ad.dateAdded)) {
-            for(let c=0; c<3; c++) {
+          if (isAssetScheduled(ad) && shouldIncludeItem(ad.dateAdded)) {
+            for(let c=0; c < (config.adWeight || 3); c++) {
                 list.push({
                     id: `ad-${ad.id}-${i}-${c}`,
                     type: ad.type,
@@ -110,64 +124,56 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         });
     }
 
-    if (config.showPamphlets) {
+    if (config.showPamphlets && (config.pamphletWeight || 0) > 0) {
         pamphlets.forEach((pamphlet) => {
            if (pamphlet.pages && pamphlet.pages.length > 0) {
                if (!pamphlet.endDate || shouldIncludeItem(pamphlet.startDate)) {
-                  list.push({
-                    id: `pamphlet-${pamphlet.id}`,
-                    type: 'image',
-                    url: pamphlet.pages[0],
-                    title: pamphlet.title,
-                    subtitle: "Showcase Catalogue",
-                    startDate: pamphlet.startDate,
-                    endDate: pamphlet.endDate
-                 });
+                  for(let c=0; c < (config.pamphletWeight || 1); c++) {
+                      list.push({
+                        id: `pamphlet-${pamphlet.id}-${c}`,
+                        type: 'image',
+                        url: pamphlet.pages[0],
+                        title: pamphlet.title,
+                        subtitle: "Showcase Catalogue",
+                        startDate: pamphlet.startDate,
+                        endDate: pamphlet.endDate
+                     });
+                  }
                }
            }
         });
     }
 
-    products.forEach((p) => {
-        if (!shouldIncludeItem(p.dateAdded)) return;
+    if ((config.productWeight || 0) > 0) {
+        products.forEach((p) => {
+            if (!shouldIncludeItem(p.dateAdded)) return;
 
-        if (config.showProductImages && p.imageUrl) {
-            list.push({
-                id: `prod-img-${p.id}`,
-                type: 'image',
-                url: p.imageUrl,
-                title: p.brandName,
-                subtitle: p.name,
-                dateAdded: p.dateAdded
-            });
-        }
-        if (config.showProductVideos) {
-            if (p.videoUrl) {
-                 list.push({
-                    id: `prod-vid-${p.id}`,
-                    type: 'video',
-                    url: p.videoUrl,
-                    title: p.brandName,
-                    subtitle: `${p.name} - Official Video`,
-                    dateAdded: p.dateAdded
-                 });
-            }
-            if (p.videoUrls) {
-                p.videoUrls.forEach((url, idx) => {
-                    if (url !== p.videoUrl) {
-                        list.push({
-                            id: `prod-vid-${p.id}-${idx}`,
+            for(let c=0; c < (config.productWeight || 1); c++) {
+                if (config.showProductImages && p.imageUrl) {
+                    list.push({
+                        id: `prod-img-${p.id}-${c}`,
+                        type: 'image',
+                        url: p.imageUrl,
+                        title: p.brandName,
+                        subtitle: p.name,
+                        dateAdded: p.dateAdded
+                    });
+                }
+                if (config.showProductVideos) {
+                    if (p.videoUrl) {
+                         list.push({
+                            id: `prod-vid-${p.id}-${c}-primary`,
                             type: 'video',
-                            url: url,
+                            url: p.videoUrl,
                             title: p.brandName,
-                            subtitle: `${p.name} - Video Showcase`,
+                            subtitle: `${p.name} - Official Video`,
                             dateAdded: p.dateAdded
-                        });
+                         });
                     }
-                });
+                }
             }
-        }
-    });
+        });
+    }
 
     for (let i = list.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -183,7 +189,10 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     config.showProductImages, 
     config.showProductVideos, 
     config.showCustomAds, 
-    config.showPamphlets
+    config.showPamphlets,
+    config.adWeight,
+    config.productWeight,
+    config.pamphletWeight
   ]);
 
   const nextSlide = () => {
@@ -214,6 +223,12 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
   useEffect(() => {
     if (!currentItem) return;
+    
+    if (config.lockedEffect && config.lockedEffect !== 'random') {
+        setAnimationEffect(config.lockedEffect);
+        return;
+    }
+
     const imageEffects = ['effect-smooth-zoom', 'effect-subtle-drift', 'effect-soft-scale', 'effect-gentle-pan'];
     const videoEffects = ['effect-fade-in']; 
     if (currentItem.type === 'image') {
@@ -221,7 +236,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     } else {
         setAnimationEffect(videoEffects[0]);
     }
-  }, [currentItem?.id]);
+  }, [currentItem?.id, config.lockedEffect]);
 
   useEffect(() => {
     if (isSleepMode || !currentItem || playlist.length === 0) return;
@@ -285,7 +300,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       </div>
   );
 
-  // Forced object-contain for "shrink to fit perfectly"
   const objectFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
 
   return (
@@ -348,7 +362,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         }
       `}</style>
 
-      {/* Cinematic Letterbox Aura Background - uses object-cover to fill all gaps */}
       <div 
         key={`bg-${currentItem.id}`} 
         className="absolute inset-0 z-0 letterbox-blur opacity-60"
@@ -357,7 +370,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       
       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 z-10" />
 
-      {/* Main Content: Uses object-contain to shrink to fit perfectly */}
       <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center overflow-hidden p-4 md:p-12">
          
          {currentItem.type === 'video' ? (
