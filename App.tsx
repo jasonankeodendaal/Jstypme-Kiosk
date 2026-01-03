@@ -38,20 +38,28 @@ export default function App() {
   
   const syncTimeoutRef = useRef<number | null>(null);
   const kioskId = getKioskId();
-
-  useEffect(() => {
-    const handleLocationChange = () => setCurrentRoute(window.location.pathname);
-    window.addEventListener('popstate', handleLocationChange);
-    return () => window.removeEventListener('popstate', handleLocationChange);
-  }, []);
+  const isAdmin = currentRoute.startsWith('/admin');
 
   const fetchData = useCallback(async (isBackground = false) => {
+      // Only show visible syncing indicators if explicitly not a background pulse
       if (!isBackground) setIsSyncing(true);
+      
       try {
         const data = await generateStoreData();
         if (data) {
-           // Create a new reference to force React state update
-           setStoreData({ ...data });
+           setStoreData(prev => {
+               // SILENT UPDATE LOGIC:
+               // If we are in Admin mode, we only update fleet telemetry to avoid 
+               // wiping out local draft edits in the form fields.
+               if (isAdmin && isBackground && prev) {
+                   return {
+                       ...prev,
+                       fleet: data.fleet
+                   };
+               }
+               // For Kiosks or first load, merge data silently without triggering a reload of the component tree if possible
+               return { ...data };
+           });
            setLastSyncTime(new Date().toLocaleTimeString());
         }
       } catch (e) {
@@ -60,13 +68,14 @@ export default function App() {
         setLoading(false);
         setIsSyncing(false);
       }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     initSupabase();
+    // Initial fetch
     fetchData();
 
-    // 1. Routine Sync (Pulsing) - Pulls every 60s
+    // 1. Routine Sync (Pulsing) - Pulls telemetry every 60s SILENTLY
     const interval = setInterval(() => {
         fetchData(true);
     }, 60000); 
@@ -77,22 +86,21 @@ export default function App() {
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
-              console.log("Realtime: Config change detected. Refreshing state...");
-              if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-              syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 200);
+              if (!isAdmin) {
+                  // Kiosks update silently in background
+                  if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
+                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 500);
+              }
             }
           )
           .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
             (payload: any) => {
-              // Only trigger if it affects this device or if we are in admin mode
-              const isAdminView = window.location.pathname.startsWith('/admin');
               const isMyUpdate = payload.new && payload.new.id === kioskId;
               const isMyDelete = payload.old && payload.old.id === kioskId;
               
-              if (isAdminView || isMyUpdate || isMyDelete) {
-                  console.log("Realtime: Fleet change detected.");
+              if (isAdmin || isMyUpdate || isMyDelete) {
                   if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 200);
+                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 500);
               }
             }
           )
@@ -105,9 +113,10 @@ export default function App() {
     }
     
     return () => clearInterval(interval);
-  }, [fetchData, kioskId]);
+  }, [fetchData, kioskId, isAdmin]);
 
   const handleUpdateData = async (newData: StoreData) => {
+    // Admin explicit saves show a sync indicator
     setIsSyncing(true);
     setStoreData({ ...newData }); 
     try {
@@ -120,7 +129,9 @@ export default function App() {
     }
   };
 
-  if (loading) {
+  // Critical: Only show the "System Initialize" loader on the VERY first boot.
+  // Once storeData is present, we never show this again during background syncs.
+  if (loading && !storeData) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-white font-black">
         <Loader2 className="animate-spin mb-4 text-blue-500" size={48} />
@@ -129,15 +140,15 @@ export default function App() {
     );
   }
 
-  const isAdmin = currentRoute.startsWith('/admin');
-
   return (
     <>
       {storeData && <AppIconUpdater storeData={storeData} />}
-      {isSyncing && (
+      
+      {/* Subtle sync indicator for Admin actions, Kiosks stay silent */}
+      {isSyncing && isAdmin && (
          <div className="fixed top-12 right-4 z-[200] bg-slate-900 text-white px-3 py-1.5 rounded-lg shadow-2xl flex items-center gap-2 border border-white/10 animate-fade-in">
             <Loader2 className="animate-spin text-blue-400" size={12} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Syncing Cloud</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Updating Cloud</span>
          </div>
       )}
       
