@@ -168,8 +168,11 @@ export interface KioskRegistry {
 
 export interface ArchivedItem {
     id: string;
-    type: 'product' | 'pricelist' | 'tv_model' | 'device' | 'other';
+    type: 'product' | 'pricelist' | 'tv_model' | 'device' | 'brand' | 'catalogue' | 'other';
+    action: 'delete' | 'restore' | 'update' | 'create';
     name: string;
+    userName: string;
+    method: 'admin_panel' | 'system_auto' | 'import';
     data: any;
     deletedAt: string;
 }

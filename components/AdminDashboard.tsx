@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User
 } from 'lucide-react';
-import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem } from '../types';
+import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem, ArchivedItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
 import { uploadFileToStorage, supabase, checkCloudConnection } from '../services/kioskService';
 import SetupGuide from './SetupGuide';
@@ -93,7 +93,6 @@ const SystemDocumentation = () => {
                             }`}
                         >
                             <div className={`p-2 rounded-xl transition-all duration-500 ${activeSection === section.id ? 'bg-white/20' : 'bg-slate-800'}`}>
-                                {/* Fix: Cast to any to allow size prop override in cloneElement */}
                                 {React.cloneElement(section.icon as React.ReactElement<any>, { size: 18 })}
                             </div>
                             <div className="min-w-0">
@@ -592,11 +591,23 @@ const SystemDocumentation = () => {
     );
 };
 
-// Updated Auth Component with Name/PIN and Admin validation
+// Updated Auth Component with persistence
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+
+  // Persistent login check
+  useEffect(() => {
+    const savedAdmin = localStorage.getItem('kiosk_admin_session');
+    if (savedAdmin) {
+        try {
+            const adminData = JSON.parse(savedAdmin);
+            const verified = admins.find(a => a.id === adminData.id && a.pin === adminData.pin);
+            if (verified) onLogin(verified);
+        } catch(e) {}
+    }
+  }, [admins]);
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -613,6 +624,7 @@ const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminU
     );
 
     if (admin) {
+        localStorage.setItem('kiosk_admin_session', JSON.stringify(admin));
         onLogin(admin);
     } else {
         setError('Invalid credentials.');
@@ -1363,8 +1375,8 @@ const PricelistManager = ({
                              <div className="bg-white/40 p-2 rounded-lg border border-slate-100">
                                 <label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Pricelist Mode</label>
                                 <div className="grid grid-cols-2 gap-1 bg-white p-1 rounded-md border border-slate-200">
-                                    <button onClick={() => updatePricelist(item.id, { type: 'pdf', dateAdded: new Date().toISOString() })} className={`py-1 text-[9px] font-black uppercase rounded flex items-center justify-center gap-1 transition-all ${item.type !== 'manual' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><FileText size={10}/> PDF</button>
-                                    <button onClick={() => updatePricelist(item.id, { type: 'manual', dateAdded: new Date().toISOString() })} className={`py-1 text-[9px] font-black uppercase rounded flex items-center justify-center gap-1 transition-all ${item.type === 'manual' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={10}/> Manual</button>
+                                    <button onClick={() => updatePricelist(item.id, { type: 'pdf', dateAdded: new Date().toISOString() })} className={`py-1 text-[9px] font-black uppercase rounded items-center justify-center gap-1 transition-all ${item.type !== 'manual' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><FileText size={10}/> PDF</button>
+                                    <button onClick={() => updatePricelist(item.id, { type: 'manual', dateAdded: new Date().toISOString() })} className={`py-1 text-[9px] font-black uppercase rounded items-center justify-center gap-1 transition-all ${item.type === 'manual' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={10}/> Manual</button>
                                 </div>
                              </div>
 
@@ -2231,7 +2243,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
         let category = newBrands[brandName].categories.find(c => c.name === categoryName);
         if (!category) {
             category = {
-                id: generateId('cat'),
+                id: generateId('c'),
                 name: categoryName,
                 icon: 'Box',
                 products: []
@@ -2243,7 +2255,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
         let product = category.products.find(p => p.name === productName);
         if (!product) {
             product = {
-                id: generateId('prod'),
+                id: generateId('p'),
                 name: productName, 
                 description: '',
                 specs: {},
@@ -2307,7 +2319,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
     return Object.values(newBrands);
 };
 
-// Fix: Implemented missing downloadZip function
+// Implemented missing downloadZip function
 const downloadZip = async (data: StoreData | null) => {
     if (!data) return;
     const zip = new JSZip();
@@ -2352,7 +2364,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [editingTVModel, setEditingTVModel] = useState<TVModel | null>(null);
   
   // History State
-  const [historyTab, setHistoryTab] = useState<'brands' | 'catalogues' | 'deletedItems'>('deletedItems');
+  const [historyTab, setHistoryTab] = useState<'all' | 'delete' | 'restore' | 'update' | 'create'>('all');
   const [historySearch, setHistorySearch] = useState('');
   
   const [localData, setLocalData] = useState<StoreData | null>(storeData);
@@ -2370,7 +2382,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       { id: 'fleet', label: 'Fleet', icon: Tablet },
       { id: 'history', label: 'History', icon: History },
       { id: 'settings', label: 'Settings', icon: Settings },
-      { id: 'guide', label: 'System Guide', icon: BookOpen } // New Tab
+      { id: 'guide', label: 'System Guide', icon: BookOpen }
   ].filter(tab => tab.id === 'guide' || currentUser?.permissions[tab.id as keyof AdminPermissions]);
 
   useEffect(() => {
@@ -2459,7 +2471,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
       if(confirm(`Archive and remove device "${kiosk.name}" from live monitoring?`) && supabase) {
           // 1. Archive the device data
-          const newArchive = addToArchive('device', kiosk.name, kiosk);
+          const newArchive = addToArchive('device', kiosk.name, kiosk, 'delete');
           
           // 2. Update local data state
           const updatedData = { ...localData!, archive: newArchive };
@@ -2475,13 +2487,16 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   };
 
   // ARCHIVE HANDLERS
-  const addToArchive = (type: 'product' | 'pricelist' | 'tv_model' | 'device' | 'other', name: string, data: any) => {
-      if (!localData) return;
+  const addToArchive = (type: ArchivedItem['type'], name: string, data: any, action: ArchivedItem['action'] = 'delete', method: ArchivedItem['method'] = 'admin_panel') => {
+      if (!localData || !currentUser) return;
       const now = new Date().toISOString();
-      const newItem = {
+      const newItem: ArchivedItem = {
           id: generateId('arch'),
           type,
+          action,
           name,
+          userName: currentUser.name,
+          method,
           data,
           deletedAt: now
       };
@@ -2489,7 +2504,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       const currentArchive = localData.archive || { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} };
       const newArchive = {
           ...currentArchive,
-          deletedItems: [newItem, ...(currentArchive.deletedItems || [])]
+          deletedItems: [newItem, ...(currentArchive.deletedItems || [])].slice(0, 1000) // Cap history to 1000 items
       };
       
       return newArchive;
@@ -2499,10 +2514,11 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
      if(!localData) return;
      const newArchiveBrands = localData.archive?.brands.filter(x => x.id !== b.id) || [];
      const newBrands = [...localData.brands, b];
+     const newArchive = addToArchive('brand', b.name, b, 'restore');
      handleLocalUpdate({
          ...localData,
          brands: newBrands,
-         archive: { ...localData.archive!, brands: newArchiveBrands }
+         archive: { ...localData.archive!, brands: newArchiveBrands, deletedItems: newArchive?.deletedItems }
      });
   };
   
@@ -2510,10 +2526,11 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
      if(!localData) return;
      const newArchiveCats = localData.archive?.catalogues.filter(x => x.id !== c.id) || [];
      const newCats = [...(localData.catalogues || []), c];
+     const newArchive = addToArchive('catalogue', c.title, c, 'restore');
      handleLocalUpdate({
          ...localData,
          catalogues: newCats,
-         archive: { ...localData.archive!, catalogues: newArchiveCats }
+         archive: { ...localData.archive!, catalogues: newArchiveCats, deletedItems: newArchive?.deletedItems }
      });
   };
 
@@ -2550,7 +2567,8 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
           return b;
       });
 
-      handleLocalUpdate({ ...localData, brands: newBrands });
+      const newArchive = addToArchive('product', product.name, { product, from: selectedCategory.name, to: targetCategoryId }, 'update');
+      handleLocalUpdate({ ...localData, brands: newBrands, archive: newArchive });
       setMovingProduct(null);
   };
 
@@ -2571,6 +2589,11 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   if (!localData) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /> Loading...</div>;
   if (!currentUser) return <Auth admins={localData.admins || []} onLogin={setCurrentUser} />;
 
+  const logout = () => {
+    localStorage.removeItem('kiosk_admin_session');
+    setCurrentUser(null);
+  };
+
   const brands = Array.isArray(localData.brands) 
       ? [...localData.brands].sort((a, b) => a.name.localeCompare(b.name)) 
       : [];
@@ -2580,18 +2603,13 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       : [];
 
   // Filter Logic for History
-  const archivedBrands = (localData.archive?.brands || []).filter(b => 
-      b.name.toLowerCase().includes(historySearch.toLowerCase()) || 
-      b.id.toLowerCase().includes(historySearch.toLowerCase())
-  );
-  
-  const archivedCatalogues = (localData.archive?.catalogues || []).filter(c => 
-      c.title.toLowerCase().includes(historySearch.toLowerCase())
-  );
-
-  const archivedGenericItems = (localData.archive?.deletedItems || []).filter(i =>
-      i.name.toLowerCase().includes(historySearch.toLowerCase())
-  );
+  const archivedGenericItems = (localData.archive?.deletedItems || []).filter(i => {
+      const matchesSearch = i.name.toLowerCase().includes(historySearch.toLowerCase()) || 
+                          i.userName.toLowerCase().includes(historySearch.toLowerCase()) ||
+                          i.type.toLowerCase().includes(historySearch.toLowerCase());
+      const matchesTab = historyTab === 'all' || i.action === historyTab;
+      return matchesSearch && matchesTab;
+  });
 
   return (
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
@@ -2626,7 +2644,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                          <span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span>
                      </div>
                      <button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button>
-                     <button onClick={() => setCurrentUser(null)} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2">
+                     <button onClick={logout} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2">
                         <LogOut size={16} />
                         <span className="text-[10px] font-bold uppercase hidden md:inline">Logout</span>
                      </button>
@@ -2655,14 +2673,14 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             {activeTab === 'inventory' && (
                 !selectedBrand ? (
                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 animate-fade-in">
-                       <button onClick={() => { const name = prompt("Brand Name:"); if(name) handleLocalUpdate({ ...localData, brands: [...brands, { id: generateId('b'), name, categories: [] }] }) }} className="bg-white border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-4 md:p-8 text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-all group min-h-[120px] md:min-h-[200px]">
+                       <button onClick={() => { const name = prompt("Brand Name:"); if(name) { handleLocalUpdate({ ...localData, brands: [...brands, { id: generateId('b'), name, categories: [] }], archive: addToArchive('brand', name, null, 'create') }); } }} className="bg-white border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-4 md:p-8 text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-all group min-h-[120px] md:min-h-[200px]">
                            <Plus size={24} className="mb-2" /><span className="font-bold uppercase text-[10px] md:text-xs tracking-wider text-center">Add Brand</span>
                        </button>
                        {brands.map(brand => (
                            <div key={brand.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all group relative flex flex-col h-full">
                                <div className="flex-1 bg-slate-50 flex items-center justify-center p-2 relative aspect-square">
                                    {brand.logoUrl ? <img src={brand.logoUrl} className="max-h-full max-w-full object-contain" /> : <span className="text-4xl font-black text-slate-200">{brand.name.charAt(0)}</span>}
-                                   <button onClick={(e) => { e.stopPropagation(); if(confirm("Move to archive?")) { const now = new Date().toISOString(); handleLocalUpdate({...localData, brands: brands.filter(b=>b.id!==brand.id), archive: {...localData.archive!, brands: [...(localData.archive?.brands||[]), brand], deletedAt: {...localData.archive?.deletedAt, [brand.id]: now} }}); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12}/></button>
+                                   <button onClick={(e) => { e.stopPropagation(); if(confirm("Move to archive?")) { const now = new Date().toISOString(); handleLocalUpdate({...localData, brands: brands.filter(b=>b.id!==brand.id), archive: {...addToArchive('brand', brand.name, brand, 'delete')!, brands: [...(localData.archive?.brands||[]), brand], deletedAt: {...localData.archive?.deletedAt, [brand.id]: now} }}); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12}/></button>
                                </div>
                                <div className="p-2 md:p-4">
                                    <h3 className="font-black text-slate-900 text-xs md:text-lg uppercase tracking-tight mb-1 truncate">{brand.name}</h3>
@@ -2674,16 +2692,16 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                    </div>
                ) : !selectedCategory ? (
                    <div className="animate-fade-in">
-                       <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-xl md:text-2xl font-black uppercase text-slate-900 flex-1">{selectedBrand.name}</h2><FileUpload label="Brand Logo" currentUrl={selectedBrand.logoUrl} onUpload={(url: any) => { const updated = {...selectedBrand, logoUrl: url}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }} /></div>
+                       <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-xl md:text-2xl font-black uppercase text-slate-900 flex-1">{selectedBrand.name}</h2><FileUpload label="Brand Logo" currentUrl={selectedBrand.logoUrl} onUpload={(url: any) => { const updated = {...selectedBrand, logoUrl: url}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('brand', selectedBrand.name, {logo: url}, 'update')}); }} /></div>
                        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-                           <button onClick={() => { const name = prompt("Category Name:"); if(name) { const updated = {...selectedBrand, categories: [...selectedBrand.categories, { id: generateId('c'), name, icon: 'Box', products: [] }]}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); } }} className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-4 text-slate-400 hover:border-blue-500 hover:text-blue-500 aspect-square"><Plus size={24} /><span className="font-bold text-[10px] uppercase mt-2 text-center">New Category</span></button>
+                           <button onClick={() => { const name = prompt("Category Name:"); if(name) { const updated = {...selectedBrand, categories: [...selectedBrand.categories, { id: generateId('c'), name, icon: 'Box', products: [] }]}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `${selectedBrand.name} > ${name}`, null, 'create')}); } }} className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-4 text-slate-400 hover:border-blue-500 hover:text-blue-500 aspect-square"><Plus size={24} /><span className="font-bold text-[10px] uppercase mt-2 text-center">New Category</span></button>
                            {selectedBrand.categories.map(cat => (
                                <button key={cat.id} onClick={() => setSelectedCategory(cat)} className="bg-white p-2 md:p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md text-left group relative aspect-square flex flex-col justify-center">
                                    <Box size={20} className="mb-2 md:mb-4 text-slate-400 mx-auto md:mx-0" />
                                    <h3 className="font-black text-slate-900 uppercase text-[10px] md:text-sm text-center md:text-left truncate w-full">{cat.name}</h3>
                                    <p className="text-[9px] md:text-xs text-slate-500 font-bold text-center md:text-left">{cat.products.length} Products</p>
-                                   <div onClick={(e)=>{e.stopPropagation(); const newName = prompt("Rename Category:", cat.name); if(newName && newName.trim() !== "") { const updated = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === cat.id ? {...c, name: newName.trim()} : c)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-8 md:top-2 md:right-8 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-500 rounded transition-all"><Edit2 size={12}/></div>
-                                   <div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ const updated={...selectedBrand, categories: selectedBrand.categories.filter(c=>c.id!==cat.id)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b)}); }}} className="absolute top-1 right-1 md:top-2 md:right-2 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded"><Trash2 size={12}/></div>
+                                   <div onClick={(e)=>{e.stopPropagation(); const newName = prompt("Rename Category:", cat.name); if(newName && newName.trim() !== "") { const updated = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === cat.id ? {...c, name: newName.trim()} : c)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `Renamed ${cat.name} to ${newName}`, null, 'update')}); }}} className="absolute top-1 right-8 md:top-2 md:right-8 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-500 rounded transition-all"><Edit2 size={12}/></div>
+                                   <div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ const updated={...selectedBrand, categories: selectedBrand.categories.filter(c=>c.id!==cat.id)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `Deleted category ${cat.name}`, cat, 'delete')}); }}} className="absolute top-1 right-1 md:top-2 md:right-2 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded"><Trash2 size={12}/></div>
                                 </button>
                             ))}
                        </div>
@@ -2708,7 +2726,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                                    const updatedBrand = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c)}; 
                                                    
                                                    // Add to archive
-                                                   const newArchive = addToArchive('product', product.name, product);
+                                                   const newArchive = addToArchive('product', product.name, product, 'delete');
                                                    
                                                    handleLocalUpdate({...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b), archive: newArchive}); 
                                                } 
@@ -2730,12 +2748,12 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 <PricelistManager 
                     pricelists={localData.pricelists || []} 
                     pricelistBrands={localData.pricelistBrands || []}
-                    onSavePricelists={(p) => handleLocalUpdate({ ...localData, pricelists: p })}
-                    onSaveBrands={(b) => handleLocalUpdate({ ...localData, pricelistBrands: b })}
+                    onSavePricelists={(p) => handleLocalUpdate({ ...localData, pricelists: p, archive: addToArchive('pricelist', 'Batch Update', p, 'update') })}
+                    onSaveBrands={(b) => handleLocalUpdate({ ...localData, pricelistBrands: b, archive: addToArchive('other', 'Update Pricelist Brands', b, 'update') })}
                     onDeletePricelist={(id) => {
                         const toDelete = localData.pricelists?.find(p => p.id === id);
                         if (toDelete) {
-                            const newArchive = addToArchive('pricelist', toDelete.title, toDelete);
+                            const newArchive = addToArchive('pricelist', toDelete.title, toDelete, 'delete');
                             handleLocalUpdate({ ...localData, pricelists: localData.pricelists?.filter(p => p.id !== id), archive: newArchive });
                         }
                     }}
@@ -2749,7 +2767,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                             <h2 className="text-2xl font-black text-slate-900 uppercase">TV Video Management</h2>
                         </div>
                         <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            <button onClick={() => { const name = prompt("Brand Name:"); if(name) { const newBrand = { id: generateId('tvb'), name, models: [] }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: [...(localData.tv?.brands || []), newBrand] } as TVConfig }); }}} className="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center p-4 min-h-[160px] text-indigo-400 hover:border-indigo-500 hover:text-indigo-600 transition-all group">
+                            <button onClick={() => { const name = prompt("Brand Name:"); if(name) { const newBrand = { id: generateId('tvb'), name, models: [] }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: [...(localData.tv?.brands || []), newBrand] } as TVConfig, archive: addToArchive('brand', name, null, 'create') }); }}} className="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center p-4 min-h-[160px] text-indigo-400 hover:border-indigo-500 hover:text-indigo-600 transition-all group">
                                 <Plus size={32} className="mb-2" /><span className="font-bold uppercase text-xs tracking-wider text-center">Add TV Brand</span>
                             </button>
                             {tvBrands.map(brand => (
@@ -2761,7 +2779,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                         <h3 className="font-black text-slate-900 text-sm uppercase truncate mb-1">{brand.name}</h3>
                                         <p className="text-xs text-slate-500 font-bold">{brand.models?.length || 0} Models</p>
                                     </div>
-                                    <button onClick={(e) => { e.stopPropagation(); if(confirm("Delete TV Brand?")) { handleLocalUpdate({...localData, tv: { ...localData.tv, brands: tvBrands.filter(b => b.id !== brand.id) } as TVConfig }); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity z-20"><Trash2 size={14}/></button>
+                                    <button onClick={(e) => { e.stopPropagation(); if(confirm("Delete TV Brand?")) { handleLocalUpdate({...localData, tv: { ...localData.tv, brands: tvBrands.filter(b => b.id !== brand.id) } as TVConfig, archive: addToArchive('brand', brand.name, brand, 'delete') }); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity z-20"><Trash2 size={14}/></button>
                                     <button onClick={() => setSelectedTVBrand(brand)} className="absolute inset-0 w-full h-full opacity-0 z-10" />
                                 </div>
                             ))}
@@ -2775,8 +2793,8 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                                     <h4 className="font-bold text-slate-900 uppercase text-xs mb-4">Brand Identity</h4>
                                     <div className="space-y-4">
-                                        <InputField label="Brand Name" val={selectedTVBrand.name} onChange={(e: any) => { const updated = { ...selectedTVBrand, name: e.target.value }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); }} />
-                                        <FileUpload label="Brand Logo" currentUrl={selectedTVBrand.logoUrl} onUpload={(url: any) => { const updated = { ...selectedTVBrand, logoUrl: url }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); }} />
+                                        <InputField label="Brand Name" val={selectedTVBrand.name} onChange={(e: any) => { const updated = { ...selectedTVBrand, name: e.target.value }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig, archive: addToArchive('brand', selectedTVBrand.name, {name: e.target.value}, 'update') }); }} />
+                                        <FileUpload label="Brand Logo" currentUrl={selectedTVBrand.logoUrl} onUpload={(url: any) => { const updated = { ...selectedTVBrand, logoUrl: url }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig, archive: addToArchive('brand', selectedTVBrand.name, {logo: url}, 'update') }); }} />
                                     </div>
                                 </div>
                             </div>
@@ -2792,7 +2810,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                                 </div>
                                                 <div className="flex border-t border-slate-200 divide-x divide-slate-200">
                                                     <button onClick={() => setEditingTVModel(model)} className="flex-1 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-50 transition-colors">Edit / Videos</button>
-                                                    <button onClick={() => { if (confirm("Delete this model?")) { const updated = { ...selectedTVBrand, models: selectedTVBrand.models.filter(m => m.id !== model.id) }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig }); } }} className="flex-1 py-2 text-[10px] font-bold uppercase text-red-500 hover:bg-red-50 transition-colors">Delete</button>
+                                                    <button onClick={() => { if (confirm("Delete this model?")) { const updated = { ...selectedTVBrand, models: selectedTVBrand.models.filter(m => m.id !== model.id) }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updated : b) } as TVConfig, archive: addToArchive('tv_model', model.name, model, 'delete') }); } }} className="flex-1 py-2 text-[10px] font-bold uppercase text-red-500 hover:bg-red-50 transition-colors">Delete</button>
                                                 </div>
                                             </div>
                                         ))}
@@ -2807,19 +2825,19 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             {activeTab === 'marketing' && (
                 <div className="max-w-5xl mx-auto">
                     {activeSubTab === 'catalogues' && (
-                        <CatalogueManager catalogues={(localData.catalogues || []).filter(c => !c.brandId)} onSave={(c) => { const brandCatalogues = (localData.catalogues || []).filter(c => c.brandId); handleLocalUpdate({ ...localData, catalogues: [...brandCatalogues, ...c] }); }} />
+                        <CatalogueManager catalogues={(localData.catalogues || []).filter(c => !c.brandId)} onSave={(c) => { const brandCatalogues = (localData.catalogues || []).filter(c => c.brandId); handleLocalUpdate({ ...localData, catalogues: [...brandCatalogues, ...c], archive: addToArchive('catalogue', 'Batch Update', c, 'update') }); }} />
                     )}
                     {activeSubTab === 'hero' && (
                         <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
-                                    <InputField label="Title" val={localData.hero.title} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, title: e.target.value}})} />
-                                    <InputField label="Subtitle" val={localData.hero.subtitle} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, subtitle: e.target.value}})} />
-                                    <InputField label="Website URL" val={localData.hero.websiteUrl || ''} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, websiteUrl: e.target.value}})} placeholder="https://example.com" />
+                                    <InputField label="Title" val={localData.hero.title} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, title: e.target.value}, archive: addToArchive('other', 'Hero Title Update', e.target.value, 'update')})} />
+                                    <InputField label="Subtitle" val={localData.hero.subtitle} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, subtitle: e.target.value}, archive: addToArchive('other', 'Hero Subtitle Update', e.target.value, 'update')})} />
+                                    <InputField label="Website URL" val={localData.hero.websiteUrl || ''} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, websiteUrl: e.target.value}, archive: addToArchive('other', 'Hero Website Update', e.target.value, 'update')})} placeholder="https://example.com" />
                                 </div>
                                 <div className="space-y-4">
-                                    <FileUpload label="Background Image" currentUrl={localData.hero.backgroundImageUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, backgroundImageUrl: url}})} />
-                                    <FileUpload label="Brand Logo" currentUrl={localData.hero.logoUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, logoUrl: url}})} />
+                                    <FileUpload label="Background Image" currentUrl={localData.hero.backgroundImageUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, backgroundImageUrl: url}, archive: addToArchive('other', 'Hero Background Update', url, 'update')})} />
+                                    <FileUpload label="Brand Logo" currentUrl={localData.hero.logoUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, logoUrl: url}, archive: addToArchive('other', 'Hero Logo Update', url, 'update')})} />
                                 </div>
                             </div>
                         </div>
@@ -2830,12 +2848,12 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                 <div key={zone} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                                     <h4 className="font-bold uppercase text-xs mb-1">{zone.replace('home', '')}</h4>
                                     <p className="text-[10px] text-slate-400 mb-4 uppercase font-bold tracking-wide">{zone.includes('Side') ? 'Size: 1080x1920 (Portrait)' : zone.includes('screensaver') ? 'Mixed Media' : 'Size: 1920x1080 (Landscape)'}</p>
-                                    <FileUpload label="Upload Media" accept="image/*,video/*" allowMultiple onUpload={(urls:any, type:any) => { const newAds = (Array.isArray(urls)?urls:[urls]).map(u=>({id:generateId('ad'), type, url:u, dateAdded: new Date().toISOString()})); handleLocalUpdate({...localData, ads: {...localData.ads, [zone]: [...((localData.ads as any)[zone] || []), ...newAds]} as any}); }} />
+                                    <FileUpload label="Upload Media" accept="image/*,video/*" allowMultiple onUpload={(urls:any, type:any) => { const newAds = (Array.isArray(urls)?urls:[urls]).map(u=>({id:generateId('ad'), type, url:u, dateAdded: new Date().toISOString()})); handleLocalUpdate({...localData, ads: {...localData.ads, [zone]: [...((localData.ads as any)[zone] || []), ...newAds]} as any, archive: addToArchive('other', `New ads for ${zone}`, newAds, 'create')}); }} />
                                     <div className="grid grid-cols-3 gap-2 mt-4">
                                         {((localData.ads as any)[zone] || []).map((ad: any, idx: number) => (
                                             <div key={ad.id} className="relative group aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
                                                 {ad.type === 'video' ? <video src={ad.url} className="w-full h-full object-cover opacity-60" /> : <img src={ad.url} alt="Ad" className="w-full h-full object-cover" />}
-                                                <button onClick={() => { const currentAds = (localData.ads as any)[zone]; const newAdsList = currentAds.filter((_: any, i: number) => i !== idx); handleLocalUpdate({ ...localData, ads: { ...localData.ads, [zone]: newAdsList } as any }); }} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"><Trash2 size={10} /></button>
+                                                <button onClick={() => { const currentAds = (localData.ads as any)[zone]; const toDelete = currentAds[idx]; const newAdsList = currentAds.filter((_: any, i: number) => i !== idx); handleLocalUpdate({ ...localData, ads: { ...localData.ads, [zone]: newAdsList } as any, archive: addToArchive('other', `Deleted ad from ${zone}`, toDelete, 'delete') }); }} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"><Trash2 size={10} /></button>
                                             </div>
                                         ))}
                                     </div>
@@ -3000,12 +3018,12 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Clock size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Timing & Schedule</h3></div>
-                             <div className="grid grid-cols-2 gap-4 mb-6"><InputField label="Idle Wait (sec)" val={localData.screensaverSettings?.idleTimeout||60} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, idleTimeout: parseInt(e.target.value)}})} /><InputField label="Slide Duration (sec)" val={localData.screensaverSettings?.imageDuration||8} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, imageDuration: parseInt(e.target.value)}})} /></div>
-                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><div className="flex justify-between items-center mb-4"><label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Active Hours (Sleep Mode)</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, enableSleepMode: !localData.screensaverSettings?.enableSleepMode}})} className={`w-8 h-4 rounded-full transition-colors relative ${localData.screensaverSettings?.enableSleepMode ? 'bg-green-500' : 'bg-slate-300'}`}><div className={`w-2 h-2 bg-white rounded-full absolute top-1 transition-all ${localData.screensaverSettings?.enableSleepMode ? 'left-5' : 'left-1'}`}></div></button></div><div className={`grid grid-cols-2 gap-4 transition-opacity ${localData.screensaverSettings?.enableSleepMode ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}><div><label className="block text-[10px] font-bold text-slate-400 mb-1">Start Time</label><input type="time" value={localData.screensaverSettings?.activeHoursStart || '08:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursStart: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div><div><label className="block text-[10px] font-bold text-slate-400 mb-1">End Time</label><input type="time" value={localData.screensaverSettings?.activeHoursEnd || '20:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursEnd: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div></div></div>
+                             <div className="grid grid-cols-2 gap-4 mb-6"><InputField label="Idle Wait (sec)" val={localData.screensaverSettings?.idleTimeout||60} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, idleTimeout: parseInt(e.target.value)}, archive: addToArchive('other', 'Screensaver Idle Timeout', e.target.value, 'update')})} /><InputField label="Slide Duration (sec)" val={localData.screensaverSettings?.imageDuration||8} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, imageDuration: parseInt(e.target.value)}, archive: addToArchive('other', 'Screensaver Slide Duration', e.target.value, 'update')})} /></div>
+                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><div className="flex justify-between items-center mb-4"><label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Active Hours (Sleep Mode)</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, enableSleepMode: !localData.screensaverSettings?.enableSleepMode}, archive: addToArchive('other', 'Screensaver Sleep Mode Toggle', !localData.screensaverSettings?.enableSleepMode, 'update')})} className={`w-8 h-4 rounded-full transition-colors relative ${localData.screensaverSettings?.enableSleepMode ? 'bg-green-500' : 'bg-slate-300'}`}><div className={`w-2 h-2 bg-white rounded-full absolute top-1 transition-all ${localData.screensaverSettings?.enableSleepMode ? 'left-5' : 'left-1'}`}></div></button></div><div className={`grid grid-cols-2 gap-4 transition-opacity ${localData.screensaverSettings?.enableSleepMode ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}><div><label className="block text-[10px] font-bold text-slate-400 mb-1">Start Time</label><input type="time" value={localData.screensaverSettings?.activeHoursStart || '08:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursStart: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div><div><label className="block text-[10px] font-bold text-slate-400 mb-1">End Time</label><input type="time" value={localData.screensaverSettings?.activeHoursEnd || '20:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursEnd: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div></div></div>
                          </div>
                          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Content & Behavior</h3></div>
-                             <div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}})} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div>
+                             <div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}, archive: addToArchive('other', `Screensaver Opt: ${opt.label}`, !(localData.screensaverSettings as any)[opt.key], 'update')})} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div>
                          </div>
                      </div>
 
@@ -3056,9 +3074,12 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             )}
             
             {activeTab === 'history' && (
-               <div className="max-w-6xl mx-auto space-y-6">
+               <div className="max-w-7xl mx-auto space-y-6">
                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                       <h2 className="text-2xl font-black text-slate-900 uppercase">Archive Management</h2>
+                       <div>
+                           <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">System Audit Log</h2>
+                           <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">Detailed track of administrative actions</p>
+                       </div>
                        <div className="flex gap-2">
                             <button 
                                 onClick={() => { if(confirm("Permanently clear ALL archived history?")) handleLocalUpdate({...localData, archive: { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }}) }} 
@@ -3069,183 +3090,127 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                        </div>
                    </div>
 
-                   <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm min-h-[500px] flex flex-col">
-                       {/* Toolbar */}
-                       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between gap-4">
-                           <div className="flex items-center gap-2 bg-slate-200/50 p-1 rounded-lg self-start overflow-x-auto max-w-full">
-                               <button onClick={() => setHistoryTab('deletedItems')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'deletedItems' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>All Items</button>
-                               <button onClick={() => setHistoryTab('brands')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'brands' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Deleted Brands</button>
-                               <button onClick={() => setHistoryTab('catalogues')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase transition-all whitespace-nowrap ${historyTab === 'catalogues' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Deleted Pamphlets</button>
+                   <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-2xl min-h-[600px] flex flex-col">
+                       {/* Enhanced Toolbar */}
+                       <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between gap-6">
+                           <div className="flex items-center gap-2 bg-slate-200/50 p-1.5 rounded-2xl self-start overflow-x-auto max-w-full">
+                               {[
+                                   {id: 'all', label: 'All Activity', icon: <History size={14}/>},
+                                   {id: 'create', label: 'Created', icon: <Plus size={14}/>},
+                                   {id: 'update', label: 'Updated', icon: <Edit2 size={14}/>},
+                                   {id: 'delete', label: 'Deleted', icon: <Trash2 size={14}/>},
+                                   {id: 'restore', label: 'Restored', icon: <RotateCcw size={14}/>},
+                               ].map(tab => (
+                                   <button 
+                                       key={tab.id}
+                                       onClick={() => setHistoryTab(tab.id as any)} 
+                                       className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all whitespace-nowrap flex items-center gap-2 ${historyTab === tab.id ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700'}`}
+                                   >
+                                       {tab.icon} {tab.label}
+                                   </button>
+                               ))}
                            </div>
-                           <div className="relative">
-                               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                           <div className="relative group">
+                               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                                <input 
                                   type="text" 
-                                  placeholder="Search Archives..." 
-                                  className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold w-full md:w-64 focus:border-blue-500 outline-none"
+                                  placeholder="Search actions, users or items..." 
+                                  className="pl-12 pr-6 py-3 bg-white border-2 border-slate-200 rounded-2xl text-xs font-bold w-full md:w-80 focus:border-blue-500 outline-none transition-all shadow-sm"
                                   value={historySearch}
                                   onChange={(e) => setHistorySearch(e.target.value)}
                                />
                            </div>
                        </div>
 
-                       {/* List Content */}
+                       {/* Detailed List Content */}
                        <div className="flex-1 overflow-y-auto">
-                           {historyTab === 'deletedItems' ? (
-                               archivedGenericItems.length === 0 ? (
-                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                                       <Archive size={48} className="mb-4 opacity-20" />
-                                       <span className="text-xs font-bold uppercase tracking-widest">No Deleted Items Found</span>
-                                   </div>
-                               ) : (
-                                   <table className="w-full text-left">
-                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                                           <tr>
-                                               <th className="px-6 py-3">Type</th>
-                                               <th className="px-6 py-3">Name</th>
-                                               <th className="px-6 py-3">Deleted Date</th>
-                                               <th className="px-6 py-3 text-right">Data</th>
-                                           </tr>
-                                       </thead>
-                                       <tbody className="divide-y divide-slate-100 text-sm">
-                                           {archivedGenericItems.map(item => (
-                                               <tr key={item.id} className="hover:bg-slate-50 group">
-                                                   <td className="px-6 py-4">
-                                                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                                                           item.type === 'product' ? 'bg-blue-50 text-blue-700' :
-                                                           item.type === 'pricelist' ? 'bg-green-50 text-green-700' :
-                                                           item.type === 'device' ? 'bg-purple-50 text-purple-700' :
-                                                           'bg-slate-100 text-slate-600'
-                                                       }`}>
-                                                           {item.type}
-                                                       </span>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="font-bold text-slate-900">{item.name}</div>
-                                                       <div className="text-[10px] text-slate-400 font-mono">{item.id}</div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="text-xs font-bold text-slate-600">
-                                                           {formatRelativeTime(item.deletedAt)}
-                                                       </div>
-                                                       <div className="text-[10px] text-slate-400">
-                                                           {new Date(item.deletedAt).toLocaleTimeString()}
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4 text-right">
-                                                       <button 
-                                                            onClick={() => {
-                                                                const json = JSON.stringify(item.data, null, 2);
-                                                                const blob = new Blob([json], {type: "application/json"});
-                                                                const url = URL.createObjectURL(blob);
-                                                                const a = document.createElement('a');
-                                                                a.href = url;
-                                                                a.download = `${item.name}-recovered.json`;
-                                                                a.click();
-                                                            }}
-                                                            className="text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase inline-flex items-center gap-1 transition-colors border border-slate-200"
-                                                       >
-                                                           <Download size={12} /> JSON
-                                                       </button>
-                                                   </td>
-                                               </tr>
-                                           ))}
-                                       </tbody>
-                                   </table>
-                               )
-                           ) : historyTab === 'brands' ? (
-                               archivedBrands.length === 0 ? (
-                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                                       <Archive size={48} className="mb-4 opacity-20" />
-                                       <span className="text-xs font-bold uppercase tracking-widest">No Archived Brands Found</span>
-                                   </div>
-                               ) : (
-                                   <table className="w-full text-left">
-                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                                           <tr>
-                                               <th className="px-6 py-3">Brand Name</th>
-                                               <th className="px-6 py-3">Metadata</th>
-                                               <th className="px-6 py-3">Deleted Date</th>
-                                               <th className="px-6 py-3 text-right">Actions</th>
-                                           </tr>
-                                       </thead>
-                                       <tbody className="divide-y divide-slate-100 text-sm">
-                                           {archivedBrands.map(b => (
-                                               <tr key={b.id} className="hover:bg-slate-50 group">
-                                                   <td className="px-6 py-4">
-                                                       <div className="font-bold text-slate-900">{b.name}</div>
-                                                       <div className="text-[10px] text-slate-400 font-mono">{b.id}</div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
-                                                           <Box size={12} /> {b.categories.length} Categories
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="text-xs font-bold text-slate-600">
-                                                           {localData.archive?.deletedAt?.[b.id] ? formatRelativeTime(localData.archive.deletedAt[b.id]) : 'Unknown'}
-                                                       </div>
-                                                       <div className="text-[10px] text-slate-400">
-                                                           {localData.archive?.deletedAt?.[b.id] ? new Date(localData.archive.deletedAt[b.id]).toLocaleTimeString() : ''}
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4 text-right">
-                                                       <button onClick={() => restoreBrand(b)} className="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold uppercase inline-flex items-center gap-1 transition-colors">
-                                                           <RotateCcw size={14} /> Restore
-                                                       </button>
-                                                   </td>
-                                               </tr>
-                                           ))}
-                                       </tbody>
-                                   </table>
-                               )
-                           ) : (
-                               archivedCatalogues.length === 0 ? (
-                                   <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                                       <Archive size={48} className="mb-4 opacity-20" />
-                                       <span className="text-xs font-bold uppercase tracking-widest">No Archived Pamphlets Found</span>
-                                   </div>
-                               ) : (
-                                   <table className="w-full text-left">
-                                       <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                                           <tr>
-                                               <th className="px-6 py-3">Title</th>
-                                               <th className="px-6 py-3">Type</th>
-                                               <th className="px-6 py-3">Expiration Info</th>
-                                               <th className="px-6 py-3 text-right">Actions</th>
-                                           </tr>
-                                       </thead>
-                                       <tbody className="divide-y divide-slate-100 text-sm">
-                                           {archivedCatalogues.map(c => (
-                                               <tr key={c.id} className="hover:bg-slate-50 group">
-                                                   <td className="px-6 py-4">
-                                                       <div className="font-bold text-slate-900">{c.title}</div>
-                                                       <div className="text-[10px] text-slate-400 font-mono">{c.id}</div>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${c.brandId ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
-                                                           {c.brandId ? 'Brand Catalogue' : 'Global Pamphlet'}
-                                                       </span>
-                                                   </td>
-                                                   <td className="px-6 py-4">
-                                                       <div className="text-xs font-bold text-slate-600">
-                                                           {c.endDate ? `Expired: ${new Date(c.endDate).toLocaleDateString()}` : 'Manual Delete'}
-                                                       </div>
-                                                       <div className="text-[10px] text-slate-400">
-                                                           Deleted: {localData.archive?.deletedAt?.[c.id] ? formatRelativeTime(localData.archive.deletedAt[c.id]) : 'N/A'}
-                                                       </div>
-                                                   </td>
-                                                   <td className="px-6 py-4 text-right">
-                                                       <button onClick={() => restoreCatalogue(c)} className="text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg text-xs font-bold uppercase inline-flex items-center gap-1 transition-colors">
-                                                           <RotateCcw size={14} /> Restore
-                                                       </button>
-                                                   </td>
-                                               </tr>
-                                           ))}
-                                       </tbody>
-                                   </table>
-                               )
-                           )}
+                            {archivedGenericItems.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-96 text-slate-400">
+                                    <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-4 border border-slate-100">
+                                        <History size={40} className="opacity-20" />
+                                    </div>
+                                    <span className="text-xs font-black uppercase tracking-widest">No matching activities found</span>
+                                </div>
+                            ) : (
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-md">
+                                        <tr>
+                                            <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Action & Type</th>
+                                            <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Subject</th>
+                                            <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Executor</th>
+                                            <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Timestamp</th>
+                                            <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Reference</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {archivedGenericItems.map(item => (
+                                            <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
+                                                <td className="px-8 py-5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                                                            item.action === 'delete' ? 'bg-red-50 border-red-100 text-red-500' :
+                                                            item.action === 'restore' ? 'bg-green-50 border-green-100 text-green-500' :
+                                                            item.action === 'create' ? 'bg-blue-50 border-blue-100 text-blue-500' :
+                                                            'bg-orange-50 border-orange-100 text-orange-500'
+                                                        }`}>
+                                                            {item.action === 'delete' ? <Trash2 size={16}/> :
+                                                             item.action === 'restore' ? <RotateCcw size={16}/> :
+                                                             item.action === 'create' ? <Plus size={16}/> :
+                                                             <Edit2 size={16}/>}
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[10px] font-black uppercase tracking-tight text-slate-900">{item.action}</div>
+                                                            <div className="text-[9px] font-bold text-slate-400 uppercase">{item.type}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <div className="font-black text-slate-900 uppercase text-xs tracking-tight">{item.name}</div>
+                                                    <div className="text-[9px] text-slate-400 font-mono mt-1 opacity-60">ID: {item.id}</div>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center">
+                                                            <User size={12} />
+                                                        </div>
+                                                        <span className="text-xs font-black text-slate-700 uppercase tracking-tight">{item.userName || 'System'}</span>
+                                                    </div>
+                                                    <div className="text-[9px] font-bold text-slate-400 uppercase mt-1">via {item.method || 'admin_panel'}</div>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <div className="text-xs font-black text-slate-900">{formatRelativeTime(item.deletedAt)}</div>
+                                                    <div className="text-[9px] font-bold text-slate-400 mt-1 uppercase">{new Date(item.deletedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                                </td>
+                                                <td className="px-8 py-5 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {(item.type === 'brand' || item.type === 'catalogue') && item.action === 'delete' && (
+                                                            <button 
+                                                                onClick={() => item.type === 'brand' ? restoreBrand(item.data) : restoreCatalogue(item.data)}
+                                                                className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase rounded-lg shadow-lg hover:bg-blue-700 transition-all active:scale-95"
+                                                            >
+                                                                Restore
+                                                            </button>
+                                                        )}
+                                                        <button 
+                                                                onClick={() => {
+                                                                    const json = JSON.stringify(item.data || item, null, 2);
+                                                                    const blob = new Blob([json], {type: "application/json"});
+                                                                    const url = URL.createObjectURL(blob);
+                                                                    const a = document.createElement('a');
+                                                                    a.href = url; a.download = `${item.name}-audit.json`; a.click();
+                                                                }}
+                                                                className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200"
+                                                                title="Download Audit Payload"
+                                                        >
+                                                            <Download size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                        </div>
                    </div>
                </div>
@@ -3263,7 +3228,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                            <FileUpload 
                                label="Main Company Logo (PDFs & Header)" 
                                currentUrl={localData.companyLogoUrl} 
-                               onUpload={(url: string) => handleLocalUpdate({...localData, companyLogoUrl: url})} 
+                               onUpload={(url: string) => handleLocalUpdate({...localData, companyLogoUrl: url, archive: addToArchive('other', 'Company Logo Update', url, 'update')})} 
                            />
                            <p className="text-[10px] text-slate-400 mt-2 font-medium">
                                This logo is used at the top of the Kiosk App and as the primary branding on all exported PDF Pricelists.
@@ -3284,7 +3249,8 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                    value={localData.systemSettings?.setupPin || '0000'} 
                                    onChange={(e) => handleLocalUpdate({
                                        ...localData,
-                                       systemSettings: { ...localData.systemSettings, setupPin: e.target.value }
+                                       systemSettings: { ...localData.systemSettings, setupPin: e.target.value },
+                                       archive: addToArchive('other', 'System PIN Update', '********', 'update')
                                    })}
                                    className="w-full md:w-64 p-3 border border-slate-300 rounded-xl bg-white font-mono font-bold text-lg tracking-widest text-center"
                                    placeholder="0000"
@@ -3387,7 +3353,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                                          }
                                                      });
                                                      
-                                                     handleLocalUpdate({ ...localData, brands: mergedBrands });
+                                                     handleLocalUpdate({ ...localData, brands: mergedBrands, archive: addToArchive('other', 'Bulk Import Successful', {brandsCount: newBrands.length}, 'create', 'import') });
                                                      alert(`Import Successful! Processed ${newBrands.length} brands.`);
                                                  } catch(err) {
                                                      console.error(err);
@@ -3405,7 +3371,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                        </div>
                    </div>
 
-                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><UserCog size={20} className="text-blue-500"/> Admin Access Control</h3><AdminManager admins={localData.admins || []} onUpdate={(admins) => handleLocalUpdate({ ...localData, admins })} currentUser={currentUser} /></div>
+                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><UserCog size={20} className="text-blue-500"/> Admin Access Control</h3><AdminManager admins={localData.admins || []} onUpdate={(admins) => handleLocalUpdate({ ...localData, admins, archive: addToArchive('other', 'Admin list updated', null, 'update') })} currentUser={currentUser} /></div>
 
                    <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg text-white">
                         <div className="flex items-center gap-3 mb-6"><CloudLightning size={24} className="text-yellow-400" /><h3 className="font-black uppercase text-sm tracking-wider">System Operations</h3></div>
@@ -3427,7 +3393,9 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                     const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x);
                     const updatedCat = { ...selectedCategory, products: newProducts };
                     const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) };
-                    handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b) });
+                    
+                    const newArchive = addToArchive('product', p.name, p, isNew ? 'create' : 'update');
+                    handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b), archive: newArchive });
                     setEditingProduct(null);
                 }} onCancel={() => setEditingProduct(null)} />
             </div>
@@ -3442,7 +3410,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
         )}
         
         {editingTVModel && (
-            <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updatedTVBrand : b) } as TVConfig }); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />
+            <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updatedTVBrand : b) } as TVConfig, archive: addToArchive('tv_model', m.name, m, isNew ? 'create' : 'update') }); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />
         )}
         
         {showGuide && <SetupGuide onClose={() => setShowGuide(false)} />}
