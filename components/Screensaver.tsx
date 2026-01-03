@@ -34,7 +34,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const watchdogRef = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Default config
+  // Default config - Changed displayStyle to 'contain' by default for "perfect fit"
   const config: ScreensaverSettings = {
       idleTimeout: 60,
       imageDuration: 8,
@@ -43,7 +43,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       showProductVideos: true,
       showPamphlets: true,
       showCustomAds: true,
-      displayStyle: 'contain', // Default to shrink-to-fit
+      displayStyle: 'contain', 
       showInfoOverlay: true,
       enableSleepMode: false,
       activeHoursStart: '08:00',
@@ -285,6 +285,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       </div>
   );
 
+  // Forced object-contain for "shrink to fit perfectly"
   const objectFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
 
   return (
@@ -300,30 +301,29 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             perspective: 1000px;
         }
 
-        /* Animations constrained to 1.0 max scale to guarantee "shrink-to-fit" */
         .effect-smooth-zoom { animation: smoothZoom 15s ease-out forwards; }
         @keyframes smoothZoom { 
-            0% { transform: scale(0.92) translate3d(0,0,0); opacity: 0.8; } 
-            100% { transform: scale(1.0) translate3d(0,0,0); opacity: 1; } 
+            0% { transform: scale(1.0) translate3d(0,0,0); opacity: 0.8; } 
+            100% { transform: scale(1.1) translate3d(0,0,0); opacity: 1; } 
         }
         
         .effect-subtle-drift { animation: subtleDrift 20s linear forwards; }
         @keyframes subtleDrift {
-            0% { transform: scale(0.98) translate3d(-1%, -1%, 0); }
-            100% { transform: scale(0.98) translate3d(1%, 1%, 0); }
+            0% { transform: scale(1.05) translate3d(-2%, -2%, 0); }
+            100% { transform: scale(1.05) translate3d(2%, 2%, 0); }
         }
         
         .effect-soft-scale { animation: softScale 10s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         @keyframes softScale {
-            0% { transform: scale(0.9) translate3d(0,0,0); opacity: 0; }
+            0% { transform: scale(1.15) translate3d(0,0,0); opacity: 0; }
             20% { opacity: 1; }
             100% { transform: scale(1.0) translate3d(0,0,0); }
         }
         
         .effect-gentle-pan { animation: gentlePan 12s ease-in-out forwards; }
         @keyframes gentlePan {
-            0% { transform: translate3d(-15px, 0, 0) scale(0.98); }
-            100% { transform: translate3d(15px, 0, 0) scale(0.98); }
+            0% { transform: translate3d(-30px, 0, 0) scale(1.1); }
+            100% { transform: translate3d(30px, 0, 0) scale(1.1); }
         }
         
         .effect-fade-in { animation: fadeInVideo 1.2s ease-out forwards; }
@@ -343,20 +343,22 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             filter: blur(60px) brightness(0.4);
             transform: scale(1.2);
             transition: opacity 1s ease-in-out;
+            background-size: cover;
+            background-position: center;
         }
       `}</style>
 
-      {/* Cinematic Letterbox Aura Background */}
+      {/* Cinematic Letterbox Aura Background - uses object-cover to fill all gaps */}
       <div 
         key={`bg-${currentItem.id}`} 
-        className="absolute inset-0 z-0 bg-cover bg-center letterbox-blur opacity-50"
+        className="absolute inset-0 z-0 letterbox-blur opacity-60"
         style={{ backgroundImage: `url(${currentItem.url})` }}
       />
       
       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 z-10" />
 
-      {/* Main Content: Max-constrained for absolute shrink-to-fit */}
-      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center overflow-hidden">
+      {/* Main Content: Uses object-contain to shrink to fit perfectly */}
+      <div key={`${currentItem.id}-${animationEffect}`} className="w-full h-full relative z-20 flex items-center justify-center overflow-hidden p-4 md:p-12">
          
          {currentItem.type === 'video' ? (
              <>
@@ -364,7 +366,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                     ref={videoRef}
                     key={`vid-el-${currentItem.url}-${currentIndex}`}
                     src={currentItem.url} 
-                    className={`w-full h-full max-w-full max-h-full ${objectFitClass} shadow-2xl ${animationEffect}`}
+                    className={`max-w-full max-h-full ${objectFitClass} shadow-2xl ${animationEffect}`}
                     muted={config.muteVideos || !isAudioUnlocked} 
                     autoPlay={true}
                     playsInline={true}
@@ -380,16 +382,14 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                  )}
              </>
          ) : (
-             <div className="w-full h-full flex items-center justify-center relative">
-                <img 
-                  src={currentItem.url} 
-                  alt="Screensaver" 
-                  className={`max-w-full max-h-full w-auto h-auto object-contain shadow-2xl ${animationEffect}`}
-                  loading="eager"
-                  decoding="async"
-                  onError={handleMediaError}
-                />
-             </div>
+             <img 
+               src={currentItem.url} 
+               alt="Screensaver" 
+               className={`max-w-full max-h-full ${objectFitClass} shadow-2xl ${animationEffect}`}
+               loading="eager"
+               decoding="async"
+               onError={handleMediaError}
+             />
          )}
 
          {config.showInfoOverlay && (currentItem.title || currentItem.subtitle) && (
