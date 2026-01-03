@@ -51,7 +51,8 @@ export default function App() {
                // 1. Initial Load
                if (!prev) return data;
 
-               // 2. Admin Logic: Only sync fleet telemetry to avoid wiping out unsaved form changes
+               // 2. Admin Logic: Only sync fleet telemetry to avoid wiping out unsaved form changes or resetting UI state
+               // We check if we are in the admin route. If it's a background pulse, we only merge fleet data.
                if (isAdmin && isBackground) {
                    return {
                        ...prev,
@@ -59,7 +60,7 @@ export default function App() {
                    };
                }
 
-               // 3. Kiosk Logic: Full update, React reconciliation handles smooth transition
+               // 3. Kiosk Logic or Manual Refresh: Full update
                return { ...data };
            });
            setLastSyncTime(new Date().toLocaleTimeString());
@@ -74,10 +75,11 @@ export default function App() {
 
   useEffect(() => {
     initSupabase();
-    // Initial silent fetch
+    // Initial fetch
     fetchData();
 
     // 1. Background Routine Sync (Pulsing Heartbeat) - Silent
+    // Changed to be strictly telemetry-focused for Admin to prevent reloads
     const interval = setInterval(() => {
         fetchData(true);
     }, 60000); 
@@ -88,17 +90,15 @@ export default function App() {
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
-              // Debounce realtime syncs to prevent UI thrashing
+              // Debounce realtime syncs
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
               syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
             }
           )
           .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
             (payload: any) => {
-              const isMyUpdate = payload.new && payload.new.id === kioskId;
-              const isMyDelete = payload.old && payload.old.id === kioskId;
-              
-              if (isAdmin || isMyUpdate || isMyDelete) {
+              // Always sync fleet updates for admin immediately
+              if (isAdmin) {
                   if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
                   syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
               }
@@ -116,21 +116,20 @@ export default function App() {
   }, [fetchData, kioskId, isAdmin]);
 
   const handleUpdateData = async (newData: StoreData) => {
-    // Explicit Admin action: show "Updating Cloud" indicator
     setIsSyncing(true);
+    // Optimistic update
     setStoreData({ ...newData }); 
     try {
         await saveStoreData(newData);
         setLastSyncTime(new Date().toLocaleTimeString());
+        // After a successful save, we mark changes as synced
     } catch (e: any) {
         console.error("Manual save failed", e);
     } finally {
-        // Keep indicator visible slightly to confirm success
         setTimeout(() => setIsSyncing(false), 500);
     }
   };
 
-  // Critical: Only block the screen on the VERY first boot
   if (isFirstLoad && !storeData) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0f172a] text-white font-black">
@@ -144,7 +143,6 @@ export default function App() {
     <>
       {storeData && <AppIconUpdater storeData={storeData} />}
       
-      {/* Explicit Sync Indicator for Admin saves, hidden for silent pulses */}
       {isSyncing && isAdmin && (
          <div className="fixed top-12 right-4 z-[200] bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg shadow-2xl flex items-center gap-2 border border-white/10 animate-fade-in">
             <Loader2 className="animate-spin text-blue-400" size={12} />
@@ -156,7 +154,7 @@ export default function App() {
         <AdminDashboard 
             storeData={storeData}
             onUpdateData={handleUpdateData}
-            onRefresh={() => fetchData(false)} // Manual refresh is not silent
+            onRefresh={() => fetchData(false)} 
         />
       ) : currentRoute === '/about' ? (
         <AboutPage 
