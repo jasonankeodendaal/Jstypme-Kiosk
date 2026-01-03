@@ -1,3 +1,4 @@
+
 export interface DimensionSet {
   label?: string; // e.g. "Device", "Stand", "Box 1"
   width: string;
@@ -120,6 +121,12 @@ export interface Pricelist {
   month: string;
   year: string;
   dateAdded?: string; // New: For "New" flag logic
+  version?: number; // Sequential version tracker
+  history?: {
+    version: number;
+    dateAdded: string;
+    items: PricelistItem[];
+  }[]; // Archive of past versions
 }
 
 export interface AdItem {
