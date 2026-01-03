@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KioskApp } from './components/KioskApp';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -52,6 +51,7 @@ export default function App() {
                if (!prev) return data;
 
                // 2. Admin Logic: Only sync fleet telemetry to avoid wiping out unsaved form changes
+               // Or if not background, allow full load
                if (isAdmin && isBackground) {
                    return {
                        ...prev,
@@ -78,7 +78,7 @@ export default function App() {
     fetchData();
 
     // 1. Background Routine Sync (Pulsing Heartbeat) - Silent
-    // This is the primary sync mechanism for Admin to prevent "reloads"
+    // Only perform background syncs for fleet telemetry in Admin mode
     const interval = setInterval(() => {
         fetchData(true);
     }, 60000); 

@@ -597,7 +597,7 @@ const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminU
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
 
-  // Persistent login check
+  // Persistent login check - run once on mount
   useEffect(() => {
     const savedAdmin = localStorage.getItem('kiosk_admin_session');
     if (savedAdmin) {
@@ -607,7 +607,7 @@ const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminU
             if (verified) onLogin(verified);
         } catch(e) {}
     }
-  }, [admins]);
+  }, []); // Only on mount to prevent sync-loop flickers
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2414,6 +2414,16 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  // CRITICAL: SYSTEM WATCHDOG HEARTBEAT FOR ADMIN
+  useEffect(() => {
+    const heartbeat = setInterval(() => {
+        if ((window as any).signalAppHeartbeat) {
+            (window as any).signalAppHeartbeat();
+        }
+    }, 2000);
+    return () => clearInterval(heartbeat);
+  }, []);
+
   const handleLocalUpdate = (newData: StoreData) => {
       setLocalData(newData);
       setHasUnsavedChanges(true);
@@ -2723,7 +2733,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                            <button onClick={() => { 
                                                if(confirm(`Delete product "${product.name}"?`)) { 
                                                    const updatedCat = {...selectedCategory, products: selectedCategory.products.filter(p => p.id !== product.id)}; 
-                                                   const updatedBrand = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c)}; 
+                                                   const updatedBrand = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) || []}; 
                                                    
                                                    // Add to archive
                                                    const newArchive = addToArchive('product', product.name, product, 'delete');
