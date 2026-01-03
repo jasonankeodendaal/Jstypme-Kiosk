@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
@@ -591,23 +591,11 @@ const SystemDocumentation = () => {
     );
 };
 
-// Updated Auth Component with persistence
+// Updated Auth Component - Persistent session removal
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
-
-  // Persistent login check - run once on mount
-  useEffect(() => {
-    const savedAdmin = localStorage.getItem('kiosk_admin_session');
-    if (savedAdmin) {
-        try {
-            const adminData = JSON.parse(savedAdmin);
-            const verified = admins.find(a => a.id === adminData.id && a.pin === adminData.pin);
-            if (verified) onLogin(verified);
-        } catch(e) {}
-    }
-  }, []); // Only on mount to prevent sync-loop flickers
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -624,7 +612,7 @@ const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminU
     );
 
     if (admin) {
-        localStorage.setItem('kiosk_admin_session', JSON.stringify(admin));
+        // Fresh entry on every reload - no longer using localStorage
         onLogin(admin);
     } else {
         setError('Invalid credentials.');
@@ -2373,6 +2361,36 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [importProgress, setImportProgress] = useState<string>('');
   const [exportProcessing, setExportProcessing] = useState(false);
 
+  const logout = useCallback(() => {
+    // Session is only in-memory now
+    setCurrentUser(null);
+  }, []);
+
+  // Admin Idle Auto-Lock Logic - 5 Minute Timeout
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const AUTO_LOCK_MS = 5 * 60 * 1000; 
+    let lockTimer: number;
+
+    const resetLockTimer = () => {
+      if (lockTimer) window.clearTimeout(lockTimer);
+      lockTimer = window.setTimeout(() => {
+        logout();
+      }, AUTO_LOCK_MS);
+    };
+
+    const userEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    userEvents.forEach(evt => window.addEventListener(evt, resetLockTimer));
+    
+    resetLockTimer(); // Init timer
+
+    return () => {
+      if (lockTimer) window.clearTimeout(lockTimer);
+      userEvents.forEach(evt => window.removeEventListener(evt, resetLockTimer));
+    };
+  }, [currentUser, logout]);
+
   const availableTabs = [
       { id: 'inventory', label: 'Inventory', icon: Box },
       { id: 'marketing', label: 'Marketing', icon: Megaphone },
@@ -2599,11 +2617,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   if (!localData) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /> Loading...</div>;
   if (!currentUser) return <Auth admins={localData.admins || []} onLogin={setCurrentUser} />;
 
-  const logout = () => {
-    localStorage.removeItem('kiosk_admin_session');
-    setCurrentUser(null);
-  };
-
   const brands = Array.isArray(localData.brands) 
       ? [...localData.brands].sort((a, b) => a.name.localeCompare(b.name)) 
       : [];
@@ -2710,7 +2723,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                    <Box size={20} className="mb-2 md:mb-4 text-slate-400 mx-auto md:mx-0" />
                                    <h3 className="font-black text-slate-900 uppercase text-[10px] md:text-sm text-center md:text-left truncate w-full">{cat.name}</h3>
                                    <p className="text-[9px] md:text-xs text-slate-500 font-bold text-center md:text-left">{cat.products.length} Products</p>
-                                   <div onClick={(e)=>{e.stopPropagation(); const newName = prompt("Rename Category:", cat.name); if(newName && newName.trim() !== "") { const updated = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === cat.id ? {...c, name: newName.trim()} : c)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `Renamed ${cat.name} to ${newName}`, null, 'update')}); }}} className="absolute top-1 right-8 md:top-2 md:right-8 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-500 rounded transition-all"><Edit2 size={12}/></div>
+                                   <div onClick={(e)=>{e.stopPropagation(); const name = prompt("Rename Category:", cat.name); if(name && name.trim() !== "") { const updated = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === cat.id ? {...c, name: name.trim()} : c)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `Renamed ${cat.name} to ${name}`, null, 'update')}); }}} className="absolute top-1 right-8 md:top-2 md:right-8 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-500 rounded transition-all"><Edit2 size={12}/></div>
                                    <div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ const updated={...selectedBrand, categories: selectedBrand.categories.filter(c=>c.id!==cat.id)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `Deleted category ${cat.name}`, cat, 'delete')}); }}} className="absolute top-1 right-1 md:top-2 md:right-2 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded"><Trash2 size={12}/></div>
                                 </button>
                             ))}
