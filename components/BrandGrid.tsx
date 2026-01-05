@@ -286,7 +286,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
       </div>
 
       {showAllBrands && (
-        <div className="fixed inset-0 z-[60] bg-white/98 p-6 md:p-20 animate-fade-in flex flex-col backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] bg-blue-50/70 backdrop-blur-2xl p-6 md:p-20 animate-fade-in flex flex-col">
             <div className="flex justify-between items-center mb-12 shrink-0 max-w-7xl mx-auto w-full">
                 <div>
                    <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-4">
@@ -296,7 +296,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                 </div>
                 <button 
                   onClick={() => setShowAllBrands(false)}
-                  className="bg-slate-100 hover:bg-red-500 hover:text-white text-slate-400 p-4 rounded-full transition-all duration-300 shadow-sm"
+                  className="bg-white/50 hover:bg-red-500 hover:text-white text-slate-400 p-4 rounded-full transition-all duration-300 shadow-sm border border-blue-100"
                 >
                    <X size={32} />
                 </button>
@@ -311,7 +311,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                           setShowAllBrands(false);
                           onSelectBrand(brand);
                       }}
-                      className="group flex flex-col items-center justify-center w-full p-2 md:p-4 transition-all duration-500 hover:-translate-y-1.5 rounded-3xl hover:bg-blue-50 border border-transparent hover:border-blue-100"
+                      className="group flex flex-col items-center justify-center w-full p-2 md:p-4 transition-all duration-500 hover:-translate-y-1.5 rounded-3xl hover:bg-white/80 border border-transparent hover:border-blue-100 shadow-transparent hover:shadow-xl hover:shadow-blue-500/5"
                       title={brand.name}
                     >
                       <div className="relative w-12 h-12 md:w-16 md:h-16 flex items-center justify-center transition-all duration-500 group-hover:scale-110 mb-3">
@@ -323,7 +323,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                             className="w-full h-full object-contain drop-shadow-sm group-hover:drop-shadow-lg"
                           />
                         ) : (
-                          <div className="w-full h-full rounded-full bg-slate-100 text-slate-300 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center text-sm font-black transition-all duration-500 shadow-inner">
+                          <div className="w-full h-full rounded-full bg-blue-100 text-blue-400 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center text-sm font-black transition-all duration-500 shadow-inner">
                             {brand.name.charAt(0)}
                           </div>
                         )}
