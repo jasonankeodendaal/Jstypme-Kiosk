@@ -320,14 +320,14 @@ const SystemDocumentation = () => {
                                 <h3 className="text-sm font-black uppercase text-slate-900 mb-4 flex items-center gap-2"><Binary size={16} className="text-blue-500"/> Fuzzy Matching</h3>
                                 <p className="text-xs text-slate-500 leading-relaxed font-medium mb-4">The engine doesn't need perfect column names. It scans for keywords like "SKU", "Model", "Code" to find the right column, and "Price", "RRP", "Cost" for the value.</p>
                                 <div className="bg-slate-100 p-3 rounded-lg text-[10px] font-mono text-slate-600">
-                                    Input: "Product_Code_V2" &rarr; Mapped to: <span className="text-green-600 font-bold">SKU</span>
+                                    Input: "Product_Code_V2" {"->"} Mapped to: <span className="text-green-600 font-bold">SKU</span>
                                 </div>
                             </div>
                             <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                                 <h3 className="text-sm font-black uppercase text-slate-900 mb-4 flex items-center gap-2"><Sparkles size={16} className="text-orange-500"/> Price Rounding</h3>
-                                <p className="text-xs text-slate-500 leading-relaxed font-medium mb-4">Retail pricing often ends in '99'. The system automatically rounds up decimals (99.50 -> 100) and can optionally smooth "jagged" numbers for a cleaner look.</p>
+                                <p className="text-xs text-slate-500 leading-relaxed font-medium mb-4">Retail pricing often ends in '99'. The system automatically rounds up decimals (99.50 {"->"} 100) and can optionally smooth "jagged" numbers for a cleaner look.</p>
                                 <div className="bg-slate-100 p-3 rounded-lg text-[10px] font-mono text-slate-600">
-                                    Input: "R 799.99" &rarr; Output: <span className="text-green-600 font-bold">R 800</span>
+                                    Input: "R 799.99" {"->"} Output: <span className="text-green-600 font-bold">R 800</span>
                                 </div>
                             </div>
                         </div>
