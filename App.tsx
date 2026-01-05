@@ -6,7 +6,75 @@ import AboutPage from './components/AboutPage';
 import { generateStoreData, saveStoreData } from './services/geminiService';
 import { initSupabase, supabase, getKioskId } from './services/kioskService';
 import { StoreData } from './types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Cloud, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
+
+/**
+ * Global Background Sync Progress Popup
+ * Resides in App root so it stays visible during login/logout transitions.
+ */
+const SyncStatusPopup = () => {
+    const [progress, setProgress] = useState(0);
+    const [status, setStatus] = useState<'idle' | 'syncing' | 'complete' | 'error'>('idle');
+
+    useEffect(() => {
+        const handleSync = (e: any) => {
+            const { progress: p, status: s } = e.detail;
+            setProgress(p);
+            setStatus(s);
+        };
+        window.addEventListener('kiosk-sync-event', handleSync);
+        return () => window.removeEventListener('kiosk-sync-event', handleSync);
+    }, []);
+
+    if (status === 'idle') return null;
+
+    return (
+        <div className={`fixed bottom-6 right-6 z-[999] animate-fade-in`}>
+            <div className={`bg-slate-900/90 backdrop-blur-xl border ${status === 'error' ? 'border-red-500/50' : 'border-blue-500/30'} shadow-2xl p-4 rounded-2xl flex items-center gap-4 min-w-[200px] transition-all duration-500`}>
+                <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
+                    {status === 'syncing' && (
+                        <div className="absolute inset-0 border-2 border-slate-700 rounded-full"></div>
+                    )}
+                    <div 
+                        className={`absolute inset-0 border-2 ${status === 'error' ? 'border-red-500' : 'border-blue-500'} rounded-full transition-all duration-300`}
+                        style={{ 
+                            clipPath: `inset(0 0 0 0)`,
+                            borderDasharray: '63', // ~2 * PI * r
+                            borderDashoffset: `${63 - (63 * progress / 100)}`,
+                            transform: 'rotate(-90deg)'
+                        }}
+                    ></div>
+                    
+                    {status === 'syncing' ? (
+                        <Cloud className="text-blue-400 animate-pulse" size={16} />
+                    ) : status === 'complete' ? (
+                        <CheckCircle className="text-green-400 animate-bounce" size={20} />
+                    ) : (
+                        <AlertCircle className="text-red-400" size={20} />
+                    )}
+                </div>
+
+                <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase text-white tracking-widest leading-none">
+                            {status === 'syncing' ? 'Background Sync' : status === 'complete' ? 'Sync Success' : 'Sync Failed'}
+                        </span>
+                        {status === 'syncing' && <span className="text-[10px] font-bold text-blue-400 tabular-nums">{progress}%</span>}
+                    </div>
+                    <div className="text-[8px] font-bold text-slate-400 uppercase mt-1 tracking-tighter">
+                        {status === 'syncing' ? 'Updating Cloud Infrastructure' : status === 'complete' ? 'Data is safe in the cloud' : 'Network interruption detected'}
+                    </div>
+                </div>
+            </div>
+            
+            {status === 'complete' && (
+                <div className="absolute -top-4 -left-4 pointer-events-none">
+                    <Sparkles className="text-yellow-400 animate-ping opacity-50" size={20} />
+                </div>
+            )}
+        </div>
+    );
+};
 
 const AppIconUpdater = ({ storeData }: { storeData: StoreData }) => {
     const isAdmin = window.location.pathname.startsWith('/admin');
@@ -41,26 +109,15 @@ export default function App() {
   const isAdmin = currentRoute.startsWith('/admin');
 
   const fetchData = useCallback(async (isBackground = false) => {
-      // 1. If it's a background sync call but we are in Admin, abort.
-      // Admin should NEVER background-sync to avoid overwriting active forms.
       if (isAdmin && isBackground) return;
-
       if (!isBackground && isFirstLoad) setIsSyncing(true);
       
       try {
         const data = await generateStoreData();
         if (data) {
            setStoreData(prev => {
-               // 1. Initial Load: Always accept
                if (!prev) return data;
-
-               // 2. Admin Logic: Only allow manual refresh to update full data.
-               // We never background-sync Admin data.
-               if (isAdmin && isBackground) {
-                   return prev; 
-               }
-
-               // 3. Kiosk Logic: Full update
+               if (isAdmin && isBackground) return prev; 
                return { ...data };
            });
            setLastSyncTime(new Date().toLocaleTimeString());
@@ -75,19 +132,13 @@ export default function App() {
 
   useEffect(() => {
     initSupabase();
-    // Initial fetch to get the current system state
     fetchData();
-
-    // 1. Background Routine Sync (Pulsing Heartbeat) - STRICTLY KIOSK ONLY
     let interval: any = null;
     if (!isAdmin) {
         interval = setInterval(() => {
             fetchData(true);
         }, 60000); 
     }
-
-    // 2. Realtime Event Listener - STRICTLY KIOSK ONLY
-    // We don't want Admin state jumping because a Kiosk registered itself.
     let channel: any = null;
     if (supabase && !isAdmin) {
         channel = supabase
@@ -98,20 +149,8 @@ export default function App() {
               syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
             }
           )
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
-            (payload: any) => {
-              const isMyUpdate = payload.new && payload.new.id === kioskId;
-              const isMyDelete = payload.old && payload.old.id === kioskId;
-              
-              if (isMyUpdate || isMyDelete) {
-                  if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
-              }
-            }
-          )
           .subscribe();
     }
-
     return () => {
         if (channel) supabase.removeChannel(channel);
         if (interval) clearInterval(interval);
@@ -119,15 +158,12 @@ export default function App() {
   }, [fetchData, kioskId, isAdmin]);
 
   const handleUpdateData = async (newData: StoreData) => {
-    setIsSyncing(true);
     setStoreData({ ...newData }); 
     try {
         await saveStoreData(newData);
         setLastSyncTime(new Date().toLocaleTimeString());
     } catch (e: any) {
         console.error("Manual save failed", e);
-    } finally {
-        setIsSyncing(false);
     }
   };
 
@@ -143,13 +179,7 @@ export default function App() {
   return (
     <>
       {storeData && <AppIconUpdater storeData={storeData} />}
-      
-      {isSyncing && isAdmin && (
-         <div className="fixed top-12 right-4 z-[200] bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg shadow-2xl flex items-center gap-2 border border-white/10 animate-fade-in">
-            <Loader2 className="animate-spin text-blue-400" size={12} />
-            <span className="text-[9px] font-black uppercase tracking-widest">Updating Cloud</span>
-         </div>
-      )}
+      <SyncStatusPopup />
       
       {isAdmin ? (
         <AdminDashboard 
