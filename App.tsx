@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KioskApp } from './components/KioskApp';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -125,8 +126,7 @@ export default function App() {
     } catch (e: any) {
         console.error("Manual save failed", e);
     } finally {
-        // Keep indicator visible slightly to confirm success
-        setTimeout(() => setIsSyncing(false), 500);
+        setIsSyncing(false);
     }
   };
 

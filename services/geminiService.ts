@@ -723,23 +723,8 @@ export const generateStoreData = async (): Promise<StoreData> => {
 };
 
 export const saveStoreData = async (data: StoreData): Promise<void> => {
-    // 1. Try Cloud Save (Priority)
-    if (!supabase) initSupabase();
-    if (supabase) {
-        try {
-            const { fleet, ...dataToSave } = data;
-            const { error } = await supabase
-                .from('store_config')
-                .upsert({ id: 1, data: dataToSave });
-            
-            if (error) throw error;
-        } catch (e) {
-            console.error("Cloud sync failed.", e);
-            throw new Error("Connection failed.");
-        }
-    }
-
-    // 2. Local Storage (Backup/Cache)
+    // 1. Local Storage (Instant Priority) - EXECUTE FIRST
+    // We do this FIRST so the app feels instant and data is safe locally immediately.
     try {
         localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
     } catch (e) {
@@ -750,6 +735,23 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(smallerData));
         } catch (innerE) {
              console.error("Local Storage completely full. Kiosk data will not persist offline.");
+        }
+    }
+
+    // 2. Cloud Save (Async / Background)
+    if (!supabase) initSupabase();
+    if (supabase) {
+        try {
+            const { fleet, ...dataToSave } = data;
+            // Use upsert with minimal response overhead
+            const { error } = await supabase
+                .from('store_config')
+                .upsert({ id: 1, data: dataToSave }, { onConflict: 'id', ignoreDuplicates: false, count: 'exact' }); 
+            
+            if (error) throw error;
+        } catch (e) {
+            console.error("Cloud sync failed.", e);
+            throw new Error("Connection failed.");
         }
     }
 };
