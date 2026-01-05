@@ -251,7 +251,7 @@ const SystemDocumentation = () => {
                                  {/* Conveyor */}
                                  <div className="flex-1 h-16 bg-slate-50 border-y border-slate-200 relative overflow-hidden flex items-center px-2">
                                      <div className="absolute inset-0 flex items-center justify-center opacity-10 font-mono text-[10px] space-x-4 conveyor">
-                                         <span>RAW_DATA</span><span>>>></span><span>SANITIZING</span><span>>>></span><span>FORMATTING</span>
+                                         <span>RAW_DATA</span><span>{'>>>'}</span><span>SANITIZING</span><span>{'>>>'}</span><span>FORMATTING</span>
                                      </div>
                                      <div className="w-10 h-10 bg-white rounded-full shadow-lg border border-slate-200 flex items-center justify-center text-blue-500 z-10 mx-auto node-pulse">
                                          <Settings size={20} className="animate-spin-slow" />
