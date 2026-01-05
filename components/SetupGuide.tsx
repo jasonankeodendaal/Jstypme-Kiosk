@@ -288,12 +288,18 @@ CREATE POLICY "Allow All Price" ON public.pricelists FOR ALL USING (true) WITH C
 CREATE POLICY "Allow All Kiosks" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow All Logs" ON public.audit_logs FOR ALL USING (true) WITH CHECK (true);
 
--- 4. FINAL ACCESS GRANTS
+-- 4. INITIAL SEEDING
+-- Ensures the app finds row #1 on the first load
+INSERT INTO public.store_config (id, data) 
+VALUES (1, '{}') 
+ON CONFLICT (id) DO NOTHING;
+
+-- 5. FINAL ACCESS GRANTS
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 `}
                         />
                         <EngineerNote>
-                            This revised script ensures the 'kiosks' and 'store_config' tables exist, which are critical for device heartbeat and system-wide settings.
+                            This revised script ensures the 'kiosks' and 'store_config' tables exist and includes an initial SEED record for ID:1.
                         </EngineerNote>
                     </Step>
 

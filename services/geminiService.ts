@@ -82,35 +82,64 @@ const migrateData = (data: any): StoreData => {
 /**
  * RECONSTRUCTION ENGINE:
  * Fetches data from multiple tables and stitches them into the unified StoreData object.
+ * Updated to handle individual table 404s gracefully.
  */
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
+  
+  let cloudData: any = {};
+  let brandData: any[] = [];
+  let catData: any[] = [];
+  let prodData: any[] = [];
+  let catalogueData: any[] = [];
+  let pricelistData: any[] = [];
+  let fleetData: any[] = [];
+  let logData: any[] = [];
+
   if (supabase) {
       try {
-          const [configRes, brandsRes, catsRes, prodsRes, cataloguesRes, pricelistsRes, fleetRes, logsRes] = await Promise.all([
-              supabase.from('store_config').select('data').eq('id', 1).maybeSingle(),
-              supabase.from('brands').select('*'),
-              supabase.from('categories').select('*'),
-              supabase.from('products').select('*'),
-              supabase.from('catalogues').select('*'),
-              supabase.from('pricelists').select('*'),
-              supabase.from('kiosks').select('*'),
-              supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100)
+          // Perform fetches individually to avoid Promise.all failure on 404s
+          const fetchWithCatch = async (query: any) => {
+              try {
+                  const { data, error } = await query;
+                  if (error) return null;
+                  return data;
+              } catch (e) { return null; }
+          };
+
+          const [config, brands, cats, prods, catalogues, pricelists, fleet, logs] = await Promise.all([
+              fetchWithCatch(supabase.from('store_config').select('data').eq('id', 1).maybeSingle()),
+              fetchWithCatch(supabase.from('brands').select('*')),
+              fetchWithCatch(supabase.from('categories').select('*')),
+              fetchWithCatch(supabase.from('products').select('*')),
+              fetchWithCatch(supabase.from('catalogues').select('*')),
+              fetchWithCatch(supabase.from('pricelists').select('*')),
+              fetchWithCatch(supabase.from('kiosks').select('*')),
+              fetchWithCatch(supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100))
           ]);
 
-          let processedData = migrateData(configRes.data?.data || {});
+          if (config) cloudData = config.data || {};
+          if (brands) brandData = brands;
+          if (cats) catData = cats;
+          if (prods) prodData = prods;
+          if (catalogues) catalogueData = catalogues;
+          if (pricelists) pricelistData = pricelists;
+          if (fleet) fleetData = fleet;
+          if (logs) logData = logs;
+
+          let processedData = migrateData(cloudData);
           
           // Reconstruct Brands -> Categories -> Products
-          if (brandsRes.data) {
-              processedData.brands = brandsRes.data.map((b: any) => {
+          if (brandData.length > 0) {
+              processedData.brands = brandData.map((b: any) => {
                   const brand = b.data as Brand;
                   brand.id = b.id;
-                  brand.categories = (catsRes.data || [])
+                  brand.categories = (catData || [])
                       .filter((c: any) => c.brand_id === b.id)
                       .map((c: any) => {
                           const cat = c.data as Category;
                           cat.id = c.id;
-                          cat.products = (prodsRes.data || [])
+                          cat.products = (prodData || [])
                               .filter((p: any) => p.category_id === c.id)
                               .map((p: any) => ({ ...(p.data as Product), id: p.id }));
                           return cat;
@@ -119,12 +148,12 @@ export const generateStoreData = async (): Promise<StoreData> => {
               });
           }
 
-          if (cataloguesRes.data) processedData.catalogues = cataloguesRes.data.map((x: any) => ({ ...x.data, id: x.id }));
-          if (pricelistsRes.data) processedData.pricelists = pricelistsRes.data.map((x: any) => ({ ...x.data, id: x.id }));
-          if (logsRes.data) processedData.archive = { ...processedData.archive, deletedItems: logsRes.data.map((x: any) => ({ ...x.data, id: x.id })), brands: [], products: [], catalogues: [], deletedAt: {} };
+          if (catalogueData.length > 0) processedData.catalogues = catalogueData.map((x: any) => ({ ...x.data, id: x.id }));
+          if (pricelistData.length > 0) processedData.pricelists = pricelistData.map((x: any) => ({ ...x.data, id: x.id }));
+          if (logData.length > 0) processedData.archive = { ...processedData.archive, deletedItems: logData.map((x: any) => ({ ...x.data, id: x.id })), brands: [], products: [], catalogues: [], deletedAt: {} };
           
-          if (fleetRes.data) {
-              processedData.fleet = fleetRes.data.map((k: any) => ({
+          if (fleetData.length > 0) {
+              processedData.fleet = fleetData.map((k: any) => ({
                   id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
                   last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
                   version: k.version, locationDescription: k.location_description,
@@ -134,8 +163,9 @@ export const generateStoreData = async (): Promise<StoreData> => {
 
           try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(processedData)); } catch (e) {}
           return processedData;
-      } catch (e) { console.warn("Relational fetch failed, falling back to cache.", e); }
+      } catch (e) { console.warn("Relational fetch encountered an unexpected error.", e); }
   }
+
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DATA);
     if (stored) return migrateData(JSON.parse(stored));
