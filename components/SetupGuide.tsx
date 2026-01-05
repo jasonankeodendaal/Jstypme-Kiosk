@@ -42,7 +42,6 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
     </div>
   );
 
-  // Fix: Corrected corrupted component declaration and syntax error on line 37
   const WhyBox = ({ title = "Architectural Logic", children, variant = "blue" }: any) => {
     const colors = variant === 'orange' ? 'bg-orange-50 border-orange-500 text-orange-900/80' : variant === 'purple' ? 'bg-purple-50 border-purple-500 text-purple-900/80' : 'bg-blue-50 border-blue-500 text-blue-900/80';
     const iconColor = variant === 'orange' ? 'text-orange-800' : variant === 'purple' ? 'text-purple-800' : 'text-blue-800';
@@ -199,8 +198,14 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                         <p className="font-medium text-slate-700">Open Supabase &rarr; **SQL Editor** &rarr; **New Query**. Execute this script to provision the relational tables required for high-speed synchronization.</p>
                         <CodeBlock 
                           id="sql-schema"
-                          label="Production SQL Bootstrap (Relational)"
-                          code={`-- 1. EXTENDED RELATIONAL SCHEMA
+                          label="Production SQL Bootstrap (Full Relational Fix)"
+                          code={`-- 1. CLEANUP & CORE SCHEMA
+CREATE TABLE IF NOT EXISTS public.store_config (
+    id int primary key,
+    data jsonb not null,
+    updated_at timestamp with time zone default now()
+);
+
 CREATE TABLE IF NOT EXISTS public.brands (
     id text primary key,
     data jsonb not null,
@@ -233,43 +238,62 @@ CREATE TABLE IF NOT EXISTS public.pricelists (
     created_at timestamp with time zone default now()
 );
 
+CREATE TABLE IF NOT EXISTS public.kiosks (
+    id text primary key,
+    name text,
+    device_type text,
+    assigned_zone text,
+    last_seen timestamp with time zone default now(),
+    status text,
+    wifi_strength integer,
+    ip_address text,
+    version text,
+    location_description text,
+    restart_requested boolean default false,
+    created_at timestamp with time zone default now()
+);
+
 CREATE TABLE IF NOT EXISTS public.audit_logs (
     id text primary key,
     data jsonb not null,
     created_at timestamp with time zone default now()
 );
 
--- 2. RESET POLICIES
-DROP POLICY IF EXISTS "Allow All Config" ON public.store_config;
-DROP POLICY IF EXISTS "Allow All Brands" ON public.brands;
-DROP POLICY IF EXISTS "Allow All Cats" ON public.categories;
-DROP POLICY IF EXISTS "Allow All Prods" ON public.products;
-DROP POLICY IF EXISTS "Allow All Cats_Res" ON public.catalogues;
-DROP POLICY IF EXISTS "Allow All Price" ON public.pricelists;
-DROP POLICY IF EXISTS "Allow All Logs" ON public.audit_logs;
-
--- 3. ENABLE RLS & GRANTS
+-- 2. ENABLE ROW LEVEL SECURITY
+ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.catalogues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+-- 3. RESET & RECREATE PERMISSIVE POLICIES
+DROP POLICY IF EXISTS "Allow All Config" ON public.store_config;
+DROP POLICY IF EXISTS "Allow All Brands" ON public.brands;
+DROP POLICY IF EXISTS "Allow All Cats" ON public.categories;
+DROP POLICY IF EXISTS "Allow All Prods" ON public.products;
+DROP POLICY IF EXISTS "Allow All Catalogues" ON public.catalogues;
+DROP POLICY IF EXISTS "Allow All Price" ON public.pricelists;
+DROP POLICY IF EXISTS "Allow All Kiosks" ON public.kiosks;
+DROP POLICY IF EXISTS "Allow All Logs" ON public.audit_logs;
 
--- 4. CREATE PERMISSIVE POLICIES
 CREATE POLICY "Allow All Config" ON public.store_config FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow All Brands" ON public.brands FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow All Cats" ON public.categories FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow All Prods" ON public.products FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All Cats_Res" ON public.catalogues FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow All Catalogues" ON public.catalogues FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow All Price" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow All Kiosks" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow All Logs" ON public.audit_logs FOR ALL USING (true) WITH CHECK (true);
+
+-- 4. FINAL ACCESS GRANTS
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 `}
                         />
                         <EngineerNote>
-                            Running this script fixes the **500 Internal Server Error**. It moves large data lists out of the main config file into dedicated tables, ensuring each save request is lightweight.
+                            This revised script ensures the 'kiosks' and 'store_config' tables exist, which are critical for device heartbeat and system-wide settings.
                         </EngineerNote>
                     </Step>
 
@@ -294,5 +318,4 @@ CREATE POLICY "Allow All Logs" ON public.audit_logs FOR ALL USING (true) WITH CH
   );
 };
 
-// Fix: Added missing default export
 export default SetupGuide;
