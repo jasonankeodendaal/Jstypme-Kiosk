@@ -278,6 +278,7 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
 
       const uploadSingle = async (file: File) => {
            const localBase64 = await readFileAsBase64(file);
+           
            try {
               const url = await uploadFileToStorage(file);
               return { url, base64: localBase64 };
@@ -290,17 +291,12 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
           if (allowMultiple) {
               const results: string[] = [];
               const base64s: string[] = [];
-              // Parallelized Upload
-              const uploadPromises = files.map(async (file, idx) => {
-                  const res = await uploadSingle(file);
-                  setUploadProgress(((idx + 1) / files.length) * 100);
-                  return res;
-              });
-              const responses = await Promise.all(uploadPromises);
-              responses.forEach(res => {
+              for(let i=0; i<files.length; i++) {
+                  const res = await uploadSingle(files[i]);
                   results.push(res.url);
                   base64s.push(res.base64);
-              });
+                  setUploadProgress(((i+1)/files.length)*100);
+              }
               onUpload(results, fileType, base64s);
           } else {
               const res = await uploadSingle(files[0]);
@@ -347,17 +343,17 @@ const InputField = ({ label, val, onChange, placeholder, isArea = false, half = 
     </div>
 );
 
-const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalogue[], onSave: (c: Catalogue[], immediate: boolean, partial?: any) => void, brandId?: string }) => {
+const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalogue[], onSave: (c: Catalogue[], immediate: boolean) => void, brandId?: string }) => {
     const [localList, setLocalList] = useState(catalogues || []);
     useEffect(() => setLocalList(catalogues || []), [catalogues]);
 
-    const handleUpdate = (newList: Catalogue[], immediate = false, partial?: any) => {
+    const handleUpdate = (newList: Catalogue[], immediate = false) => {
         setLocalList(newList);
-        onSave(newList, immediate, partial); 
+        onSave(newList, immediate); 
     };
 
     const addCatalogue = () => {
-        const item = {
+        handleUpdate([...localList, {
             id: generateId('cat'),
             title: brandId ? 'New Brand Catalogue' : 'New Pamphlet',
             brandId: brandId,
@@ -366,23 +362,11 @@ const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalog
             year: new Date().getFullYear(),
             startDate: '',
             endDate: ''
-        } as Catalogue;
-        handleUpdate([...localList, item], true, { type: 'catalogue', action: 'upsert', item });
+        }], true);
     };
 
     const updateCatalogue = (id: string, updates: Partial<Catalogue>, immediate = false) => {
-        const item = localList.find(c => c.id === id);
-        if (item) {
-            const updatedItem = { ...item, ...updates };
-            handleUpdate(localList.map(c => c.id === id ? updatedItem : c), immediate, { type: 'catalogue', action: 'upsert', item: updatedItem });
-        }
-    };
-
-    const deleteCatalogue = (id: string) => {
-        const item = localList.find(c => c.id === id);
-        if (item) {
-            handleUpdate(localList.filter(c => c.id !== id), true, { type: 'catalogue', action: 'delete', item });
-        }
+        handleUpdate(localList.map(c => c.id === id ? { ...c, ...updates } : c), immediate);
     };
 
     return (
@@ -442,7 +426,7 @@ const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalog
                             </div>
 
                             <div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-2">
-                                <button onClick={() => deleteCatalogue(cat.id)} className="text-red-400 hover:text-red-600 flex items-center gap-1 text-[10px] font-bold uppercase"><Trash2 size={12} /> Delete Catalogue</button>
+                                <button onClick={() => handleUpdate(localList.filter(c => c.id !== cat.id), true)} className="text-red-400 hover:text-red-600 flex items-center gap-1 text-[10px] font-bold uppercase"><Trash2 size={12} /> Delete Catalogue</button>
                             </div>
                         </div>
                     </div>
@@ -633,7 +617,7 @@ const PricelistManager = ({
 }: { 
     pricelists: Pricelist[], 
     pricelistBrands: PricelistBrand[], 
-    onSavePricelists: (p: Pricelist[], immediate?: boolean, partial?: any) => void,
+    onSavePricelists: (p: Pricelist[], immediate?: boolean) => void,
     onSaveBrands: (b: PricelistBrand[], immediate?: boolean) => void,
     onDeletePricelist: (id: string) => void
 }) => {
@@ -701,20 +685,15 @@ const PricelistManager = ({
             year: new Date().getFullYear().toString(),
             dateAdded: new Date().toISOString()
         };
-        onSavePricelists([...pricelists, newItem], true, { type: 'pricelist', action: 'upsert', item: newItem });
+        onSavePricelists([...pricelists, newItem], true);
     };
 
     const updatePricelist = (id: string, updates: Partial<Pricelist>, immediate = false) => {
-        const item = pricelists.find(p => p.id === id);
-        if (item) {
-            const updatedItem = { ...item, ...updates };
-            onSavePricelists(pricelists.map(p => p.id === id ? updatedItem : p), immediate, { type: 'pricelist', action: 'upsert', item: updatedItem });
-        }
+        onSavePricelists(pricelists.map(p => p.id === id ? { ...p, ...updates } : p), immediate);
     };
 
     const handleDeletePricelist = (id: string) => {
-        const item = pricelists.find(p => p.id === id);
-        if(item && confirm("Delete this pricelist? It will be moved to Archive.")) {
+        if(confirm("Delete this pricelist? It will be moved to Archive.")) {
             onDeletePricelist(id);
         }
     };
@@ -885,129 +864,10 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
     const validFiles = Object.keys(loadedZip.files).filter(path => !loadedZip.files[path].dir && !path.includes('__MACOSX') && !path.includes('.DS_Store'));
     let rootPrefix = "";
     if (validFiles.length > 0) { const firstFileParts = getCleanPath(validFiles[0]).split('/').filter(p => p); if (firstFileParts.length > 1) { const possibleRoot = firstFileParts[0]; if (validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'))) { rootPrefix = possibleRoot + '/'; } } }
-    
-    const getMimeType = (filename: string) => { 
-        const ext = filename.split('.').pop()?.toLowerCase(); 
-        if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg'; 
-        if (ext === 'png') return 'image/png'; 
-        if (ext === 'webp') return 'image/webp'; 
-        if (ext === 'gif') return 'image/gif'; 
-        if (ext === 'mp4') return 'video/mp4'; 
-        if (ext === 'webm') return 'video/webm'; 
-        if (ext === 'pdf') return 'application/pdf'; 
-        return 'application/octet-stream'; 
-    };
-
-    const processAsset = async (zipObj: any, filename: string): Promise<string> => { 
-        const blob = await zipObj.async("blob"); 
-        if (supabase) { 
-            try { 
-                const mimeType = getMimeType(filename); 
-                const safeName = filename.replace(/[^a-z0-9._-]/gi, '_'); 
-                const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType }); 
-                return await uploadFileToStorage(fileToUpload); 
-            } catch (e) { 
-                console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e); 
-            } 
-        } 
-        return new Promise(resolve => { 
-            const reader = new FileReader(); 
-            reader.onloadend = () => resolve(reader.result as string); 
-            reader.readAsDataURL(blob); 
-        }); 
-    };
-
-    const filePaths = Object.keys(loadedZip.files); 
-    let processedCount = 0;
-    const batchSize = 3; 
-    
-    const importTasks: any[] = [];
-    for (const rawPath of filePaths) {
-        let path = getCleanPath(rawPath);
-        const fileObj = loadedZip.files[rawPath];
-        if (fileObj.dir || path.includes('__MACOSX') || path.includes('.DS_Store')) continue;
-        if (rootPrefix && path.startsWith(rootPrefix)) path = path.substring(rootPrefix.length);
-        if (path.startsWith('_System_Backup/') || path.includes('store_config')) continue;
-        
-        const parts = path.split('/').filter(p => p.trim() !== '');
-        if (parts.length < 2) continue;
-        
-        importTasks.push({ path, fileObj, parts });
-    }
-
-    for (let i = 0; i < importTasks.length; i += batchSize) {
-        const batch = importTasks.slice(i, i + batchSize);
-        await Promise.all(batch.map(async (task) => {
-            const { path, fileObj, parts } = task;
-            const brandName = parts[0];
-            if (!newBrands[brandName]) { newBrands[brandName] = { id: generateId('brand'), name: brandName, categories: [] }; }
-
-            if (parts.length === 2) {
-                const fileName = parts[1].toLowerCase();
-                if (fileName.includes('brand_logo') || fileName.includes('logo')) {
-                    newBrands[brandName].logoUrl = await processAsset(fileObj, parts[1]);
-                } else if (fileName.endsWith('.json') && fileName.includes('brand')) {
-                    try {
-                        const text = await fileObj.async("text");
-                        const meta = JSON.parse(text);
-                        if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor;
-                        if (meta.id) newBrands[brandName].id = meta.id;
-                    } catch(e) {}
-                }
-                return;
-            }
-
-            if (parts.length < 4) return;
-            const categoryName = parts[1];
-            const productName = parts[2];
-            const fileName = parts.slice(3).join('/');
-
-            let category = newBrands[brandName].categories.find(c => c.name === categoryName);
-            if (!category) {
-                category = { id: generateId('c'), name: categoryName, icon: 'Box', products: [] };
-                newBrands[brandName].categories.push(category);
-            }
-
-            let product = category.products.find(p => p.name === productName);
-            if (!product) {
-                product = { id: generateId('p'), name: productName, description: '', specs: {}, features: [], dimensions: [], imageUrl: '', galleryUrls: [], videoUrls: [], manuals: [], dateAdded: new Date().toISOString() };
-                category.products.push(product);
-            }
-
-            const lowerFile = fileName.toLowerCase();
-            if (fileName.endsWith('.json') && (fileName.includes('details') || fileName.includes('product'))) {
-                try {
-                    const text = await fileObj.async("text");
-                    const meta = JSON.parse(text);
-                    if (meta.id) product.id = meta.id;
-                    if (meta.name) product.name = meta.name;
-                    if (meta.description) product.description = meta.description;
-                    if (meta.sku) product.sku = meta.sku;
-                    if (meta.specs) product.specs = { ...product.specs, ...meta.specs };
-                    if (meta.features) product.features = [...(product.features || []), ...(meta.features || [])];
-                    if (meta.dimensions) product.dimensions = meta.dimensions;
-                    if (meta.boxContents) product.boxContents = meta.boxContents;
-                    if (meta.terms) product.terms = meta.terms;
-                    if (meta.dateAdded) product.dateAdded = meta.dateAdded;
-                } catch(e) {}
-            } else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
-                const url = await processAsset(fileObj, parts.slice(3).join('_'));
-                if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
-                    product.imageUrl = url;
-                } else {
-                    product.galleryUrls = [...(product.galleryUrls || []), url];
-                }
-            } else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
-                const url = await processAsset(fileObj, parts.slice(3).join('_'));
-                product.videoUrls = [...(product.videoUrls || []), url];
-            } else if (lowerFile.endsWith('.pdf')) {
-                const url = await processAsset(fileObj, parts.slice(3).join('_'));
-                product.manuals?.push({ id: generateId('man'), title: fileName.replace('.pdf', '').replace(/_/g, ' '), images: [], pdfUrl: url, thumbnailUrl: '' });
-            }
-        }));
-        processedCount += batch.length;
-        if (onProgress) onProgress(`Uploaded ${processedCount}/${importTasks.length} assets...`);
-    }
+    const getMimeType = (filename: string) => { const ext = filename.split('.').pop()?.toLowerCase(); if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg'; if (ext === 'png') return 'image/png'; if (ext === 'webp') return 'image/webp'; if (ext === 'gif') return 'image/gif'; if (ext === 'mp4') return 'video/mp4'; if (ext === 'webm') return 'video/webm'; if (ext === 'pdf') return 'application/pdf'; return 'application/octet-stream'; };
+    const processAsset = async (zipObj: any, filename: string): Promise<string> => { const blob = await zipObj.async("blob"); if (supabase) { try { const mimeType = getMimeType(filename); const safeName = filename.replace(/[^a-z0-9._-]/gi, '_'); const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType }); const url = await uploadFileToStorage(fileToUpload); return url; } catch (e) { console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e); } } return new Promise(resolve => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(blob); }); };
+    const filePaths = Object.keys(loadedZip.files); let processedCount = 0;
+    for (const rawPath of filePaths) { let path = getCleanPath(rawPath); const fileObj = loadedZip.files[rawPath]; if (fileObj.dir) continue; if (path.includes('__MACOSX') || path.includes('.DS_Store')) continue; if (rootPrefix && path.startsWith(rootPrefix)) { path = path.substring(rootPrefix.length); } if (path.startsWith('_System_Backup/')) continue; if (path.includes('store_config')) continue; const parts = path.split('/').filter(p => p.trim() !== ''); if (parts.length < 2) continue; processedCount++; if (onProgress && processedCount % 5 === 0) onProgress(`Processing item ${processedCount}/${validFiles.length}...`); const brandName = parts[0]; if (!newBrands[brandName]) { newBrands[brandName] = { id: generateId('brand'), name: brandName, categories: [] }; } if (parts.length === 2) { const fileName = parts[1].toLowerCase(); if (fileName.includes('brand_logo') || fileName.includes('logo')) { const url = await processAsset(fileObj, parts[1]); newBrands[brandName].logoUrl = url; } if (fileName.endsWith('.json') && fileName.includes('brand')) { try { const text = await fileObj.async("text"); const meta = JSON.parse(text); if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor; if (meta.id) newBrands[brandName].id = meta.id; } catch(e) {} } continue; } if (parts.length < 4) continue; const categoryName = parts[1]; const productName = parts[2]; const fileName = parts.slice(3).join('/'); let category = newBrands[brandName].categories.find(c => c.name === categoryName); if (!category) { category = { id: generateId('c'), name: categoryName, icon: 'Box', products: [] }; newBrands[brandName].categories.push(category); } let product = category.products.find(p => p.name === productName); if (!product) { product = { id: generateId('p'), name: productName, description: '', specs: {}, features: [], dimensions: [], imageUrl: '', galleryUrls: [], videoUrls: [], manuals: [], dateAdded: new Date().toISOString() }; category.products.push(product); } const lowerFile = fileName.toLowerCase(); if (fileName.endsWith('.json') && (fileName.includes('details') || fileName.includes('product'))) { try { const text = await fileObj.async("text"); const meta = JSON.parse(text); if (meta.id) product.id = meta.id; if (meta.name) product.name = meta.name; if (meta.description) product.description = meta.description; if (meta.sku) product.sku = meta.sku; if (meta.specs) product.specs = { ...product.specs, ...meta.specs }; if (meta.features) product.features = [...(product.features || []), ...(meta.features || [])]; if (meta.dimensions) product.dimensions = meta.dimensions; if (meta.boxContents) product.boxContents = meta.boxContents; if (meta.terms) product.terms = meta.terms; if (meta.dateAdded) product.dateAdded = meta.dateAdded; } catch(e) { console.warn("Failed to parse JSON for " + productName); } } else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) { const url = await processAsset(fileObj, parts.slice(3).join('_')); if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) { product.imageUrl = url; } else { product.galleryUrls = [...(product.galleryUrls || []), url]; } } else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) { const url = await processAsset(fileObj, parts.slice(3).join('_')); product.videoUrls = [...(product.videoUrls || []), url]; } else if (lowerFile.endsWith('.pdf')) { const url = await processAsset(fileObj, parts.slice(3).join('_')); product.manuals?.push({ id: generateId('man'), title: fileName.replace('.pdf', '').replace(/_/g, ' '), images: [], pdfUrl: url, thumbnailUrl: '' }); } }
     return Object.values(newBrands);
 };
 
@@ -1029,7 +889,7 @@ const downloadZip = async (data: StoreData | null) => {
     URL.revokeObjectURL(url);
 };
 
-export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData, partial?: any) => void, onRefresh: () => void }) => {
+export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => void, onRefresh: () => void }) => {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   
   const [activeTab, setActiveTab] = useState<string>('inventory');
@@ -1070,10 +930,10 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   useEffect(() => { checkCloudConnection().then(setIsCloudConnected); const interval = setInterval(() => checkCloudConnection().then(setIsCloudConnected), 30000); return () => clearInterval(interval); }, []);
   useEffect(() => { if (!hasUnsavedChanges && storeData) { setLocalData(storeData); } }, [storeData, hasUnsavedChanges]);
 
-  const handleLocalUpdate = (newData: StoreData, immediate = false, partial?: any) => {
+  const handleLocalUpdate = (newData: StoreData, immediate = false) => {
       setLocalData(newData);
       if (immediate) {
-          onUpdateData(newData, partial);
+          onUpdateData(newData);
           setHasUnsavedChanges(false);
       } else {
           setHasUnsavedChanges(true);
@@ -1095,7 +955,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
           const newArchive = addToArchive('device', kiosk.name, kiosk, 'delete');
           const updatedData = { ...localData!, archive: newArchive };
           await supabase.from('kiosks').delete().eq('id', id);
-          handleLocalUpdate(updatedData, true, { type: 'audit', action: 'create', item: newArchive?.deletedItems?.[0] }); 
+          handleLocalUpdate(updatedData, true); 
           onRefresh();
       }
   };
@@ -1105,12 +965,12 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       const now = new Date().toISOString();
       const newItem: ArchivedItem = { id: generateId('arch'), type, action, name, userName: currentUser.name, method, data, deletedAt: now };
       const currentArchive = localData.archive || { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} };
-      const newArchive = { ...currentArchive, deletedItems: [newItem, ...(currentArchive.deletedItems || [])].slice(0, 100) };
+      const newArchive = { ...currentArchive, deletedItems: [newItem, ...(currentArchive.deletedItems || [])].slice(0, 1000) };
       return newArchive;
   };
 
-  const restoreBrand = (b: Brand) => { if(!localData) return; const newArchiveBrands = localData.archive?.brands.filter(x => x.id !== b.id) || []; const newBrands = [...localData.brands, b]; const newArchive = addToArchive('brand', b.name, b, 'restore'); handleLocalUpdate({ ...localData, brands: newBrands, archive: { ...localData.archive!, brands: newArchiveBrands, deletedItems: newArchive?.deletedItems } }, true, { type: 'brand', action: 'upsert', item: b }); };
-  const restoreCatalogue = (c: Catalogue) => { if(!localData) return; const newArchiveCats = localData.archive?.catalogues.filter(x => x.id !== c.id) || []; const newCats = [...(localData.catalogues || []), c]; const newArchive = addToArchive('catalogue', c.title, c, 'restore'); handleLocalUpdate({ ...localData, catalogues: newCats, archive: { ...localData.archive!, catalogues: newArchiveCats, deletedItems: newArchive?.deletedItems } }, true, { type: 'catalogue', action: 'upsert', item: c }); };
+  const restoreBrand = (b: Brand) => { if(!localData) return; const newArchiveBrands = localData.archive?.brands.filter(x => x.id !== b.id) || []; const newBrands = [...localData.brands, b]; const newArchive = addToArchive('brand', b.name, b, 'restore'); handleLocalUpdate({ ...localData, brands: newBrands, archive: { ...localData.archive!, brands: newArchiveBrands, deletedItems: newArchive?.deletedItems } }, true); };
+  const restoreCatalogue = (c: Catalogue) => { if(!localData) return; const newArchiveCats = localData.archive?.catalogues.filter(x => x.id !== c.id) || []; const newCats = [...(localData.catalogues || []), c]; const newArchive = addToArchive('catalogue', c.title, c, 'restore'); handleLocalUpdate({ ...localData, catalogues: newCats, archive: { ...localData.archive!, catalogues: newArchiveCats, deletedItems: newArchive?.deletedItems } }, true); };
 
   const handleMoveProduct = (product: Product, targetBrandId: string, targetCategoryId: string) => {
       if (!localData || !selectedBrand || !selectedCategory) return;
@@ -1118,7 +978,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       let newBrands = localData.brands.map(b => { if (b.id === selectedBrand.id) { return { ...b, categories: b.categories.map(c => c.id === selectedCategory.id ? updatedSourceCat : c) }; } return b; });
       newBrands = newBrands.map(b => { if (b.id === targetBrandId) { return { ...b, categories: b.categories.map(c => { if (c.id === targetCategoryId) { return { ...c, products: [...c.products, product] }; } return c; }) }; } return b; });
       const newArchive = addToArchive('product', product.name, { product, from: selectedCategory.name, to: targetCategoryId }, 'update');
-      handleLocalUpdate({ ...localData, brands: newBrands, archive: newArchive }, true, { type: 'product', action: 'upsert', item: { ...product, categoryId: targetCategoryId } }); 
+      handleLocalUpdate({ ...localData, brands: newBrands, archive: newArchive }, true); 
       setMovingProduct(null);
   };
 
@@ -1141,36 +1001,36 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             {activeTab === 'inventory' && (
                 !selectedBrand ? (
                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 animate-fade-in">
-                       <button onClick={() => { const name = prompt("Brand Name:"); if(name) { const item = { id: generateId('b'), name, categories: [] } as Brand; handleLocalUpdate({ ...localData, brands: [...brands, item], archive: addToArchive('brand', name, null, 'create') }, true, { type: 'brand', action: 'upsert', item }); } }} className="bg-white border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-4 md:p-8 text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-all group min-h-[120px] md:min-h-[200px]"><Plus size={24} className="mb-2" /><span className="font-bold uppercase text-[10px] md:text-xs tracking-wider text-center">Add Brand</span></button>
+                       <button onClick={() => { const name = prompt("Brand Name:"); if(name) { handleLocalUpdate({ ...localData, brands: [...brands, { id: generateId('b'), name, categories: [] }], archive: addToArchive('brand', name, null, 'create') }, true); } }} className="bg-white border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-4 md:p-8 text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-all group min-h-[120px] md:min-h-[200px]"><Plus size={24} className="mb-2" /><span className="font-bold uppercase text-[10px] md:text-xs tracking-wider text-center">Add Brand</span></button>
                        {brands.map(brand => (
                            <div key={brand.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all group relative flex flex-col h-full">
-                               <div className="flex-1 bg-slate-50 flex items-center justify-center p-2 relative aspect-square">{brand.logoUrl ? <img src={brand.logoUrl} className="max-h-full max-w-full object-contain" /> : <span className="text-4xl font-black text-slate-200">{brand.name.charAt(0)}</span>}<button onClick={(e) => { e.stopPropagation(); if(confirm("Move to archive?")) { const now = new Date().toISOString(); handleLocalUpdate({...localData, brands: brands.filter(b=>b.id!==brand.id), archive: {...addToArchive('brand', brand.name, brand, 'delete')!, brands: [...(localData.archive?.brands||[]), brand], deletedAt: {...localData.archive?.deletedAt, [brand.id]: now} }}, true, { type: 'brand', action: 'delete', item: brand }); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12}/></button></div>
+                               <div className="flex-1 bg-slate-50 flex items-center justify-center p-2 relative aspect-square">{brand.logoUrl ? <img src={brand.logoUrl} className="max-h-full max-w-full object-contain" /> : <span className="text-4xl font-black text-slate-200">{brand.name.charAt(0)}</span>}<button onClick={(e) => { e.stopPropagation(); if(confirm("Move to archive?")) { const now = new Date().toISOString(); handleLocalUpdate({...localData, brands: brands.filter(b=>b.id!==brand.id), archive: {...addToArchive('brand', brand.name, brand, 'delete')!, brands: [...(localData.archive?.brands||[]), brand], deletedAt: {...localData.archive?.deletedAt, [brand.id]: now} }}, true); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12}/></button></div>
                                <div className="p-2 md:p-4"><h3 className="font-black text-slate-900 text-xs md:text-lg uppercase tracking-tight mb-1 truncate">{brand.name}</h3><p className="text-[10px] md:text-xs text-slate-500 font-bold mb-2 md:mb-4">{brand.categories.length} Categories</p><button onClick={() => setSelectedBrand(brand)} className="w-full bg-slate-900 text-white py-1.5 md:py-2 rounded-lg font-bold text-[10px] md:text-xs uppercase hover:bg-blue-600 transition-colors">Manage</button></div>
                            </div>
                        ))}
                    </div>
                ) : !selectedCategory ? (
                    <div className="animate-fade-in">
-                       <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-xl md:text-2xl font-black uppercase text-slate-900 flex-1">{selectedBrand.name}</h2><FileUpload label="Brand Logo" currentUrl={selectedBrand.logoUrl} onUpload={(url: any) => { const updated = {...selectedBrand, logoUrl: url}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('brand', selectedBrand.name, {logo: url}, 'update')}, true, { type: 'brand', action: 'upsert', item: updated }); }} /></div>
+                       <div className="flex items-center gap-4 mb-6"><button onClick={() => setSelectedBrand(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-xl md:text-2xl font-black uppercase text-slate-900 flex-1">{selectedBrand.name}</h2><FileUpload label="Brand Logo" currentUrl={selectedBrand.logoUrl} onUpload={(url: any) => { const updated = {...selectedBrand, logoUrl: url}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('brand', selectedBrand.name, {logo: url}, 'update')}, true); }} /></div>
                        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-                           <button onClick={() => { const name = prompt("Category Name:"); if(name) { const item = { id: generateId('c'), name, icon: 'Box', products: [], brandId: selectedBrand.id } as Category; const updated = {...selectedBrand, categories: [...selectedBrand.categories, item]}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `${selectedBrand.name} > ${name}`, null, 'create')}, true, { type: 'category', action: 'upsert', item }); } }} className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-4 text-slate-400 hover:border-blue-500 hover:text-blue-500 aspect-square"><Plus size={24} /><span className="font-bold text-[10px] uppercase mt-2 text-center">New Category</span></button>
+                           <button onClick={() => { const name = prompt("Category Name:"); if(name) { const updated = {...selectedBrand, categories: [...selectedBrand.categories, { id: generateId('c'), name, icon: 'Box', products: [] }]}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `${selectedBrand.name} > ${name}`, null, 'create')}, true); } }} className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center p-4 text-slate-400 hover:border-blue-500 hover:text-blue-500 aspect-square"><Plus size={24} /><span className="font-bold text-[10px] uppercase mt-2 text-center">New Category</span></button>
                            {selectedBrand.categories.map(cat => (
                                <button key={cat.id} onClick={() => setSelectedCategory(cat)} className="bg-white p-2 md:p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md text-left group relative aspect-square flex flex-col justify-center">
                                    <Box size={20} className="mb-2 md:mb-4 text-slate-400 mx-auto md:mx-0" /><h3 className="font-black text-slate-900 uppercase text-[10px] md:text-sm text-center md:text-left truncate w-full">{cat.name}</h3><p className="text-[9px] md:text-xs text-slate-500 font-bold text-center md:text-left">{cat.products.length} Products</p>
-                                   <div onClick={(e)=>{e.stopPropagation(); const name = prompt("Rename Category:", cat.name); if(name && name.trim() !== "") { const updatedCat = {...cat, name: name.trim()}; const updatedBrand = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === cat.id ? updatedCat : c)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updatedBrand.id?updatedBrand:b), archive: addToArchive('other', `Renamed ${cat.name} to ${name}`, null, 'update')}, true, { type: 'category', action: 'upsert', item: updatedCat }); }}} className="absolute top-1 right-8 md:top-2 md:right-8 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-500 rounded transition-all"><Edit2 size={12}/></div>
-                                   <div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ const updated={...selectedBrand, categories: selectedBrand.categories.filter(c=>c.id!==cat.id)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `Deleted category ${cat.name}`, cat, 'delete')}, true, { type: 'category', action: 'delete', item: cat }); }}} className="absolute top-1 right-1 md:top-2 md:right-2 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded"><Trash2 size={12}/></div>
+                                   <div onClick={(e)=>{e.stopPropagation(); const name = prompt("Rename Category:", cat.name); if(name && name.trim() !== "") { const updated = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === cat.id ? {...c, name: name.trim()} : c)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `Renamed ${cat.name} to ${name}`, null, 'update')}, true); }}} className="absolute top-1 right-8 md:top-2 md:right-8 p-1 md:p-1.5 opacity-0 group-hover:opacity-100 hover:bg-blue-50 text-blue-500 rounded transition-all"><Edit2 size={12}/></div>
+                                   <div onClick={(e)=>{e.stopPropagation(); if(confirm("Delete?")){ const updated={...selectedBrand, categories: selectedBrand.categories.filter(c=>c.id!==cat.id)}; handleLocalUpdate({...localData, brands: brands.map(b=>b.id===updated.id?updated:b), archive: addToArchive('other', `Deleted category ${cat.name}`, cat, 'delete')}, true); }}} className="absolute top-1 right-1 md:top-2 md:right-2 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-500 rounded"><Trash2 size={12}/></div>
                                 </button>
                             ))}
                        </div>
-                       <div className="mt-8 border-t border-slate-200 pt-8"><h3 className="font-bold text-slate-900 uppercase text-sm mb-4">Brand Catalogues</h3><CatalogueManager catalogues={localData.catalogues?.filter(c => c.brandId === selectedBrand.id) || []} brandId={selectedBrand.id} onSave={(c, immediate, partial) => { const otherCatalogues = (localData.catalogues || []).filter(cat => cat.brandId !== selectedBrand.id); handleLocalUpdate({ ...localData, catalogues: [...otherCatalogues, ...c] }, immediate, partial); }} /></div>
+                       <div className="mt-8 border-t border-slate-200 pt-8"><h3 className="font-bold text-slate-900 uppercase text-sm mb-4">Brand Catalogues</h3><CatalogueManager catalogues={localData.catalogues?.filter(c => c.brandId === selectedBrand.id) || []} brandId={selectedBrand.id} onSave={(c, immediate) => { const otherCatalogues = (localData.catalogues || []).filter(cat => cat.brandId !== selectedBrand.id); handleLocalUpdate({ ...localData, catalogues: [...otherCatalogues, ...c] }, immediate); }} /></div>
                    </div>
                ) : (
                    <div className="animate-fade-in h-full flex flex-col">
-                       <div className="flex items-center gap-4 mb-6 shrink-0"><button onClick={() => setSelectedCategory(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-lg md:text-2xl font-black uppercase text-slate-900 flex-1 truncate">{selectedCategory.name}</h2><button onClick={() => setEditingProduct({ id: generateId('p'), name: '', description: '', specs: {}, features: [], dimensions: [], imageUrl: '', categoryId: selectedCategory.id } as any)} className="bg-blue-600 text-white px-3 py-2 md:px-4 rounded-lg font-bold uppercase text-[10px] md:text-xs flex items-center gap-2 shrink-0"><Plus size={14} /> Add</button></div>
+                       <div className="flex items-center gap-4 mb-6 shrink-0"><button onClick={() => setSelectedCategory(null)} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500"><ArrowLeft size={20} /></button><h2 className="text-lg md:text-2xl font-black uppercase text-slate-900 flex-1 truncate">{selectedCategory.name}</h2><button onClick={() => setEditingProduct({ id: generateId('p'), name: '', description: '', specs: {}, features: [], dimensions: [], imageUrl: '' } as any)} className="bg-blue-600 text-white px-3 py-2 md:px-4 rounded-lg font-bold uppercase text-[10px] md:text-xs flex items-center gap-2 shrink-0"><Plus size={14} /> Add</button></div>
                        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 overflow-y-auto pb-20">
                            {selectedCategory.products.map(product => (
                                <div key={product.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col group hover:shadow-lg transition-all">
-                                   <div className="aspect-square bg-slate-50 relative flex items-center justify-center p-2 md:p-4">{product.imageUrl ? <img src={product.imageUrl} className="max-w-full max-h-full object-contain" /> : <Box size={24} className="text-slate-300" />}<div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2"><div className="flex gap-2"><button onClick={() => setEditingProduct(product)} className="p-1.5 md:p-2 bg-white text-blue-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50">Edit</button><button onClick={() => setMovingProduct(product)} className="p-1.5 md:p-2 bg-white text-orange-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-orange-50" title="Move Category">Move</button></div><button onClick={() => { if(confirm(`Delete product "${product.name}"?`)) { const updatedCat = {...selectedCategory, products: selectedCategory.products.filter(p => p.id !== product.id)}; const updatedBrand = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) || []}; const newArchive = addToArchive('product', product.name, product, 'delete'); handleLocalUpdate({...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b), archive: newArchive}, true, { type: 'product', action: 'delete', item: product }); } }} className="p-1.5 md:p-2 bg-white text-red-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-red-50 w-[80%]">Delete</button></div></div>
+                                   <div className="aspect-square bg-slate-50 relative flex items-center justify-center p-2 md:p-4">{product.imageUrl ? <img src={product.imageUrl} className="max-w-full max-h-full object-contain" /> : <Box size={24} className="text-slate-300" />}<div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2"><div className="flex gap-2"><button onClick={() => setEditingProduct(product)} className="p-1.5 md:p-2 bg-white text-blue-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-blue-50">Edit</button><button onClick={() => setMovingProduct(product)} className="p-1.5 md:p-2 bg-white text-orange-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-orange-50" title="Move Category">Move</button></div><button onClick={() => { if(confirm(`Delete product "${product.name}"?`)) { const updatedCat = {...selectedCategory, products: selectedCategory.products.filter(p => p.id !== product.id)}; const updatedBrand = {...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) || []}; const newArchive = addToArchive('product', product.name, product, 'delete'); handleLocalUpdate({...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b), archive: newArchive}, true); } }} className="p-1.5 md:p-2 bg-white text-red-600 rounded-lg font-bold text-[10px] md:text-xs uppercase shadow-lg hover:bg-red-50 w-[80%]">Delete</button></div></div>
                                    <div className="p-2 md:p-4"><h4 className="font-bold text-slate-900 text-[10px] md:text-sm truncate uppercase">{product.name}</h4><p className="text-[9px] md:text-xs text-slate-500 font-mono truncate">{product.sku || 'No SKU'}</p></div>
                                </div>
                             ))}
@@ -1183,9 +1043,9 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 <PricelistManager 
                     pricelists={localData.pricelists || []} 
                     pricelistBrands={localData.pricelistBrands || []}
-                    onSavePricelists={(p, immediate, partial) => handleLocalUpdate({ ...localData, pricelists: p, archive: addToArchive('pricelist', 'Update', p, 'update') }, immediate, partial)}
+                    onSavePricelists={(p, immediate) => handleLocalUpdate({ ...localData, pricelists: p, archive: addToArchive('pricelist', 'Batch Update', p, 'update') }, immediate)}
                     onSaveBrands={(b, immediate) => handleLocalUpdate({ ...localData, pricelistBrands: b, archive: addToArchive('other', 'Update Pricelist Brands', b, 'update') }, immediate)}
-                    onDeletePricelist={(id) => { const toDelete = localData.pricelists?.find(p => p.id === id); if (toDelete) { const newArchive = addToArchive('pricelist', toDelete.title, toDelete, 'delete'); handleLocalUpdate({ ...localData, pricelists: localData.pricelists?.filter(p => p.id !== id), archive: newArchive }, true, { type: 'pricelist', action: 'delete', item: toDelete }); } }}
+                    onDeletePricelist={(id) => { const toDelete = localData.pricelists?.find(p => p.id === id); if (toDelete) { const newArchive = addToArchive('pricelist', toDelete.title, toDelete, 'delete'); handleLocalUpdate({ ...localData, pricelists: localData.pricelists?.filter(p => p.id !== id), archive: newArchive }, true); } }}
                 />
             )}
             
@@ -1200,7 +1060,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             {activeTab === 'marketing' && (
                 <div className="max-w-5xl mx-auto">
                     {activeSubTab === 'catalogues' && (
-                        <CatalogueManager catalogues={(localData.catalogues || []).filter(c => !c.brandId)} onSave={(c, immediate, partial) => { const brandCatalogues = (localData.catalogues || []).filter(c => c.brandId); handleLocalUpdate({ ...localData, catalogues: [...brandCatalogues, ...c], archive: addToArchive('catalogue', 'Update', c, 'update') }, immediate, partial); }} />
+                        <CatalogueManager catalogues={(localData.catalogues || []).filter(c => !c.brandId)} onSave={(c, immediate) => { const brandCatalogues = (localData.catalogues || []).filter(c => c.brandId); handleLocalUpdate({ ...localData, catalogues: [...brandCatalogues, ...c], archive: addToArchive('catalogue', 'Batch Update', c, 'update') }, immediate); }} />
                     )}
                     {activeSubTab === 'hero' && (
                         <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-4"><InputField label="Title" val={localData.hero.title} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, title: e.target.value}, archive: addToArchive('other', 'Hero Title Update', e.target.value, 'update')})} /><InputField label="Subtitle" val={localData.hero.subtitle} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, subtitle: e.target.value}, archive: addToArchive('other', 'Hero Subtitle Update', e.target.value, 'update')})} /><InputField label="Website URL" val={localData.hero.websiteUrl || ''} onChange={(e:any) => handleLocalUpdate({...localData, hero: {...localData.hero, websiteUrl: e.target.value}, archive: addToArchive('other', 'Hero Website Update', e.target.value, 'update')})} placeholder="https://example.com" /></div><div className="space-y-4"><FileUpload label="Background Image" currentUrl={localData.hero.backgroundImageUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, backgroundImageUrl: url}, archive: addToArchive('other', 'Hero Background Update', url, 'update')}, true)} /><FileUpload label="Brand Logo" currentUrl={localData.hero.logoUrl} onUpload={(url:any) => handleLocalUpdate({...localData, hero: {...localData.hero, logoUrl: url}, archive: addToArchive('other', 'Hero Logo Update', url, 'update')}, true)} /></div></div></div>
@@ -1231,7 +1091,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             )}
         </main>
 
-        {editingProduct && <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in"><ProductEditor product={editingProduct} onSave={(p) => { if (!selectedBrand || !selectedCategory) return; if (p.sku && checkSkuDuplicate(p.sku, p.id)) { alert(`SKU "${p.sku}" is already used by another product.`); return; } const isNew = !selectedCategory.products.find(x => x.id === p.id); const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x); const updatedCat = { ...selectedCategory, products: newProducts }; const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) }; const newArchive = addToArchive('product', p.name, p, isNew ? 'create' : 'update'); handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b), archive: newArchive }, true, { type: 'product', action: 'upsert', item: { ...p, categoryId: selectedCategory.id } }); setEditingProduct(null); }} onCancel={() => setEditingProduct(null)} /></div>}
+        {editingProduct && <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in"><ProductEditor product={editingProduct} onSave={(p) => { if (!selectedBrand || !selectedCategory) return; if (p.sku && checkSkuDuplicate(p.sku, p.id)) { alert(`SKU "${p.sku}" is already used by another product.`); return; } const isNew = !selectedCategory.products.find(x => x.id === p.id); const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x); const updatedCat = { ...selectedCategory, products: newProducts }; const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) }; const newArchive = addToArchive('product', p.name, p, isNew ? 'create' : 'update'); handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b), archive: newArchive }, true); setEditingProduct(null); }} onCancel={() => setEditingProduct(null)} /></div>}
         {movingProduct && <MoveProductModal product={movingProduct} allBrands={brands} currentBrandId={selectedBrand?.id || ''} currentCategoryId={selectedCategory?.id || ''} onClose={() => setMovingProduct(null)} onMove={(product, targetBrand, targetCategory) => handleMoveProduct(product, targetBrand, targetCategory)} />}
         {editingKiosk && <KioskEditorModal kiosk={editingKiosk} onSave={(k) => { updateFleetMember(k); setEditingKiosk(null); }} onClose={() => setEditingKiosk(null)} />}
         {editingTVModel && <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updatedTVBrand : b) } as TVConfig, archive: addToArchive('tv_model', m.name, m, isNew ? 'create' : 'update') }, true); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />}
