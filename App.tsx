@@ -79,10 +79,13 @@ export default function App() {
     fetchData();
 
     // 1. Background Routine Sync (Pulsing Heartbeat) - Silent
-    // Only perform background syncs for fleet telemetry in Admin mode
-    const interval = setInterval(() => {
-        fetchData(true);
-    }, 60000); 
+    // Disable interval entirely in Admin mode to prevent potential state interference
+    let interval: any = null;
+    if (!isAdmin) {
+        interval = setInterval(() => {
+            fetchData(true);
+        }, 60000); 
+    }
 
     // 2. Realtime Event Listener - Disabled for Admin to prevent intrusive updates
     let channel: any = null;
@@ -112,7 +115,7 @@ export default function App() {
 
     return () => {
         if (channel) supabase.removeChannel(channel);
-        clearInterval(interval);
+        if (interval) clearInterval(interval);
     };
   }, [fetchData, kioskId, isAdmin]);
 
