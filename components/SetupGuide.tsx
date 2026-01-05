@@ -200,12 +200,18 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                           id="sql-schema"
                           label="Production SQL Bootstrap (Fixed)"
                           code={`-- 1. RESET & CLEANUP (Ensures clean slate)
+-- Drop legacy policies
 DROP POLICY IF EXISTS "Allow Public Read Config" ON public.store_config;
 DROP POLICY IF EXISTS "Allow Public Update Config" ON public.store_config;
 DROP POLICY IF EXISTS "Allow Public Insert Config" ON public.store_config;
 DROP POLICY IF EXISTS "Allow Public Fleet Access" ON public.kiosks;
 DROP POLICY IF EXISTS "Enable access to all users" ON public.kiosks;
 DROP POLICY IF EXISTS "Public Storage Access" ON storage.objects;
+
+-- Drop current policies (Fixes "policy already exists" error)
+DROP POLICY IF EXISTS "Allow All Config" ON public.store_config;
+DROP POLICY IF EXISTS "Allow All Fleet" ON public.kiosks;
+DROP POLICY IF EXISTS "Allow All Storage" ON storage.objects;
 
 -- 2. TABLE DEFINITIONS
 CREATE TABLE IF NOT EXISTS public.store_config (
