@@ -1,16 +1,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { StoreData, TVBrand, TVModel } from '../types';
-import { Play, Tv, ArrowLeft, ChevronLeft, ChevronRight, Pause, RotateCcw, MonitorPlay, MonitorStop, Film, LayoutGrid, SkipForward, Monitor, PlayCircle, Info } from 'lucide-react';
+import { Play, Tv, ArrowLeft, ChevronLeft, ChevronRight, Pause, RotateCcw, MonitorPlay, MonitorStop, Film, LayoutGrid, SkipForward, Monitor, PlayCircle, Info, VolumeX, Loader2 } from 'lucide-react';
 
 interface TVModeProps {
   storeData: StoreData;
   onRefresh: () => void;
   screensaverEnabled: boolean;
   onToggleScreensaver: () => void;
+  isAudioUnlocked: boolean;
 }
 
-const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnabled, onToggleScreensaver }) => {
+const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnabled, onToggleScreensaver, isAudioUnlocked }) => {
   const [viewingBrand, setViewingBrand] = useState<TVBrand | null>(null);
   const [viewingModel, setViewingModel] = useState<TVModel | null>(null);
   
@@ -18,6 +19,7 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false); 
   const [isPaused, setIsPaused] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
 
   const [showControls, setShowControls] = useState(true);
   
@@ -87,7 +89,13 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
       if (nextIndex === currentVideoIndex) {
           if (videoRef.current) {
               videoRef.current.currentTime = 0;
-              videoRef.current.play().catch(console.warn);
+              videoRef.current.play().catch(() => {
+                  console.warn("Retrying play muted...");
+                  if (videoRef.current) {
+                      videoRef.current.muted = true;
+                      videoRef.current.play().catch(e => console.error("Playback totally blocked", e));
+                  }
+              });
           }
       } else {
           setCurrentVideoIndex(nextIndex);
@@ -105,6 +113,26 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
     return () => { if (watchdogRef.current) clearTimeout(watchdogRef.current); };
   }, [currentVideoIndex, isPlaying, activePlaylist.length]);
 
+  // Robust Autoplay Effect
+  useEffect(() => {
+      if (isPlaying && videoRef.current) {
+          setIsLoading(true);
+          const playPromise = videoRef.current.play();
+          if (playPromise !== undefined) {
+              playPromise.then(() => {
+                  setIsPaused(false);
+                  setIsLoading(false);
+              }).catch((error) => {
+                  console.warn("Autoplay blocked by browser policy. Muting and retrying.", error);
+                  if (videoRef.current) {
+                      videoRef.current.muted = true;
+                      videoRef.current.play().catch(e => console.error("Critical playback failure", e));
+                  }
+              });
+          }
+      }
+  }, [currentVideoIndex, isPlaying]);
+
   const handleVideoEnded = () => {
       skipToNext();
   };
@@ -119,13 +147,19 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
       const prevIndex = (currentVideoIndex - 1 + activePlaylist.length) % activePlaylist.length;
       if (prevIndex === currentVideoIndex && videoRef.current) {
            videoRef.current.currentTime = 0;
-           videoRef.current.play().catch(console.warn);
+           videoRef.current.play().catch(() => {
+               if (videoRef.current) {
+                   videoRef.current.muted = true;
+                   videoRef.current.play();
+               }
+           });
       } else {
            setCurrentVideoIndex(prevIndex);
       }
   };
   
   const handleVideoError = () => {
+      console.error("Source error on video:", activePlaylist[currentVideoIndex]);
       setTimeout(skipToNext, 2000);
   }
 
@@ -146,23 +180,46 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
                   className="w-full h-full object-contain"
                   autoPlay
                   playsInline
+                  muted={!isAudioUnlocked}
                   onEnded={handleVideoEnded}
                   onError={handleVideoError}
-                  onPlay={() => setIsPaused(false)}
+                  onPlay={() => { setIsPaused(false); setIsLoading(false); }}
                   onPause={() => setIsPaused(true)}
+                  onLoadStart={() => setIsLoading(true)}
+                  onCanPlay={() => setIsLoading(false)}
               />
+              
+              {isLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-10">
+                      <div className="flex flex-col items-center gap-4">
+                          <Loader2 size={48} className="text-blue-500 animate-spin" />
+                          <span className="text-white text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Buffering Source...</span>
+                      </div>
+                  </div>
+              )}
+
               <div className={`absolute inset-0 flex flex-col justify-between p-4 md:p-8 transition-opacity duration-300 bg-gradient-to-b from-black/60 via-transparent to-black/60 ${showControls ? 'opacity-100 pointer-events-auto cursor-auto' : 'opacity-0 pointer-events-none'}`}>
                   <div className="flex justify-between items-start">
                       <button onClick={exitPlayer} className="bg-white/10 hover:bg-white/20 text-white p-3 md:p-4 rounded-full border border-white/10">
                           <ArrowLeft size={24} className="md:w-8 md:h-8" />
                       </button>
-                      <div className="bg-black/60 px-6 py-2 rounded-xl border border-white/10 text-center">
-                          <h2 className="text-white font-black uppercase tracking-widest text-sm md:text-lg">TV Channel Loop</h2>
-                          <div className="text-blue-400 text-[10px] md:text-xs font-bold uppercase mt-1 flex items-center justify-center gap-2">
-                              <Film size={12} /> Video {currentVideoIndex + 1} of {activePlaylist.length}
-                          </div>
+                      
+                      <div className="flex flex-col gap-2 items-end">
+                        <div className="bg-black/60 px-6 py-2 rounded-xl border border-white/10 text-center">
+                            <h2 className="text-white font-black uppercase tracking-widest text-sm md:text-lg">TV Channel Loop</h2>
+                            <div className="text-blue-400 text-[10px] md:text-xs font-bold uppercase mt-1 flex items-center justify-center gap-2">
+                                <Film size={12} /> Video {currentVideoIndex + 1} of {activePlaylist.length}
+                            </div>
+                        </div>
+                        {!isAudioUnlocked && (
+                            <div className="bg-orange-500/80 backdrop-blur-md px-4 py-1.5 rounded-lg border border-orange-400 flex items-center gap-2 animate-pulse">
+                                <VolumeX size={14} className="text-white" />
+                                <span className="text-white font-black text-[9px] uppercase tracking-wider">Sound Muted: Tap screen to unlock</span>
+                            </div>
+                        )}
                       </div>
                   </div>
+                  
                   <div className="flex items-center justify-center gap-8 md:gap-16">
                       <button onClick={handlePrev} className="p-4 md:p-6 bg-white/10 hover:bg-white/20 rounded-full text-white border border-white/10 group">
                           <ChevronLeft size={32} className="md:w-12 md:h-12 group-hover:-translate-x-1 transition-transform" />
@@ -182,6 +239,7 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
                           <ChevronRight size={32} className="md:w-12 md:h-12 group-hover:translate-x-1 transition-transform" />
                       </button>
                   </div>
+                  
                   <div className="flex items-center gap-4">
                       <div className="text-white text-xs font-mono font-bold">{currentVideoIndex + 1} / {activePlaylist.length}</div>
                       <div className="flex-1 bg-white/10 h-1.5 rounded-full overflow-hidden">

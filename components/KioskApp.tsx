@@ -796,7 +796,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   if (!storeData) return null;
   if (!isSetup) return <SetupScreen storeData={storeData} onComplete={() => setIsSetup(true)} />;
-  if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} />;
+  if (deviceType === 'tv') return <TVMode storeData={storeData} onRefresh={() => window.location.reload()} screensaverEnabled={screensaverEnabled} onToggleScreensaver={() => setScreensaverEnabled(!screensaverEnabled)} isAudioUnlocked={isAudioUnlocked} />;
   
   return (
     <div className="relative bg-slate-100 overflow-hidden flex flex-col h-[100dvh] w-full">
@@ -875,7 +875,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
             />
          }
        </div>
-       <footer className="relative shrink-0 bg-white border-t border-slate-200 text-slate-500 h-10 flex items-center justify-between px-2 md:px-6 z-50 text-[7px] md:text-[10px] print:hidden">
+       <footer className="relative shrink-0 bg-white border-t border-slate-200 h-10 flex items-center justify-between px-2 md:px-6 z-50 text-[7px] md:text-[10px] print:hidden">
           <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
               <div className="flex items-center gap-1 shrink-0"><div className={`w-1 h-1 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div><span className="font-bold uppercase whitespace-nowrap">{isOnline ? 'Live' : 'Offline'}</span></div>
               <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 shrink-0"><span className="font-black text-slate-300 uppercase hidden md:inline">ID:</span><span className="font-mono font-bold text-slate-600">{kioskId}</span></div>
