@@ -6,7 +6,7 @@ import AboutPage from './components/AboutPage';
 import { generateStoreData, saveStoreData } from './services/geminiService';
 import { initSupabase, supabase, getKioskId } from './services/kioskService';
 import { StoreData } from './types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 
 const AppIconUpdater = ({ storeData }: { storeData: StoreData }) => {
     const isAdmin = window.location.pathname.startsWith('/admin');
@@ -34,6 +34,7 @@ export default function App() {
   const [storeData, setStoreData] = useState<StoreData | null>(null);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
   
   const syncTimeoutRef = useRef<number | null>(null);
@@ -47,54 +48,12 @@ export default function App() {
       try {
         if ('wakeLock' in navigator) {
           wakeLock = await (navigator as any).wakeLock.request('screen');
-          console.log('Native Bridge: Wake Lock Acquired');
         }
       } catch (err) {
-        console.warn('Native Bridge: Wake Lock Failed', err);
+        console.warn('Wake Lock Failed', err);
       }
     };
-
     requestWakeLock();
-    const handleVisibilityChange = () => {
-      if (wakeLock !== null && document.visibilityState === 'visible') {
-        requestWakeLock();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (wakeLock) wakeLock.release();
-    };
-  }, []);
-
-  // APK NATIVE BRIDGE: Haptics and Immersive Fullscreen
-  useEffect(() => {
-    const handleFirstTouch = () => {
-      // 1. Request Immersive Mode (Fullscreen)
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
-      
-      // 2. Play subtle click vibration if supported
-      if (navigator.vibrate) {
-        navigator.vibrate(10);
-      }
-    };
-
-    const handleHaptic = (e: MouseEvent | TouchEvent) => {
-        const target = e.target as HTMLElement;
-        if (target.closest('button, a, [role="button"]')) {
-            if (navigator.vibrate) navigator.vibrate(15);
-        }
-    };
-
-    window.addEventListener('mousedown', handleFirstTouch, { once: true });
-    window.addEventListener('touchstart', handleFirstTouch, { once: true });
-    window.addEventListener('click', handleHaptic);
-    
-    return () => {
-        window.removeEventListener('click', handleHaptic);
-    };
   }, []);
 
   const fetchData = useCallback(async (isBackground = false) => {
@@ -129,21 +88,27 @@ export default function App() {
       if (!isBackground && isFirstLoad) setIsSyncing(true);
       
       try {
-        const data = await generateStoreData();
+        // Add a timeout to the fetch so it doesn't spin forever
+        const dataPromise = generateStoreData();
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Cloud Connection Timeout")), 15000)
+        );
+
+        const data = await Promise.race([dataPromise, timeoutPromise]) as StoreData;
+        
         if (data) {
            setStoreData(prev => {
                if (!prev) return data;
                if (!isAdmin) return { ...data };
                if (!isBackground) return { ...data };
-               return {
-                   ...prev,
-                   fleet: data.fleet
-               };
+               return { ...prev, fleet: data.fleet };
            });
            setLastSyncTime(new Date().toLocaleTimeString());
+           setError(null);
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error("Fetch failed", e);
+        setError(e.message || "Unknown Connection Error");
       } finally {
         setIsFirstLoad(false);
         setIsSyncing(false);
@@ -158,35 +123,8 @@ export default function App() {
         fetchData(true);
     }, 60000); 
 
-    let channel: any = null;
-    if (supabase && !isAdmin) {
-        channel = supabase
-          .channel('global_sync_channel')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
-            () => {
-              if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-              syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
-            }
-          )
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
-            (payload: any) => {
-              const isMyUpdate = payload.new && payload.new.id === kioskId;
-              const isMyDelete = payload.old && payload.old.id === kioskId;
-              
-              if (isMyUpdate || isMyDelete) {
-                  if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
-              }
-            }
-          )
-          .subscribe();
-    }
-
-    return () => {
-        if (channel) supabase.removeChannel(channel);
-        clearInterval(interval);
-    };
-  }, [fetchData, kioskId, isAdmin]);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   const handleUpdateData = async (newData: StoreData) => {
     setIsSyncing(true);
@@ -203,9 +141,28 @@ export default function App() {
 
   if (isFirstLoad && !storeData) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0f172a] text-white font-black">
-        <div className="spinner mb-6"></div>
-        <div className="tracking-[0.2em] uppercase text-[10px] text-slate-500">Initializing Firmware...</div>
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0f172a] text-white p-6">
+        {error ? (
+          <div className="bg-red-900/20 border-2 border-red-500/50 p-8 rounded-[2rem] max-w-md w-full text-center animate-fade-in shadow-2xl">
+            <AlertTriangle className="text-red-500 mx-auto mb-4" size={48} />
+            <h2 className="text-xl font-black uppercase tracking-tight mb-2">Sync Protocol Failed</h2>
+            <p className="text-slate-400 text-sm font-mono mb-6 break-all bg-black/40 p-3 rounded-xl">{error}</p>
+            <button 
+                onClick={() => { setError(null); fetchData(); }}
+                className="w-full bg-white text-slate-900 py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-500 hover:text-white transition-all shadow-xl"
+            >
+                <RefreshCw size={18} /> Retry Connection
+            </button>
+            <p className="text-[9px] text-slate-500 mt-6 uppercase font-bold tracking-widest leading-relaxed">
+              Verify VITE_SUPABASE_URL & ANON_KEY in environment settings.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="spinner mb-6"></div>
+            <div className="tracking-[0.2em] uppercase text-[10px] text-slate-500 font-black">Initializing Firmware...</div>
+          </>
+        )}
       </div>
     );
   }
