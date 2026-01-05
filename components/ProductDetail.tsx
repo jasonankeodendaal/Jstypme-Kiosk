@@ -209,7 +209,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                 <div className="space-y-16 lg:space-y-24">
                     
                     {/* KEY FEATURES SECTION */}
-                    {product.features.length > 0 && (
+                    {product.features && product.features.length > 0 && (
                         <div className="animate-slide-up">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 flex items-center gap-4">
                                 <span className="w-10 h-0.5 bg-slate-200"></span> 01. Key Features
@@ -220,7 +220,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                                         <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-all">
                                             <Check size={20} strokeWidth={3} />
                                         </div>
-                                        <span className="text-sm font-bold text-slate-800 leading-tight py-1">{f}</span>
+                                        <span className="text-sm font-bold text-slate-800 leading-tight py-1">{/* DEFENSIVE: Render non-strings as JSON */ typeof f === 'object' ? JSON.stringify(f) : f}</span>
                                     </div>
                                 ))}
                             </div>
@@ -237,7 +237,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                                 {Object.entries(product.specs).map(([key, value], idx) => (
                                     <div key={idx} className="bg-slate-50 border border-slate-100 p-5 rounded-2xl">
                                         <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{key}</span>
-                                        <span className="block text-sm font-black text-slate-900 leading-tight">{value}</span>
+                                        <span className="block text-sm font-black text-slate-900 leading-tight">{/* DEFENSIVE: Render non-strings as JSON */ typeof value === 'object' ? JSON.stringify(value) : value}</span>
                                     </div>
                                 ))}
                             </div>
