@@ -150,7 +150,7 @@ export const generateStoreData = async (): Promise<StoreData> => {
                       id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
                       last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
                       version: k.version, locationDescription: k.location_description,
-                      assignedZone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested
+                      assigned_zone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested
                   }));
               }
               processedData = await handleExpiration(processedData);
@@ -175,40 +175,54 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(smallerData)); } catch (innerE) {}
     }
 
-    // 2. Cloud Background Sync with Progress Simulation
+    // 2. Cloud Background Sync with Progress Simulation and Payload Fallback
     if (!supabase) initSupabase();
     if (supabase) {
         broadcastSync(5, 'syncing');
         
-        // Background task starts - decoupled from the calling thread
         (async () => {
-            const { fleet, ...dataToSave } = data;
-            
-            // Artificial progress crawl to 90% (linear approach to the "finish line")
+            const { fleet, ...fullDataToSave } = data;
+            let operationDone = false;
             let simulatedProgress = 5;
+
             const progressInterval = setInterval(() => {
-                if (simulatedProgress < 90) {
-                    simulatedProgress += Math.random() * 8;
-                    broadcastSync(Math.min(90, Math.floor(simulatedProgress)), 'syncing');
+                if (!operationDone && simulatedProgress < 90) {
+                    simulatedProgress += (90 - simulatedProgress) * 0.1;
+                    broadcastSync(Math.floor(simulatedProgress), 'syncing');
                 }
-            }, 300);
+            }, 200);
+
+            const performCloudSave = async (payload: any) => {
+                return await supabase
+                    .from('store_config')
+                    .upsert({ id: 1, data: payload }, { onConflict: 'id' });
+            };
 
             try {
-                const { error } = await supabase
-                    .from('store_config')
-                    .upsert({ id: 1, data: dataToSave }, { onConflict: 'id' });
+                // Attempt 1: Full Save
+                const response = await performCloudSave(fullDataToSave);
                 
-                clearInterval(progressInterval);
-                
-                if (error) {
-                    console.error("Sync Error:", error);
-                    broadcastSync(0, 'error');
-                } else {
-                    broadcastSync(100, 'complete');
-                    // Hide after a brief moment of "Success"
-                    setTimeout(() => broadcastSync(0, 'idle'), 2500);
+                if (response.error) {
+                    console.warn("Full sync failed (likely payload size). Error:", response.error);
+                    
+                    // Attempt 2: Fallback (Save without large archive history)
+                    broadcastSync(50, 'syncing');
+                    const { archive, ...essentialData } = fullDataToSave;
+                    const fallbackResponse = await performCloudSave(essentialData);
+                    
+                    if (fallbackResponse.error) {
+                        throw new Error(fallbackResponse.error.message);
+                    }
+                    console.log("Essential data synced successfully (Archive dropped).");
                 }
-            } catch (e) {
+
+                operationDone = true;
+                clearInterval(progressInterval);
+                broadcastSync(100, 'complete');
+                setTimeout(() => broadcastSync(0, 'idle'), 2000);
+            } catch (e: any) {
+                console.error("Cloud Sync Error:", e);
+                operationDone = true;
                 clearInterval(progressInterval);
                 broadcastSync(0, 'error');
             }

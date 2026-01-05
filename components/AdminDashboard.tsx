@@ -278,7 +278,6 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
 
       const uploadSingle = async (file: File) => {
            const localBase64 = await readFileAsBase64(file);
-           
            try {
               const url = await uploadFileToStorage(file);
               return { url, base64: localBase64 };
@@ -291,12 +290,17 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
           if (allowMultiple) {
               const results: string[] = [];
               const base64s: string[] = [];
-              for(let i=0; i<files.length; i++) {
-                  const res = await uploadSingle(files[i]);
+              // Parallelized Upload
+              const uploadPromises = files.map(async (file, idx) => {
+                  const res = await uploadSingle(file);
+                  setUploadProgress(((idx + 1) / files.length) * 100);
+                  return res;
+              });
+              const responses = await Promise.all(uploadPromises);
+              responses.forEach(res => {
                   results.push(res.url);
                   base64s.push(res.base64);
-                  setUploadProgress(((i+1)/files.length)*100);
-              }
+              });
               onUpload(results, fileType, base64s);
           } else {
               const res = await uploadSingle(files[0]);
@@ -819,7 +823,7 @@ const KioskEditorModal = ({ kiosk, onSave, onClose }: { kiosk: KioskRegistry, on
     );
 };
 
-const MoveProductModal = ({ product, allBrands, currentBrandId, currentCategoryId, onClose, onMove }: { product: Product, allBrands: Brand[], currentBrandId: string, currentCategoryId: string, onClose: () => void, onMove: (p: Product, b: string, c: string) => void }) => {
+const MoveProductModal = ({ product, allBrands, currentBrandId, currentCategoryId, onClose, onMove }: { product: Product, allBrands: Brand[], currentBrandId: string, currentCategoryId: string, onClose: () => void, onMove: (p: Product, b: string, client: string) => void }) => {
     const [targetBrandId, setTargetBrandId] = useState(currentBrandId);
     const [targetCategoryId, setTargetCategoryId] = useState(currentCategoryId);
     const targetBrand = allBrands.find(b => b.id === targetBrandId);
@@ -864,10 +868,132 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
     const validFiles = Object.keys(loadedZip.files).filter(path => !loadedZip.files[path].dir && !path.includes('__MACOSX') && !path.includes('.DS_Store'));
     let rootPrefix = "";
     if (validFiles.length > 0) { const firstFileParts = getCleanPath(validFiles[0]).split('/').filter(p => p); if (firstFileParts.length > 1) { const possibleRoot = firstFileParts[0]; if (validFiles.every(path => getCleanPath(path).startsWith(possibleRoot + '/'))) { rootPrefix = possibleRoot + '/'; } } }
-    const getMimeType = (filename: string) => { const ext = filename.split('.').pop()?.toLowerCase(); if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg'; if (ext === 'png') return 'image/png'; if (ext === 'webp') return 'image/webp'; if (ext === 'gif') return 'image/gif'; if (ext === 'mp4') return 'video/mp4'; if (ext === 'webm') return 'video/webm'; if (ext === 'pdf') return 'application/pdf'; return 'application/octet-stream'; };
-    const processAsset = async (zipObj: any, filename: string): Promise<string> => { const blob = await zipObj.async("blob"); if (supabase) { try { const mimeType = getMimeType(filename); const safeName = filename.replace(/[^a-z0-9._-]/gi, '_'); const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType }); const url = await uploadFileToStorage(fileToUpload); return url; } catch (e) { console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e); } } return new Promise(resolve => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result as string); reader.readAsDataURL(blob); }); };
-    const filePaths = Object.keys(loadedZip.files); let processedCount = 0;
-    for (const rawPath of filePaths) { let path = getCleanPath(rawPath); const fileObj = loadedZip.files[rawPath]; if (fileObj.dir) continue; if (path.includes('__MACOSX') || path.includes('.DS_Store')) continue; if (rootPrefix && path.startsWith(rootPrefix)) { path = path.substring(rootPrefix.length); } if (path.startsWith('_System_Backup/')) continue; if (path.includes('store_config')) continue; const parts = path.split('/').filter(p => p.trim() !== ''); if (parts.length < 2) continue; processedCount++; if (onProgress && processedCount % 5 === 0) onProgress(`Processing item ${processedCount}/${validFiles.length}...`); const brandName = parts[0]; if (!newBrands[brandName]) { newBrands[brandName] = { id: generateId('brand'), name: brandName, categories: [] }; } if (parts.length === 2) { const fileName = parts[1].toLowerCase(); if (fileName.includes('brand_logo') || fileName.includes('logo')) { const url = await processAsset(fileObj, parts[1]); newBrands[brandName].logoUrl = url; } if (fileName.endsWith('.json') && fileName.includes('brand')) { try { const text = await fileObj.async("text"); const meta = JSON.parse(text); if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor; if (meta.id) newBrands[brandName].id = meta.id; } catch(e) {} } continue; } if (parts.length < 4) continue; const categoryName = parts[1]; const productName = parts[2]; const fileName = parts.slice(3).join('/'); let category = newBrands[brandName].categories.find(c => c.name === categoryName); if (!category) { category = { id: generateId('c'), name: categoryName, icon: 'Box', products: [] }; newBrands[brandName].categories.push(category); } let product = category.products.find(p => p.name === productName); if (!product) { product = { id: generateId('p'), name: productName, description: '', specs: {}, features: [], dimensions: [], imageUrl: '', galleryUrls: [], videoUrls: [], manuals: [], dateAdded: new Date().toISOString() }; category.products.push(product); } const lowerFile = fileName.toLowerCase(); if (fileName.endsWith('.json') && (fileName.includes('details') || fileName.includes('product'))) { try { const text = await fileObj.async("text"); const meta = JSON.parse(text); if (meta.id) product.id = meta.id; if (meta.name) product.name = meta.name; if (meta.description) product.description = meta.description; if (meta.sku) product.sku = meta.sku; if (meta.specs) product.specs = { ...product.specs, ...meta.specs }; if (meta.features) product.features = [...(product.features || []), ...(meta.features || [])]; if (meta.dimensions) product.dimensions = meta.dimensions; if (meta.boxContents) product.boxContents = meta.boxContents; if (meta.terms) product.terms = meta.terms; if (meta.dateAdded) product.dateAdded = meta.dateAdded; } catch(e) { console.warn("Failed to parse JSON for " + productName); } } else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) { const url = await processAsset(fileObj, parts.slice(3).join('_')); if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) { product.imageUrl = url; } else { product.galleryUrls = [...(product.galleryUrls || []), url]; } } else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) { const url = await processAsset(fileObj, parts.slice(3).join('_')); product.videoUrls = [...(product.videoUrls || []), url]; } else if (lowerFile.endsWith('.pdf')) { const url = await processAsset(fileObj, parts.slice(3).join('_')); product.manuals?.push({ id: generateId('man'), title: fileName.replace('.pdf', '').replace(/_/g, ' '), images: [], pdfUrl: url, thumbnailUrl: '' }); } }
+    
+    const getMimeType = (filename: string) => { 
+        const ext = filename.split('.').pop()?.toLowerCase(); 
+        if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg'; 
+        if (ext === 'png') return 'image/png'; 
+        if (ext === 'webp') return 'image/webp'; 
+        if (ext === 'gif') return 'image/gif'; 
+        if (ext === 'mp4') return 'video/mp4'; 
+        if (ext === 'webm') return 'video/webm'; 
+        if (ext === 'pdf') return 'application/pdf'; 
+        return 'application/octet-stream'; 
+    };
+
+    const processAsset = async (zipObj: any, filename: string): Promise<string> => { 
+        const blob = await zipObj.async("blob"); 
+        if (supabase) { 
+            try { 
+                const mimeType = getMimeType(filename); 
+                const safeName = filename.replace(/[^a-z0-9._-]/gi, '_'); 
+                const fileToUpload = new File([blob], `import_${Date.now()}_${safeName}`, { type: mimeType }); 
+                return await uploadFileToStorage(fileToUpload); 
+            } catch (e) { 
+                console.warn(`Asset upload failed for ${filename}. Fallback to Base64.`, e); 
+            } 
+        } 
+        return new Promise(resolve => { 
+            const reader = new FileReader(); 
+            reader.onloadend = () => resolve(reader.result as string); 
+            reader.readAsDataURL(blob); 
+        }); 
+    };
+
+    // Parallel processing with limited concurrency (batching)
+    const filePaths = Object.keys(loadedZip.files); 
+    let processedCount = 0;
+    const batchSize = 3; // Upload 3 assets at a time to stay stable but fast
+    
+    // First, map all valid files and their metadata
+    const importTasks: any[] = [];
+    for (const rawPath of filePaths) {
+        let path = getCleanPath(rawPath);
+        const fileObj = loadedZip.files[rawPath];
+        if (fileObj.dir || path.includes('__MACOSX') || path.includes('.DS_Store')) continue;
+        if (rootPrefix && path.startsWith(rootPrefix)) path = path.substring(rootPrefix.length);
+        if (path.startsWith('_System_Backup/') || path.includes('store_config')) continue;
+        
+        const parts = path.split('/').filter(p => p.trim() !== '');
+        if (parts.length < 2) continue;
+        
+        importTasks.push({ path, fileObj, parts });
+    }
+
+    // Process tasks in batches for speed
+    for (let i = 0; i < importTasks.length; i += batchSize) {
+        const batch = importTasks.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (task) => {
+            const { path, fileObj, parts } = task;
+            const brandName = parts[0];
+            if (!newBrands[brandName]) { newBrands[brandName] = { id: generateId('brand'), name: brandName, categories: [] }; }
+
+            if (parts.length === 2) {
+                const fileName = parts[1].toLowerCase();
+                if (fileName.includes('brand_logo') || fileName.includes('logo')) {
+                    newBrands[brandName].logoUrl = await processAsset(fileObj, parts[1]);
+                } else if (fileName.endsWith('.json') && fileName.includes('brand')) {
+                    try {
+                        const text = await fileObj.async("text");
+                        const meta = JSON.parse(text);
+                        if (meta.themeColor) newBrands[brandName].themeColor = meta.themeColor;
+                        if (meta.id) newBrands[brandName].id = meta.id;
+                    } catch(e) {}
+                }
+                return;
+            }
+
+            if (parts.length < 4) return;
+            const categoryName = parts[1];
+            const productName = parts[2];
+            const fileName = parts.slice(3).join('/');
+
+            let category = newBrands[brandName].categories.find(c => c.name === categoryName);
+            if (!category) {
+                category = { id: generateId('c'), name: categoryName, icon: 'Box', products: [] };
+                newBrands[brandName].categories.push(category);
+            }
+
+            let product = category.products.find(p => p.name === productName);
+            if (!product) {
+                product = { id: generateId('p'), name: productName, description: '', specs: {}, features: [], dimensions: [], imageUrl: '', galleryUrls: [], videoUrls: [], manuals: [], dateAdded: new Date().toISOString() };
+                category.products.push(product);
+            }
+
+            const lowerFile = fileName.toLowerCase();
+            if (fileName.endsWith('.json') && (fileName.includes('details') || fileName.includes('product'))) {
+                try {
+                    const text = await fileObj.async("text");
+                    const meta = JSON.parse(text);
+                    if (meta.id) product.id = meta.id;
+                    if (meta.name) product.name = meta.name;
+                    if (meta.description) product.description = meta.description;
+                    if (meta.sku) product.sku = meta.sku;
+                    if (meta.specs) product.specs = { ...product.specs, ...meta.specs };
+                    if (meta.features) product.features = [...(product.features || []), ...(meta.features || [])];
+                    if (meta.dimensions) product.dimensions = meta.dimensions;
+                    if (meta.boxContents) product.boxContents = meta.boxContents;
+                    if (meta.terms) product.terms = meta.terms;
+                    if (meta.dateAdded) product.dateAdded = meta.dateAdded;
+                } catch(e) {}
+            } else if (lowerFile.endsWith('.jpg') || lowerFile.endsWith('.jpeg') || lowerFile.endsWith('.png') || lowerFile.endsWith('.webp')) {
+                const url = await processAsset(fileObj, parts.slice(3).join('_'));
+                if (lowerFile.includes('cover') || lowerFile.includes('main') || (!product.imageUrl && !lowerFile.includes('gallery'))) {
+                    product.imageUrl = url;
+                } else {
+                    product.galleryUrls = [...(product.galleryUrls || []), url];
+                }
+            } else if (lowerFile.endsWith('.mp4') || lowerFile.endsWith('.webm') || lowerFile.endsWith('.mov')) {
+                const url = await processAsset(fileObj, parts.slice(3).join('_'));
+                product.videoUrls = [...(product.videoUrls || []), url];
+            } else if (lowerFile.endsWith('.pdf')) {
+                const url = await processAsset(fileObj, parts.slice(3).join('_'));
+                product.manuals?.push({ id: generateId('man'), title: fileName.replace('.pdf', '').replace(/_/g, ' '), images: [], pdfUrl: url, thumbnailUrl: '' });
+            }
+        }));
+        processedCount += batch.length;
+        if (onProgress) onProgress(`Uploaded ${processedCount}/${importTasks.length} assets...`);
+    }
     return Object.values(newBrands);
 };
 
@@ -965,7 +1091,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       const now = new Date().toISOString();
       const newItem: ArchivedItem = { id: generateId('arch'), type, action, name, userName: currentUser.name, method, data, deletedAt: now };
       const currentArchive = localData.archive || { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} };
-      const newArchive = { ...currentArchive, deletedItems: [newItem, ...(currentArchive.deletedItems || [])].slice(0, 1000) };
+      const newArchive = { ...currentArchive, deletedItems: [newItem, ...(currentArchive.deletedItems || [])].slice(0, 100) };
       return newArchive;
   };
 
