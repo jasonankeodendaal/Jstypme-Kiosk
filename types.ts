@@ -1,4 +1,3 @@
-
 export interface DimensionSet {
   label?: string; // e.g. "Device", "Stand", "Box 1"
   width: string;
@@ -110,13 +109,6 @@ export interface PricelistItem {
   imageUrl?: string; // Added for visual support
 }
 
-export interface PricelistHistoryItem {
-  versionId: string;
-  date: string;
-  user: string;
-  itemCount: number;
-}
-
 export interface Pricelist {
   id: string;
   brandId: string;
@@ -128,8 +120,6 @@ export interface Pricelist {
   month: string;
   year: string;
   dateAdded?: string; // New: For "New" flag logic
-  versionId?: string; // e.g. "v01"
-  history?: PricelistHistoryItem[];
 }
 
 export interface AdItem {
