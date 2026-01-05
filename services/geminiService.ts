@@ -6,9 +6,9 @@ const STORAGE_KEY_DATA = 'kiosk_pro_store_data';
 const STORAGE_KEY_ID = 'kiosk_pro_device_id';
 
 // Progress broadcasting utility
-const broadcastSync = (progress: number, status: 'idle' | 'syncing' | 'complete' | 'error', isSurgical = false) => {
+const broadcastSync = (progress: number, status: 'idle' | 'syncing' | 'complete' | 'error') => {
     window.dispatchEvent(new CustomEvent('kiosk-sync-event', { 
-        detail: { progress, status, isSurgical } 
+        detail: { progress, status } 
     }));
 };
 
@@ -164,37 +164,6 @@ export const generateStoreData = async (): Promise<StoreData> => {
     if (stored) return migrateData(JSON.parse(stored));
   } catch (e) {}
   return migrateData(DEFAULT_DATA);
-};
-
-/**
- * INCREMENTAL SAVE: JSONB Patching
- * Only updates a specific branch of the JSON blob.
- * Requires the 'patch_config' RPC in Supabase.
- */
-export const patchStoreData = async (path: string[], value: any): Promise<void> => {
-    // Background sync starts
-    if (!supabase) initSupabase();
-    if (supabase) {
-        broadcastSync(20, 'syncing', true);
-        try {
-            const { error } = await supabase.rpc('patch_config', { 
-                path_arr: path, 
-                new_val: value 
-            });
-            
-            if (error) {
-                console.error("Incremental Patch Error:", error);
-                // Fallback: If RPC fails (missing from DB), do a full save
-                const stored = localStorage.getItem(STORAGE_KEY_DATA);
-                if (stored) await saveStoreData(JSON.parse(stored));
-            } else {
-                broadcastSync(100, 'complete', true);
-                setTimeout(() => broadcastSync(0, 'idle'), 1500);
-            }
-        } catch (e) {
-            broadcastSync(0, 'error');
-        }
-    }
 };
 
 export const saveStoreData = async (data: StoreData): Promise<void> => {

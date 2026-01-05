@@ -3,10 +3,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KioskApp } from './components/KioskApp';
 import { AdminDashboard } from './components/AdminDashboard';
 import AboutPage from './components/AboutPage';
-import { generateStoreData, saveStoreData, patchStoreData } from './services/geminiService';
+import { generateStoreData, saveStoreData } from './services/geminiService';
 import { initSupabase, supabase, getKioskId } from './services/kioskService';
 import { StoreData } from './types';
-import { Loader2, Cloud, CheckCircle, AlertCircle, Sparkles, Zap } from 'lucide-react';
+import { Loader2, Cloud, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
 
 /**
  * Global Background Sync Progress Popup
@@ -15,14 +15,12 @@ import { Loader2, Cloud, CheckCircle, AlertCircle, Sparkles, Zap } from 'lucide-
 const SyncStatusPopup = () => {
     const [progress, setProgress] = useState(0);
     const [status, setStatus] = useState<'idle' | 'syncing' | 'complete' | 'error'>('idle');
-    const [isSurgical, setIsSurgical] = useState(false);
 
     useEffect(() => {
         const handleSync = (e: any) => {
-            const { progress: p, status: s, isSurgical: isS } = e.detail;
+            const { progress: p, status: s } = e.detail;
             setProgress(p);
             setStatus(s);
-            setIsSurgical(!!isS);
         };
         window.addEventListener('kiosk-sync-event', handleSync);
         return () => window.removeEventListener('kiosk-sync-event', handleSync);
@@ -32,13 +30,13 @@ const SyncStatusPopup = () => {
 
     return (
         <div className={`fixed bottom-6 right-6 z-[999] animate-fade-in`}>
-            <div className={`bg-slate-900/90 backdrop-blur-xl border ${status === 'error' ? 'border-red-500/50' : isSurgical ? 'border-yellow-500/30' : 'border-blue-500/30'} shadow-2xl p-4 rounded-2xl flex items-center gap-4 min-w-[200px] transition-all duration-500`}>
+            <div className={`bg-slate-900/90 backdrop-blur-xl border ${status === 'error' ? 'border-red-500/50' : 'border-blue-500/30'} shadow-2xl p-4 rounded-2xl flex items-center gap-4 min-w-[200px] transition-all duration-500`}>
                 <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
                     {status === 'syncing' && (
                         <div className="absolute inset-0 border-2 border-slate-700 rounded-full"></div>
                     )}
                     <div 
-                        className={`absolute inset-0 border-2 ${status === 'error' ? 'border-red-500' : isSurgical ? 'border-yellow-500' : 'border-blue-500'} rounded-full transition-all duration-300`}
+                        className={`absolute inset-0 border-2 ${status === 'error' ? 'border-red-500' : 'border-blue-500'} rounded-full transition-all duration-300`}
                         style={{ 
                             clipPath: `inset(0 0 0 0)`,
                             borderDasharray: '63', // ~2 * PI * r
@@ -48,7 +46,7 @@ const SyncStatusPopup = () => {
                     ></div>
                     
                     {status === 'syncing' ? (
-                        isSurgical ? <Zap className="text-yellow-400 animate-pulse" size={16} /> : <Cloud className="text-blue-400 animate-pulse" size={16} />
+                        <Cloud className="text-blue-400 animate-pulse" size={16} />
                     ) : status === 'complete' ? (
                         <CheckCircle className="text-green-400 animate-bounce" size={20} />
                     ) : (
@@ -59,12 +57,12 @@ const SyncStatusPopup = () => {
                 <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] font-black uppercase text-white tracking-widest leading-none">
-                            {status === 'syncing' ? (isSurgical ? 'Incremental Patch' : 'Background Sync') : status === 'complete' ? 'Sync Success' : 'Sync Failed'}
+                            {status === 'syncing' ? 'Background Sync' : status === 'complete' ? 'Sync Success' : 'Sync Failed'}
                         </span>
                         {status === 'syncing' && <span className="text-[10px] font-bold text-blue-400 tabular-nums">{progress}%</span>}
                     </div>
                     <div className="text-[8px] font-bold text-slate-400 uppercase mt-1 tracking-tighter">
-                        {status === 'syncing' ? (isSurgical ? 'Injecting surgical JSON update' : 'Updating Cloud Infrastructure') : status === 'complete' ? 'Data is safe in the cloud' : 'Network interruption detected'}
+                        {status === 'syncing' ? 'Updating Cloud Infrastructure' : status === 'complete' ? 'Data is safe in the cloud' : 'Network interruption detected'}
                     </div>
                 </div>
             </div>
@@ -169,16 +167,6 @@ export default function App() {
     }
   };
 
-  const handlePatchData = async (path: string[], value: any, updatedFullState: StoreData) => {
-    setStoreData({ ...updatedFullState });
-    try {
-        await patchStoreData(path, value);
-        setLastSyncTime(new Date().toLocaleTimeString());
-    } catch (e) {
-        console.error("Patch failed", e);
-    }
-  };
-
   if (isFirstLoad && !storeData) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0f172a] text-white font-black">
@@ -197,7 +185,6 @@ export default function App() {
         <AdminDashboard 
             storeData={storeData}
             onUpdateData={handleUpdateData}
-            onPatchData={handlePatchData}
             onRefresh={() => fetchData(false)} 
         />
       ) : currentRoute === '/about' ? (
