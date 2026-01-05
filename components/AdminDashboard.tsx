@@ -118,18 +118,148 @@ const SystemDocumentation = () => {
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 blur-[150px] pointer-events-none rounded-full"></div>
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/5 blur-[150px] pointer-events-none rounded-full"></div>
 
-                {/* Documentation Sections Omitted for Brevity - they are static */}
                 {activeSection === 'architecture' && (
-                    <div className="space-y-20 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-blue-500/20">Module 01: Core Brain</div>
-                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Atomic Synchronization</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The Kiosk is designed to work <strong>offline</strong> first. It doesn't need internet to show products—it only needs it to "sync up" with your latest changes.</p>
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <div>
+                            <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-blue-500/20 mb-4">Module 01: Core Brain</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none mb-6">Atomic Synchronization</h2>
+                            <p className="text-lg text-slate-500 font-medium leading-relaxed">
+                                The Kiosk uses an <strong>Offline-First</strong> architecture. It doesn't need constant internet to show products—it only needs it to "sync up" with your latest changes.
+                            </p>
                         </div>
-                        {/* Content... */}
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-4 text-blue-600"><Database size={24} /></div>
+                                <h3 className="font-black text-slate-900 uppercase text-sm mb-2">Local Storage</h3>
+                                <p className="text-xs text-slate-500 font-medium leading-relaxed">Every image, price, and video link is saved to the tablet's internal hard drive (IndexedDB/LocalStorage). If WiFi cuts out, the app doesn't even blink.</p>
+                            </div>
+                            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-4 text-purple-600"><CloudLightning size={24} /></div>
+                                <h3 className="font-black text-slate-900 uppercase text-sm mb-2">Cloud Pulse</h3>
+                                <p className="text-xs text-slate-500 font-medium leading-relaxed">Every 60 seconds, the app silently "pulses" the cloud database. If it sees a new version ID, it downloads the changes in the background and seamlessly updates the UI.</p>
+                            </div>
+                        </div>
                     </div>
                 )}
-                {/* Other sections handled by original code... */}
+
+                {activeSection === 'inventory' && (
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <div>
+                            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20 mb-4">Module 02: Stock Logic</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none mb-6">The Trinity Structure</h2>
+                            <p className="text-lg text-slate-500 font-medium leading-relaxed">
+                                Products are organized in a strict 3-tier hierarchy: <strong>Brand &rarr; Category &rarr; Product</strong>. This ensures navigation remains intuitive on touch screens.
+                            </p>
+                        </div>
+
+                        <div className="bg-slate-900 text-white p-8 rounded-3xl relative overflow-hidden">
+                            <div className="relative z-10 space-y-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-black text-xs">1</div>
+                                    <div className="font-bold text-lg">The Brand (Root)</div>
+                                </div>
+                                <div className="flex items-center gap-4 pl-4 border-l-2 border-slate-700">
+                                    <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center font-black text-xs">2</div>
+                                    <div className="font-bold text-lg">The Category (Filter)</div>
+                                </div>
+                                <div className="flex items-center gap-4 pl-4 border-l-2 border-slate-700 ml-4">
+                                    <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center font-black text-xs">3</div>
+                                    <div className="font-bold text-lg">The Product (Unit)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'pricelists' && (
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <div>
+                            <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-orange-500/20 mb-4">Module 03: Pricing Engine</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none mb-6">Dynamic PDF Generation</h2>
+                            <p className="text-lg text-slate-500 font-medium leading-relaxed">
+                                The system does not just store PDF files. It includes a <strong>Manual Builder</strong> that turns raw data rows into professional, branded PDF documents on the fly.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4">
+                             <div className="p-6 border border-slate-200 rounded-2xl flex gap-4 items-start">
+                                 <div className="bg-green-100 p-2 rounded-lg text-green-700"><FileSpreadsheet size={24}/></div>
+                                 <div>
+                                     <h4 className="font-black text-slate-900 uppercase text-sm">Excel Ingestion</h4>
+                                     <p className="text-xs text-slate-500 mt-1">Upload a standard .xlsx or .csv file. The system scans for columns like "SKU", "Description", and "Price" using fuzzy logic matching.</p>
+                                 </div>
+                             </div>
+                             <div className="p-6 border border-slate-200 rounded-2xl flex gap-4 items-start">
+                                 <div className="bg-red-100 p-2 rounded-lg text-red-700"><FileText size={24}/></div>
+                                 <div>
+                                     <h4 className="font-black text-slate-900 uppercase text-sm">Client-Side Rendering</h4>
+                                     <p className="text-xs text-slate-500 mt-1">PDFs are generated instantly in the browser (Client Side). This ensures 100% privacy and zero server latency.</p>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'screensaver' && (
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <div>
+                            <div className="bg-pink-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-pink-500/20 mb-4">Module 04: Visual Loop</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none mb-6">Smart Idle Detection</h2>
+                            <p className="text-lg text-slate-500 font-medium leading-relaxed">
+                                The screensaver is the "Attract Mode". It activates when no touches are detected for a set time (Default: 60s).
+                            </p>
+                        </div>
+                        <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200">
+                            <h3 className="font-black text-slate-900 uppercase text-sm mb-4">The Playlist Algorithm</h3>
+                            <ul className="space-y-4">
+                                <li className="flex items-center gap-3 text-sm font-bold text-slate-600"><Check className="text-blue-500"/> Mixes uploaded "Ads" with Product Images.</li>
+                                <li className="flex items-center gap-3 text-sm font-bold text-slate-600"><Check className="text-blue-500"/> Prioritizes items marked as "New" (added in last 6 months).</li>
+                                <li className="flex items-center gap-3 text-sm font-bold text-slate-600"><Check className="text-blue-500"/> Auto-plays videos (Muted by default for browser policy).</li>
+                            </ul>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fleet' && (
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <div>
+                            <div className="bg-cyan-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-cyan-500/20 mb-4">Module 05: Fleet Watch</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none mb-6">Telemetry & Heartbeat</h2>
+                            <p className="text-lg text-slate-500 font-medium leading-relaxed">
+                                Every active device sends a "Heartbeat" signal every 30 seconds. This allows you to see which stores are online, their WiFi strength, and app version.
+                            </p>
+                        </div>
+                        <div className="p-6 bg-red-50 border border-red-100 rounded-2xl flex gap-4">
+                            <Activity className="text-red-500 shrink-0" size={32} />
+                            <div>
+                                <h4 className="font-black text-red-900 uppercase text-sm">Remote Kill Switch</h4>
+                                <p className="text-xs text-red-800/70 mt-1 font-medium">You can force a device to reload or de-register it remotely. The next time that device sends a heartbeat, it will receive the command and execute it immediately.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'tv' && (
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <div>
+                            <div className="bg-indigo-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20 mb-4">Module 06: TV Protocol</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none mb-6">Digital Signage Mode</h2>
+                            <p className="text-lg text-slate-500 font-medium leading-relaxed">
+                                Devices set to "TV Mode" do not show the interactive catalogue. Instead, they act as pure video loop players for large wall-mounted displays.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                                <h4 className="font-black text-slate-900 uppercase text-sm mb-2">Global Loop</h4>
+                                <p className="text-xs text-slate-500 leading-relaxed"> plays ALL videos from ALL brands in a random shuffle. Perfect for main store displays.</p>
+                            </div>
+                            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                                <h4 className="font-black text-slate-900 uppercase text-sm mb-2">Brand Channel</h4>
+                                <p className="text-xs text-slate-500 leading-relaxed">Locks the TV to a specific brand (e.g. Samsung). Only plays videos from that brand's models.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
