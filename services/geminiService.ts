@@ -1,11 +1,9 @@
 
-import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand } from "../types";
+import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand, Category, Pricelist, ArchivedItem } from "../types";
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
 const STORAGE_KEY_DATA = 'kiosk_pro_store_data';
-const STORAGE_KEY_ID = 'kiosk_pro_device_id';
 
-// Progress broadcasting utility
 const broadcastSync = (progress: number, status: 'idle' | 'syncing' | 'complete' | 'error') => {
     window.dispatchEvent(new CustomEvent('kiosk-sync-event', { 
         detail: { progress, status } 
@@ -17,16 +15,7 @@ const DEFAULT_ADMIN: AdminUser = {
     name: 'Admin',
     pin: '1723',
     isSuperAdmin: true,
-    permissions: {
-        inventory: true,
-        marketing: true,
-        tv: true,
-        screensaver: true,
-        fleet: true,
-        history: true,
-        settings: true,
-        pricelists: true
-    }
+    permissions: { inventory: true, marketing: true, tv: true, screensaver: true, fleet: true, history: true, settings: true, pricelists: true }
 };
 
 const MOCK_BRANDS: Brand[] = [
@@ -44,9 +33,9 @@ const MOCK_BRANDS: Brand[] = [
             id: 'p-iphone15pm',
             sku: 'APL-I15PM',
             name: 'iPhone 15 Pro Max',
-            description: 'Forged in titanium and featuring the groundbreaking A17 Pro chip, a customizable Action button, and a more versatile Pro camera system.',
-            specs: { 'Chip': 'A17 Pro', 'Display': '6.7-inch Super Retina XDR', 'Camera': '48MP Main | Ultra Wide | Telephoto' },
-            features: ['Titanium design', 'Action button', 'USB-C with USB 3 speeds', 'All-day battery life'],
+            description: 'Forged in titanium and featuring the groundbreaking A17 Pro chip.',
+            specs: { 'Chip': 'A17 Pro', 'Display': '6.7-inch Super Retina XDR' },
+            features: ['Titanium design', 'Action button'],
             dimensions: [{ label: 'Device', width: '76.7 mm', height: '159.9 mm', depth: '8.25 mm', weight: '221 g' }],
             imageUrl: 'https://images.unsplash.com/photo-1696446701796-da61225697cc?w=800&auto=format&fit=crop'
           }
@@ -58,22 +47,8 @@ const MOCK_BRANDS: Brand[] = [
 
 const DEFAULT_DATA: StoreData = {
   companyLogoUrl: "https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png",
-  hero: {
-    title: "Future Retail Experience",
-    subtitle: "Discover the latest in Tech, Fashion, and Lifestyle.",
-    backgroundImageUrl: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop",
-    logoUrl: "https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png",
-    websiteUrl: "https://jstyp.me"
-  },
-  screensaverSettings: {
-    idleTimeout: 60,
-    imageDuration: 8,
-    muteVideos: false,
-    showProductImages: true,
-    showProductVideos: true,
-    showPamphlets: true,
-    showCustomAds: true
-  },
+  hero: { title: "Future Retail Experience", subtitle: "Discover the latest in Tech, Fashion, and Lifestyle.", backgroundImageUrl: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop", logoUrl: "https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png", websiteUrl: "https://jstyp.me" },
+  screensaverSettings: { idleTimeout: 60, imageDuration: 8, muteVideos: false, showProductImages: true, showProductVideos: true, showPamphlets: true, showCustomAds: true },
   catalogues: [],
   pricelists: [],
   pricelistBrands: [],
@@ -83,10 +58,7 @@ const DEFAULT_DATA: StoreData = {
   fleet: [],
   about: { title: "About Our Vision", text: "Welcome to the Kiosk Pro Showcase.", audioUrl: "" },
   admins: [DEFAULT_ADMIN],
-  appConfig: {
-      kioskIconUrl: "https://i.ibb.co/S7Nxv1dD/android-launchericon-512-512.png",
-      adminIconUrl: "https://i.ibb.co/qYDggwHs/android-launchericon-512-512.png"
-  },
+  appConfig: { kioskIconUrl: "https://i.ibb.co/S7Nxv1dD/android-launchericon-512-512.png", adminIconUrl: "https://i.ibb.co/qYDggwHs/android-launchericon-512-512.png" },
   systemSettings: { setupPin: "0000" }
 };
 
@@ -107,57 +79,62 @@ const migrateData = (data: any): StoreData => {
     return data as StoreData;
 };
 
-const handleExpiration = async (data: StoreData): Promise<StoreData> => {
-    if (!data.catalogues) return data;
-    const now = new Date();
-    const activeCatalogues: Catalogue[] = [];
-    const expiredCatalogues: Catalogue[] = [];
-    data.catalogues.forEach(c => {
-        if (c.endDate && new Date(c.endDate) < now) expiredCatalogues.push(c);
-        else activeCatalogues.push(c);
-    });
-    if (expiredCatalogues.length > 0) {
-        const newArchive: ArchiveData = {
-            ...data.archive,
-            brands: data.archive?.brands || [],
-            products: data.archive?.products || [],
-            catalogues: [...(data.archive?.catalogues || []), ...expiredCatalogues],
-            deletedItems: data.archive?.deletedItems || [],
-            deletedAt: {
-                ...(data.archive?.deletedAt || {}),
-                ...expiredCatalogues.reduce((acc, curr) => ({ ...acc, [curr.id]: new Date().toISOString() }), {})
-            }
-        };
-        const updatedData = { ...data, catalogues: activeCatalogues, archive: newArchive };
-        if (supabase) await supabase.from('store_config').update({ data: updatedData }).eq('id', 1);
-        return updatedData;
-    }
-    return data;
-};
-
+/**
+ * RECONSTRUCTION ENGINE:
+ * Fetches data from multiple tables and stitches them into the unified StoreData object.
+ */
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
   if (supabase) {
       try {
-          const [configResponse, fleetResponse] = await Promise.all([
-              supabase.from('store_config').select('data').eq('id', 1).single(),
-              supabase.from('kiosks').select('*')
+          const [configRes, brandsRes, catsRes, prodsRes, cataloguesRes, pricelistsRes, fleetRes, logsRes] = await Promise.all([
+              supabase.from('store_config').select('data').eq('id', 1).maybeSingle(),
+              supabase.from('brands').select('*'),
+              supabase.from('categories').select('*'),
+              supabase.from('products').select('*'),
+              supabase.from('catalogues').select('*'),
+              supabase.from('pricelists').select('*'),
+              supabase.from('kiosks').select('*'),
+              supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(100)
           ]);
-          if (configResponse.data) {
-              let processedData = migrateData(configResponse.data.data || {});
-              if (fleetResponse.data) {
-                  processedData.fleet = fleetResponse.data.map((k: any) => ({
-                      id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
-                      last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
-                      version: k.version, locationDescription: k.location_description,
-                      assigned_zone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested
-                  }));
-              }
-              processedData = await handleExpiration(processedData);
-              try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(processedData)); } catch (e) {}
-              return processedData;
+
+          let processedData = migrateData(configRes.data?.data || {});
+          
+          // Reconstruct Brands -> Categories -> Products
+          if (brandsRes.data) {
+              processedData.brands = brandsRes.data.map((b: any) => {
+                  const brand = b.data as Brand;
+                  brand.id = b.id;
+                  brand.categories = (catsRes.data || [])
+                      .filter((c: any) => c.brand_id === b.id)
+                      .map((c: any) => {
+                          const cat = c.data as Category;
+                          cat.id = c.id;
+                          cat.products = (prodsRes.data || [])
+                              .filter((p: any) => p.category_id === c.id)
+                              .map((p: any) => ({ ...(p.data as Product), id: p.id }));
+                          return cat;
+                      });
+                  return brand;
+              });
           }
-      } catch (e) { console.warn("Cloud fetch unavailable, fallback to cache.", e); }
+
+          if (cataloguesRes.data) processedData.catalogues = cataloguesRes.data.map((x: any) => ({ ...x.data, id: x.id }));
+          if (pricelistsRes.data) processedData.pricelists = pricelistsRes.data.map((x: any) => ({ ...x.data, id: x.id }));
+          if (logsRes.data) processedData.archive = { ...processedData.archive, deletedItems: logsRes.data.map((x: any) => ({ ...x.data, id: x.id })), brands: [], products: [], catalogues: [], deletedAt: {} };
+          
+          if (fleetRes.data) {
+              processedData.fleet = fleetRes.data.map((k: any) => ({
+                  id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
+                  last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
+                  version: k.version, locationDescription: k.location_description,
+                  assigned_zone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested
+              }));
+          }
+
+          try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(processedData)); } catch (e) {}
+          return processedData;
+      } catch (e) { console.warn("Relational fetch failed, falling back to cache.", e); }
   }
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DATA);
@@ -166,71 +143,81 @@ export const generateStoreData = async (): Promise<StoreData> => {
   return migrateData(DEFAULT_DATA);
 };
 
-export const saveStoreData = async (data: StoreData): Promise<void> => {
-    // 1. Local Persistence (Atomic)
-    try {
-        localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
-    } catch (e) {
-        const { archive, ...smallerData } = data;
-        try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(smallerData)); } catch (innerE) {}
-    }
+/**
+ * INCREMENTAL PATCHING ENGINE:
+ * Determines what exactly changed and sends ONLY that part to the cloud.
+ */
+export const saveStoreData = async (data: StoreData, partial?: { type: string, action: 'upsert' | 'delete', item: any }): Promise<void> => {
+    // 1. Always sync local cache first
+    try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data)); } catch (e) {}
 
-    // 2. Cloud Background Sync with Progress Simulation and Payload Fallback
     if (!supabase) initSupabase();
-    if (supabase) {
-        broadcastSync(5, 'syncing');
-        
-        (async () => {
-            const { fleet, ...fullDataToSave } = data;
-            let operationDone = false;
-            let simulatedProgress = 5;
+    if (!supabase) return;
 
-            const progressInterval = setInterval(() => {
-                if (!operationDone && simulatedProgress < 90) {
-                    simulatedProgress += (90 - simulatedProgress) * 0.1;
-                    broadcastSync(Math.floor(simulatedProgress), 'syncing');
-                }
-            }, 200);
+    broadcastSync(5, 'syncing');
 
-            const performCloudSave = async (payload: any) => {
-                return await supabase
-                    .from('store_config')
-                    .upsert({ id: 1, data: payload }, { onConflict: 'id' });
-            };
+    (async () => {
+        try {
+            if (partial) {
+                const { type, action, item } = partial;
+                let response;
 
-            try {
-                // Attempt 1: Full Save
-                const response = await performCloudSave(fullDataToSave);
-                
-                if (response.error) {
-                    console.warn("Full sync failed (likely payload size). Error:", response.error);
-                    
-                    // Attempt 2: Fallback (Save without large archive history)
-                    broadcastSync(50, 'syncing');
-                    const { archive, ...essentialData } = fullDataToSave;
-                    const fallbackResponse = await performCloudSave(essentialData);
-                    
-                    if (fallbackResponse.error) {
-                        throw new Error(fallbackResponse.error.message);
-                    }
-                    console.log("Essential data synced successfully (Archive dropped).");
+                switch (type) {
+                    case 'product':
+                        if (action === 'upsert') response = await supabase.from('products').upsert({ id: item.id, category_id: item.categoryId, data: item }, { onConflict: 'id' });
+                        else response = await supabase.from('products').delete().eq('id', item.id);
+                        break;
+                    case 'category':
+                        if (action === 'upsert') response = await supabase.from('categories').upsert({ id: item.id, brand_id: item.brandId, data: item }, { onConflict: 'id' });
+                        else response = await supabase.from('categories').delete().eq('id', item.id);
+                        break;
+                    case 'brand':
+                        if (action === 'upsert') response = await supabase.from('brands').upsert({ id: item.id, data: { name: item.name, logoUrl: item.logoUrl, themeColor: item.themeColor } }, { onConflict: 'id' });
+                        else response = await supabase.from('brands').delete().eq('id', item.id);
+                        break;
+                    case 'catalogue':
+                        if (action === 'upsert') response = await supabase.from('catalogues').upsert({ id: item.id, data: item }, { onConflict: 'id' });
+                        else response = await supabase.from('catalogues').delete().eq('id', item.id);
+                        break;
+                    case 'pricelist':
+                        if (action === 'upsert') response = await supabase.from('pricelists').upsert({ id: item.id, data: item }, { onConflict: 'id' });
+                        else response = await supabase.from('pricelists').delete().eq('id', item.id);
+                        break;
+                    case 'audit':
+                        response = await supabase.from('audit_logs').insert({ id: item.id, data: item });
+                        break;
                 }
 
-                operationDone = true;
-                clearInterval(progressInterval);
-                broadcastSync(100, 'complete');
-                setTimeout(() => broadcastSync(0, 'idle'), 2000);
-            } catch (e: any) {
-                console.error("Cloud Sync Error:", e);
-                operationDone = true;
-                clearInterval(progressInterval);
-                broadcastSync(0, 'error');
+                if (response?.error) throw response.error;
+            } else {
+                // Global Config Save (Hero, Ads, Settings, etc.)
+                const { brands, catalogues, pricelists, fleet, archive, ...configOnly } = data;
+                const { error } = await supabase.from('store_config').upsert({ id: 1, data: configOnly }, { onConflict: 'id' });
+                if (error) throw error;
             }
-        })();
-    }
+
+            broadcastSync(100, 'complete');
+            setTimeout(() => broadcastSync(0, 'idle'), 1500);
+        } catch (e) {
+            console.error("Incremental Sync Error:", e);
+            broadcastSync(0, 'error');
+        }
+    })();
 };
 
 export const resetStoreData = async (): Promise<StoreData> => {
+    // Factory reset logic needs careful handling with relational tables
+    if (supabase) {
+        await Promise.all([
+            supabase.from('products').delete().neq('id', '0'),
+            supabase.from('categories').delete().neq('id', '0'),
+            supabase.from('brands').delete().neq('id', '0'),
+            supabase.from('catalogues').delete().neq('id', '0'),
+            supabase.from('pricelists').delete().neq('id', '0'),
+            supabase.from('audit_logs').delete().neq('id', '0'),
+            supabase.from('store_config').upsert({ id: 1, data: DEFAULT_DATA })
+        ]);
+    }
     await saveStoreData(DEFAULT_DATA);
     return DEFAULT_DATA;
 };

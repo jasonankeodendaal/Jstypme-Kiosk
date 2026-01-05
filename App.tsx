@@ -157,10 +157,10 @@ export default function App() {
     };
   }, [fetchData, kioskId, isAdmin]);
 
-  const handleUpdateData = async (newData: StoreData) => {
+  const handleUpdateData = async (newData: StoreData, partial?: any) => {
     setStoreData({ ...newData }); 
     try {
-        await saveStoreData(newData);
+        await saveStoreData(newData, partial);
         setLastSyncTime(new Date().toLocaleTimeString());
     } catch (e: any) {
         console.error("Manual save failed", e);
