@@ -198,15 +198,22 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                         <p className="font-medium text-slate-700">Open your Supabase Dashboard &rarr; **SQL Editor** &rarr; **New Query**. Copy and execute this complete bootstrap script to build the entire fleet architecture.</p>
                         <CodeBlock 
                           id="sql-schema"
-                          label="Production SQL Bootstrap"
-                          code={`-- 1. CONFIGURATION LAYER: Stores inventory, hero, and global settings
+                          label="Production SQL Bootstrap (Fixed)"
+                          code={`-- 1. RESET & CLEANUP (Ensures clean slate)
+DROP POLICY IF EXISTS "Allow Public Read Config" ON public.store_config;
+DROP POLICY IF EXISTS "Allow Public Update Config" ON public.store_config;
+DROP POLICY IF EXISTS "Allow Public Insert Config" ON public.store_config;
+DROP POLICY IF EXISTS "Allow Public Fleet Access" ON public.kiosks;
+DROP POLICY IF EXISTS "Enable access to all users" ON public.kiosks;
+DROP POLICY IF EXISTS "Public Storage Access" ON storage.objects;
+
+-- 2. TABLE DEFINITIONS
 CREATE TABLE IF NOT EXISTS public.store_config (
     id bigint primary key default 1,
     data jsonb not null default '{}'::jsonb,
     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 2. TELEMETRY LAYER: Real-time health monitoring of all kiosk hardware
 CREATE TABLE IF NOT EXISTS public.kiosks (
     id text primary key,
     name text not null,
@@ -222,34 +229,36 @@ CREATE TABLE IF NOT EXISTS public.kiosks (
     restart_requested boolean default false
 );
 
--- 3. INITIALIZE: Ensure the singleton record exists
+-- 3. STORAGE & PERMISSIONS
+-- Auto-create the media bucket if missing
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('kiosk-media', 'kiosk-media', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Ensure row 1 exists
 INSERT INTO public.store_config (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING;
 
--- 4. SECURITY PROTOCOLS: Enable Row Level Security (RLS)
+-- 4. SECURITY POLICIES (OPEN ACCESS)
 ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
 
--- 5. CLEANUP OLD POLICIES (Idempotency Fix)
-DROP POLICY IF EXISTS "Allow Public Read Config" ON public.store_config;
-DROP POLICY IF EXISTS "Allow Public Update Config" ON public.store_config;
-DROP POLICY IF EXISTS "Allow Public Insert Config" ON public.store_config;
-DROP POLICY IF EXISTS "Allow Public Fleet Access" ON public.kiosks;
-DROP POLICY IF EXISTS "Enable access to all users" ON public.kiosks;
-DROP POLICY IF EXISTS "Enable insert/update for fleet" ON public.kiosks;
+-- Grant permissions to anonymous API users
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON public.store_config TO anon, authenticated;
+GRANT ALL ON public.kiosks TO anon, authenticated;
 
--- 6. ACCESS POLICIES (Permissive for Kiosk Anon Access)
-CREATE POLICY "Allow Public Read Config" ON public.store_config FOR SELECT USING (true);
-CREATE POLICY "Allow Public Update Config" ON public.store_config FOR UPDATE USING (true);
-CREATE POLICY "Allow Public Insert Config" ON public.store_config FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow Public Fleet Access" ON public.kiosks FOR ALL USING (true);`}
+-- Create permissive policies
+CREATE POLICY "Allow All Config" ON public.store_config FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow All Fleet" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow All Storage" ON storage.objects FOR ALL USING (bucket_id = 'kiosk-media') WITH CHECK (bucket_id = 'kiosk-media');`}
                         />
                         <EngineerNote>
-                            The SQL script now includes `DROP POLICY IF EXISTS` commands. This ensures that if you run the script multiple times (or update your project), you won't get "Multiple Permissive Policies" warnings in the dashboard.
+                            This script now includes `GRANT` statements and Storage Bucket creation. This fixes issues where "Pricelist Titles" or "Images" fail to save due to missing permissions or missing buckets.
                         </EngineerNote>
                     </Step>
 
                     <Step number="2" title="Storage Engine Configuration">
-                        <p className="font-medium text-slate-700">High-resolution assets (4K videos, product manuals) are served via Supabase's Edge-cached S3 storage. You must provision the `kiosk-media` bucket.</p>
+                        <p className="font-medium text-slate-700">The SQL above automatically provisions the `kiosk-media` bucket. If you prefer manual setup or need custom limits:</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-200">
                             <div className="space-y-3">
                                 <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase">Bucket Settings</div>
