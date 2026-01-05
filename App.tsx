@@ -119,7 +119,6 @@ export default function App() {
   const handleUpdateData = async (newData: StoreData) => {
     // Explicit Admin action: show "Updating Cloud" indicator
     setIsSyncing(true);
-    // Optimistically update parent state so children get the new version ASAP
     setStoreData({ ...newData }); 
     try {
         await saveStoreData(newData);
@@ -157,8 +156,7 @@ export default function App() {
         <AdminDashboard 
             storeData={storeData}
             onUpdateData={handleUpdateData}
-            onRefresh={() => fetchData(false)}
-            isSyncing={isSyncing}
+            onRefresh={() => fetchData(false)} // Manual refresh is not silent
         />
       ) : currentRoute === '/about' ? (
         <AboutPage 
