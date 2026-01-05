@@ -1,3 +1,4 @@
+
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand } from "../types";
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
@@ -557,7 +558,8 @@ const DEFAULT_DATA: StoreData = {
       thumbnailUrl: 'https://images.unsplash.com/photo-1592890288564-76628a30a657?w=300&h=400&fit=crop',
       month: 'May',
       year: '2024',
-      dateAdded: new Date().toISOString()
+      dateAdded: new Date().toISOString(),
+      versionId: 'v01'
     }
   ],
   pricelistBrands: [
@@ -631,6 +633,14 @@ const migrateData = (data: any): StoreData => {
                     if (!p.manuals) p.manuals = [];
                 });
             });
+        });
+    }
+
+    // New Migration for Version IDs
+    if (data.pricelists) {
+        data.pricelists.forEach((pl: any) => {
+            if (!pl.versionId) pl.versionId = 'v01';
+            if (!pl.history) pl.history = [];
         });
     }
 
