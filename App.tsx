@@ -39,10 +39,65 @@ export default function App() {
   const syncTimeoutRef = useRef<number | null>(null);
   const kioskId = getKioskId();
   const isAdmin = currentRoute.startsWith('/admin');
+  
+  // APK NATIVE BRIDGE: Screen Wake Lock
+  useEffect(() => {
+    let wakeLock: any = null;
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+          console.log('Native Bridge: Wake Lock Acquired');
+        }
+      } catch (err) {
+        console.warn('Native Bridge: Wake Lock Failed', err);
+      }
+    };
+
+    requestWakeLock();
+    const handleVisibilityChange = () => {
+      if (wakeLock !== null && document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wakeLock) wakeLock.release();
+    };
+  }, []);
+
+  // APK NATIVE BRIDGE: Haptics and Immersive Fullscreen
+  useEffect(() => {
+    const handleFirstTouch = () => {
+      // 1. Request Immersive Mode (Fullscreen)
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      
+      // 2. Play subtle click vibration if supported
+      if (navigator.vibrate) {
+        navigator.vibrate(10);
+      }
+    };
+
+    const handleHaptic = (e: MouseEvent | TouchEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('button, a, [role="button"]')) {
+            if (navigator.vibrate) navigator.vibrate(15);
+        }
+    };
+
+    window.addEventListener('mousedown', handleFirstTouch, { once: true });
+    window.addEventListener('touchstart', handleFirstTouch, { once: true });
+    window.addEventListener('click', handleHaptic);
+    
+    return () => {
+        window.removeEventListener('click', handleHaptic);
+    };
+  }, []);
 
   const fetchData = useCallback(async (isBackground = false) => {
-      // If we are admin and this is a background pulse, we ONLY want fleet telemetry.
-      // We must avoid fetching store_config because it might be stale compared to our local draft.
       if (isAdmin && isBackground && !isFirstLoad) {
           try {
               if (supabase) {
@@ -78,16 +133,8 @@ export default function App() {
         if (data) {
            setStoreData(prev => {
                if (!prev) return data;
-
-               // Kiosk logic: Full update always
                if (!isAdmin) return { ...data };
-
-               // Admin logic: 
-               // Background syncs are now handled above (fleet only).
-               // If this is a manual refresh (!isBackground), allow full data replacement.
                if (!isBackground) return { ...data };
-
-               // Fallback: merge fleet anyway
                return {
                    ...prev,
                    fleet: data.fleet
@@ -107,12 +154,10 @@ export default function App() {
     initSupabase();
     fetchData();
 
-    // Routine Sync (Fleet telemetry heartbeat)
     const interval = setInterval(() => {
         fetchData(true);
     }, 60000); 
 
-    // Realtime Event Listener - Disabled for Admin to prevent intrusive data loss
     let channel: any = null;
     if (supabase && !isAdmin) {
         channel = supabase
@@ -144,7 +189,6 @@ export default function App() {
   }, [fetchData, kioskId, isAdmin]);
 
   const handleUpdateData = async (newData: StoreData) => {
-    // Immediate local update to keep UI responsive and prevent stale background fetches
     setIsSyncing(true);
     setStoreData({ ...newData }); 
     try {
