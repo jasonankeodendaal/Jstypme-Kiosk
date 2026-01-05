@@ -738,21 +738,20 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         }
     }
 
-    // 2. Cloud Save (Async / Background)
+    // 2. Cloud Save (Async / Background) - FIRE AND FORGET
     if (!supabase) initSupabase();
     if (supabase) {
-        try {
-            const { fleet, ...dataToSave } = data;
-            // Use upsert with minimal response overhead
-            const { error } = await supabase
-                .from('store_config')
-                .upsert({ id: 1, data: dataToSave }, { onConflict: 'id', ignoreDuplicates: false, count: 'exact' }); 
-            
-            if (error) throw error;
-        } catch (e) {
-            console.error("Cloud sync failed.", e);
-            throw new Error("Connection failed.");
-        }
+        const { fleet, ...dataToSave } = data;
+        // Don't await the promise so the UI doesn't block
+        supabase
+            .from('store_config')
+            .upsert({ id: 1, data: dataToSave }, { onConflict: 'id', ignoreDuplicates: false, count: 'exact' })
+            .then(({ error }) => {
+                if (error) console.error("Cloud background sync failed:", error);
+            })
+            .catch((e: any) => {
+                console.error("Cloud connection failed:", e);
+            });
     }
 };
 
