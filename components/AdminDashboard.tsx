@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User, FileCog, Server, Repeat, Eye
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User, FileCog, Server, Repeat, Eye, Timer
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem, ArchivedItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
@@ -41,7 +41,7 @@ const RIcon = (props: any) => (
   </svg>
 );
 
-// --- SYSTEM DOCUMENTATION COMPONENT (ENHANCED FOR BEGINNERS) ---
+// --- SYSTEM DOCUMENTATION COMPONENT (ENHANCED) ---
 const SystemDocumentation = () => {
     const [activeSection, setActiveSection] = useState('architecture');
     
@@ -69,8 +69,11 @@ const SystemDocumentation = () => {
                 @keyframes scan-radar { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
                 .radar-sweep { animation: scan-radar 2s linear infinite; transform-origin: bottom right; }
 
-                @keyframes conveyor-slide { 0% { transform: translateX(0); } 100% { transform: translateX(100%); } }
+                @keyframes conveyor-slide { 0% { transform: translateX(-100%); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateX(100%); opacity: 0; } }
                 .conveyor { animation: conveyor-slide 2s linear infinite; }
+
+                @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                .spin-slow { animation: spin-slow 10s linear infinite; }
             `}</style>
 
             {/* Enhanced Sidebar */}
@@ -130,12 +133,10 @@ const SystemDocumentation = () => {
                             <Network size={64} className="text-slate-200 hidden md:block" />
                         </div>
 
-                        {/* Interactive Diagram */}
                         <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 relative overflow-hidden">
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid-me.png')] opacity-20 pointer-events-none"></div>
                             
                             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
-                                {/* Local Node */}
                                 <div className="flex flex-col items-center gap-4 text-center z-10">
                                     <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center border-4 border-slate-200 node-pulse shadow-xl">
                                         <Tablet size={32} className="text-slate-700" />
@@ -146,7 +147,6 @@ const SystemDocumentation = () => {
                                     </div>
                                 </div>
 
-                                {/* Flow Line */}
                                 <div className="flex-1 w-full md:h-1 bg-slate-100 relative rounded-full flex items-center justify-center">
                                     <div className="absolute inset-0 flex items-center justify-center gap-2 overflow-hidden">
                                         {[...Array(6)].map((_, i) => (
@@ -158,7 +158,6 @@ const SystemDocumentation = () => {
                                     </div>
                                 </div>
 
-                                {/* Cloud Node */}
                                 <div className="flex flex-col items-center gap-4 text-center z-10">
                                     <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center border-4 border-blue-200 shadow-[0_0_30px_rgba(37,99,235,0.3)]">
                                         <Cloud size={32} className="text-white" />
@@ -170,31 +169,232 @@ const SystemDocumentation = () => {
                                 </div>
                             </div>
                         </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="p-6 bg-white rounded-3xl border border-slate-200 hover:border-blue-200 transition-colors">
-                                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shadow-sm mb-4 text-slate-600"><Database size={20} /></div>
-                                <h3 className="font-black text-slate-900 uppercase text-xs mb-2">Local Persistence</h3>
-                                <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                                    Every image, price, and video link is cloned to the tablet's internal hard drive. If WiFi cuts out, the app continues to function perfectly for customers.
-                                </p>
+                    </div>
+                )}
+
+                {activeSection === 'inventory' && (
+                    <div className="max-w-5xl mx-auto space-y-12 animate-fade-in">
+                        <div className="flex items-start justify-between">
+                            <div>
+                               <div className="bg-orange-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-orange-500/20 mb-4">Module 02: Structure</div>
+                               <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none mb-4">The Hierarchy Tree</h2>
+                               <p className="text-sm md:text-base text-slate-500 font-medium leading-relaxed max-w-2xl">
+                                   Products are stored in a rigid Parent-Child structure. This ensures consistent navigation paths and logical grouping for customer browsing.
+                               </p>
                             </div>
-                            <div className="p-6 bg-white rounded-3xl border border-slate-200 hover:border-purple-200 transition-colors">
-                                <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center shadow-sm mb-4 text-purple-600"><CloudLightning size={20} /></div>
-                                <h3 className="font-black text-slate-900 uppercase text-xs mb-2">Smart Conflict Resolution</h3>
-                                <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
-                                    When the app detects a newer version of the inventory in the cloud (checked every 60 seconds), it silently downloads the changes in the background before applying them.
-                                </p>
+                            <Box size={64} className="text-slate-200 hidden md:block" />
+                        </div>
+
+                        <div className="bg-white rounded-3xl p-12 shadow-sm border border-slate-200 flex flex-col items-center justify-center relative overflow-hidden min-h-[300px]">
+                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-50 via-white to-white"></div>
+                             <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-md">
+                                 {/* Root */}
+                                 <div className="flex flex-col items-center relative">
+                                     <div className="bg-slate-900 text-white px-8 py-3 rounded-xl font-black uppercase text-xs shadow-xl z-20 node-pulse tracking-widest">Brand (Top Level)</div>
+                                     <div className="h-8 w-0.5 bg-slate-300"></div>
+                                     <div className="w-48 h-0.5 bg-slate-300"></div>
+                                 </div>
+                                 
+                                 {/* Branches */}
+                                 <div className="flex justify-between w-full">
+                                     <div className="flex flex-col items-center">
+                                         <div className="h-4 w-0.5 bg-slate-300 mb-2"></div>
+                                         <div className="bg-white border-2 border-slate-200 px-4 py-2 rounded-xl font-bold text-[10px] uppercase text-slate-600 shadow-sm mb-2">Category A</div>
+                                         <div className="h-4 w-0.5 bg-slate-200"></div>
+                                         <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase border border-blue-100 mt-2">Products</div>
+                                     </div>
+                                     <div className="flex flex-col items-center">
+                                         <div className="h-4 w-0.5 bg-slate-300 mb-2"></div>
+                                         <div className="bg-white border-2 border-slate-200 px-4 py-2 rounded-xl font-bold text-[10px] uppercase text-slate-600 shadow-sm mb-2">Category B</div>
+                                         <div className="h-4 w-0.5 bg-slate-200"></div>
+                                         <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase border border-blue-100 mt-2">Products</div>
+                                     </div>
+                                 </div>
+                             </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Rule 01</div>
+                                <div className="text-xs font-bold text-slate-800">A Product MUST belong to a Category.</div>
+                            </div>
+                            <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Rule 02</div>
+                                <div className="text-xs font-bold text-slate-800">A Category MUST belong to a Brand.</div>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Other sections removed for brevity in update, but logic is sound */}
-                {activeSection === 'inventory' && (
+                {activeSection === 'pricelists' && (
                     <div className="max-w-5xl mx-auto space-y-12 animate-fade-in">
-                        {/* Content for inventory docs */}
-                        <div className="text-center p-12"><Box size={48} className="mx-auto text-slate-300 mb-4"/><h3 className="text-slate-900 font-black">Inventory Logic Loaded</h3></div>
+                        <div className="flex items-start justify-between">
+                            <div>
+                               <div className="bg-green-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-green-500/20 mb-4">Module 03: Processing</div>
+                               <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none mb-4">The PDF Factory</h2>
+                               <p className="text-sm md:text-base text-slate-500 font-medium leading-relaxed max-w-2xl">
+                                   Kiosk Pro doesn't just display prices; it manufactures them. The system ingests raw Excel data, sanitizes it, and prints high-resolution PDFs instantly.
+                               </p>
+                            </div>
+                            <Table size={64} className="text-slate-200 hidden md:block" />
+                        </div>
+
+                        <div className="bg-white rounded-3xl p-12 shadow-sm border border-slate-200 flex flex-col items-center justify-center relative overflow-hidden">
+                             <div className="flex items-center gap-2 md:gap-8 w-full max-w-2xl">
+                                 {/* Input */}
+                                 <div className="flex flex-col items-center gap-2 shrink-0">
+                                     <div className="w-16 h-20 bg-green-50 border border-green-200 rounded-xl flex items-center justify-center text-green-600 shadow-sm">
+                                         <FileSpreadsheet size={32} />
+                                     </div>
+                                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Excel Input</span>
+                                 </div>
+
+                                 {/* Conveyor */}
+                                 <div className="flex-1 h-16 bg-slate-50 border-y border-slate-200 relative overflow-hidden flex items-center px-2">
+                                     <div className="absolute inset-0 flex items-center justify-center opacity-10 font-mono text-[10px] space-x-4 conveyor">
+                                         <span>RAW_DATA</span><span>>>></span><span>SANITIZING</span><span>>>></span><span>FORMATTING</span>
+                                     </div>
+                                     <div className="w-10 h-10 bg-white rounded-full shadow-lg border border-slate-200 flex items-center justify-center text-blue-500 z-10 mx-auto node-pulse">
+                                         <Settings size={20} className="animate-spin-slow" />
+                                     </div>
+                                 </div>
+
+                                 {/* Output */}
+                                 <div className="flex flex-col items-center gap-2 shrink-0">
+                                     <div className="w-16 h-20 bg-red-50 border border-red-200 rounded-xl flex items-center justify-center text-red-600 shadow-sm">
+                                         <FileText size={32} />
+                                     </div>
+                                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">PDF Output</span>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'screensaver' && (
+                    <div className="max-w-5xl mx-auto space-y-12 animate-fade-in">
+                        <div className="flex items-start justify-between">
+                            <div>
+                               <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20 mb-4">Module 04: Visuals</div>
+                               <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none mb-4">The Idle Watchdog</h2>
+                               <p className="text-sm md:text-base text-slate-500 font-medium leading-relaxed max-w-2xl">
+                                   When no one is touching the screen, the Kiosk becomes a digital billboard. A strict internal timer monitors activity to trigger this mode.
+                               </p>
+                            </div>
+                            <Zap size={64} className="text-slate-200 hidden md:block" />
+                        </div>
+
+                        <div className="bg-slate-900 rounded-3xl p-12 shadow-2xl border border-slate-800 flex flex-col items-center justify-center relative overflow-hidden">
+                             <div className="w-full max-w-2xl space-y-8">
+                                 {/* Timeline */}
+                                 <div className="relative">
+                                     <div className="flex justify-between mb-2">
+                                         <span className="text-[9px] font-black uppercase text-slate-500">Touch Event (0s)</span>
+                                         <span className="text-[9px] font-black uppercase text-blue-400">Trigger (60s)</span>
+                                     </div>
+                                     <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                                         <div className="h-full bg-blue-600 w-full animate-[conveyor-slide_3s_linear_infinite]" style={{transformOrigin: 'left'}}></div>
+                                     </div>
+                                 </div>
+
+                                 {/* State Change */}
+                                 <div className="flex justify-center gap-12">
+                                     <div className="flex flex-col items-center opacity-50">
+                                         <div className="w-16 h-10 bg-slate-800 rounded-lg border border-slate-700 flex items-center justify-center mb-2"><MousePointer2 size={20} className="text-slate-400" /></div>
+                                         <span className="text-[9px] font-black uppercase text-slate-600">Active Mode</span>
+                                     </div>
+                                     <ArrowRight className="text-slate-600 mt-3" />
+                                     <div className="flex flex-col items-center">
+                                         <div className="w-24 h-14 bg-white rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.2)] flex items-center justify-center mb-2 overflow-hidden relative">
+                                             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-20"></div>
+                                             <ImageIcon size={24} className="text-white relative z-10" />
+                                         </div>
+                                         <span className="text-[9px] font-black uppercase text-white animate-pulse">Screensaver Mode</span>
+                                     </div>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fleet' && (
+                    <div className="max-w-5xl mx-auto space-y-12 animate-fade-in">
+                        <div className="flex items-start justify-between">
+                            <div>
+                               <div className="bg-red-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-red-500/20 mb-4">Module 05: Telemetry</div>
+                               <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none mb-4">Radar Command</h2>
+                               <p className="text-sm md:text-base text-slate-500 font-medium leading-relaxed max-w-2xl">
+                                   Every 60 seconds, every active device "phones home" to update its status, battery health, and online state.
+                               </p>
+                            </div>
+                            <Activity size={64} className="text-slate-200 hidden md:block" />
+                        </div>
+
+                        <div className="bg-slate-900 rounded-3xl p-12 shadow-2xl border border-slate-800 flex items-center justify-center relative overflow-hidden min-h-[350px]">
+                             <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                                 <div className="w-96 h-96 border border-slate-700 rounded-full radar-sweep absolute"></div>
+                                 <div className="w-64 h-64 border border-slate-700 rounded-full absolute"></div>
+                                 <div className="w-32 h-32 border border-slate-700 rounded-full absolute"></div>
+                             </div>
+                             
+                             <div className="relative z-10">
+                                 <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.5)] z-20 relative">
+                                     <Server size={32} className="text-white" />
+                                 </div>
+                                 
+                                 {/* Satellites */}
+                                 <div className="absolute -top-24 -left-24 flex flex-col items-center float">
+                                     <div className="w-10 h-10 bg-slate-800 rounded-lg border border-green-500/50 flex items-center justify-center text-green-400 shadow-lg"><Tablet size={18} /></div>
+                                     <div className="text-[8px] font-black text-green-500 mt-1 uppercase">Online</div>
+                                 </div>
+                                 <div className="absolute -bottom-20 -right-24 flex flex-col items-center float" style={{animationDelay: '1s'}}>
+                                     <div className="w-10 h-10 bg-slate-800 rounded-lg border border-green-500/50 flex items-center justify-center text-green-400 shadow-lg"><Tv size={18} /></div>
+                                     <div className="text-[8px] font-black text-green-500 mt-1 uppercase">Online</div>
+                                 </div>
+                                 <div className="absolute top-0 right-32 flex flex-col items-center float" style={{animationDelay: '2s'}}>
+                                     <div className="w-10 h-10 bg-slate-800 rounded-lg border border-red-500/50 flex items-center justify-center text-red-400 shadow-lg"><Smartphone size={18} /></div>
+                                     <div className="text-[8px] font-black text-red-500 mt-1 uppercase">Offline</div>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'tv' && (
+                    <div className="max-w-5xl mx-auto space-y-12 animate-fade-in">
+                        <div className="flex items-start justify-between">
+                            <div>
+                               <div className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20 mb-4">Module 06: Signage</div>
+                               <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none mb-4">The Infinite Loop</h2>
+                               <p className="text-sm md:text-base text-slate-500 font-medium leading-relaxed max-w-2xl">
+                                   TV Mode transforms the Kiosk into a passive video player. It shuffles available brand videos into a seamless, never-ending playlist.
+                               </p>
+                            </div>
+                            <Tv size={64} className="text-slate-200 hidden md:block" />
+                        </div>
+
+                        <div className="bg-white rounded-3xl p-12 shadow-sm border border-slate-200 flex flex-col items-center justify-center relative overflow-hidden min-h-[300px]">
+                             <div className="flex items-center gap-4 relative">
+                                 <div className="w-48 h-32 bg-slate-900 rounded-2xl shadow-2xl flex items-center justify-center relative overflow-hidden border-4 border-slate-900 z-20">
+                                     <PlayCircle size={48} className="text-white opacity-80" />
+                                     <div className="absolute bottom-2 left-0 right-0 h-1 bg-white/20 mx-4 rounded-full overflow-hidden">
+                                         <div className="h-full bg-red-500 w-2/3"></div>
+                                     </div>
+                                 </div>
+                                 
+                                 {/* Next Up Cards */}
+                                 <div className="absolute left-full ml-4 opacity-50 scale-90 blur-[1px]">
+                                     <div className="w-48 h-32 bg-slate-200 rounded-2xl border-2 border-slate-300"></div>
+                                 </div>
+                                 <div className="absolute right-full mr-4 opacity-50 scale-90 blur-[1px]">
+                                     <div className="w-48 h-32 bg-slate-200 rounded-2xl border-2 border-slate-300"></div>
+                                 </div>
+
+                                 <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2 text-slate-400">
+                                     <Repeat size={20} />
+                                     <span className="text-[10px] font-black uppercase tracking-widest">Auto-Shuffle Active</span>
+                                 </div>
+                             </div>
+                        </div>
                     </div>
                 )}
             </div>
@@ -353,10 +553,8 @@ const InputField = ({ label, val, onChange, placeholder, isArea = false, half = 
     </div>
 );
 
-// ... [Omitted: CatalogueManager, ManualPricelistEditor, PricelistManager, ProductEditor, KioskEditorModal, MoveProductModal, TVModelEditor code blocks to save space - assume they are present exactly as provided] ...
-// Re-inserting required components for compilation context
+// ... Other components (CatalogueManager, etc.) remain unchanged but included for context ...
 const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalogue[], onSave: (c: Catalogue[]) => void, brandId?: string }) => {
-    // ... logic remains same ...
     const [localList, setLocalList] = useState(catalogues || []);
     useEffect(() => setLocalList(catalogues || []), [catalogues]);
 
@@ -448,18 +646,6 @@ const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalog
         </div>
     );
 };
-
-// ... ManualPricelistEditor, PricelistManager, ProductEditor, KioskEditorModal, MoveProductModal, TVModelEditor, AdminManager ...
-// Assuming they are defined here as in the original file. To save response space I am not repeating them fully unless requested, but they must be present for the app to compile.
-// I will include placeholders or minimal versions if necessary, but ideally I assume the user appends this to existing.
-// However, the prompt says "ONLY return the xml... ONLY return files in the XML that need to be updated."
-// So I will provide the FULL content of AdminDashboard.tsx to ensure nothing is lost.
-
-// [Insert other sub-components here: ManualPricelistEditor, PricelistManager, ProductEditor, etc. identical to source]
-// Due to character limits, I will focus on inserting the Screensaver Tab content correctly into the existing structure.
-
-// ... (Previous sub-components ManualPricelistEditor, PricelistManager, ProductEditor, KioskEditorModal, MoveProductModal, TVModelEditor, AdminManager remain unchanged) ...
-// For the sake of a complete file replacement, I will include their implementations below.
 
 const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pricelist, onSave: (pl: Pricelist) => void, onClose: () => void }) => {
   const [items, setItems] = useState<PricelistItem[]>(pricelist.items || []);
