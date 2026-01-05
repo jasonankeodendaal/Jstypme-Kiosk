@@ -41,26 +41,26 @@ export default function App() {
   const isAdmin = currentRoute.startsWith('/admin');
 
   const fetchData = useCallback(async (isBackground = false) => {
-      // Background pulses never show UI spinners
+      // 1. If it's a background sync call but we are in Admin, abort.
+      // Admin should NEVER background-sync to avoid overwriting active forms.
+      if (isAdmin && isBackground) return;
+
       if (!isBackground && isFirstLoad) setIsSyncing(true);
       
       try {
         const data = await generateStoreData();
         if (data) {
            setStoreData(prev => {
-               // 1. Initial Load
+               // 1. Initial Load: Always accept
                if (!prev) return data;
 
-               // 2. Admin Logic: Only sync fleet telemetry to avoid wiping out unsaved form changes
-               // Or if not background, allow full load
+               // 2. Admin Logic: Only allow manual refresh to update full data.
+               // We never background-sync Admin data.
                if (isAdmin && isBackground) {
-                   return {
-                       ...prev,
-                       fleet: data.fleet
-                   };
+                   return prev; 
                }
 
-               // 3. Kiosk Logic: Full update, React reconciliation handles smooth transition
+               // 3. Kiosk Logic: Full update
                return { ...data };
            });
            setLastSyncTime(new Date().toLocaleTimeString());
@@ -75,11 +75,10 @@ export default function App() {
 
   useEffect(() => {
     initSupabase();
-    // Initial silent fetch
+    // Initial fetch to get the current system state
     fetchData();
 
-    // 1. Background Routine Sync (Pulsing Heartbeat) - Silent
-    // Disable interval entirely in Admin mode to prevent potential state interference
+    // 1. Background Routine Sync (Pulsing Heartbeat) - STRICTLY KIOSK ONLY
     let interval: any = null;
     if (!isAdmin) {
         interval = setInterval(() => {
@@ -87,14 +86,14 @@ export default function App() {
         }, 60000); 
     }
 
-    // 2. Realtime Event Listener - Disabled for Admin to prevent intrusive updates
+    // 2. Realtime Event Listener - STRICTLY KIOSK ONLY
+    // We don't want Admin state jumping because a Kiosk registered itself.
     let channel: any = null;
     if (supabase && !isAdmin) {
         channel = supabase
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
-              // Debounce realtime syncs to prevent UI thrashing
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
               syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
             }
@@ -120,7 +119,6 @@ export default function App() {
   }, [fetchData, kioskId, isAdmin]);
 
   const handleUpdateData = async (newData: StoreData) => {
-    // Explicit Admin action: show "Updating Cloud" indicator
     setIsSyncing(true);
     setStoreData({ ...newData }); 
     try {
@@ -133,7 +131,6 @@ export default function App() {
     }
   };
 
-  // Critical: Only block the screen on the VERY first boot
   if (isFirstLoad && !storeData) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0f172a] text-white font-black">
@@ -147,7 +144,6 @@ export default function App() {
     <>
       {storeData && <AppIconUpdater storeData={storeData} />}
       
-      {/* Explicit Sync Indicator for Admin saves, hidden for silent pulses */}
       {isSyncing && isAdmin && (
          <div className="fixed top-12 right-4 z-[200] bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg shadow-2xl flex items-center gap-2 border border-white/10 animate-fade-in">
             <Loader2 className="animate-spin text-blue-400" size={12} />
@@ -159,7 +155,7 @@ export default function App() {
         <AdminDashboard 
             storeData={storeData}
             onUpdateData={handleUpdateData}
-            onRefresh={() => fetchData(false)} // Manual refresh is not silent
+            onRefresh={() => fetchData(false)} 
         />
       ) : currentRoute === '/about' ? (
         <AboutPage 

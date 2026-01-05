@@ -26,18 +26,23 @@
 
         // Separate monitoring interval (simulating a worker thread logic)
         // If main thread freezes for more than 30s, force refresh.
+        // GATED: Admin mode ignores this to prevent unintended reloads during editing.
         var watchdogTimer = setInterval(function() {
             var now = Date.now();
-            if (now - lastHeartbeat > 30000) {
+            var isAdmin = window.location.pathname.indexOf('/admin') !== -1;
+            
+            if (!isAdmin && (now - lastHeartbeat > 30000)) {
                 console.error("CRITICAL: Application freeze detected. Rebooting Kiosk Firmware...");
                 window.location.reload();
             }
         }, 5000);
 
         // Daily Maintenance: Hard refresh at 3AM to clear browser heap
+        // Only for Kiosks, not for Admins.
         setInterval(function() {
             var now = new Date();
-            if (now.getHours() === 3 && now.getMinutes() === 0) {
+            var isAdmin = window.location.pathname.indexOf('/admin') !== -1;
+            if (!isAdmin && now.getHours() === 3 && now.getMinutes() === 0) {
                 window.location.reload();
             }
         }, 60000);
@@ -84,7 +89,10 @@
                     if (text) {
                         text.style.color = '#f59e0b';
                         text.innerHTML = "SYSTEM HANG DETECTED...<br><span style='font-size:8px; opacity:0.6'>Performing automatic driver reset.</span>";
-                        setTimeout(function() { window.location.reload(); }, 2000);
+                        setTimeout(function() { 
+                            var isAdmin = window.location.pathname.indexOf('/admin') !== -1;
+                            if (!isAdmin) window.location.reload(); 
+                        }, 2000);
                     }
                 }
             }, 12000);

@@ -14,7 +14,6 @@ import * as XLSX from 'xlsx';
 
 const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
 
-// Visual Component for Signal Bars
 const SignalStrengthBars = ({ strength }: { strength: number }) => {
     return (
         <div className="flex items-end gap-0.5 h-3">
@@ -32,7 +31,6 @@ const SignalStrengthBars = ({ strength }: { strength: number }) => {
     );
 };
 
-// Custom R Icon for Pricelists
 const RIcon = (props: any) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 5v14" />
@@ -41,7 +39,6 @@ const RIcon = (props: any) => (
   </svg>
 );
 
-// --- SYSTEM DOCUMENTATION COMPONENT (ENHANCED FOR BEGINNERS) ---
 const SystemDocumentation = () => {
     const [activeSection, setActiveSection] = useState('architecture');
     
@@ -71,7 +68,6 @@ const SystemDocumentation = () => {
                 .bounce-x { animation: bounce-x 2s ease-in-out infinite; }
             `}</style>
 
-            {/* Enhanced Sidebar */}
             <div className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
                 <div className="mb-10">
                     <div className="flex items-center gap-2 mb-3">
@@ -112,9 +108,7 @@ const SystemDocumentation = () => {
                 </div>
             </div>
             
-            {/* Dynamic Content Area */}
             <div className="flex-1 overflow-y-auto bg-white relative p-6 md:p-12 lg:p-20 scroll-smooth">
-                {/* Visual Background Elements */}
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 blur-[150px] pointer-events-none rounded-full"></div>
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/5 blur-[150px] pointer-events-none rounded-full"></div>
 
@@ -126,12 +120,10 @@ const SystemDocumentation = () => {
                             <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The Kiosk is designed to work <strong>offline</strong> first. It doesn't need internet to show products—it only needs it to "sync up" with your latest changes.</p>
                         </div>
 
-                        {/* Interactive Data Flow Illustration */}
                         <div className="relative p-12 bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden min-h-[450px] flex flex-col items-center justify-center">
                             <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
                             
                             <div className="relative w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-12">
-                                {/* Component: Admin PC */}
                                 <div className="flex flex-col items-center gap-4 group">
                                     <div className="w-24 h-24 bg-white/5 border-2 border-blue-500/30 rounded-[2rem] flex items-center justify-center relative transition-all duration-500 group-hover:border-blue-500 group-hover:scale-110">
                                         <Monitor className="text-blue-400" size={40} />
@@ -143,11 +135,9 @@ const SystemDocumentation = () => {
                                     </div>
                                 </div>
 
-                                {/* The Central Logic Pipe */}
                                 <div className="flex-1 w-full h-24 relative flex items-center justify-center">
                                     <div className="w-full h-1 bg-white/5 rounded-full relative">
                                         <div className="absolute inset-0 bg-blue-500/20 blur-md"></div>
-                                        {/* Animated Data Packets */}
                                         {[0, 1, 2].map(i => (
                                             <div key={i} className="data-flow absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,1)]" style={{ animationDelay: `${i * 1}s` }}></div>
                                         ))}
@@ -155,7 +145,6 @@ const SystemDocumentation = () => {
                                     <div className="absolute -bottom-8 bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-xl text-[9px] font-black text-blue-400 uppercase tracking-widest">Encrypted Cloud Tunnel</div>
                                 </div>
 
-                                {/* Component: Kiosk Tablet */}
                                 <div className="flex flex-col items-center gap-4 group">
                                     <div className="w-32 h-20 bg-slate-800 rounded-2xl border-2 border-green-500/30 flex items-center justify-center relative shadow-2xl transition-all duration-500 group-hover:border-green-500 group-hover:rotate-1">
                                         <Tablet className="text-green-400" size={32} />
@@ -169,7 +158,6 @@ const SystemDocumentation = () => {
                             </div>
                         </div>
 
-                        {/* Beginner Explanation Blocks */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                             <div className="space-y-6">
                                 <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
@@ -198,17 +186,13 @@ const SystemDocumentation = () => {
                         </div>
                     </div>
                 )}
-
-                {/* ... (Other sections) ... */}
                 
-                {/* Bottom Spacer */}
                 <div className="h-40"></div>
             </div>
         </div>
     );
 };
 
-// Updated Auth Component - Persistent session removal
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
@@ -229,7 +213,6 @@ const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminU
     );
 
     if (admin) {
-        // Fresh entry on every reload - no longer using localStorage
         onLogin(admin);
     } else {
         setError('Invalid credentials.');
@@ -274,7 +257,6 @@ const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminU
   );
 };
 
-// Updated FileUpload to always return Base64 for local processing if needed
 const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <ImageIcon />, allowMultiple = false }: any) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -295,7 +277,6 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
       };
 
       const uploadSingle = async (file: File) => {
-           // Always get local base64 first (useful for PDF conversion locally)
            const localBase64 = await readFileAsBase64(file);
            
            try {
@@ -316,7 +297,6 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
                   base64s.push(res.base64);
                   setUploadProgress(((i+1)/files.length)*100);
               }
-              // Pass back both URL list and Base64 list (last arg)
               onUpload(results, fileType, base64s);
           } else {
               const res = await uploadSingle(files[0]);
@@ -641,7 +621,6 @@ const PricelistManager = ({
     onSaveBrands: (b: PricelistBrand[], immediate?: boolean) => void,
     onDeletePricelist: (id: string) => void
 }) => {
-    // Sort Brands Alphabetically for Display
     const sortedBrands = useMemo(() => {
         return [...pricelistBrands].sort((a, b) => a.name.localeCompare(b.name));
     }, [pricelistBrands]);
@@ -914,7 +893,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   
   const [activeTab, setActiveTab] = useState<string>('inventory');
-  const [activeSubTab, setActiveSubTab] = useState<string>('brands'); 
+  const [activeSubTab, setActiveSubTab] = useState<string>('hero'); 
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -947,13 +926,10 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
   const availableTabs = [ { id: 'inventory', label: 'Inventory', icon: Box }, { id: 'marketing', label: 'Marketing', icon: Megaphone }, { id: 'pricelists', label: 'Pricelists', icon: RIcon }, { id: 'tv', label: 'TV', icon: Tv }, { id: 'screensaver', label: 'Screensaver', icon: Monitor }, { id: 'fleet', label: 'Fleet', icon: Tablet }, { id: 'history', label: 'History', icon: History }, { id: 'settings', label: 'Settings', icon: Settings }, { id: 'guide', label: 'System Guide', icon: BookOpen } ].filter(tab => tab.id === 'guide' || currentUser?.permissions[tab.id as keyof AdminPermissions]);
 
-  useEffect(() => { if (currentUser && availableTabs.length > 0 && !availableTabs.find(t => t.id === activeTab)) { setActiveTab(availableTabs[0].id); } }, [currentUser]);
+  useEffect(() => { if (currentUser && availableTabs.length > 0 && !availableTabs.find(t => t.id === activeTab)) { setActiveTab(availableTabs[0].id); } }, [currentUser, availableTabs, activeTab]);
   useEffect(() => { checkCloudConnection().then(setIsCloudConnected); const interval = setInterval(() => checkCloudConnection().then(setIsCloudConnected), 30000); return () => clearInterval(interval); }, []);
-  useEffect(() => { if (!hasUnsavedChanges && storeData) { setLocalData(storeData); } }, [storeData]);
-  useEffect(() => { const handleBeforeUnload = (e: BeforeUnloadEvent) => { if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; } }; window.addEventListener('beforeunload', handleBeforeUnload); return () => window.removeEventListener('beforeunload', handleBeforeUnload); }, [hasUnsavedChanges]);
-  useEffect(() => { const heartbeat = setInterval(() => { if ((window as any).signalAppHeartbeat) { (window as any).signalAppHeartbeat(); } }, 2000); return () => clearInterval(heartbeat); }, []);
+  useEffect(() => { if (!hasUnsavedChanges && storeData) { setLocalData(storeData); } }, [storeData, hasUnsavedChanges]);
 
-  // UPDATED: IMMEDIATE SAVE LOGIC
   const handleLocalUpdate = (newData: StoreData, immediate = false) => {
       setLocalData(newData);
       if (immediate) {
@@ -979,7 +955,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
           const newArchive = addToArchive('device', kiosk.name, kiosk, 'delete');
           const updatedData = { ...localData!, archive: newArchive };
           await supabase.from('kiosks').delete().eq('id', id);
-          handleLocalUpdate(updatedData, true); // Immediate Save
+          handleLocalUpdate(updatedData, true); 
           onRefresh();
       }
   };
@@ -1002,7 +978,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       let newBrands = localData.brands.map(b => { if (b.id === selectedBrand.id) { return { ...b, categories: b.categories.map(c => c.id === selectedCategory.id ? updatedSourceCat : c) }; } return b; });
       newBrands = newBrands.map(b => { if (b.id === targetBrandId) { return { ...b, categories: b.categories.map(c => { if (c.id === targetCategoryId) { return { ...c, products: [...c.products, product] }; } return c; }) }; } return b; });
       const newArchive = addToArchive('product', product.name, { product, from: selectedCategory.name, to: targetCategoryId }, 'update');
-      handleLocalUpdate({ ...localData, brands: newBrands, archive: newArchive }, true); // Immediate Save
+      handleLocalUpdate({ ...localData, brands: newBrands, archive: newArchive }, true); 
       setMovingProduct(null);
   };
 
@@ -1017,7 +993,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
   return (
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
-        {/* ... Header and Tabs ... */}
         <header className="bg-slate-900 text-white shrink-0 shadow-xl z-20"><div className="flex items-center justify-between px-4 py-3 border-b border-slate-800"><div className="flex items-center gap-2"><Settings className="text-blue-500" size={24} /><div><h1 className="text-lg font-black uppercase tracking-widest leading-none">Admin Hub</h1></div></div><div className="flex items-center gap-4"><div className="text-xs font-bold text-slate-400 uppercase hidden md:block">Hello, {currentUser.name}</div><button onClick={handleGlobalSave} disabled={!hasUnsavedChanges} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}><SaveAll size={16} />{hasUnsavedChanges ? 'Save Changes' : 'Saved'}</button></div><div className="flex items-center gap-3"><div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>{isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}<span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span></div><button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button><button onClick={logout} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2"><LogOut size={16} /><span className="text-[10px] font-bold uppercase hidden md:inline">Logout</span></button></div></div><div className="flex overflow-x-auto no-scrollbar">{availableTabs.map(tab => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 min-w-[100px] py-4 text-center text-xs font-black uppercase tracking-wider border-b-4 transition-all ${activeTab === tab.id ? 'border-blue-500 text-white bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>{tab.label}</button>))}</div></header>
         {activeTab === 'marketing' && (<div className="bg-white border-b border-slate-200 flex overflow-x-auto no-scrollbar shadow-sm z-10 shrink-0"><button onClick={() => setActiveSubTab('hero')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'hero' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Hero Banner</button><button onClick={() => setActiveSubTab('ads')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'ads' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Ad Zones</button><button onClick={() => setActiveSubTab('catalogues')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'catalogues' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Pamphlets</button></div>)}
 
