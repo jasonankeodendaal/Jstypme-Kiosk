@@ -229,14 +229,22 @@ INSERT INTO public.store_config (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (
 ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
 
--- 5. ACCESS POLICIES: 
--- In production, replace 'true' with specific user_id checks for authenticated admins
+-- 5. CLEANUP OLD POLICIES (Idempotency Fix)
+DROP POLICY IF EXISTS "Allow Public Read Config" ON public.store_config;
+DROP POLICY IF EXISTS "Allow Public Update Config" ON public.store_config;
+DROP POLICY IF EXISTS "Allow Public Insert Config" ON public.store_config;
+DROP POLICY IF EXISTS "Allow Public Fleet Access" ON public.kiosks;
+DROP POLICY IF EXISTS "Enable access to all users" ON public.kiosks;
+DROP POLICY IF EXISTS "Enable insert/update for fleet" ON public.kiosks;
+
+-- 6. ACCESS POLICIES (Permissive for Kiosk Anon Access)
 CREATE POLICY "Allow Public Read Config" ON public.store_config FOR SELECT USING (true);
 CREATE POLICY "Allow Public Update Config" ON public.store_config FOR UPDATE USING (true);
+CREATE POLICY "Allow Public Insert Config" ON public.store_config FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow Public Fleet Access" ON public.kiosks FOR ALL USING (true);`}
                         />
                         <EngineerNote>
-                            The `kiosks` table uses a string ID (e.g. `LOC-12345`) which is persisted in the tablet's IndexedDB. This allows for identity persistence even after app updates.
+                            The SQL script now includes `DROP POLICY IF EXISTS` commands. This ensures that if you run the script multiple times (or update your project), you won't get "Multiple Permissive Policies" warnings in the dashboard.
                         </EngineerNote>
                     </Step>
 
