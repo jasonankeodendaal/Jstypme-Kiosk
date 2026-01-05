@@ -6,7 +6,7 @@ import AboutPage from './components/AboutPage';
 import { generateStoreData, saveStoreData } from './services/geminiService';
 import { initSupabase, supabase, getKioskId } from './services/kioskService';
 import { StoreData } from './types';
-import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const AppIconUpdater = ({ storeData }: { storeData: StoreData }) => {
     const isAdmin = window.location.pathname.startsWith('/admin');
@@ -34,81 +34,39 @@ export default function App() {
   const [storeData, setStoreData] = useState<StoreData | null>(null);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
   
   const syncTimeoutRef = useRef<number | null>(null);
   const kioskId = getKioskId();
   const isAdmin = currentRoute.startsWith('/admin');
-  
-  // APK NATIVE BRIDGE: Screen Wake Lock
-  useEffect(() => {
-    let wakeLock: any = null;
-    const requestWakeLock = async () => {
-      try {
-        if ('wakeLock' in navigator) {
-          wakeLock = await (navigator as any).wakeLock.request('screen');
-        }
-      } catch (err) {
-        console.warn('Wake Lock Failed', err);
-      }
-    };
-    requestWakeLock();
-  }, []);
 
   const fetchData = useCallback(async (isBackground = false) => {
-      if (isAdmin && isBackground && !isFirstLoad) {
-          try {
-              if (supabase) {
-                  const { data: fleetData } = await supabase.from('kiosks').select('*');
-                  if (fleetData) {
-                      const mappedFleet = fleetData.map((k: any) => ({
-                          id: k.id,
-                          name: k.name,
-                          deviceType: k.device_type,
-                          status: k.status,
-                          last_seen: k.last_seen,
-                          wifiStrength: k.wifi_strength,
-                          ipAddress: k.ip_address,
-                          version: k.version,
-                          locationDescription: k.location_description,
-                          assignedZone: k.assigned_zone,
-                          notes: k.notes,
-                          restartRequested: k.restart_requested
-                      }));
-                      setStoreData(prev => prev ? { ...prev, fleet: mappedFleet } : null);
-                  }
-              }
-          } catch (e) {
-              console.warn("Background fleet sync failed", e);
-          }
-          return;
-      }
-
+      // Background pulses never show UI spinners
       if (!isBackground && isFirstLoad) setIsSyncing(true);
       
       try {
-        // Add a timeout to the fetch so it doesn't spin forever
-        const dataPromise = generateStoreData();
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Cloud Connection Timeout")), 15000)
-        );
-
-        const data = await Promise.race([dataPromise, timeoutPromise]) as StoreData;
-        
+        const data = await generateStoreData();
         if (data) {
            setStoreData(prev => {
+               // 1. Initial Load
                if (!prev) return data;
-               if (!isAdmin) return { ...data };
-               if (!isBackground) return { ...data };
-               return { ...prev, fleet: data.fleet };
+
+               // 2. Admin Logic: Only sync fleet telemetry to avoid wiping out unsaved form changes
+               // Or if not background, allow full load
+               if (isAdmin && isBackground) {
+                   return {
+                       ...prev,
+                       fleet: data.fleet
+                   };
+               }
+
+               // 3. Kiosk Logic: Full update, React reconciliation handles smooth transition
+               return { ...data };
            });
            setLastSyncTime(new Date().toLocaleTimeString());
-           setError(null);
         }
-      } catch (e: any) {
+      } catch (e) {
         console.error("Fetch failed", e);
-        setError(e.message || "Unknown Connection Error");
       } finally {
         setIsFirstLoad(false);
         setIsSyncing(false);
@@ -117,16 +75,49 @@ export default function App() {
 
   useEffect(() => {
     initSupabase();
+    // Initial silent fetch
     fetchData();
 
+    // 1. Background Routine Sync (Pulsing Heartbeat) - Silent
+    // Only perform background syncs for fleet telemetry in Admin mode
     const interval = setInterval(() => {
         fetchData(true);
     }, 60000); 
 
-    return () => clearInterval(interval);
-  }, [fetchData]);
+    // 2. Realtime Event Listener - Disabled for Admin to prevent intrusive updates
+    let channel: any = null;
+    if (supabase && !isAdmin) {
+        channel = supabase
+          .channel('global_sync_channel')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
+            () => {
+              // Debounce realtime syncs to prevent UI thrashing
+              if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
+              syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
+            }
+          )
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
+            (payload: any) => {
+              const isMyUpdate = payload.new && payload.new.id === kioskId;
+              const isMyDelete = payload.old && payload.old.id === kioskId;
+              
+              if (isMyUpdate || isMyDelete) {
+                  if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
+                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
+              }
+            }
+          )
+          .subscribe();
+    }
+
+    return () => {
+        if (channel) supabase.removeChannel(channel);
+        clearInterval(interval);
+    };
+  }, [fetchData, kioskId, isAdmin]);
 
   const handleUpdateData = async (newData: StoreData) => {
+    // Explicit Admin action: show "Updating Cloud" indicator
     setIsSyncing(true);
     setStoreData({ ...newData }); 
     try {
@@ -139,30 +130,12 @@ export default function App() {
     }
   };
 
+  // Critical: Only block the screen on the VERY first boot
   if (isFirstLoad && !storeData) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0f172a] text-white p-6">
-        {error ? (
-          <div className="bg-red-900/20 border-2 border-red-500/50 p-8 rounded-[2rem] max-w-md w-full text-center animate-fade-in shadow-2xl">
-            <AlertTriangle className="text-red-500 mx-auto mb-4" size={48} />
-            <h2 className="text-xl font-black uppercase tracking-tight mb-2">Sync Protocol Failed</h2>
-            <p className="text-slate-400 text-sm font-mono mb-6 break-all bg-black/40 p-3 rounded-xl">{error}</p>
-            <button 
-                onClick={() => { setError(null); fetchData(); }}
-                className="w-full bg-white text-slate-900 py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-500 hover:text-white transition-all shadow-xl"
-            >
-                <RefreshCw size={18} /> Retry Connection
-            </button>
-            <p className="text-[9px] text-slate-500 mt-6 uppercase font-bold tracking-widest leading-relaxed">
-              Verify VITE_SUPABASE_URL & ANON_KEY in environment settings.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="spinner mb-6"></div>
-            <div className="tracking-[0.2em] uppercase text-[10px] text-slate-500 font-black">Initializing Firmware...</div>
-          </>
-        )}
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0f172a] text-white font-black">
+        <div className="spinner mb-6"></div>
+        <div className="tracking-[0.2em] uppercase text-[10px] text-slate-500">Initializing Firmware...</div>
       </div>
     );
   }
@@ -171,6 +144,7 @@ export default function App() {
     <>
       {storeData && <AppIconUpdater storeData={storeData} />}
       
+      {/* Explicit Sync Indicator for Admin saves, hidden for silent pulses */}
       {isSyncing && isAdmin && (
          <div className="fixed top-12 right-4 z-[200] bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg shadow-2xl flex items-center gap-2 border border-white/10 animate-fade-in">
             <Loader2 className="animate-spin text-blue-400" size={12} />
@@ -182,7 +156,7 @@ export default function App() {
         <AdminDashboard 
             storeData={storeData}
             onUpdateData={handleUpdateData}
-            onRefresh={() => fetchData(false)} 
+            onRefresh={() => fetchData(false)} // Manual refresh is not silent
         />
       ) : currentRoute === '/about' ? (
         <AboutPage 
