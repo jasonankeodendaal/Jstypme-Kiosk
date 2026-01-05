@@ -457,11 +457,8 @@ const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalog
 };
 
 const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pricelist, onSave: (pl: Pricelist) => void, onClose: () => void }) => {
-  // ... (ManualPricelistEditor content remains the same)
-  // Re-including for completeness but no changes inside this component logic specifically requested, 
-  // the usage in AdminDashboard is what changes.
-  // Actually, I should include it to ensure the XML is complete.
   const [items, setItems] = useState<PricelistItem[]>(pricelist.items || []);
+  const [title, setTitle] = useState(pricelist.title || ''); 
   const [isImporting, setIsImporting] = useState(false);
   
   const addItem = () => {
@@ -562,11 +559,19 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white rounded-3xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
         <div className="p-6 border-b border-slate-100 bg-slate-50 flex flex-col md:flex-row justify-between gap-4 shrink-0">
-          <div>
-            <h3 className="font-black text-slate-900 uppercase text-lg flex items-center gap-2"><Table className="text-blue-600" size={24} /> Pricelist Builder</h3>
-            <p className="text-xs text-slate-500 font-bold uppercase">{pricelist.title} ({pricelist.month} {pricelist.year})</p>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+                <Table className="text-blue-600" size={24} />
+                <input 
+                    value={title} 
+                    onChange={(e) => setTitle(e.target.value)} 
+                    className="font-black text-slate-900 uppercase text-lg bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-blue-500 outline-none w-full transition-colors placeholder:text-slate-300"
+                    placeholder="ENTER LIST TITLE..."
+                />
+            </div>
+            <p className="text-xs text-slate-500 font-bold uppercase ml-8">{pricelist.month} {pricelist.year}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             <label className="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg cursor-pointer">
               {isImporting ? <Loader2 size={16} className="animate-spin" /> : <FileInput size={16} />} Import Excel/CSV
               <input type="file" className="hidden" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={handleSpreadsheetImport} disabled={isImporting} />
@@ -616,15 +621,12 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
         </div>
         <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
           <button onClick={onClose} className="px-6 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
-          <button onClick={() => { onSave({ ...pricelist, items, type: 'manual', dateAdded: new Date().toISOString() }); onClose(); }} className="px-8 py-3 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"><Save size={16} /> Save Pricelist Table</button>
+          <button onClick={() => { onSave({ ...pricelist, title, items, type: 'manual', dateAdded: new Date().toISOString() }); onClose(); }} className="px-8 py-3 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"><Save size={16} /> Save Pricelist Table</button>
         </div>
       </div>
     </div>
   );
 };
-
-// ... (PricelistManager, ProductEditor, KioskEditorModal, MoveProductModal, TVModelEditor, AdminManager definitions remain largely same, 
-//      but usages of onSave need to be updated in the main AdminDashboard component)
 
 const PricelistManager = ({ 
     pricelists, 
@@ -639,7 +641,6 @@ const PricelistManager = ({
     onSaveBrands: (b: PricelistBrand[], immediate?: boolean) => void,
     onDeletePricelist: (id: string) => void
 }) => {
-    // ... (internal logic same)
     // Sort Brands Alphabetically for Display
     const sortedBrands = useMemo(() => {
         return [...pricelistBrands].sort((a, b) => a.name.localeCompare(b.name));
@@ -781,9 +782,7 @@ const PricelistManager = ({
     );
 };
 
-// ... ProductEditor, KioskEditorModal, MoveProductModal, TVModelEditor, AdminManager ...
 const ProductEditor = ({ product, onSave, onCancel }: { product: Product, onSave: (p: Product) => void, onCancel: () => void }) => {
-    // ... logic same ...
     const [draft, setDraft] = useState<Product>({ 
         ...product, 
         dimensions: Array.isArray(product.dimensions) ? product.dimensions : (product.dimensions ? [{label: "Device", ...(product.dimensions as any)}] : []),
@@ -791,11 +790,12 @@ const ProductEditor = ({ product, onSave, onCancel }: { product: Product, onSave
         manuals: product.manuals || (product.manualUrl || (product.manualImages && product.manualImages.length > 0) ? [{ id: generateId('man'), title: "User Manual", images: product.manualImages || [], pdfUrl: product.manualUrl }] : []),
         dateAdded: product.dateAdded || new Date().toISOString()
     });
-    // ... helper functions (addFeature, addManual, etc.) ...
+    
     const [newFeature, setNewFeature] = useState('');
     const [newBoxItem, setNewBoxItem] = useState('');
     const [newSpecKey, setNewSpecKey] = useState('');
     const [newSpecValue, setNewSpecValue] = useState('');
+    
     const addFeature = () => { if (newFeature.trim()) { setDraft({ ...draft, features: [...draft.features, newFeature.trim()] }); setNewFeature(''); } };
     const addBoxItem = () => { if(newBoxItem.trim()) { setDraft({ ...draft, boxContents: [...(draft.boxContents || []), newBoxItem.trim()] }); setNewBoxItem(''); } };
     const addSpec = () => { if (newSpecKey.trim() && newSpecValue.trim()) { setDraft({ ...draft, specs: { ...draft.specs, [newSpecKey.trim()]: newSpecValue.trim() } }); setNewSpecKey(''); setNewSpecValue(''); } };
@@ -859,7 +859,6 @@ const TVModelEditor = ({ model, onSave, onClose }: { model: TVModel, onSave: (m:
 };
 
 const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], onUpdate: (admins: AdminUser[]) => void, currentUser: AdminUser }) => {
-    // ... logic same ...
     const [editingId, setEditingId] = useState<string | null>(null);
     const [newName, setNewName] = useState('');
     const [newPin, setNewPin] = useState('');
@@ -877,9 +876,7 @@ const AdminManager = ({ admins, onUpdate, currentUser }: { admins: AdminUser[], 
     );
 };
 
-// ... importZip, downloadZip ...
 const importZip = async (file: File, onProgress?: (msg: string) => void): Promise<Brand[]> => {
-    // ... (same as previous)
     const zip = new JSZip();
     let loadedZip;
     try { loadedZip = await zip.loadAsync(file); } catch (e) { throw new Error("Invalid ZIP file"); }
@@ -896,7 +893,6 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
 };
 
 const downloadZip = async (data: StoreData | null) => {
-    // ... (same as previous)
     if (!data) return;
     const zip = new JSZip();
     const dataJson = JSON.stringify(data, null, 2);
