@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User, Film
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User, MonitorPlay
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem, ArchivedItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
@@ -39,13 +38,7 @@ const RIcon = (props: any) => (
   </svg>
 );
 
-interface AdminDashboardProps {
-  storeData: StoreData | null;
-  onUpdateData: (data: StoreData) => Promise<void>;
-  onRefresh: () => void;
-}
-
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ storeData, onUpdateData, onRefresh }) => {
+const SystemDocumentation = () => {
     const [activeSection, setActiveSection] = useState('architecture');
     
     const sections = [
@@ -196,61 +189,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ storeData, onUpd
                 {activeSection === 'inventory' && (
                     <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-orange-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-orange-500/20">Module 02: Digital Shelf</div>
-                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Hierarchy Topology</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The system uses a strict <strong>3-Layer Structure</strong> to keep thousands of products organized. It behaves exactly like folders on a computer.</p>
+                            <div className="bg-orange-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg">Module 02: Storage Logic</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Structured Hierarchy</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The database is strictly hierarchical. This ensures that every product belongs to a specific "shelf" (Category) within a specific "Store" (Brand).</p>
                         </div>
-
-                        <div className="bg-white rounded-[3rem] border border-slate-200 shadow-xl overflow-hidden p-12 relative min-h-[400px]">
-                            <div className="absolute top-0 right-0 p-12 opacity-5"><Layers size={200} /></div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10 items-start">
-                                <div className="flex flex-col items-center text-center">
-                                    <div className="w-32 h-32 bg-blue-50 rounded-[2rem] flex items-center justify-center border-4 border-blue-100 mb-6 shadow-xl relative group">
-                                        <div className="absolute -top-4 -right-4 bg-blue-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg">Level 1</div>
-                                        <Box size={48} className="text-blue-600 group-hover:scale-110 transition-transform" />
-                                    </div>
-                                    <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight">The Brand</h3>
-                                    <p className="text-sm text-slate-500 font-medium mt-3 px-4">The "Master Folder". Example: <strong>Apple, Samsung, LG</strong>. Deleting a Brand deletes everything inside it.</p>
-                                </div>
-
-                                <div className="hidden md:flex justify-center pt-12"><ArrowRight size={40} className="text-slate-300" /></div>
-
-                                <div className="flex flex-col items-center text-center">
-                                    <div className="w-32 h-32 bg-purple-50 rounded-[2rem] flex items-center justify-center border-4 border-purple-100 mb-6 shadow-xl relative group">
-                                        <div className="absolute -top-4 -right-4 bg-purple-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg">Level 2</div>
-                                        <LayoutGrid size={48} className="text-purple-600 group-hover:scale-110 transition-transform" />
-                                    </div>
-                                    <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight">The Category</h3>
-                                    <p className="text-sm text-slate-500 font-medium mt-3 px-4">The "Sub-Folder". Example: <strong>Smartphones, Laptops</strong>. This groups similar items together for easy browsing.</p>
-                                </div>
-
-                                <div className="hidden md:flex justify-center pt-12"><ArrowRight size={40} className="text-slate-300" /></div>
-
-                                <div className="flex flex-col items-center text-center">
-                                    <div className="w-32 h-32 bg-green-50 rounded-[2rem] flex items-center justify-center border-4 border-green-100 mb-6 shadow-xl relative group">
-                                        <div className="absolute -top-4 -right-4 bg-green-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg">Level 3</div>
-                                        <Tag size={48} className="text-green-600 group-hover:scale-110 transition-transform" />
-                                    </div>
-                                    <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight">The Product</h3>
-                                    <p className="text-sm text-slate-500 font-medium mt-3 px-4">The "File". Contains <strong>Images, Specs, Videos</strong>. This is what the customer actually clicks on.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200">
-                                <h4 className="flex items-center gap-2 text-slate-900 font-black uppercase text-lg mb-4"><Upload size={20}/> Bulk Import Logic</h4>
-                                <p className="text-slate-600 text-sm leading-relaxed">
-                                    When you upload a ZIP file, the system automatically builds this tree for you. It looks at your folders: <code>/Samsung/TVs/OLED-65</code> and instantly creates the Brand (Samsung), Category (TVs), and Product (OLED-65).
-                                </p>
-                            </div>
-                            <div className="bg-slate-900 p-8 rounded-[2rem] text-white shadow-2xl">
-                                <h4 className="flex items-center gap-2 text-white font-black uppercase text-lg mb-4"><Sparkles size={20} className="text-yellow-400"/> AI Cleanup</h4>
-                                <p className="text-slate-400 text-sm leading-relaxed">
-                                    Raw data is often messy ("SAM_TV_X90L_BLK"). Our AI layer reads this and renames it to "Samsung X90L Black", keeping the kiosk looking premium without manual typing.
-                                </p>
-                            </div>
+                        {/* Visual Diagram of Brand > Category > Product */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                             {/* Card 1: Brand */}
+                             <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-xl relative overflow-hidden">
+                                 <div className="absolute top-0 right-0 p-4 opacity-10"><Package size={80} /></div>
+                                 <h3 className="text-xl font-black text-slate-900 mb-2">1. Brand Root</h3>
+                                 <p className="text-sm text-slate-500 font-medium">The top-level container (e.g., "Samsung"). It holds global assets like the Logo and Theme Color.</p>
+                             </div>
+                             {/* Card 2: Category */}
+                             <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-xl relative overflow-hidden">
+                                 <div className="absolute top-0 right-0 p-4 opacity-10"><Grid size={80} /></div>
+                                 <h3 className="text-xl font-black text-slate-900 mb-2">2. Category Node</h3>
+                                 <p className="text-sm text-slate-500 font-medium">Groups similar items (e.g., "Smartphones"). Defines the icon used in the navigation grid.</p>
+                             </div>
+                             {/* Card 3: Product */}
+                             <div className="bg-blue-600 text-white p-8 rounded-[2rem] shadow-xl relative overflow-hidden">
+                                 <div className="absolute top-0 right-0 p-4 opacity-10"><Box size={80} /></div>
+                                 <h3 className="text-xl font-black text-white mb-2">3. Product Leaf</h3>
+                                 <p className="text-sm text-blue-100 font-medium">The actual item. Contains Specs, Gallery, Videos, and Manuals. Linked via SKU.</p>
+                             </div>
                         </div>
                     </div>
                 )}
@@ -258,82 +220,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ storeData, onUpd
                 {activeSection === 'pricelists' && (
                     <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-green-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-green-500/20">Module 03: Price Intelligence</div>
-                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Dynamic Rendering</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The system doesn't just "show" a pricelist; it <strong>re-builds</strong> it. You can feed it raw Excel data, and it will generate a pixel-perfect, branded PDF on the fly.</p>
+                            <div className="bg-green-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg">Module 03: Pricing Engine</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Rounding & Generation</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The system automatically "cleans" prices to look professional. It converts raw Excel data into a standardized format.</p>
                         </div>
-
-                        <div className="relative bg-slate-100 rounded-[3rem] p-12 overflow-hidden shadow-inner border border-slate-200">
-                            <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.5)_50%,transparent_75%,transparent_100%)] bg-[length:20px_20px]"></div>
-                            
-                            <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
-                                <div className="bg-white p-6 rounded-2xl shadow-lg w-64 -rotate-3 border border-slate-200">
-                                    <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-2">
-                                        <FileSpreadsheet className="text-green-600" />
-                                        <span className="text-xs font-black uppercase text-slate-400">Excel / CSV Input</span>
-                                    </div>
-                                    <div className="space-y-2 opacity-50 font-mono text-[10px]">
-                                        <div className="bg-slate-100 p-1 rounded">SKU: 104-X</div>
-                                        <div className="bg-slate-100 p-1 rounded">Price: 199.999</div>
-                                        <div className="bg-slate-100 p-1 rounded">Desc: smrt_phn</div>
-                                    </div>
-                                </div>
-
-                                <div className="flex-1 flex flex-col items-center">
-                                    <div className="bg-slate-900 text-white px-6 py-3 rounded-full font-black uppercase text-xs tracking-widest shadow-xl mb-4 flex items-center gap-2">
-                                        <Cpu size={16} className="animate-spin-slow" /> Processing
-                                    </div>
-                                    <div className="h-1 w-full bg-slate-300 rounded-full overflow-hidden">
-                                        <div className="h-full bg-slate-900 w-1/2 animate-pulse"></div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white p-6 rounded-2xl shadow-2xl w-64 rotate-3 border-4 border-slate-900 relative">
-                                    <div className="absolute -top-3 -right-3 bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase">PDF Output</div>
-                                    <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-2">
-                                        <FileText className="text-red-500" />
-                                        <span className="text-xs font-black uppercase text-slate-900">Kiosk Standard</span>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between text-xs font-bold text-slate-800"><span>104-X</span><span>R 200</span></div>
-                                        <div className="text-[10px] text-slate-500 leading-tight">Smart Phone - Black Edition</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                            <div className="bg-blue-50 border-l-4 border-blue-500 p-8 rounded-r-[2rem]">
-                                <h3 className="text-blue-900 font-black uppercase text-sm tracking-widest mb-2">Algorithm: "The Round Up"</h3>
-                                <p className="text-blue-800/80 text-sm leading-relaxed">
-                                    The engine automatically fixes "ugly" prices.
-                                    <br/><br/>
-                                    <code>199.01</code> becomes <strong>200</strong>.<br/>
-                                    <code>49.95</code> becomes <strong>50</strong>.<br/>
-                                    <code>1299</code> becomes <strong>1300</strong> (if psychological rounding is on).
-                                    <br/><br/>
-                                    This ensures every price displayed on the kiosk looks intentional and clean.
-                                </p>
-                            </div>
-                            <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Two Ways to Upload</h3>
-                                <ul className="space-y-4">
-                                    <li className="flex items-start gap-4">
-                                        <div className="bg-slate-200 p-2 rounded-lg"><Upload size={20}/></div>
-                                        <div>
-                                            <div className="font-bold text-slate-900 text-sm uppercase">Quick PDF Drop</div>
-                                            <p className="text-xs text-slate-500 mt-1">Already have a designed PDF? Just drop it in. The Kiosk acts as a simple viewer.</p>
-                                        </div>
-                                    </li>
-                                    <li className="flex items-start gap-4">
-                                        <div className="bg-green-100 p-2 rounded-lg"><Table size={20} className="text-green-700"/></div>
-                                        <div>
-                                            <div className="font-bold text-slate-900 text-sm uppercase">Manual Builder</div>
-                                            <p className="text-xs text-slate-500 mt-1">Paste data from Excel. The Kiosk builds the table, adds images, and lets you export a printable version.</p>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
+                        <div className="bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl relative">
+                             <h3 className="text-blue-400 font-black uppercase text-xs tracking-widest mb-6">Algorithm Visualization</h3>
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                                 <div>
+                                     <div className="text-3xl font-mono text-red-400 line-through opacity-50 mb-2">129.99</div>
+                                     <ArrowRight className="mx-auto rotate-90 md:rotate-0 my-2 text-slate-600" />
+                                     <div className="text-4xl font-mono font-black text-white">130</div>
+                                     <div className="text-[10px] uppercase text-slate-500 mt-2 font-bold">Decimal Ceiling</div>
+                                 </div>
+                                 <div>
+                                     <div className="text-3xl font-mono text-red-400 line-through opacity-50 mb-2">799</div>
+                                     <ArrowRight className="mx-auto rotate-90 md:rotate-0 my-2 text-slate-600" />
+                                     <div className="text-4xl font-mono font-black text-white">800</div>
+                                     <div className="text-[10px] uppercase text-slate-500 mt-2 font-bold">Psychological Rounding</div>
+                                 </div>
+                                 <div>
+                                     <div className="text-3xl font-mono text-red-400 line-through opacity-50 mb-2">122</div>
+                                     <ArrowRight className="mx-auto rotate-90 md:rotate-0 my-2 text-slate-600" />
+                                     <div className="text-4xl font-mono font-black text-white">122</div>
+                                     <div className="text-[10px] uppercase text-slate-500 mt-2 font-bold">Integer Preservation</div>
+                                 </div>
+                             </div>
                         </div>
                     </div>
                 )}
@@ -341,47 +253,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ storeData, onUpd
                 {activeSection === 'screensaver' && (
                     <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20">Module 04: Idle Engine</div>
-                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Visual Loop</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">When no one is touching the tablet, it shouldn't just sit there. It becomes a <strong>Digital Signage Player</strong>, mixing ads and products to attract attention.</p>
+                            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg">Module 04: Visual Loop</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Smart Playlist</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The screensaver doesn't just play random files. It constructs a dynamic playlist every time the device goes idle, ensuring fresh content.</p>
                         </div>
-
-                        <div className="bg-black rounded-[3rem] p-4 shadow-2xl relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 via-purple-900/40 to-pink-900/40 opacity-50"></div>
-                            
-                            <div className="relative z-10 flex items-center gap-2 overflow-x-hidden p-8">
-                                <div className="conveyor-belt flex gap-4">
-                                    {[1,2,3,4,5,6].map(i => (
-                                        <div key={i} className={`w-40 h-24 rounded-xl flex flex-col items-center justify-center shrink-0 border-2 ${i % 2 === 0 ? 'bg-blue-600 border-blue-400' : 'bg-slate-800 border-slate-700'}`}>
-                                            {i % 2 === 0 ? <ImageIcon className="text-white mb-2"/> : <Video className="text-slate-400 mb-2"/>}
-                                            <span className="text-[10px] font-black uppercase text-white tracking-widest">{i % 2 === 0 ? 'ADVERT' : 'PRODUCT'}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full border border-white/20 flex items-center gap-3">
-                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                                <span className="text-white text-[10px] font-black uppercase tracking-[0.2em]">Auto-Playlist Active</span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-lg transition-all">
-                                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4"><Clock size={24} className="text-slate-600"/></div>
-                                <h3 className="font-bold text-slate-900 text-sm uppercase mb-2">1. The Timer</h3>
-                                <p className="text-xs text-slate-500 leading-relaxed">If the screen isn't touched for <strong>60 seconds</strong> (configurable), the loop starts. Touching the screen <strong>instantly</strong> kills the loop.</p>
-                            </div>
-                            <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-lg transition-all">
-                                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4"><LayoutGrid size={24} className="text-purple-600"/></div>
-                                <h3 className="font-bold text-slate-900 text-sm uppercase mb-2">2. The Mix</h3>
-                                <p className="text-xs text-slate-500 leading-relaxed">It doesn't just play one video. It shuffles: <strong>Custom Ads</strong> you uploaded + <strong>New Products</strong> from your inventory.</p>
-                            </div>
-                            <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-lg transition-all">
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4"><Moon size={24} className="text-blue-600"/></div>
-                                <h3 className="font-bold text-slate-900 text-sm uppercase mb-2">3. Sleep Mode</h3>
-                                <p className="text-xs text-slate-500 leading-relaxed">Set active hours (e.g., 8am - 8pm). Outside these times, the screen turns <strong>Black</strong> to save the tablet battery/screen.</p>
-                            </div>
+                        <div className="p-8 bg-purple-50 rounded-[2rem] border border-purple-100">
+                            <h3 className="font-black text-purple-900 uppercase text-lg mb-4">Construction Logic</h3>
+                            <ul className="space-y-4">
+                                <li className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+                                    <span className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-black text-sm">1</span>
+                                    <span className="font-bold text-slate-700">Inject Custom Ads (High Priority)</span>
+                                </li>
+                                <li className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+                                    <span className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-black text-sm">2</span>
+                                    <span className="font-bold text-slate-700">Inject Pamphlet Covers (Date Sensitive)</span>
+                                </li>
+                                <li className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+                                    <span className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-black text-sm">3</span>
+                                    <span className="font-bold text-slate-700">Mix in Product Images & Videos</span>
+                                </li>
+                                <li className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm">
+                                    <span className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-black text-sm">4</span>
+                                    <span className="font-bold text-slate-700">Shuffle & Play Loop</span>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 )}
@@ -389,60 +284,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ storeData, onUpd
                 {activeSection === 'fleet' && (
                     <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-red-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-red-500/20">Module 05: Command Center</div>
-                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Fleet Telemetry</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">You might have 1 tablet or 100. The Fleet module is your "Mission Control", letting you see the health of every device from one screen.</p>
+                            <div className="bg-slate-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg">Module 05: Fleet Watch</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Telemetry Pulse</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Every device sends a "Heartbeat" to the cloud every 30 seconds. This allows you to see which units are online, what WiFi strength they have, and if they need a reboot.</p>
                         </div>
-
-                        <div className="relative p-12 bg-slate-900 rounded-[3rem] shadow-2xl flex items-center justify-center min-h-[350px]">
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-transparent to-transparent animate-pulse"></div>
-                            
-                            <div className="relative z-10 w-full max-w-2xl">
-                                <div className="flex justify-between items-end mb-2">
-                                    <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Signal Strength</div>
-                                    <div className="text-[10px] font-black text-green-500 uppercase tracking-widest">Status: ONLINE</div>
-                                </div>
-                                <div className="h-40 bg-slate-800 rounded-xl relative overflow-hidden border border-slate-700 flex items-end px-4 pb-0 gap-1">
-                                    {[...Array(40)].map((_, i) => (
-                                        <div 
-                                            key={i} 
-                                            className="flex-1 bg-blue-500/50 rounded-t-sm transition-all duration-300"
-                                            style={{ 
-                                                height: `${Math.max(10, Math.random() * 80)}%`,
-                                                opacity: Math.random() > 0.5 ? 1 : 0.5 
-                                            }}
-                                        ></div>
-                                    ))}
-                                    <div className="absolute top-0 left-0 w-full h-px bg-blue-500/50"></div>
-                                    <div className="absolute top-1/2 left-0 w-full h-px bg-blue-500/20 border-t border-dashed border-blue-500/50"></div>
-                                </div>
-                                <div className="flex justify-between mt-4">
-                                    <div className="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 font-mono">ID: KIOSK-01</div>
-                                    <div className="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 text-xs text-slate-300 font-mono">IP: 192.168.1.14</div>
-                                </div>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="bg-green-50 p-6 rounded-2xl border border-green-200">
+                                <h4 className="font-black text-green-700 uppercase">Online Pulse</h4>
+                                <p className="text-sm text-green-800 mt-2">If last seen &lt; 2 mins ago. Device is active and syncing.</p>
                             </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                            <div>
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-4 flex items-center gap-3"><Activity className="text-red-500"/> The Heartbeat</h3>
-                                <p className="text-slate-600 font-medium leading-relaxed">
-                                    Every device sends a tiny signal ("ping") to the cloud every 30 seconds.
-                                    <br/><br/>
-                                    <ul className="list-disc pl-5 space-y-2 text-sm">
-                                        <li><strong>Green Dot:</strong> Ping received < 60s ago.</li>
-                                        <li><strong>Red Dot:</strong> No ping for > 5 minutes (Device Offline).</li>
-                                        <li><strong>Yellow Dot:</strong> Weak Wi-Fi signal detected.</li>
-                                    </ul>
-                                </p>
-                            </div>
-                            <div className="bg-red-50 border border-red-100 p-8 rounded-[2rem]">
-                                <h3 className="text-red-900 font-black uppercase text-sm tracking-widest mb-3 flex items-center gap-2"><Power size={16}/> Emergency Protocol</h3>
-                                <p className="text-red-800/80 text-sm leading-relaxed">
-                                    If a kiosk freezes or glitches, you can hit the <strong>"Remote Reset"</strong> button in the admin panel. 
-                                    <br/><br/>
-                                    The next time that tablet sends a heartbeat, it will receive the "Kill Command" and automatically reboot its software.
-                                </p>
+                            <div className="bg-red-50 p-6 rounded-2xl border border-red-200">
+                                <h4 className="font-black text-red-700 uppercase">Offline State</h4>
+                                <p className="text-sm text-red-800 mt-2">If last seen &gt; 5 mins ago. Device may be off or disconnected.</p>
                             </div>
                         </div>
                     </div>
@@ -451,56 +304,128 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ storeData, onUpd
                 {activeSection === 'tv' && (
                     <div className="space-y-20 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
-                            <div className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20">Module 06: Large Format</div>
-                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">TV Protocol</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Tablets are for touching. TVs are for watching. This mode changes the entire brain of the app to focus on <strong>Passive Video Playback</strong>.</p>
+                            <div className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg">Module 06: TV Protocol</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Passive Display</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">TV Mode removes all interactive elements. It is designed for large video walls where no user touch input is expected.</p>
                         </div>
-
-                        <div className="flex flex-col md:flex-row gap-8 items-center justify-center p-12 bg-slate-100 rounded-[3rem] border border-slate-200">
-                            <div className="w-64 aspect-[9/16] bg-white rounded-[2rem] border-8 border-slate-900 shadow-2xl relative flex flex-col items-center justify-center p-4">
-                                <div className="absolute top-4 w-12 h-1 bg-slate-200 rounded-full"></div>
-                                <MousePointer2 className="text-blue-500 animate-bounce mb-2" size={32} />
-                                <span className="text-xs font-black uppercase text-slate-900">Kiosk Mode</span>
-                                <span className="text-[9px] font-bold text-slate-400 mt-1 text-center">Interactive. Buttons. Search.</span>
-                            </div>
-
-                            <div className="hidden md:block"><ArrowRight size={32} className="text-slate-300" /></div>
-
-                            <div className="w-96 aspect-video bg-black rounded-[2rem] border-8 border-slate-800 shadow-2xl relative flex items-center justify-center overflow-hidden">
-                                <div className="absolute inset-0 opacity-50 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b')] bg-cover bg-center"></div>
-                                <div className="relative z-10 text-center">
-                                    <PlayCircle className="text-white mx-auto mb-2" size={48} />
-                                    <span className="text-xs font-black uppercase text-white tracking-widest">TV Mode</span>
-                                    <span className="text-[9px] font-bold text-white/70 mt-1 block">No Buttons. Just Loop.</span>
+                        <div className="p-8 bg-slate-900 rounded-[2rem] text-white">
+                            <div className="flex items-center gap-4 mb-6">
+                                <MonitorPlay size={32} className="text-indigo-400" />
+                                <div>
+                                    <h3 className="font-black uppercase text-xl">Playback Rules</h3>
+                                    <p className="text-slate-400 text-xs font-bold uppercase">Difference from Kiosk Mode</p>
                                 </div>
                             </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                            <div className="space-y-6">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">How It Behaves</h3>
-                                <p className="text-slate-600 font-medium leading-relaxed">
-                                    When you set a device to "TV Mode":
-                                    <br/><br/>
-                                    1. It hides all search bars, menus, and back buttons.<br/>
-                                    2. It ignores "Idle Timers" (it never sleeps).<br/>
-                                    3. It plays video loops endlessly.
-                                </p>
-                            </div>
-                            <div className="bg-indigo-50 border border-indigo-100 p-8 rounded-[2rem]">
-                                <h3 className="text-indigo-900 font-black uppercase text-sm tracking-widest mb-3 flex items-center gap-2"><Film size={16}/> Brand Channels</h3>
-                                <p className="text-indigo-800/80 text-sm leading-relaxed">
-                                    You can assign a TV to a specific brand. 
-                                    <br/><br/>
-                                    <em>Example:</em> A TV above the Samsung shelf can be locked to play <strong>Only Samsung Videos</strong>. Meanwhile, the TV at the entrance can play the <strong>Global Loop</strong> (all brands mixed).
-                                </p>
-                            </div>
+                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <li className="bg-white/10 p-4 rounded-xl border border-white/5">
+                                    <span className="text-indigo-300 font-black uppercase text-xs block mb-1">No Idle Timer</span>
+                                    Videos play forever. The screen never goes black (unless Sleep Mode is active).
+                                </li>
+                                <li className="bg-white/10 p-4 rounded-xl border border-white/5">
+                                    <span className="text-indigo-300 font-black uppercase text-xs block mb-1">Audio Unlocked</span>
+                                    Designed for showrooms where sound is encouraged.
+                                </li>
+                                <li className="bg-white/10 p-4 rounded-xl border border-white/5">
+                                    <span className="text-indigo-300 font-black uppercase text-xs block mb-1">Specific Loops</span>
+                                    Can lock to a specific Brand or Model, unlike Kiosk which mixes everything.
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 )}
-
+                
                 <div className="h-40"></div>
             </div>
+        </div>
+    );
+};
+
+const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
+    const [pin, setPin] = useState('');
+    const [error, setError] = useState(false);
+
+    const handleLogin = () => {
+        const admin = admins.find(a => a.pin === pin);
+        if (admin) {
+            onLogin(admin);
+        } else {
+            setError(true);
+            setPin('');
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[200] bg-slate-950 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-8 w-full max-w-sm text-center shadow-2xl border-4 border-slate-900">
+                <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+                    <Lock size={32} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 uppercase mb-2 tracking-tight">System Locked</h2>
+                <p className="text-slate-500 mb-8 text-xs font-bold uppercase tracking-widest">Authorized Personnel Only</p>
+                
+                <input 
+                    type="password" 
+                    value={pin}
+                    onChange={e => { setPin(e.target.value); setError(false); }}
+                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                    className={`w-full text-center text-3xl font-mono font-black tracking-[0.5em] p-4 border-2 rounded-2xl mb-6 outline-none transition-all ${error ? 'border-red-500 bg-red-50 text-red-900' : 'border-slate-200 focus:border-blue-500 focus:bg-blue-50'}`}
+                    maxLength={6}
+                    placeholder="••••"
+                    autoFocus
+                />
+
+                <button 
+                    onClick={handleLogin}
+                    className="w-full bg-slate-900 text-white font-black uppercase py-4 rounded-xl hover:bg-blue-600 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                >
+                    <Unlock size={18} /> Access Dashboard
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => void, onRefresh: () => void }) => {
+    const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
+    const [activeTab, setActiveTab] = useState('docs');
+
+    if (!storeData) return null;
+
+    if (!currentUser) {
+        return <Auth admins={storeData.admins} onLogin={setCurrentUser} />;
+    }
+
+    return (
+        <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row font-sans text-slate-900 overflow-hidden">
+            <aside className="w-full md:w-72 bg-slate-900 text-white flex flex-col shrink-0 z-20">
+                <div className="p-6 border-b border-white/10">
+                    <h1 className="font-black text-xl uppercase tracking-widest flex items-center gap-2"><LayoutGrid className="text-blue-500"/> Kiosk<span className="text-blue-500">Admin</span></h1>
+                </div>
+                <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+                    <button onClick={() => setActiveTab('docs')} className={`w-full text-left px-4 py-3 rounded-xl font-bold uppercase text-xs flex items-center gap-3 transition-all ${activeTab === 'docs' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+                        <BookOpen size={18} /> Documentation
+                    </button>
+                    {/* Placeholder for other navigation items based on imports */}
+                    <button onClick={() => setActiveTab('inventory')} className={`w-full text-left px-4 py-3 rounded-xl font-bold uppercase text-xs flex items-center gap-3 transition-all ${activeTab === 'inventory' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+                        <Box size={18} /> Inventory
+                    </button>
+                </nav>
+                <div className="p-4 border-t border-white/10">
+                     <button onClick={() => setCurrentUser(null)} className="w-full bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white p-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 transition-all">
+                         <LogOut size={16} /> Sign Out
+                     </button>
+                </div>
+            </aside>
+            <main className="flex-1 overflow-y-auto relative p-4 md:p-8">
+                {activeTab === 'docs' && <SystemDocumentation />}
+                {activeTab === 'inventory' && (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                        <Box size={64} className="mb-4 opacity-20" />
+                        <h2 className="text-xl font-black uppercase">Inventory Manager</h2>
+                        <p className="text-sm">Functionality to be implemented.</p>
+                    </div>
+                )}
+            </main>
         </div>
     );
 };
