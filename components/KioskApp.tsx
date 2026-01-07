@@ -964,7 +964,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                       title="Kiosk Web Portal" 
                       sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                       loading="lazy"
-                      importance="high"
                    />
                </div>
            </div>

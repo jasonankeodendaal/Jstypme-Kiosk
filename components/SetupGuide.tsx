@@ -17,7 +17,7 @@ interface SetupGuideProps {
 }
 
 const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'supabase' | 'apk' | 'ai' | 'pricelists' | 'build'>('supabase');
+  const [activeTab, setActiveTab] = useState<'architecture' | 'supabase' | 'apk' | 'ai' | 'pricelists'>('architecture');
   const [copiedStep, setCopiedStep] = useState<string | null>(null);
   const [roundDemoValue, setRoundDemoValue] = useState(799);
 
@@ -153,11 +153,11 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
         <div className="w-full md:w-96 glass-sidebar border-r border-slate-200 p-8 flex flex-col shrink-0 overflow-y-auto z-40">
             <nav className="space-y-4">
                 {[
-                    { id: 'supabase', label: '1. Cloud Infrastructure', sub: 'PostgreSQL & Realtime', icon: Database, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-600' },
-                    { id: 'apk', label: '2. Android APK Native', sub: 'Hardware Packaging', icon: SmartphoneNfc, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-600' },
-                    { id: 'ai', label: '3. Gemini AI Engine', sub: 'LLM Content Synthesis', icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
-                    { id: 'build', label: '4. Asset Compiler', sub: 'Production Pipelines', icon: Container, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
-                    { id: 'pricelists', label: '5. Technical Matrix', sub: 'Pricelist Rounding', icon: Table, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-600' }
+                    { id: 'architecture', label: '1. System Logic', sub: 'Data Flow Topology', icon: Workflow, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
+                    { id: 'supabase', label: '2. Cloud Infrastructure', sub: 'PostgreSQL & Realtime', icon: Database, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-600' },
+                    { id: 'apk', label: '3. Android APK Native', sub: 'Hardware Packaging', icon: SmartphoneNfc, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-600' },
+                    { id: 'ai', label: '4. Gemini AI Engine', sub: 'LLM Content Synthesis', icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
+                    { id: 'pricelists', label: '5. Technical Matrix', sub: 'PDF & Pricing Logic', icon: Table, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-600' }
                 ].map(tab => (
                     <button 
                         key={tab.id}
@@ -190,15 +190,63 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
         <div className="flex-1 overflow-y-auto bg-slate-50/50 p-6 md:p-16 scroll-smooth">
            <div className="max-w-4xl mx-auto bg-white rounded-[4rem] shadow-[0_40px_100px_rgba(0,0,0,0.08)] border border-slate-200/60 overflow-hidden min-h-full pb-40">
               
+              {/* SECTION: ARCHITECTURE */}
+              {activeTab === 'architecture' && (
+                  <div className="p-10 md:p-20 animate-fade-in">
+                      <SectionHeading icon={Network} subtitle="A visual breakdown of the Local-First data synchronization topology.">System Architecture</SectionHeading>
+                      
+                      <div className="relative bg-slate-50 p-8 rounded-[3rem] border border-slate-200 overflow-hidden mb-12">
+                          <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/graphy.png')]"></div>
+                          
+                          <div className="relative z-10 flex flex-col gap-8 items-center">
+                              {/* Cloud Layer */}
+                              <div className="bg-white p-6 rounded-3xl border-2 border-green-200 shadow-xl w-full max-w-md text-center relative">
+                                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Supabase Cloud</div>
+                                  <div className="flex justify-center gap-8 text-slate-400">
+                                      <div className="flex flex-col items-center"><Database size={24} className="text-green-600 mb-1"/><span className="text-[9px] font-bold uppercase">Store Config</span></div>
+                                      <div className="flex flex-col items-center"><HardDrive size={24} className="text-green-600 mb-1"/><span className="text-[9px] font-bold uppercase">Media Storage</span></div>
+                                      <div className="flex flex-col items-center"><Activity size={24} className="text-green-600 mb-1"/><span className="text-[9px] font-bold uppercase">Fleet Logs</span></div>
+                                  </div>
+                              </div>
+
+                              {/* Sync Pipes */}
+                              <div className="flex gap-20 w-full max-w-lg justify-center relative h-16">
+                                  <div className="w-0.5 h-full bg-slate-300 relative">
+                                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 py-1 rounded border border-slate-200 text-[8px] font-black uppercase text-slate-400 whitespace-nowrap">Read/Write</div>
+                                  </div>
+                                  <div className="w-0.5 h-full bg-slate-300 relative">
+                                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 py-1 rounded border border-slate-200 text-[8px] font-black uppercase text-slate-400 whitespace-nowrap">Sync Down</div>
+                                  </div>
+                              </div>
+
+                              {/* Device Layer */}
+                              <div className="flex gap-8 w-full justify-center">
+                                  <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-2xl w-48 text-center flex flex-col items-center border border-slate-800">
+                                      <Settings size={32} className="text-blue-400 mb-3" />
+                                      <div className="font-black uppercase text-sm">Admin Hub</div>
+                                      <p className="text-[9px] text-slate-400 mt-2 leading-tight">Controls inventory, logic, and pushes updates.</p>
+                                  </div>
+                                  
+                                  <div className="bg-white p-6 rounded-3xl border-2 border-slate-200 shadow-xl w-48 text-center flex flex-col items-center">
+                                      <Tablet size={32} className="text-slate-400 mb-3" />
+                                      <div className="font-black uppercase text-sm text-slate-900">Kiosk Unit</div>
+                                      <p className="text-[9px] text-slate-500 mt-2 leading-tight">Downloads snapshot. Runs 100% offline if needed.</p>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+
+                      <WhyBox title="Snapshot Strategy">
+                          Unlike traditional web apps that query a database on every page load, this system loads the <strong>entire store configuration</strong> (products, images, settings) into the device's memory on startup. This ensures <strong>zero-latency navigation</strong> and resilience against unstable in-store WiFi.
+                      </WhyBox>
+                  </div>
+              )}
+
               {/* SECTION: SUPABASE */}
               {activeTab === 'supabase' && (
                 <div className="p-10 md:p-20 animate-fade-in">
                     <SectionHeading icon={Database} subtitle="Architecting the global state orchestration layer for multi-device retail fleets.">Cloud Core Infrastructure</SectionHeading>
                     
-                    <WhyBox title="Atomic State Orchestration">
-                        The Kiosk Pro architecture utilizes a **Snapshot-First** methodology. Devices pull a massive JSONB blob into local IndexedDB memory, allowing UI responsiveness that isn't tethered to network latency. The Cloud exists to synchronize these snapshots across the fleet.
-                    </WhyBox>
-
                     <div className="flex flex-col md:flex-row items-center gap-8 mb-12 bg-slate-50 p-8 rounded-[3rem] border border-slate-200">
                         <div className="flex flex-col items-center gap-2">
                             <div className="bg-green-500 p-4 rounded-2xl shadow-xl shadow-green-500/20 text-white"><Database size={32}/></div>
@@ -357,7 +405,23 @@ Output must be structured JSON.`}
                 <div className="p-10 md:p-20 animate-fade-in">
                     <SectionHeading icon={Table} subtitle="Autonomous ingestion and high-fidelity distribution for retail pricing.">Pricelist Intelligence Engine</SectionHeading>
                     
-                    <Step number="1" title="Price Normalization Logic">
+                    <Step number="1" title="Universal Import Capability">
+                        <p className="font-medium text-slate-700">The system now supports direct parsing of <strong>PDF Documents</strong> alongside traditional Excel/CSV formats. The internal logic scans PDF text layers to identify tabular structures and pricing columns automatically.</p>
+                        <div className="flex gap-4 mt-6">
+                            <div className="flex-1 bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center text-center">
+                                <div className="p-2 bg-green-100 rounded-lg text-green-700 mb-2"><FileSpreadsheet size={20}/></div>
+                                <div className="font-black uppercase text-xs">Excel / CSV</div>
+                                <div className="text-[10px] text-slate-400 mt-1">Structured Grid Data</div>
+                            </div>
+                            <div className="flex-1 bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center text-center">
+                                <div className="p-2 bg-red-100 rounded-lg text-red-700 mb-2"><FileText size={20}/></div>
+                                <div className="font-black uppercase text-xs">PDF Document</div>
+                                <div className="text-[10px] text-slate-400 mt-1">Text Layer Scraping</div>
+                            </div>
+                        </div>
+                    </Step>
+
+                    <Step number="2" title="Price Normalization Logic">
                         <p className="font-medium text-slate-700">Our engine performs psychological pricing adjustments to maintain a "Rounded Premium" look across all tables.</p>
                         
                         <div className="bg-slate-900 p-10 rounded-[3rem] border border-slate-800 relative overflow-hidden shadow-2xl">
@@ -401,30 +465,6 @@ Output must be structured JSON.`}
                     <WhyBox title="Visual Hierarchy in PDFs" variant="orange">
                         When generating the 300DPI PDF for distribution, the engine uses **Sub-Pixel Positioning**. This ensures that even with hundreds of rows, the text remains crisp on printed A4 paper for in-store price tags.
                     </WhyBox>
-                </div>
-              )}
-
-              {/* SECTION: BUILD */}
-              {activeTab === 'build' && (
-                <div className="p-10 md:p-20 animate-fade-in">
-                    <SectionHeading icon={Container} subtitle="Production-grade compilation for low-resource hardware targets.">Asset Compiler Pipeline</SectionHeading>
-                    
-                    <Step number="1" title="Vite Chunking Strategy">
-                        <p className="font-medium text-slate-700 leading-relaxed">We isolate "Heavy" dependencies (like `pdfjs` and `xlsx`) into separate bundles. This prevents the tablet's browser engine from hanging during the initial load.</p>
-                        <CodeBlock 
-                            id="vite-strat"
-                            label="vite.config.ts"
-                            code={`manualChunks: {
-  'heavy-pdf': ['pdfjs-dist', 'jspdf'],
-  'heavy-data': ['xlsx', 'jszip'],
-  'vendor': ['react', 'react-dom', 'lucide-react']
-}`}
-                        />
-                    </Step>
-
-                    <EngineerNote>
-                        Always use `npm run build` for kiosk hardware. The development server (`npm run dev`) includes diagnostic overhead that can triple memory usage on older Android tablets.
-                    </EngineerNote>
                 </div>
               )}
 

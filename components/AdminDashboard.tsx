@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User, FileDigit, Code2, Workflow, Link2, Eye
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User, FileDigit, Code2, Workflow, Link2, Eye, FileUp
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem, ArchivedItem } from '../types';
 import { resetStoreData } from '../services/geminiService';
@@ -11,6 +11,13 @@ import { uploadFileToStorage, supabase, checkCloudConnection } from '../services
 import SetupGuide from './SetupGuide';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Robust reference for PDFJS
+const pdfjs: any = pdfjsLib;
+if (pdfjs.GlobalWorkerOptions) {
+  pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
 
 const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -40,243 +47,77 @@ const RIcon = (props: any) => (
 );
 
 const SystemDocumentation = () => {
-    const [activeSection, setActiveSection] = useState('architecture');
-    
-    const sections = [
-        { id: 'architecture', label: '1. How it Works', icon: <Network size={16} />, desc: 'The "Brain" of the Kiosk' },
-        { id: 'inventory', label: '2. Product Sorting', icon: <Box size={16}/>, desc: 'How items are organized' },
-        { id: 'pricelists', label: '3. Price Logic', icon: <Table size={16}/>, desc: 'Converting Excel to PDF' },
-        { id: 'screensaver', label: '4. Visual Loop', icon: <Zap size={16}/>, desc: 'Automatic slideshow rules' },
-        { id: 'fleet', label: '5. Fleet Watch', icon: <Activity size={16}/>, desc: 'Remote tracking & control' },
-        { id: 'tv', label: '6. TV Protocol', icon: <Tv size={16}/>, desc: 'Large scale video loops' },
-    ];
-
     return (
-        <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden shadow-2xl animate-fade-in">
-            <style>{`
-                @keyframes flow-horizontal { 0% { transform: translateX(-100%); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateX(400%); opacity: 0; } }
-                .data-flow { animation: flow-horizontal 3s linear infinite; }
-                @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2.4); opacity: 0; } }
-                .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
-            `}</style>
-
-            <div className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
-                <div className="mb-10">
-                    <div className="flex items-center gap-2 mb-3">
-                        <div className="w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse"></div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Learning Center</span>
-                    </div>
-                    <h2 className="text-white font-black text-2xl tracking-tighter leading-none">System <span className="text-blue-500">Guides</span></h2>
-                    <p className="text-slate-500 text-xs mt-2 font-medium">Step-by-step logic overview for new administrators.</p>
+        <div className="flex flex-col h-[calc(100vh-140px)] bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden shadow-2xl animate-fade-in p-8 relative">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-white to-white z-0 pointer-events-none"></div>
+            <div className="relative z-10 max-w-6xl mx-auto w-full h-full flex flex-col">
+                <div className="mb-8 text-center">
+                    <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">System Architecture</h2>
+                    <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-1">Data Flow & Logic Nodes</p>
                 </div>
-
-                <div className="space-y-2 flex-1">
-                    {sections.map(section => (
-                        <button
-                            key={section.id}
-                            onClick={() => setActiveSection(section.id)}
-                            className={`w-full text-left px-5 py-4 rounded-2xl flex items-center gap-4 transition-all duration-500 group relative overflow-hidden ${
-                                activeSection === section.id 
-                                ? 'bg-blue-600 text-white shadow-xl translate-x-2' 
-                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                            }`}
-                        >
-                            <div className={`p-2 rounded-xl transition-all duration-500 ${activeSection === section.id ? 'bg-white/20' : 'bg-slate-800'}`}>
-                                {React.cloneElement(section.icon as React.ReactElement<any>, { size: 18 })}
-                            </div>
-                            <div className="min-w-0">
-                                <div className="text-[11px] font-black uppercase tracking-widest leading-none mb-1">{section.label}</div>
-                                <div className={`text-[9px] font-bold uppercase truncate opacity-60 ${activeSection === section.id ? 'text-blue-100' : 'text-slate-500'}`}>{section.desc}</div>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto bg-white relative p-6 md:p-12 lg:p-20 scroll-smooth">
-                {activeSection === 'architecture' && (
-                    <div className="space-y-20 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-blue-500/20">Module 01: Core Brain</div>
-                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Atomic Synchronization</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The Kiosk works <strong>offline</strong> first. It only needs internet to "sync up" with your changes.</p>
-                        </div>
-                        <div className="relative p-12 bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden min-h-[450px] flex flex-col items-center justify-center">
-                            <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-                            <div className="relative w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-12">
-                                <div className="flex flex-col items-center gap-4 group"><div className="w-24 h-24 bg-white/5 border-2 border-blue-500/30 rounded-[2rem] flex items-center justify-center relative transition-all duration-500 group-hover:border-blue-500 group-hover:scale-110"><Monitor className="text-blue-400" size={40} /></div><div className="text-center"><div className="text-white font-black text-xs uppercase tracking-widest">Admin Hub</div><div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Updates Sent</div></div></div>
-                                <div className="flex-1 w-full h-24 relative flex items-center justify-center"><div className="w-full h-1 bg-white/5 rounded-full relative"><div className="absolute inset-0 bg-blue-500/20 blur-md"></div><div className="data-flow absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,1)]"></div></div><div className="absolute -bottom-8 bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-xl text-[9px] font-black text-blue-400 uppercase tracking-widest">Encrypted Cloud Tunnel</div></div>
-                                <div className="flex flex-col items-center gap-4 group"><div className="w-32 h-20 bg-slate-800 rounded-2xl border-2 border-green-500/30 flex items-center justify-center relative shadow-2xl transition-all duration-500 group-hover:border-green-500 group-hover:rotate-1"><Tablet className="text-green-400" size={32} /></div><div className="text-center"><div className="text-white font-black text-xs uppercase tracking-widest">Kiosk Device</div><div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Local Storage Active</div></div></div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeSection === 'inventory' && (
-                    <div className="space-y-12 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-orange-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-orange-500/20">Module 02: Data Structure</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">The Inventory Tree</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Products exist within a strict hierarchical lineage. This ensures navigation is always logical.</p>
-                        </div>
-                        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden p-10 relative">
-                            <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none"><GitBranch size={200} /></div>
-                            <div className="flex flex-col gap-8 relative z-10">
-                                <div className="flex items-center gap-6">
-                                    <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-xl z-20"><Box size={32}/></div>
-                                    <div className="flex-1 p-4 bg-slate-50 rounded-2xl border border-slate-100"><div className="text-xs font-black uppercase text-slate-400 mb-1">Root Level</div><div className="text-2xl font-black text-slate-900">Brand</div><div className="text-xs text-slate-500 mt-1">Samsung, Apple, Sony...</div></div>
-                                </div>
-                                <div className="ml-8 border-l-4 border-slate-100 pl-8 py-4 -my-4 flex flex-col gap-8">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg z-20"><LayoutGrid size={28}/></div>
-                                        <div className="flex-1 p-4 bg-blue-50 rounded-2xl border border-blue-100"><div className="text-xs font-black uppercase text-blue-400 mb-1">Branch Level</div><div className="text-xl font-black text-blue-900">Category</div><div className="text-xs text-blue-600 mt-1">Smartphones, TVs, Laptops...</div></div>
-                                    </div>
-                                    <div className="ml-8 border-l-4 border-blue-100 pl-8 py-4 -my-4 flex flex-col gap-8">
-                                        <div className="flex items-center gap-6">
-                                            <div className="w-12 h-12 bg-white border-2 border-slate-200 text-slate-400 rounded-2xl flex items-center justify-center shadow-sm z-20"><Smartphone size={24}/></div>
-                                            <div className="flex-1 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm"><div className="text-xs font-black uppercase text-slate-400 mb-1">Leaf Level</div><div className="text-lg font-black text-slate-900">Product</div><div className="text-xs text-slate-500 mt-1">Galaxy S24 Ultra, iPhone 15...</div></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeSection === 'pricelists' && (
-                    <div className="space-y-12 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20">Module 03: Pricing Engine</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Dynamic Price Matrix</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The system converts raw spreadsheet rows into high-fidelity, printable PDF documents on the fly.</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-col items-center text-center">
-                                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 text-green-600"><FileSpreadsheet size={32} /></div>
-                                <h3 className="font-black text-slate-900 uppercase">1. Raw Input</h3>
-                                <p className="text-xs text-slate-500 mt-2 font-medium">You upload Excel/CSV or type manually. The system parses SKU, Desc, and Price.</p>
-                            </div>
-                            <div className="flex items-center justify-center text-slate-300"><ArrowRight size={32} /></div>
-                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-col items-center text-center">
-                                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 text-blue-600"><Cpu size={32} /></div>
-                                <h3 className="font-black text-slate-900 uppercase">2. Logic Engine</h3>
-                                <p className="text-xs text-slate-500 mt-2 font-medium">Rounding logic applies: <code>.99</code> becomes <code>.00</code>. Prices ending in <code>9</code> are bumped.</p>
-                            </div>
-                            <div className="flex items-center justify-center text-slate-300"><ArrowRight size={32} /></div>
-                            <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 flex flex-col items-center text-center shadow-xl text-white">
-                                <div className="w-16 h-16 bg-white/10 rounded-2xl shadow-inner flex items-center justify-center mb-4 text-red-400"><FileText size={32} /></div>
-                                <h3 className="font-black uppercase">3. PDF Render</h3>
-                                <p className="text-xs text-slate-400 mt-2 font-medium">A vector PDF is drawn client-side using <code>jspdf</code>, ready for A4 printing.</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeSection === 'screensaver' && (
-                    <div className="space-y-12 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20">Module 04: Visual Loop</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Smart Playlist Algorithm</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The screensaver isn't random. It constructs a balanced playlist mixing product highlights, pamphlets, and paid ads.</p>
-                        </div>
-                        <div className="bg-slate-900 rounded-[2.5rem] p-10 overflow-hidden relative shadow-2xl">
-                            <div className="absolute inset-0 bg-gradient-to-r from-purple-900/20 to-blue-900/20"></div>
-                            <div className="relative z-10 flex flex-col gap-8">
-                                <div className="flex items-center justify-between text-white border-b border-white/10 pb-4 mb-4">
-                                    <div className="text-xs font-black uppercase tracking-widest">Playlist Sequence</div>
-                                    <div className="text-xs font-mono text-purple-400">Loop Duration: ~4m</div>
-                                </div>
-                                <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
-                                    {[
-                                        { type: 'Ad', color: 'bg-yellow-500', w: 'w-24' },
-                                        { type: 'Prod', color: 'bg-blue-600', w: 'w-16' },
-                                        { type: 'Prod', color: 'bg-blue-600', w: 'w-16' },
-                                        { type: 'Cat', color: 'bg-green-500', w: 'w-20' },
-                                        { type: 'Ad', color: 'bg-yellow-500', w: 'w-24' },
-                                        { type: 'Prod', color: 'bg-blue-600', w: 'w-16' },
-                                    ].map((item, i) => (
-                                        <div key={i} className={`${item.w} h-16 rounded-xl ${item.color} flex items-center justify-center shrink-0 shadow-lg border border-white/10`}>
-                                            <span className="text-[10px] font-black text-white uppercase">{item.type}</span>
-                                        </div>
-                                    ))}
-                                    <div className="w-10 h-16 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-dashed border-white/20"><RotateCcw size={16} className="text-white/30"/></div>
-                                </div>
-                                <div className="flex gap-8">
-                                    <div className="flex items-center gap-2 text-white"><div className="w-3 h-3 bg-yellow-500 rounded-full"></div><span className="text-xs font-bold uppercase">Sponsored Ad</span></div>
-                                    <div className="flex items-center gap-2 text-white"><div className="w-3 h-3 bg-blue-600 rounded-full"></div><span className="text-xs font-bold uppercase">Product Highlight</span></div>
-                                    <div className="flex items-center gap-2 text-white"><div className="w-3 h-3 bg-green-500 rounded-full"></div><span className="text-xs font-bold uppercase">Catalogue Cover</span></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeSection === 'fleet' && (
-                    <div className="space-y-12 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-blue-500/20">Module 05: Telemetry</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Heartbeat Protocol</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Devices send a "pulse" every 60 seconds. If a pulse is missed for 5 minutes, the dashboard marks it Offline.</p>
-                        </div>
-                        <div className="flex flex-col md:flex-row gap-8">
-                            <div className="flex-1 bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden">
-                                <div className="absolute top-4 right-4 animate-pulse"><Activity className="text-green-500" size={24} /></div>
-                                <h3 className="font-black text-slate-900 uppercase mb-6">Packet Structure</h3>
-                                <div className="bg-slate-900 p-6 rounded-2xl text-blue-300 font-mono text-xs leading-relaxed shadow-inner">
-                                    {`{
-  "id": "LOC-8821",
-  "status": "online",
-  "wifi_strength": 92,
-  "last_seen": "2024-03-15T10:00:00Z",
-  "version": "2.4.1"
-}`}
-                                </div>
-                            </div>
-                            <div className="w-full md:w-64 flex flex-col gap-4">
-                                <div className="bg-green-50 p-6 rounded-2xl border border-green-100 flex flex-col items-center justify-center text-center flex-1">
-                                    <Wifi size={32} className="text-green-600 mb-2" />
-                                    <div className="font-black text-green-900 uppercase text-xs">Online</div>
-                                    <div className="text-[10px] text-green-600 font-bold opacity-60">Last seen &lt; 5m</div>
-                                </div>
-                                <div className="bg-red-50 p-6 rounded-2xl border border-red-100 flex flex-col items-center justify-center text-center flex-1">
-                                    <WifiOff size={32} className="text-red-600 mb-2" />
-                                    <div className="font-black text-red-900 uppercase text-xs">Offline</div>
-                                    <div className="text-[10px] text-red-600 font-bold opacity-60">Last seen &gt; 5m</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeSection === 'tv' && (
-                    <div className="space-y-12 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-slate-800 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-black/20">Module 06: Display Wall</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">TV State Machine</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">TV Mode removes all interactive elements. It locks into a specific "Brand Channel" or cycles the "Global Loop".</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                                <div className="relative z-10">
-                                    <div className="w-16 h-10 border-2 border-white/20 rounded-lg mb-6 flex items-center justify-center"><Play size={20} className="text-white fill-current" /></div>
-                                    <h3 className="text-2xl font-black uppercase tracking-tight mb-2">Global Loop</h3>
-                                    <p className="text-slate-400 text-sm font-medium">Plays ALL available videos from ALL brands in a randomized shuffle. Ideal for general store signage.</p>
-                                </div>
-                            </div>
-                            <div className="bg-blue-600 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-6 opacity-20"><Tv size={80} /></div>
-                                <div className="relative z-10">
-                                    <div className="w-10 h-10 bg-white rounded-full mb-6 flex items-center justify-center text-blue-600 font-black">S</div>
-                                    <h3 className="text-2xl font-black uppercase tracking-tight mb-2">Brand Channel</h3>
-                                    <p className="text-blue-100 text-sm font-medium">Locked to a specific brand (e.g. Samsung). Only cycles videos belonging to that manufacturer.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
                 
-                <div className="h-40"></div>
+                <div className="flex-1 flex flex-col justify-center items-center gap-8 overflow-y-auto">
+                    {/* Top Tier: Cloud */}
+                    <div className="flex items-center justify-center">
+                        <div className="bg-white p-6 rounded-3xl border-2 border-slate-200 shadow-xl flex flex-col items-center relative z-20 w-64 text-center">
+                            <div className="absolute -top-4 bg-green-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">Cloud Core</div>
+                            <Database size={32} className="text-green-500 mb-2" />
+                            <div className="font-black text-slate-900 uppercase text-sm">Supabase DB</div>
+                            <div className="text-[10px] text-slate-400 font-mono mt-1">PostgreSQL + Realtime</div>
+                        </div>
+                    </div>
+
+                    {/* Connectors */}
+                    <div className="h-16 w-0.5 bg-slate-300 relative">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-100 px-2 py-1 text-[9px] font-black text-slate-400 uppercase whitespace-nowrap border border-slate-200 rounded">JSONB Sync</div>
+                    </div>
+
+                    {/* Middle Tier: App Logic */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
+                        {/* Admin Node */}
+                        <div className="bg-white p-6 rounded-3xl border-2 border-blue-100 shadow-lg flex flex-col items-center text-center relative group">
+                            <div className="bg-blue-50 p-3 rounded-2xl mb-3"><Settings size={24} className="text-blue-600"/></div>
+                            <div className="font-black text-slate-900 uppercase text-xs mb-2">Admin Dashboard</div>
+                            <p className="text-[10px] text-slate-500 leading-tight">Writes changes to Cloud. Manages Inventory, Screensaver, and PDF generation.</p>
+                            <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-4 h-0.5 bg-blue-100 hidden md:block"></div>
+                        </div>
+
+                        {/* Logic Engine */}
+                        <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-2xl flex flex-col items-center text-center relative z-20 border border-slate-800">
+                            <div className="bg-white/10 p-3 rounded-2xl mb-3"><Cpu size={24} className="text-blue-400"/></div>
+                            <div className="font-black uppercase text-xs mb-2 text-blue-200">Kiosk Firmware</div>
+                            <ul className="text-[9px] text-slate-400 space-y-1 text-left w-full list-disc pl-4">
+                                <li>LocalFirst (IndexedDB)</li>
+                                <li>Idle Watchdog (30s)</li>
+                                <li>Screensaver Loop</li>
+                                <li>PDF Parser</li>
+                            </ul>
+                        </div>
+
+                        {/* Viewer Node */}
+                        <div className="bg-white p-6 rounded-3xl border-2 border-purple-100 shadow-lg flex flex-col items-center text-center relative group">
+                            <div className="bg-purple-50 p-3 rounded-2xl mb-3"><Tablet size={24} className="text-purple-600"/></div>
+                            <div className="font-black text-slate-900 uppercase text-xs mb-2">Device Display</div>
+                            <p className="text-[10px] text-slate-500 leading-tight">React Virtual DOM. Optimized for hardware acceleration on Android WebViews.</p>
+                            <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-4 h-0.5 bg-purple-100 hidden md:block"></div>
+                        </div>
+                    </div>
+
+                    {/* Bottom Tier: Features */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl pt-4">
+                        {[
+                            { label: 'PDF Engine', icon: FileText, color: 'text-red-500' },
+                            { label: 'Fleet Ping', icon: Activity, color: 'text-green-500' },
+                            { label: 'Video Loop', icon: PlayCircle, color: 'text-indigo-500' },
+                            { label: 'Auto Rounding', icon: Binary, color: 'text-orange-500' }
+                        ].map((feat, i) => (
+                            <div key={i} className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
+                                <feat.icon size={16} className={feat.color} />
+                                <span className="text-[10px] font-black uppercase text-slate-600">{feat.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -529,6 +370,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
   const [items, setItems] = useState<PricelistItem[]>(pricelist.items || []);
   const [title, setTitle] = useState(pricelist.title || ''); 
   const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState('');
   
   const addItem = () => {
     setItems([...items, { id: generateId('item'), sku: '', description: '', normalPrice: '', promoPrice: '', imageUrl: '' }]);
@@ -557,52 +399,135 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
     setItems(items.filter(item => item.id !== id));
   };
 
+  // --- PDF & Excel Import Logic ---
   const handleSpreadsheetImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsImporting(true);
+    setImportStatus('Analyzing file...');
+
     try {
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-        if (jsonData.length === 0) { alert("The selected file appears to be empty."); return; }
-        const validRows = jsonData.filter(row => row && row.length > 0 && row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''));
-        if (validRows.length === 0) { alert("No data rows found in the file."); return; }
-        const firstRow = validRows[0].map(c => String(c || '').toLowerCase().trim());
-        const findIdx = (keywords: string[]) => firstRow.findIndex(h => keywords.some(k => h.includes(k)));
-        const skuIdx = findIdx(['sku', 'code', 'part', 'model']);
-        const descIdx = findIdx(['desc', 'name', 'product', 'item', 'title']);
-        const normalIdx = findIdx(['normal', 'retail', 'price', 'standard', 'cost']);
-        const promoIdx = findIdx(['promo', 'special', 'sale', 'discount', 'deal']);
-        const hasHeader = skuIdx !== -1 || descIdx !== -1 || normalIdx !== -1;
-        const dataRows = hasHeader ? validRows.slice(1) : validRows;
-        const sIdx = skuIdx !== -1 ? skuIdx : 0;
-        const dIdx = descIdx !== -1 ? descIdx : 1;
-        const nIdx = normalIdx !== -1 ? normalIdx : 2;
-        const pIdx = promoIdx !== -1 ? promoIdx : 3;
-        const newImportedItems: PricelistItem[] = dataRows.map(row => {
-            const formatImported = (val: string) => {
-                if (!val) return '';
-                const numeric = String(val).replace(/[^0-9.]/g, '');
-                if (!numeric) return String(val);
-                let n = parseFloat(numeric);
-                if (n % 1 !== 0) n = Math.ceil(n);
-                if (Math.floor(n) % 10 === 9) n += 1;
-                return `R ${n.toLocaleString()}`;
-            };
-            return {
-                id: generateId('imp'),
-                sku: String(row[sIdx] || '').trim().toUpperCase(),
-                description: String(row[dIdx] || '').trim().toUpperCase(),
-                normalPrice: formatImported(row[nIdx]),
-                promoPrice: row[pIdx] ? formatImported(row[pIdx]) : '',
-                imageUrl: ''
-            };
-        });
+        let newImportedItems: PricelistItem[] = [];
+
+        // PDF IMPORT LOGIC
+        if (file.type === 'application/pdf') {
+            setImportStatus('Scanning PDF Text Layers...');
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjs.getDocument(arrayBuffer).promise;
+            
+            let extractedLines: string[] = [];
+            
+            for (let i = 1; i <= pdf.numPages; i++) {
+                setImportStatus(`Parsing Page ${i} of ${pdf.numPages}...`);
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                // Basic vertical sorting to group items on same line
+                const items = textContent.items.map((item: any) => ({
+                    str: item.str,
+                    y: Math.round(item.transform[5]), // Y coordinate
+                    x: Math.round(item.transform[4])  // X coordinate
+                }));
+                
+                // Group by line (Y coord)
+                const lines: Record<number, string[]> = {};
+                items.forEach((item: any) => {
+                    if (!lines[item.y]) lines[item.y] = [];
+                    lines[item.y].push(item.str);
+                });
+                
+                // Sort lines top-down and join text
+                Object.keys(lines).sort((a,b) => Number(b) - Number(a)).forEach(y => {
+                    extractedLines.push(lines[Number(y)].join(' '));
+                });
+            }
+
+            // Heuristic Parsing: Look for Price Patterns (R xxx)
+            newImportedItems = extractedLines.map(line => {
+                // Regex for finding "R" followed by numbers at end of string or separated
+                const priceMatch = line.match(/(R\s?[\d,.]+)/gi);
+                if (priceMatch) {
+                    const normalPrice = priceMatch[0].replace(/\s/g, ''); // cleanup
+                    const promoPrice = priceMatch.length > 1 ? priceMatch[1].replace(/\s/g, '') : '';
+                    
+                    // Remove prices from string to get Description/SKU
+                    let rest = line;
+                    priceMatch.forEach(p => rest = rest.replace(p, ''));
+                    
+                    // Simple heuristic: First word might be SKU if it contains numbers, else it's part of desc
+                    const parts = rest.trim().split(' ');
+                    let sku = '';
+                    let description = rest.trim();
+                    
+                    if (parts.length > 1 && /\d/.test(parts[0]) && parts[0].length < 15) {
+                        sku = parts[0];
+                        description = parts.slice(1).join(' ');
+                    }
+
+                    if (description.length > 3) {
+                        return {
+                            id: generateId('pdf'),
+                            sku: sku.toUpperCase(),
+                            description: description.toUpperCase().replace(/_+/g, '').trim(),
+                            normalPrice: `R ${parseFloat(normalPrice.replace(/[^\d.]/g,'')).toLocaleString()}`,
+                            promoPrice: promoPrice ? `R ${parseFloat(promoPrice.replace(/[^\d.]/g,'')).toLocaleString()}` : '',
+                            imageUrl: ''
+                        };
+                    }
+                }
+                return null;
+            }).filter(Boolean) as PricelistItem[];
+
+        } else {
+            // EXCEL/CSV IMPORT LOGIC (Existing)
+            setImportStatus('Parsing Spreadsheet...');
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+            if (jsonData.length === 0) throw new Error("Empty file");
+            
+            const validRows = jsonData.filter(row => row && row.length > 0 && row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''));
+            const firstRow = validRows[0].map(c => String(c || '').toLowerCase().trim());
+            
+            const findIdx = (keywords: string[]) => firstRow.findIndex(h => keywords.some(k => h.includes(k)));
+            const skuIdx = findIdx(['sku', 'code', 'part', 'model']);
+            const descIdx = findIdx(['desc', 'name', 'product', 'item', 'title']);
+            const normalIdx = findIdx(['normal', 'retail', 'price', 'standard', 'cost']);
+            const promoIdx = findIdx(['promo', 'special', 'sale', 'discount', 'deal']);
+            
+            const hasHeader = skuIdx !== -1 || descIdx !== -1 || normalIdx !== -1;
+            const dataRows = hasHeader ? validRows.slice(1) : validRows;
+            
+            // Fallbacks if no header
+            const sIdx = skuIdx !== -1 ? skuIdx : 0;
+            const dIdx = descIdx !== -1 ? descIdx : 1;
+            const nIdx = normalIdx !== -1 ? normalIdx : 2;
+            const pIdx = promoIdx !== -1 ? promoIdx : 3;
+
+            newImportedItems = dataRows.map(row => {
+                const formatImported = (val: string) => {
+                    if (!val) return '';
+                    const numeric = String(val).replace(/[^0-9.]/g, '');
+                    if (!numeric) return String(val);
+                    let n = parseFloat(numeric);
+                    if (n % 1 !== 0) n = Math.ceil(n);
+                    if (Math.floor(n) % 10 === 9) n += 1;
+                    return `R ${n.toLocaleString()}`;
+                };
+                return {
+                    id: generateId('imp'),
+                    sku: String(row[sIdx] || '').trim().toUpperCase(),
+                    description: String(row[dIdx] || '').trim().toUpperCase(),
+                    normalPrice: formatImported(row[nIdx]),
+                    promoPrice: row[pIdx] ? formatImported(row[pIdx]) : '',
+                    imageUrl: ''
+                };
+            });
+        }
+
         if (newImportedItems.length > 0) {
-            const userChoice = confirm(`Parsed ${newImportedItems.length} items.\n\nOK -> UPDATE existing SKUs and ADD new ones (Merge).\nCANCEL -> REPLACE entire current list.`);
+            const userChoice = confirm(`Found ${newImportedItems.length} items.\n\nOK -> MERGE (Keep existing, update duplicates, add new)\nCANCEL -> REPLACE (Clear current list and insert new)`);
             if (userChoice) {
                 const merged = [...items];
                 const onlyNew: PricelistItem[] = [];
@@ -618,10 +543,21 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
                     } else { onlyNew.push(newItem); }
                 });
                 setItems([...merged, ...onlyNew]);
-                alert(`Merge Complete: Updated existing SKUs and added ${onlyNew.length} new items.`);
-            } else { setItems(newImportedItems); alert("Pricelist replaced with imported data."); }
-        } else { alert("Could not extract any valid items. Ensure the sheet follows the format: SKU, Description, Normal Price, Promo Price."); }
-    } catch (err) { console.error("Spreadsheet Import Error:", err); alert("Error parsing file. Ensure it is a valid .xlsx or .csv file."); } finally { setIsImporting(false); e.target.value = ''; }
+            } else { 
+                setItems(newImportedItems); 
+            }
+        } else { 
+            alert("Could not extract any valid items."); 
+        }
+
+    } catch (err) { 
+        console.error("Import Error:", err); 
+        alert("Error parsing file. Ensure it is a valid format."); 
+    } finally { 
+        setIsImporting(false); 
+        setImportStatus('');
+        e.target.value = ''; 
+    }
   };
 
   return (
@@ -641,9 +577,9 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             <p className="text-xs text-slate-500 font-bold uppercase ml-8">{pricelist.month} {pricelist.year}</p>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
-            <label className="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg cursor-pointer">
-              {isImporting ? <Loader2 size={16} className="animate-spin" /> : <FileInput size={16} />} Import Excel/CSV
-              <input type="file" className="hidden" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={handleSpreadsheetImport} disabled={isImporting} />
+            <label className={`bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg cursor-pointer ${isImporting ? 'opacity-50 cursor-wait' : ''}`}>
+              {isImporting ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />} {isImporting ? importStatus || 'Importing...' : 'Import PDF/Excel'}
+              <input type="file" className="hidden" accept=".csv,.tsv,.txt,.xlsx,.xls,.pdf" onChange={handleSpreadsheetImport} disabled={isImporting} />
             </label>
             <button onClick={addItem} className="bg-green-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-green-700 transition-colors shadow-lg shadow-green-900/10"><Plus size={16} /> Add Row</button>
             <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 ml-2"><X size={24}/></button>

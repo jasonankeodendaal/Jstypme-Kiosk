@@ -218,7 +218,16 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
   useEffect(() => {
     if (!currentItem) return;
-    const imageEffects = ['effect-smooth-zoom', 'effect-subtle-drift', 'effect-soft-scale', 'effect-gentle-pan'];
+    const imageEffects = [
+        'effect-smooth-zoom', 
+        'effect-subtle-drift', 
+        'effect-soft-scale', 
+        'effect-gentle-pan',
+        'effect-cinematic-pan',
+        'effect-drama-zoom',
+        'effect-breathing',
+        'effect-focus-pull'
+    ];
     const videoEffects = ['effect-fade-in']; 
     if (currentItem.type === 'image') {
         setAnimationEffect(imageEffects[Math.floor(Math.random() * imageEffects.length)]);
@@ -321,17 +330,12 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       </div>
 
       <style>{`
-        .effect-smooth-zoom, .effect-subtle-drift, .effect-soft-scale, .effect-gentle-pan, .effect-fade-in {
-            will-change: transform, opacity;
-            transform: translate3d(0,0,0);
-            backface-visibility: hidden;
-            perspective: 1000px;
-        }
-
+        /* --- Animation Library --- */
+        
         .effect-smooth-zoom { animation: smoothZoom 15s ease-out forwards; }
         @keyframes smoothZoom { 
-            0% { transform: scale(1.0) translate3d(0,0,0); opacity: 0.8; } 
-            100% { transform: scale(1.1) translate3d(0,0,0); opacity: 1; } 
+            0% { transform: scale(1.0); opacity: 0.8; } 
+            100% { transform: scale(1.15); opacity: 1; } 
         }
         
         .effect-subtle-drift { animation: subtleDrift 20s linear forwards; }
@@ -342,9 +346,9 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         
         .effect-soft-scale { animation: softScale 10s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         @keyframes softScale {
-            0% { transform: scale(1.15) translate3d(0,0,0); opacity: 0; }
+            0% { transform: scale(1.15); opacity: 0; }
             20% { opacity: 1; }
-            100% { transform: scale(1.0) translate3d(0,0,0); }
+            100% { transform: scale(1.0); }
         }
         
         .effect-gentle-pan { animation: gentlePan 12s ease-in-out forwards; }
@@ -352,9 +356,51 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             0% { transform: translate3d(-30px, 0, 0) scale(1.1); }
             100% { transform: translate3d(30px, 0, 0) scale(1.1); }
         }
+
+        /* NEW ANIMATIONS */
+        
+        /* 1. Cinematic Pan: Slow horizontal traverse */
+        .effect-cinematic-pan { animation: cinPan 18s ease-in-out alternate infinite; }
+        @keyframes cinPan {
+            0% { transform: scale(1.2) translate3d(-5%, 0, 0); }
+            100% { transform: scale(1.2) translate3d(5%, 0, 0); }
+        }
+
+        /* 2. Drama Zoom: Start zoomed in, slowly pull back to fit */
+        .effect-drama-zoom { animation: dramaZoom 15s ease-out forwards; }
+        @keyframes dramaZoom {
+            0% { transform: scale(1.3); opacity: 0; }
+            15% { opacity: 1; }
+            100% { transform: scale(1.0); }
+        }
+
+        /* 3. Breathing: Subtle scale up and down */
+        .effect-breathing { animation: breathe 12s ease-in-out infinite; }
+        @keyframes breathe {
+            0% { transform: scale(1.05); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1.05); }
+        }
+
+        /* 4. Focus Pull: Start blurry and zoomed, snap to clear */
+        .effect-focus-pull { animation: focusPull 10s ease-out forwards; }
+        @keyframes focusPull {
+            0% { transform: scale(1.1); filter: blur(5px); opacity: 0; }
+            20% { transform: scale(1.05); filter: blur(0px); opacity: 1; }
+            100% { transform: scale(1.0); }
+        }
         
         .effect-fade-in { animation: fadeInVideo 1.2s ease-out forwards; }
         @keyframes fadeInVideo { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Shared Properties */
+        .effect-smooth-zoom, .effect-subtle-drift, .effect-soft-scale, .effect-gentle-pan, 
+        .effect-cinematic-pan, .effect-drama-zoom, .effect-breathing, .effect-focus-pull,
+        .effect-fade-in {
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
 
         img, video {
             image-rendering: -webkit-optimize-contrast;
