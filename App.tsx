@@ -37,12 +37,13 @@ const SyncStatusPopup = () => {
                     )}
                     <div 
                         className={`absolute inset-0 border-2 ${status === 'error' ? 'border-red-500' : 'border-blue-500'} rounded-full transition-all duration-300`}
+                        // Fix: Cast style to any to avoid type errors with non-standard SVG-like properties on a div
                         style={{ 
                             clipPath: `inset(0 0 0 0)`,
                             borderDasharray: '63', // ~2 * PI * r
                             borderDashoffset: `${63 - (63 * progress / 100)}`,
                             transform: 'rotate(-90deg)'
-                        }}
+                        } as any}
                     ></div>
                     
                     {status === 'syncing' ? (

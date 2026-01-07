@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { KioskRegistry } from '../types';
 
@@ -33,9 +32,6 @@ export const initSupabase = () => {
   if (supabase) return true;
   if (SUPABASE_URL && SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.length > 10) {
     try {
-      // FIX: Explicitly pass the bound fetch polyfill to the Supabase client.
-      // Chrome 37's native fetch (if any) or missing fetch causes connection failures.
-      // Binding to window ensures we use the whatwg-fetch polyfill injected in index.html.
       supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: {
           fetch: window.fetch.bind(window)
@@ -256,5 +252,21 @@ export const uploadFileToStorage = async (file: File): Promise<string> => {
     } catch (e: any) {
         console.error("Storage error", e);
         throw e;
+    }
+};
+
+export const purgeStorageFiles = async (urls: string[]): Promise<void> => {
+    if (!supabase || urls.length === 0) return;
+    try {
+        const paths = urls
+            .filter(u => u.includes('kiosk-media'))
+            .map(u => u.split('/').pop())
+            .filter((p): p is string => !!p);
+        
+        if (paths.length > 0) {
+            await supabase.storage.from('kiosk-media').remove(paths);
+        }
+    } catch (e) {
+        console.warn("Purge failed, files might persist in cloud.", e);
     }
 };
