@@ -168,11 +168,28 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
       setActivePlaylist([]);
   };
 
+  // Preload next video in playlist to reduce buffering gap
+  const nextVideoUrl = activePlaylist.length > 0 
+      ? activePlaylist[(currentVideoIndex + 1) % activePlaylist.length] 
+      : null;
+
   // 1. Fullscreen Video Player UI
   if (isPlaying && activePlaylist.length > 0) {
       const currentUrl = activePlaylist[currentVideoIndex];
       return (
           <div className="fixed inset-0 bg-black z-[200] flex flex-col items-center justify-center overflow-hidden group cursor-none">
+              
+              {/* Hidden Preloader: Ensures next video is in browser cache */}
+              {nextVideoUrl && nextVideoUrl !== currentUrl && (
+                  <video 
+                      className="absolute w-0 h-0 opacity-0 pointer-events-none"
+                      src={nextVideoUrl} 
+                      preload="auto" 
+                      muted 
+                      playsInline 
+                  />
+              )}
+
               <video 
                   key={`${currentUrl}-${currentVideoIndex}`} 
                   ref={videoRef}

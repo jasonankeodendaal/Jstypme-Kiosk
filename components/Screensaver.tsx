@@ -211,6 +211,10 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   };
 
   const currentItem = playlist[currentIndex];
+  
+  // Predictive Loading: Get the next item to preload
+  const nextItemIndex = playlist.length > 0 ? (currentIndex + 1) % playlist.length : 0;
+  const nextItem = playlist.length > 0 ? playlist[nextItemIndex] : null;
 
   useEffect(() => {
     if (!currentItem) return;
@@ -293,6 +297,29 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       onClick={onWake}
       className="fixed inset-0 z-[100] bg-black cursor-pointer flex items-center justify-center overflow-hidden"
     >
+      {/* Hidden Preloader for Next Item to prevent buffering gaps */}
+      <div className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden">
+        {nextItem && (
+            nextItem.type === 'video' ? (
+                <video 
+                    key={`preload-${nextItem.url}`}
+                    src={nextItem.url} 
+                    preload="auto" 
+                    muted 
+                    playsInline 
+                />
+            ) : (
+                <img 
+                    key={`preload-${nextItem.url}`}
+                    src={nextItem.url} 
+                    loading="eager" 
+                    decoding="async" 
+                    alt="preload"
+                />
+            )
+        )}
+      </div>
+
       <style>{`
         .effect-smooth-zoom, .effect-subtle-drift, .effect-soft-scale, .effect-gentle-pan, .effect-fade-in {
             will-change: transform, opacity;

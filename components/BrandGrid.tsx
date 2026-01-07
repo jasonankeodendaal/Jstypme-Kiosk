@@ -28,6 +28,10 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
     }, [items?.length]);
 
     const activeItem = items && items.length > 0 ? items[currentIndex % items.length] : null;
+    
+    // Preload Logic: Determine the next item in the cycle
+    const nextIndex = items && items.length > 0 ? (currentIndex + 1) % items.length : 0;
+    const nextItem = items && items.length > 0 ? items[nextIndex] : null;
 
     useEffect(() => {
         if (!activeItem) return;
@@ -110,6 +114,17 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                     ))}
                 </div>
             )}
+
+            {/* Hidden Preloader to prevent buffering/flash when cycling ads */}
+            <div className="absolute w-0 h-0 opacity-0 overflow-hidden pointer-events-none">
+                {nextItem && (
+                    nextItem.type === 'video' ? (
+                        <video src={nextItem.url} preload="auto" muted playsInline />
+                    ) : (
+                        <img src={nextItem.url} loading="eager" decoding="async" />
+                    )
+                )}
+            </div>
         </div>
     );
 };
