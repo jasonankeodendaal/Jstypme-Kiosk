@@ -72,7 +72,10 @@ const DEFAULT_DATA: StoreData = {
     showProductImages: true,
     showProductVideos: true,
     showPamphlets: true,
-    showCustomAds: true
+    showCustomAds: true,
+    displayStyle: 'contain',
+    visualEffect: 'ken-burns', // Default premium effect
+    enableSleepMode: false
   },
   catalogues: [],
   pricelists: [],
@@ -99,6 +102,9 @@ const migrateData = (data: any): StoreData => {
     if (!data.hero) data.hero = { ...DEFAULT_DATA.hero };
     if (!data.ads) data.ads = { ...DEFAULT_DATA.ads };
     if (!data.screensaverSettings) data.screensaverSettings = { ...DEFAULT_DATA.screensaverSettings };
+    // Migration: Set default visual effect if missing
+    if (!data.screensaverSettings.visualEffect) data.screensaverSettings.visualEffect = 'ken-burns';
+    
     if (!data.about) data.about = { ...DEFAULT_DATA.about };
     if (!data.admins || !Array.isArray(data.admins) || data.admins.length === 0) data.admins = [DEFAULT_ADMIN];
     if (!data.appConfig) data.appConfig = { ...DEFAULT_DATA.appConfig };

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef, useMemo, memo } from 'react';
 import { Brand, Catalogue, HeroConfig, AdConfig, AdItem } from '../types';
-import { BookOpen, Globe, ChevronRight, X, Grid } from 'lucide-react';
+import { BookOpen, Globe, ChevronRight, X, Grid, Loader2 } from 'lucide-react';
 
 interface BrandGridProps {
   brands: Brand[];
@@ -17,19 +17,21 @@ interface BrandGridProps {
   deviceType?: string;
 }
 
-// Improved AdUnit with robust playback logic for Firefox
+// Improved AdUnit with Loading State to prevent White Flash
 const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [isLoaded, setIsLoaded] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const timeoutRef = useRef<number | null>(null);
 
     useEffect(() => {
         setCurrentIndex(0);
+        setIsLoaded(false); // Reset load state on list change
     }, [items?.length]);
 
     const activeItem = items && items.length > 0 ? items[currentIndex % items.length] : null;
     
-    // Preload Logic: Determine the next item in the cycle
+    // Preload Logic
     const nextIndex = items && items.length > 0 ? (currentIndex + 1) % items.length : 0;
     const nextItem = items && items.length > 0 ? items[nextIndex] : null;
 
@@ -42,15 +44,18 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
         if (activeItem.type === 'image') {
             timeoutRef.current = window.setTimeout(() => {
                 setCurrentIndex(prev => (prev + 1) % items!.length);
-            }, 6000);
+                setIsLoaded(false); // Reset for next item fade-in
+            }, 8000);
         } else {
             if(videoRef.current) {
                 videoRef.current.muted = true;
                 videoRef.current.play().catch(() => {});
             }
+            // Fallback timeout for video
             timeoutRef.current = window.setTimeout(() => {
                 setCurrentIndex(prev => (prev + 1) % items!.length);
-            }, 180000);
+                setIsLoaded(false);
+            }, 60000);
         }
 
         return () => {
@@ -59,23 +64,21 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
     }, [currentIndex, activeItem, items]);
 
     if (!items || items.length === 0) return (
-       <div className={`relative overflow-hidden rounded-xl border border-slate-200/50 bg-slate-50/50 ${className}`}></div>
+       <div className={`relative overflow-hidden rounded-xl border border-slate-200/50 bg-slate-100 ${className}`}></div>
     );
 
-    const handleVideoEnded = () => {
-        if (items.length > 1) {
-            setCurrentIndex(prev => (prev + 1) % items.length);
-        } else if (videoRef.current) {
-            videoRef.current.currentTime = 0;
-            videoRef.current.play().catch(e => {});
-        }
-    };
-
     return (
-        <div className={`relative overflow-hidden rounded-xl shadow-sm border border-slate-200 bg-white group ${className}`}>
-            <div className="absolute top-2 right-2 z-10 bg-black/30 text-white px-1 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest">Ad</div>
+        <div className={`relative overflow-hidden rounded-xl shadow-sm border border-slate-200 bg-slate-100 group ${className}`}>
+            <div className="absolute top-2 right-2 z-10 bg-black/40 text-white px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest backdrop-blur-sm">Ad</div>
             
-            <div key={`${activeItem!.id}-${currentIndex}`} className="w-full h-full animate-fade-in bg-slate-50">
+            {/* Loading Placeholder */}
+            {!isLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-100 z-0">
+                    <div className="w-8 h-8 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin"></div>
+                </div>
+            )}
+
+            <div key={`${activeItem!.id}-${currentIndex}`} className={`w-full h-full bg-slate-100 transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
                 {activeItem!.type === 'video' ? (
                     <video 
                         ref={videoRef}
@@ -85,37 +88,42 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                         autoPlay={true} 
                         playsInline={true}
                         loop={items.length === 1}
+                        preload="auto"
                         className="w-full h-full object-cover"
-                        onEnded={handleVideoEnded}
-                        onLoadedMetadata={() => {
-                            if (videoRef.current) {
-                                videoRef.current.muted = true;
-                                videoRef.current.play().catch(() => {});
+                        onEnded={() => {
+                            if (items.length > 1) {
+                                setCurrentIndex(prev => (prev + 1) % items.length);
+                                setIsLoaded(false);
+                            } else {
+                                videoRef.current?.play();
                             }
                         }}
+                        onCanPlay={() => setIsLoaded(true)}
+                        onLoadedData={() => setIsLoaded(true)}
                     />
                 ) : (
                     <img 
                         src={activeItem!.url} 
                         alt="Advertisement" 
-                        loading="lazy"
+                        loading="eager"
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                        onLoad={() => setIsLoaded(true)}
                     />
                 )}
             </div>
 
             {items.length > 1 && (
-                <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-10">
+                <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
                     {items.map((_, idx) => (
                         <div 
                             key={idx} 
-                            className={`w-1.5 h-1.5 rounded-full transition-colors ${idx === (currentIndex % items.length) ? 'bg-white' : 'bg-white/50'}`}
+                            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${idx === (currentIndex % items.length) ? 'bg-white scale-125 shadow-sm' : 'bg-white/40'}`}
                         ></div>
                     ))}
                 </div>
             )}
 
-            {/* Hidden Preloader to prevent buffering/flash when cycling ads */}
+            {/* Hidden Preloader */}
             <div className="absolute w-0 h-0 opacity-0 overflow-hidden pointer-events-none">
                 {nextItem && (
                     nextItem.type === 'video' ? (
