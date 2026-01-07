@@ -24,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus, ToggleLeft, ToggleRight, Globe, Activity } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus, ToggleLeft, ToggleRight, Globe, Activity, ChevronLeft, ArrowRight } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 // Extend window interface for custom watchdog properties
@@ -199,7 +199,7 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 
 // --- HIGH PERFORMANCE ROW COMPONENT ---
 const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: PricelistItem, hasImages: boolean, onEnlarge: (url: string) => void }) => (
-    <tr className="excel-row border-b border-slate-100 transition-colors group">
+    <tr className="excel-row border-b border-slate-100 transition-colors group hover:bg-slate-50">
         {hasImages && (
             <td className="p-1 border-r border-slate-100 text-center shrink-cell">
                 <div 
@@ -234,6 +234,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [includePhotosInPdf, setIncludePhotosInPdf] = useState(true);
   
+  // Pagination State
+  const ITEMS_PER_PAGE = 50;
+  const [currentPage, setCurrentPage] = useState(1);
+  
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
@@ -243,6 +247,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const hasImages = useMemo(() => {
     return pricelist.items?.some(item => item.imageUrl && item.imageUrl.trim() !== '') || false;
   }, [pricelist.items]);
+
+  const items = pricelist.items || [];
+  const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+  
+  const displayedItems = useMemo(() => {
+      const start = (currentPage - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE;
+      return items.slice(start, end);
+  }, [items, currentPage]);
 
   const onDragMove = useCallback((clientX: number, clientY: number) => {
     if (!isDragging || !scrollContainerRef.current) return;
@@ -381,12 +394,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         let currentY = drawHeader();
         currentY = drawTableHeaders(currentY);
         
-        const items = pricelist.items || [];
+        // Export ALL items, ignoring pagination
+        const itemsToExport = pricelist.items || [];
         const baseRowHeight = effectiveShowImages ? 9 : 6; 
         const footerMargin = 12;
 
-        for (let index = 0; index < items.length; index++) {
-            const item = items[index];
+        for (let index = 0; index < itemsToExport.length; index++) {
+            const item = itemsToExport[index];
             doc.setFontSize(6.5);
             const skuLines = doc.splitTextToSize(item.sku || '', skuMaxW).length;
             doc.setFontSize(7.5);
@@ -433,8 +447,6 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const handleZoomIn = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.min(prev + 0.25, 2.5)); };
   const handleZoomOut = (e: React.MouseEvent) => { e.stopPropagation(); setZoom(prev => Math.max(prev - 0.25, 1)); };
-
-  const items = pricelist.items || [];
 
   return (
     <div className="fixed inset-0 z-[110] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-8 animate-fade-in print:bg-white print:p-0 print:block overflow-hidden print:overflow-visible" onClick={onClose}>
@@ -514,16 +526,40 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => (
+                    {displayedItems.map((item) => (
                         <PricelistRow key={item.id} item={item} hasImages={hasImages} onEnlarge={url => setEnlargedImage(url)} />
                     ))}
+                    {/* Add blank rows to maintain height if needed, or leave dynamic */}
                   </tbody>
               </table>
             </div>
           </div>
         </div>
+        
+        {/* FOOTER CONTROLS - PAGINATION ADDED */}
         <div className="p-3 md:p-4 bg-white border-t border-slate-100 flex justify-between items-center shrink-0 print:hidden z-10">
-          <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">ITEMS: {items.length}</span>
+          <div className="flex items-center gap-4">
+              <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline">TOTAL ITEMS: {items.length}</span>
+              {totalPages > 1 && (
+                  <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+                      <button 
+                        onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); scrollContainerRef.current?.scrollTo(0,0); }} 
+                        disabled={currentPage === 1}
+                        className="p-1.5 rounded-md hover:bg-white disabled:opacity-30 transition-all text-slate-600"
+                      >
+                          <ChevronLeft size={16} />
+                      </button>
+                      <span className="text-[10px] font-black text-slate-700 uppercase min-w-[60px] text-center">Page {currentPage} of {totalPages}</span>
+                      <button 
+                        onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); scrollContainerRef.current?.scrollTo(0,0); }} 
+                        disabled={currentPage === totalPages}
+                        className="p-1.5 rounded-md hover:bg-white disabled:opacity-30 transition-all text-slate-600"
+                      >
+                          <ChevronRight size={16} />
+                      </button>
+                  </div>
+              )}
+          </div>
           <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">OFFICIAL KIOSK PRO DOCUMENT</p>
         </div>
       </div>

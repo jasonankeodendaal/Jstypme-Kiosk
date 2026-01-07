@@ -199,6 +199,21 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                         The Kiosk Pro architecture utilizes a **Snapshot-First** methodology. Devices pull a massive JSONB blob into local IndexedDB memory, allowing UI responsiveness that isn't tethered to network latency. The Cloud exists to synchronize these snapshots across the fleet.
                     </WhyBox>
 
+                    <div className="flex flex-col md:flex-row items-center gap-8 mb-12 bg-slate-50 p-8 rounded-[3rem] border border-slate-200">
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="bg-green-500 p-4 rounded-2xl shadow-xl shadow-green-500/20 text-white"><Database size={32}/></div>
+                            <span className="text-[10px] font-black uppercase text-slate-500 mt-2">PostgreSQL</span>
+                        </div>
+                        <div className="flex-1 h-1 w-full md:w-auto bg-slate-200 rounded-full relative overflow-hidden">
+                            <div className="absolute inset-0 bg-blue-500/20 animate-pulse"></div>
+                            <div className="absolute top-0 bottom-0 left-0 w-1/3 bg-blue-500 animate-[scanline_2s_infinite_linear]"></div>
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="bg-white border-2 border-slate-200 p-4 rounded-2xl shadow-sm text-slate-400"><Tablet size={32}/></div>
+                            <span className="text-[10px] font-black uppercase text-slate-500 mt-2">Kiosk Client</span>
+                        </div>
+                    </div>
+
                     <Step number="1" title="Production SQL Provisioning">
                         <p className="font-medium text-slate-700 leading-relaxed">Execute this bootstrap protocol in your Supabase SQL Editor. This script creates the tables, storage buckets, and permissive RLS policies required for retail kiosks.</p>
                         <CodeBlock 
