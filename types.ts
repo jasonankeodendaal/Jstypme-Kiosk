@@ -1,4 +1,3 @@
-
 export interface DimensionSet {
   label?: string; // e.g. "Device", "Stand", "Box 1"
   width: string;
@@ -144,9 +143,8 @@ export interface ScreensaverSettings {
   showProductVideos: boolean;
   showPamphlets: boolean;
   showCustomAds: boolean;
-  // Enhanced Controls
-  displayStyle?: 'contain' | 'cover'; // Legacy, kept for fallback
-  visualEffect?: 'contain' | 'cover' | 'ken-burns' | 'cinematic' | 'float' | 'pulse'; // New specific modes
+  // New Enhanced Controls
+  displayStyle?: 'contain' | 'cover';
   showInfoOverlay?: boolean;
   activeHoursStart?: string; // e.g. "08:00"
   activeHoursEnd?: string;   // e.g. "20:00"
