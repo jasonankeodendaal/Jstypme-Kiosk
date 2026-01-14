@@ -328,19 +328,40 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         // Auto-detect columns for PDF
         const effectiveShowImages = hasImages && includePhotosInPdf;
         
-        // Dynamic Column Width Calculation
+        // --- NEW WIDTH CALCULATION ---
         const mediaW = effectiveShowImages ? 14 : 0;
-        const normalW = hasNormalPrice ? 22 : 0;
-        const promoW = hasPromoPrice ? 22 : 0;
-        const skuW = hasSku ? (effectiveShowImages ? 20 : 25) : 0;
-        const fixedW = mediaW + skuW + normalW + promoW;
+        const normalW = hasNormalPrice ? 24 : 0; // Fixed width for Normal Price
         
-        // Distribute remaining width to description
-        const descW = hasDescription ? Math.max(10, innerWidth - fixedW) : 0;
-
-        // Calculate X Positions
+        let remainingW = innerWidth - mediaW - normalW;
+        
+        let skuW = 0;
+        let descW = 0;
+        let promoW = 0;
+        
+        if (hasDescription) {
+            skuW = hasSku ? 24 : 0;
+            promoW = hasPromoPrice ? 24 : 0;
+            descW = remainingW - skuW - promoW;
+        } else {
+            // No Description - Expand Promo or SKU
+            if (hasSku) {
+                if (hasPromoPrice) {
+                    skuW = 35; // Fixed wider SKU if no desc
+                    promoW = remainingW - skuW; // Promo takes remaining
+                } else {
+                    skuW = remainingW;
+                }
+            } else {
+                if (hasPromoPrice) {
+                    promoW = remainingW;
+                }
+            }
+        }
+        
+        // Coordinates
         let currentX = margin;
-        const mediaX = currentX + 1; 
+        
+        const mediaX = currentX + 1;
         if (effectiveShowImages) currentX += mediaW;
         
         const skuX = currentX + 1.5;
@@ -349,16 +370,17 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const descX = currentX + 1.5;
         if (hasDescription) currentX += descW;
         
-        const normalPriceX = currentX + normalW - 1.5; // Right aligned anchor
+        const normalPriceX = currentX + normalW - 1.5;
         if (hasNormalPrice) currentX += normalW;
         
-        const promoPriceX = currentX + promoW - 1.5; // Right aligned anchor
+        const promoPriceX = currentX + promoW - 1.5;
         if (hasPromoPrice) currentX += promoW;
         
-        const rightEdge = currentX;
+        const rightEdge = margin + innerWidth;
 
-        const skuMaxW = skuW - 3;
-        const descMaxW = descW - 3;
+        const skuMaxW = skuW > 3 ? skuW - 3 : 0;
+        const descMaxW = descW > 3 ? descW - 3 : 0;
+        // ------------------------------
 
         const [brandAsset, companyAsset] = await Promise.all([
             brandLogo ? loadImageForPDF(brandLogo) : Promise.resolve(null),
@@ -478,13 +500,13 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.setFont('helvetica', 'bold');
             if (hasDescription) drawTextFit(item.description?.toUpperCase() || '', descX, currentY, descMaxW, 7.5);
             
-            doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0); // Enforce Black Text
             if (hasNormalPrice) drawTextFit(item.normalPrice || '', normalPriceX, currentY, normalW - 3, 7.5, 'right');
             
             if (hasPromoPrice) {
                 if (item.promoPrice) {
-                    doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
-                    drawTextFit(item.promoPrice, promoPriceX, currentY, promoW - 3, 8.0, 'right');
+                    doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold'); // Enforce Black & Bold
+                    drawTextFit(item.promoPrice, promoPriceX, currentY, promoW > 0 ? promoW - 3 : 10, 8.0, 'right');
                 }
             }
 
