@@ -120,6 +120,15 @@ export interface Pricelist {
   month: string;
   year: string;
   dateAdded?: string; // New: For "New" flag logic
+  kind?: 'standard' | 'promotion'; // Distinguish standard vs promotion lists
+  startDate?: string; // Optional scheduling start
+  endDate?: string;   // Optional scheduling end
+  headers?: {         // Custom table headers
+    sku?: string;
+    description?: string;
+    normalPrice?: string;
+    promoPrice?: string;
+  };
 }
 
 export interface AdItem {

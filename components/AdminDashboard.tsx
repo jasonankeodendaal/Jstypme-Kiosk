@@ -529,6 +529,13 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
   const [items, setItems] = useState<PricelistItem[]>(pricelist.items || []);
   const [title, setTitle] = useState(pricelist.title || ''); 
   const [isImporting, setIsImporting] = useState(false);
+  const [headers, setHeaders] = useState(pricelist.headers || {
+      sku: 'SKU',
+      description: 'Description',
+      normalPrice: 'Normal Price',
+      promoPrice: 'Promo Price'
+  });
+  const [showHeaderConfig, setShowHeaderConfig] = useState(false);
   
   const addItem = () => {
     setItems([...items, { id: generateId('item'), sku: '', description: '', normalPrice: '', promoPrice: '', imageUrl: '' }]);
@@ -638,7 +645,10 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
                     placeholder="ENTER LIST TITLE..."
                 />
             </div>
-            <p className="text-xs text-slate-500 font-bold uppercase ml-8">{pricelist.month} {pricelist.year}</p>
+            <div className="flex items-center gap-4">
+                <p className="text-xs text-slate-500 font-bold uppercase ml-8">{pricelist.month} {pricelist.year}</p>
+                <button onClick={() => setShowHeaderConfig(!showHeaderConfig)} className="text-[10px] font-bold uppercase text-blue-600 flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded"><Settings size={12}/> Table Settings</button>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
             <label className="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg cursor-pointer">
@@ -649,16 +659,38 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
             <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 ml-2"><X size={24}/></button>
           </div>
         </div>
+        
+        {showHeaderConfig && (
+            <div className="bg-slate-100 p-4 border-b border-slate-200 grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
+                <div>
+                    <label className="block text-[8px] font-bold text-slate-500 uppercase mb-1">SKU Header</label>
+                    <input value={headers.sku} onChange={(e) => setHeaders({...headers, sku: e.target.value})} className="w-full text-xs font-bold p-2 rounded border border-slate-300 uppercase" />
+                </div>
+                <div>
+                    <label className="block text-[8px] font-bold text-slate-500 uppercase mb-1">Description Header</label>
+                    <input value={headers.description} onChange={(e) => setHeaders({...headers, description: e.target.value})} className="w-full text-xs font-bold p-2 rounded border border-slate-300 uppercase" />
+                </div>
+                <div>
+                    <label className="block text-[8px] font-bold text-slate-500 uppercase mb-1">Normal Price Header</label>
+                    <input value={headers.normalPrice} onChange={(e) => setHeaders({...headers, normalPrice: e.target.value})} className="w-full text-xs font-bold p-2 rounded border border-slate-300 uppercase" />
+                </div>
+                <div>
+                    <label className="block text-[8px] font-bold text-slate-500 uppercase mb-1">Promo Price Header</label>
+                    <input value={headers.promoPrice} onChange={(e) => setHeaders({...headers, promoPrice: e.target.value})} className="w-full text-xs font-bold p-2 rounded border border-slate-300 uppercase" />
+                </div>
+            </div>
+        )}
+
         <div className="flex-1 overflow-auto p-6">
           <div className="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center gap-3"><Info size={18} className="text-blue-500 shrink-0" /><p className="text-[10px] text-blue-800 font-bold uppercase leading-tight">Price Strategy: Decimals are rounded UP (129.99 → 130). Values ending in 9 are pushed to the next round number (799 → 800). Whole numbers like 122 are kept.</p></div>
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 sticky top-0 z-10">
               <tr>
                 <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 w-16">Visual</th>
-                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">SKU</th>
-                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Description</th>
-                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Normal Price</th>
-                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">Promo Price</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">{headers.sku || 'SKU'}</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">{headers.description || 'Description'}</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">{headers.normalPrice || 'Normal Price'}</th>
+                <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">{headers.promoPrice || 'Promo Price'}</th>
                 <th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 w-10 text-center">Action</th>
               </tr>
             </thead>
@@ -690,7 +722,7 @@ const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pric
         </div>
         <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
           <button onClick={onClose} className="px-6 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button>
-          <button onClick={() => { onSave({ ...pricelist, title, items, type: 'manual', dateAdded: new Date().toISOString() }); onClose(); }} className="px-8 py-3 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"><Save size={16} /> Save Pricelist Table</button>
+          <button onClick={() => { onSave({ ...pricelist, title, items, headers, type: 'manual', dateAdded: new Date().toISOString() }); onClose(); }} className="px-8 py-3 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"><Save size={16} /> Save Pricelist Table</button>
         </div>
       </div>
     </div>
@@ -772,7 +804,8 @@ const PricelistManager = ({
             type: 'pdf',
             month: 'January',
             year: new Date().getFullYear().toString(),
-            dateAdded: new Date().toISOString()
+            dateAdded: new Date().toISOString(),
+            kind: 'standard'
         };
         onSavePricelists([...pricelists, newItem], true);
     };
@@ -836,8 +869,28 @@ const PricelistManager = ({
                          <div key={item.id} className={`rounded-xl border shadow-sm overflow-hidden flex flex-col p-3 md:p-4 gap-2 md:gap-3 h-fit relative group transition-all ${recent ? 'bg-yellow-50 border-yellow-300 ring-1 ring-yellow-200' : 'bg-white border-slate-200'}`}>
                              {recent && <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-[8px] font-black uppercase px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm animate-pulse z-10"><Sparkles size={10} /> Recently Edited</div>}
                              <div><label className="block text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1">Title</label><input value={item.title} onChange={(e) => updatePricelist(item.id, { title: e.target.value, dateAdded: new Date().toISOString() })} className="w-full font-bold text-slate-900 border-b border-slate-100 focus:border-blue-500 outline-none pb-1 text-xs md:text-sm bg-transparent" placeholder="e.g. Retail Price List" /></div>
-                             <div className="grid grid-cols-2 gap-2"><div><label className="block text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1">Month</label><select value={item.month} onChange={(e) => updatePricelist(item.id, { month: e.target.value, dateAdded: new Date().toISOString() })} className="w-full text-[10px] md:text-xs font-bold p-1 bg-white/50 rounded border border-slate-200">{months.map(m => <option key={m} value={m}>{m}</option>)}</select></div><div><label className="block text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1">Year</label><input type="number" value={item.year} onChange={(e) => updatePricelist(item.id, { year: e.target.value, dateAdded: new Date().toISOString() })} className="w-full text-[10px] md:text-xs font-bold p-1 bg-white/50 rounded border border-slate-200" /></div></div>
-                             <div className="bg-white/40 p-2 rounded-lg border border-slate-100"><label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Pricelist Mode</label><div className="grid grid-cols-2 gap-1 bg-white p-1 rounded-md border border-slate-200"><button onClick={() => updatePricelist(item.id, { type: 'pdf', dateAdded: new Date().toISOString() }, true)} className={`py-1 text-[9px] font-black uppercase rounded items-center justify-center gap-1 transition-all ${item.type !== 'manual' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><FileText size={10}/> PDF</button><button onClick={() => updatePricelist(item.id, { type: 'manual', dateAdded: new Date().toISOString() }, true)} className={`py-1 text-[9px] font-black uppercase rounded items-center justify-center gap-1 transition-all ${item.type === 'manual' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={10}/> Manual</button></div></div>
+                             
+                             <div className="flex bg-slate-100 p-1 rounded-lg mb-1">
+                                 <button onClick={() => updatePricelist(item.id, { kind: 'standard' })} className={`flex-1 py-1 text-[9px] font-black uppercase rounded transition-all ${!item.kind || item.kind === 'standard' ? 'bg-white shadow text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}>Standard</button>
+                                 <button onClick={() => updatePricelist(item.id, { kind: 'promotion' })} className={`flex-1 py-1 text-[9px] font-black uppercase rounded transition-all ${item.kind === 'promotion' ? 'bg-purple-600 shadow text-white' : 'text-slate-400 hover:text-slate-600'}`}>Promotion</button>
+                             </div>
+                             
+                             {item.kind === 'promotion' ? (
+                                <div className="grid grid-cols-2 gap-2 p-2 bg-purple-50 rounded-lg border border-purple-100">
+                                    <div>
+                                        <label className="block text-[8px] font-bold text-purple-800 uppercase mb-1">Start</label>
+                                        <input type="date" value={item.startDate || ''} onChange={(e) => updatePricelist(item.id, { startDate: e.target.value, dateAdded: new Date().toISOString() })} className="w-full text-[9px] font-bold p-1 bg-white border border-purple-200 rounded text-purple-900 outline-none focus:border-purple-500" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[8px] font-bold text-purple-800 uppercase mb-1">End</label>
+                                        <input type="date" value={item.endDate || ''} onChange={(e) => updatePricelist(item.id, { endDate: e.target.value, dateAdded: new Date().toISOString() })} className="w-full text-[9px] font-bold p-1 bg-white border border-purple-200 rounded text-purple-900 outline-none focus:border-purple-500" />
+                                    </div>
+                                </div>
+                             ) : (
+                                <div className="grid grid-cols-2 gap-2"><div><label className="block text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1">Month</label><select value={item.month} onChange={(e) => updatePricelist(item.id, { month: e.target.value, dateAdded: new Date().toISOString() })} className="w-full text-[10px] md:text-xs font-bold p-1 bg-white/50 rounded border border-slate-200">{months.map(m => <option key={m} value={m}>{m}</option>)}</select></div><div><label className="block text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1">Year</label><input type="number" value={item.year} onChange={(e) => updatePricelist(item.id, { year: e.target.value, dateAdded: new Date().toISOString() })} className="w-full text-[10px] md:text-xs font-bold p-1 bg-white/50 rounded border border-slate-200" /></div></div>
+                             )}
+
+                             <div className="bg-white/40 p-2 rounded-lg border border-slate-100 mt-2"><label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Pricelist Mode</label><div className="grid grid-cols-2 gap-1 bg-white p-1 rounded-md border border-slate-200"><button onClick={() => updatePricelist(item.id, { type: 'pdf', dateAdded: new Date().toISOString() }, true)} className={`py-1 text-[9px] font-black uppercase rounded items-center justify-center gap-1 transition-all ${item.type !== 'manual' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><FileText size={10}/> PDF</button><button onClick={() => updatePricelist(item.id, { type: 'manual', dateAdded: new Date().toISOString() }, true)} className={`py-1 text-[9px] font-black uppercase rounded items-center justify-center gap-1 transition-all ${item.type === 'manual' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={10}/> Manual</button></div></div>
                              {item.type === 'manual' ? (<div className="mt-1 space-y-2"><button onClick={() => setEditingManualList(item)} className="w-full py-3 bg-blue-50 border border-blue-200 text-blue-600 rounded-lg font-black text-[10px] uppercase flex items-center justify-center gap-2 hover:bg-blue-100 transition-all"><Edit2 size={12}/> {item.items?.length || 0} Items - Open Builder</button><FileUpload label="Thumbnail Image" accept="image/*" currentUrl={item.thumbnailUrl} onUpload={(url: any) => updatePricelist(item.id, { thumbnailUrl: url, dateAdded: new Date().toISOString() }, true)} /></div>) : (<div className="mt-1 md:mt-2 grid grid-cols-2 gap-2"><FileUpload label="Thumbnail" accept="image/*" currentUrl={item.thumbnailUrl} onUpload={(url: any) => updatePricelist(item.id, { thumbnailUrl: url, dateAdded: new Date().toISOString() }, true)} /><FileUpload label="Upload PDF" accept="application/pdf" icon={<FileText />} currentUrl={item.url} onUpload={(url: any) => updatePricelist(item.id, { url: url, dateAdded: new Date().toISOString() }, true)} /></div>)}
                              <button onClick={() => handleDeletePricelist(item.id)} className="mt-auto pt-2 md:pt-3 border-t border-slate-100 text-red-500 hover:text-red-600 text-[10px] font-bold uppercase flex items-center justify-center gap-1"><Trash2 size={12} /> Delete</button>
                          </div>

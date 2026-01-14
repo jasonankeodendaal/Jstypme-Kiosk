@@ -198,7 +198,7 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
 };
 
 // --- HIGH PERFORMANCE ROW COMPONENT ---
-const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: PricelistItem, hasImages: boolean, onEnlarge: (url: string) => void }) => (
+const PricelistRow = React.memo(({ item, hasImages, hasPromoPrices, onEnlarge }: { item: PricelistItem, hasImages: boolean, hasPromoPrices: boolean, onEnlarge: (url: string) => void }) => (
     <tr className="excel-row border-b border-slate-100 transition-colors group hover:bg-slate-50">
         {hasImages && (
             <td className="p-1 border-r border-slate-100 text-center shrink-cell">
@@ -222,8 +222,10 @@ const PricelistRow = React.memo(({ item, hasImages, onEnlarge }: { item: Priceli
         )}
         <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>
         <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors whitespace-normal break-words leading-tight">{item.description}</span></td>
-        <td className="price-cell text-right border-r border-slate-100 whitespace-nowrap"><span className="font-bold text-slate-900">{item.normalPrice || ''}</span></td>
-        <td className="price-cell text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter">{item.promoPrice}</span>) : (<span className="font-bold text-slate-900">{item.normalPrice || ''}</span>)}</td>
+        <td className={`price-cell text-right ${hasPromoPrices ? 'border-r border-slate-100' : ''} whitespace-nowrap`}><span className="font-bold text-slate-900">{item.normalPrice || ''}</span></td>
+        {hasPromoPrices && (
+            <td className="price-cell text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter">{item.promoPrice}</span>) : null}</td>
+        )}
     </tr>
 ));
 
@@ -234,6 +236,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [includePhotosInPdf, setIncludePhotosInPdf] = useState(true);
   
+  // Custom Headers from Pricelist
+  const headers = pricelist.headers || {
+      sku: 'SKU',
+      description: 'Description',
+      normalPrice: 'Normal Price',
+      promoPrice: 'Promo Price'
+  };
+
   // Pagination State
   const ITEMS_PER_PAGE = 50;
   const [currentPage, setCurrentPage] = useState(1);
@@ -246,6 +256,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
 
   const hasImages = useMemo(() => {
     return pricelist.items?.some(item => item.imageUrl && item.imageUrl.trim() !== '') || false;
+  }, [pricelist.items]);
+
+  const hasPromoPrices = useMemo(() => {
+    return pricelist.items?.some(item => item.promoPrice && item.promoPrice.trim() !== '') || false;
   }, [pricelist.items]);
 
   const items = pricelist.items || [];
@@ -312,10 +326,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const innerWidth = pageWidth - (margin * 2);
         
         const effectiveShowImages = hasImages && includePhotosInPdf;
+        const effectiveShowPromo = hasPromoPrices;
+
         const mediaW = effectiveShowImages ? 14 : 0;
         const skuW = effectiveShowImages ? 20 : 25; 
         const normalW = 22; 
-        const promoW = 22; 
+        const promoW = effectiveShowPromo ? 22 : 0;
         const descW = innerWidth - mediaW - skuW - normalW - promoW;
 
         const line1 = margin;
@@ -323,7 +339,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const line3 = line2 + skuW;
         const line4 = line3 + descW;
         const line5 = line4 + normalW;
-        const line6 = line1 + innerWidth;
+        const line6 = line5 + promoW; // Right edge
 
         const mediaX = line1 + 1;
         const skuX = line2 + 1.5;
@@ -362,6 +378,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.setTextColor(255, 255, 255); doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
             doc.text(`${pricelist.month} ${pricelist.year}`.toUpperCase(), boxX + (boxW/2), boxY + 4, { align: 'center' });
             
+            // Draw Dates if promotion
+            if (pricelist.kind === 'promotion' && (pricelist.startDate || pricelist.endDate)) {
+                 doc.setTextColor(100); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+                 const dateText = `Valid: ${pricelist.startDate || 'Now'} - ${pricelist.endDate || 'Until Stock Lasts'}`;
+                 doc.text(dateText, margin, topY + 28);
+                 topY += 6; 
+            }
+
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
             doc.line(margin, topY + 26, pageWidth - margin, topY + 26);
             return topY + 32;
@@ -372,10 +396,10 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.rect(margin, startY - 4.5, pageWidth - (margin * 2), 6, 'F');
             doc.setTextColor(255, 255, 255); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
             if (effectiveShowImages) doc.text("MEDIA", mediaX, startY);
-            doc.text("SKU", skuX, startY); 
-            doc.text("DESCRIPTION", descX, startY);
-            doc.text("NORMAL", normalPriceX, startY, { align: 'right' });
-            doc.text("PROMO", promoPriceX, startY, { align: 'right' });
+            doc.text(headers.sku || "SKU", skuX, startY); 
+            doc.text(headers.description || "DESCRIPTION", descX, startY);
+            doc.text(headers.normalPrice || "NORMAL", normalPriceX, startY, { align: 'right' });
+            if (effectiveShowPromo) doc.text(headers.promoPrice || "PROMO", promoPriceX, startY, { align: 'right' });
             return startY + 4;
         };
 
@@ -429,11 +453,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
             drawTextFit(item.normalPrice || '', normalPriceX, currentY, normalW - 3, 7.5, 'right');
             
-            if (item.promoPrice) {
-                doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
-                drawTextFit(item.promoPrice, promoPriceX, currentY, promoW - 3, 8.0, 'right');
-            } else {
-                doc.setTextColor(0, 0, 0); drawTextFit(item.normalPrice || '', promoPriceX, currentY, promoW - 3, 7.5, 'right');
+            if (effectiveShowPromo) {
+                if (item.promoPrice) {
+                    doc.setTextColor(239, 68, 68); doc.setFont('helvetica', 'bold');
+                    drawTextFit(item.promoPrice, promoPriceX, currentY, promoW - 3, 8.0, 'right');
+                }
             }
 
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.04);
@@ -519,15 +543,15 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                   <thead className="print:table-header-group">
                     <tr className="print:bg-[#71717a] bg-[#71717a]">
                         {hasImages && <th className="p-2 md:p-3 shrink-cell text-white">Media</th>}
-                        <th className="p-2 md:p-3 sku-cell text-white">SKU</th>
-                        <th className="p-2 md:p-3 desc-cell text-white">Description</th>
-                        <th className="p-2 md:p-3 price-cell text-right text-white">Normal</th>
-                        <th className="p-2 md:p-3 price-cell text-right text-white">Promo</th>
+                        <th className="p-2 md:p-3 sku-cell text-white">{headers.sku || "SKU"}</th>
+                        <th className="p-2 md:p-3 desc-cell text-white">{headers.description || "Description"}</th>
+                        <th className="p-2 md:p-3 price-cell text-right text-white">{headers.normalPrice || "Normal Price"}</th>
+                        {hasPromoPrices && <th className="p-2 md:p-3 price-cell text-right text-white">{headers.promoPrice || "Promo Price"}</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {displayedItems.map((item) => (
-                        <PricelistRow key={item.id} item={item} hasImages={hasImages} onEnlarge={url => setEnlargedImage(url)} />
+                        <PricelistRow key={item.id} item={item} hasImages={hasImages} hasPromoPrices={hasPromoPrices} onEnlarge={url => setEnlargedImage(url)} />
                     ))}
                     {/* Add blank rows to maintain height if needed, or leave dynamic */}
                   </tbody>
@@ -931,7 +955,17 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
            <div className="fixed inset-0 z-[60] bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-0 md:p-4 animate-fade-in print:hidden" onClick={() => window.history.back()}>
                <div className="relative w-full h-full md:h-auto md:max-w-5xl bg-white md:rounded-2xl shadow-2xl overflow-hidden md:max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0"><h2 className="text-base md:text-xl font-black uppercase text-slate-900 flex items-center gap-2"><RIcon size={24} className="text-green-600" /> Pricelists</h2><button onClick={() => window.history.back()} className="p-2 rounded-full transition-colors hover:bg-slate-200"><X size={24} className="text-slate-500" /></button></div>
-                   <div className="flex-1 overflow-hidden flex flex-col md:flex-row"><div className="shrink-0 w-full md:w-1/3 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 overflow-hidden flex flex-col"><div className="md:hidden"><div className="overflow-x-auto no-scrollbar py-2"><div className="grid grid-rows-2 grid-flow-col gap-2 px-2 min-w-max">{pricelistBrands.map(brand => (<button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`flex items-center gap-2 p-2 rounded-xl border transition-all min-w-[120px] ${selectedBrandForPricelist === brand.id ? 'bg-white border-green-500 shadow-sm ring-1 ring-green-500/20' : 'bg-slate-100 border-transparent hover:bg-white'}`}><div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">{brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-[10px]">{brand.name.charAt(0)}</span>}</div><span className={`font-black text-[9px] uppercase leading-tight truncate flex-1 text-left ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-500'}`}>{brand.name}</span></button>))}</div></div></div><div className="hidden md:flex flex-1 flex-col overflow-y-auto no-scrollbar">{pricelistBrands.map(brand => (<button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-green-500' : 'hover:bg-white'}`}><div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">{brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-sm">{brand.name.charAt(0)}</span>}</div><span className={`font-black text-sm uppercase leading-tight ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-400'}`}>{brand.name}</span></button>))}</div></div><div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 relative">{selectedBrandForPricelist ? (<div className="animate-fade-in"><div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{storeData.pricelists?.filter(p => p.brandId === selectedBrandForPricelist).map(pl => (<button key={pl.id} onClick={() => { navigateDeeper(); if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} className={`group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border-2 flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-white hover:border-green-400'}`}><div className="aspect-[3/4] bg-slate-50 relative p-2 md:p-3 overflow-hidden">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded shadow-sm" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-200">{pl.type === 'manual' ? <List size={32}/> : <FileText size={32} />}</div>}<div className={`absolute top-2 right-2 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm z-10 ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-50'}`}>{pl.type === 'manual' ? 'TABLE' : 'PDF'}</div></div><div className="p-3 flex-1 flex flex-col justify-between bg-white"><h3 className="font-black text-slate-900 text-[10px] md:text-sm uppercase leading-tight line-clamp-2">{pl.title}</h3><div className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-2">{pl.month} {pl.year}</div></div></button>))}</div></div>) : <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4"><RIcon size={64} className="opacity-10" /></div>}</div></div></div></div>
+                   <div className="flex-1 overflow-hidden flex flex-col md:flex-row"><div className="shrink-0 w-full md:w-1/3 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 overflow-hidden flex flex-col"><div className="md:hidden"><div className="overflow-x-auto no-scrollbar py-2"><div className="grid grid-rows-2 grid-flow-col gap-2 px-2 min-w-max">{pricelistBrands.map(brand => (<button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`flex items-center gap-2 p-2 rounded-xl border transition-all min-w-[120px] ${selectedBrandForPricelist === brand.id ? 'bg-white border-green-500 shadow-sm ring-1 ring-green-500/20' : 'bg-slate-100 border-transparent hover:bg-white'}`}><div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">{brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-[10px]">{brand.name.charAt(0)}</span>}</div><span className={`font-black text-[9px] uppercase leading-tight truncate flex-1 text-left ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-500'}`}>{brand.name}</span></button>))}</div></div></div><div className="hidden md:flex flex-1 flex-col overflow-y-auto no-scrollbar">{pricelistBrands.map(brand => (<button key={brand.id} onClick={() => setSelectedBrandForPricelist(brand.id)} className={`w-full text-left p-4 transition-colors flex items-center gap-3 border-b border-slate-100 ${selectedBrandForPricelist === brand.id ? 'bg-white border-l-4 border-green-500' : 'hover:bg-white'}`}><div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">{brand.logoUrl ? <img src={brand.logoUrl} className="w-full h-full object-contain" /> : <span className="font-black text-slate-300 text-sm">{brand.name.charAt(0)}</span>}</div><span className={`font-black text-sm uppercase leading-tight ${selectedBrandForPricelist === brand.id ? 'text-green-600' : 'text-slate-400'}`}>{brand.name}</span></button>))}</div></div><div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-100/50 relative">{selectedBrandForPricelist ? (<div className="animate-fade-in"><div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">{storeData.pricelists?.filter(p => {
+                       if (p.brandId !== selectedBrandForPricelist) return false;
+                       if (p.kind === 'promotion' && p.endDate) {
+                           const end = new Date(p.endDate);
+                           const now = new Date();
+                           // Set end date to end of day for fair comparison
+                           end.setHours(23, 59, 59, 999);
+                           if (now > end) return false;
+                       }
+                       return true;
+                   }).map(pl => (<button key={pl.id} onClick={() => { navigateDeeper(); if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} className={`group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border-2 flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-white hover:border-green-400'}`}><div className="aspect-[3/4] bg-slate-50 relative p-2 md:p-3 overflow-hidden">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded shadow-sm" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-200">{pl.type === 'manual' ? <List size={32}/> : <FileText size={32} />}</div>}<div className={`absolute top-2 right-2 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm z-10 ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-50'}`}>{pl.type === 'manual' ? 'TABLE' : 'PDF'}</div></div><div className="p-3 flex-1 flex flex-col justify-between bg-white"><h3 className="font-black text-slate-900 text-[10px] md:text-sm uppercase leading-tight line-clamp-2">{pl.title}</h3><div className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-2">{pl.month} {pl.year}</div></div></button>))}</div></div>) : <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4"><RIcon size={64} className="opacity-10" /></div>}</div></div></div></div>
        )}
        {showFlipbook && <Flipbook pages={flipbookPages} onClose={() => window.history.back()} catalogueTitle={flipbookTitle} />}
        {viewingPdf && <PdfViewer url={viewingPdf.url} title={viewingPdf.title} onClose={() => window.history.back()} />}
