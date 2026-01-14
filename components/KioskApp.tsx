@@ -24,7 +24,7 @@ import Screensaver from './Screensaver';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
 import TVMode from './TVMode';
-import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus, ToggleLeft, ToggleRight, Globe, Activity, ChevronLeft, ArrowRight } from 'lucide-react';
+import { Store, RotateCcw, X, Loader2, Wifi, ShieldCheck, MonitorPlay, MonitorStop, Tablet, Smartphone, Cloud, HardDrive, RefreshCw, ZoomIn, ZoomOut, Tv, FileText, Monitor, Lock, List, Sparkles, CheckCircle2, ChevronRight, LayoutGrid, Printer, Download, Search, Filter, Video, Layers, Check, Info, Package, Tag, ArrowUpRight, MoveUp, Maximize, FileDown, Grip, Image as ImageIcon, SearchIcon, Minus, Plus, ToggleLeft, ToggleRight, Globe, Activity, ChevronLeft, ArrowRight, LifeBuoy } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 // Extend window interface for custom watchdog properties
@@ -63,9 +63,17 @@ const RIcon = ({ size = 24, className = "" }: { size?: number, className?: strin
 
 // --- SETUP SCREEN ---
 const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComplete: () => void }) => {
+    const [mode, setMode] = useState<'setup' | 'recover'>('setup');
     const [step, setStep] = useState(1);
+    
+    // Setup State
     const [shopName, setShopName] = useState('');
     const [deviceType, setDeviceType] = useState<'kiosk' | 'mobile' | 'tv'>('kiosk');
+    
+    // Recovery State
+    const [recoverId, setRecoverId] = useState('');
+
+    // Shared State
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -95,80 +103,148 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
         }
     };
 
+    const handleRecover = async () => {
+        setError('');
+        if (!recoverId.trim()) return setError('Enter Device ID (LOC-XXXX).');
+        if (!pin.trim()) return setError('Enter Security PIN.');
+
+        const systemPin = storeData.systemSettings?.setupPin || '0000';
+        if (pin !== systemPin) return setError('Invalid Security PIN.');
+
+        setIsProcessing(true);
+        try {
+            const success = await tryRecoverIdentity(recoverId.trim());
+            if (success) {
+                setCustomKioskId(recoverId.trim());
+                onComplete();
+            } else {
+                setError('Device ID not found in cloud registry.');
+            }
+        } catch (e) {
+            console.error(e);
+            setError('Recovery failed due to network error.');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[300] bg-[#0f172a] flex flex-col items-center justify-center p-4">
             <div className="bg-white rounded-lg w-full max-w-lg shadow-2xl overflow-hidden border-2 border-white">
-                <div className="bg-[#1e293b] text-white p-6 text-center">
-                    <div className="flex flex-col items-center">
-                        <div className="bg-blue-600 p-2 rounded-lg mb-3">
-                            <Store size={28} />
+                <div className="bg-[#1e293b] text-white p-6 text-center relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col items-center">
+                        <div className={`p-2 rounded-lg mb-3 ${mode === 'recover' ? 'bg-orange-600' : 'bg-blue-600'}`}>
+                            {mode === 'recover' ? <LifeBuoy size={28} /> : <Store size={28} />}
                         </div>
-                        <h1 style={{fontSize: '24px', fontWeight: 900}} className="uppercase tracking-tight">System Setup</h1>
+                        <h1 style={{fontSize: '24px', fontWeight: 900}} className="uppercase tracking-tight">
+                            {mode === 'recover' ? 'System Recovery' : 'System Setup'}
+                        </h1>
                         <p style={{color: '#94a3b8', fontSize: '10px', fontWeight: 'bold'}} className="uppercase tracking-widest mt-1">Kiosk Firmware v2.8</p>
                     </div>
                 </div>
 
                 <div className="p-6">
-                    <div className="flex justify-center gap-2 mb-6">
-                        {[1, 2, 3].map(s => (
-                            <div key={s} className={`h-2 rounded-full transition-all ${step >= s ? 'w-12 bg-blue-600' : 'w-4 bg-slate-200'}`}></div>
-                        ))}
-                    </div>
+                    {mode === 'setup' && (
+                        <div className="flex justify-center gap-2 mb-6">
+                            {[1, 2, 3].map(s => (
+                                <div key={s} className={`h-2 rounded-full transition-all ${step >= s ? 'w-12 bg-blue-600' : 'w-4 bg-slate-200'}`}></div>
+                            ))}
+                        </div>
+                    )}
 
                     <div style={{minHeight: '200px'}}>
-                        {step === 1 && (
-                            <div className="animate-fade-in">
-                                <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">01. Device Location</label>
-                                <h2 style={{color: '#000', fontSize: '18px', fontWeight: 900}} className="mb-4">Where is this tablet located?</h2>
-                                <input 
-                                    autoFocus
-                                    className="w-full p-4 bg-white border-2 border-slate-400 rounded-lg outline-none focus:border-blue-600 font-bold text-lg text-black uppercase"
-                                    placeholder="e.g. Front Desk"
-                                    value={shopName}
-                                    onChange={(e) => setShopName(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleNext()}
-                                />
-                            </div>
-                        )}
-
-                        {step === 2 && (
-                            <div className="animate-fade-in">
-                                <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">02. Display Mode</label>
-                                <h2 style={{color: '#000', fontSize: '18px', fontWeight: 900}} className="mb-4">Hardware Profile</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                    {[
-                                        { id: 'kiosk', icon: <Tablet size={20}/>, label: 'Kiosk' },
-                                        { id: 'mobile', icon: <Smartphone size={20}/>, label: 'Handheld' },
-                                        { id: 'tv', icon: <Tv size={20}/>, label: 'TV Display' }
-                                    ].map(type => (
+                        {mode === 'setup' ? (
+                            <>
+                                {step === 1 && (
+                                    <div className="animate-fade-in">
+                                        <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">01. Device Location</label>
+                                        <h2 style={{color: '#000', fontSize: '18px', fontWeight: 900}} className="mb-4">Where is this tablet located?</h2>
+                                        <input 
+                                            autoFocus
+                                            className="w-full p-4 bg-white border-2 border-slate-400 rounded-lg outline-none focus:border-blue-600 font-bold text-lg text-black uppercase"
+                                            placeholder="e.g. Front Desk"
+                                            value={shopName}
+                                            onChange={(e) => setShopName(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+                                        />
                                         <button 
-                                            key={type.id}
-                                            onClick={() => setDeviceType(type.id as any)}
-                                            style={{borderWidth: '3px'}}
-                                            className={`p-3 rounded-lg transition-all flex flex-col items-center gap-1 ${deviceType === type.id ? 'bg-blue-600 border-blue-800 text-white shadow-lg' : 'bg-slate-50 border-slate-200 text-slate-500'}`}
+                                            onClick={() => { setMode('recover'); setError(''); setPin(''); }}
+                                            className="mt-6 text-slate-400 font-bold uppercase text-[10px] tracking-widest hover:text-blue-600 flex items-center gap-2 transition-colors"
                                         >
-                                            <div>{type.icon}</div>
-                                            <div style={{fontWeight: 900}} className="uppercase text-xs">{type.label}</div>
+                                            <RotateCcw size={12} /> Recover Existing Device
                                         </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                                    </div>
+                                )}
 
-                        {step === 3 && (
-                            <div className="animate-fade-in text-center">
-                                <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">03. Security PIN</label>
-                                <h2 style={{color: '#000', fontSize: '18px', fontWeight: 900}} className="mb-4">Authorized Admin Entry</h2>
-                                <input 
-                                    autoFocus
-                                    type="password"
-                                    maxLength={8}
-                                    className="w-full max-w-[200px] p-4 bg-white border-2 border-slate-400 rounded-lg outline-none focus:border-blue-600 font-mono font-bold text-3xl text-center tracking-[0.5em] text-black"
-                                    placeholder="****"
-                                    value={pin}
-                                    onChange={(e) => setPin(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleNext()}
-                                />
+                                {step === 2 && (
+                                    <div className="animate-fade-in">
+                                        <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">02. Display Mode</label>
+                                        <h2 style={{color: '#000', fontSize: '18px', fontWeight: 900}} className="mb-4">Hardware Profile</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                            {[
+                                                { id: 'kiosk', icon: <Tablet size={20}/>, label: 'Kiosk' },
+                                                { id: 'mobile', icon: <Smartphone size={20}/>, label: 'Handheld' },
+                                                { id: 'tv', icon: <Tv size={20}/>, label: 'TV Display' }
+                                            ].map(type => (
+                                                <button 
+                                                    key={type.id}
+                                                    onClick={() => setDeviceType(type.id as any)}
+                                                    style={{borderWidth: '3px'}}
+                                                    className={`p-3 rounded-lg transition-all flex flex-col items-center gap-1 ${deviceType === type.id ? 'bg-blue-600 border-blue-800 text-white shadow-lg' : 'bg-slate-50 border-slate-200 text-slate-500'}`}
+                                                >
+                                                    <div>{type.icon}</div>
+                                                    <div style={{fontWeight: 900}} className="uppercase text-xs">{type.label}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {step === 3 && (
+                                    <div className="animate-fade-in text-center">
+                                        <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">03. Security PIN</label>
+                                        <h2 style={{color: '#000', fontSize: '18px', fontWeight: 900}} className="mb-4">Authorized Admin Entry</h2>
+                                        <input 
+                                            autoFocus
+                                            type="password"
+                                            maxLength={8}
+                                            className="w-full max-w-[200px] p-4 bg-white border-2 border-slate-400 rounded-lg outline-none focus:border-blue-600 font-mono font-bold text-3xl text-center tracking-[0.5em] text-black"
+                                            placeholder="****"
+                                            value={pin}
+                                            onChange={(e) => setPin(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+                                        />
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="animate-fade-in space-y-4">
+                                <div>
+                                    <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">Target Device ID</label>
+                                    <input 
+                                        autoFocus
+                                        className="w-full p-3 bg-white border-2 border-slate-300 rounded-lg outline-none focus:border-orange-500 font-mono font-bold text-base text-black uppercase placeholder:normal-case"
+                                        placeholder="LOC-XXXXX"
+                                        value={recoverId}
+                                        onChange={(e) => setRecoverId(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{color: '#475569', fontSize: '11px', fontWeight: 900}} className="block uppercase tracking-widest mb-2">Security PIN</label>
+                                    <input 
+                                        type="password"
+                                        maxLength={8}
+                                        className="w-full p-3 bg-white border-2 border-slate-300 rounded-lg outline-none focus:border-orange-500 font-mono font-bold text-base tracking-widest text-black"
+                                        placeholder="****"
+                                        value={pin}
+                                        onChange={(e) => setPin(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleRecover()}
+                                    />
+                                </div>
+                                <div className="p-3 bg-orange-50 text-orange-800 text-[10px] font-bold rounded-lg border border-orange-100 flex items-start gap-2 leading-relaxed">
+                                    <Info size={14} className="shrink-0 mt-0.5" />
+                                    Recovering a device will restore its identity from the cloud. It must have been previously active.
+                                </div>
                             </div>
                         )}
                     </div>
@@ -176,20 +252,47 @@ const SetupScreen = ({ storeData, onComplete }: { storeData: StoreData, onComple
                     {error && <div style={{background: '#fee2e2', color: '#b91c1c', border: '1px solid #f87171'}} className="mt-4 p-3 rounded-lg text-xs font-black uppercase flex items-center gap-2"> {error}</div>}
 
                     <div className="mt-8 flex gap-3">
-                        {step > 1 && (
-                            <button onClick={() => setStep(step - 1)} className="px-6 py-4 bg-slate-200 text-black rounded-lg font-black uppercase text-xs tracking-widest">Back</button>
+                        {(step > 1 || mode === 'recover') && (
+                            <button 
+                                onClick={() => {
+                                    if (mode === 'recover') {
+                                        setMode('setup');
+                                        setError('');
+                                    } else {
+                                        setStep(step - 1);
+                                    }
+                                }} 
+                                className="px-6 py-4 bg-slate-200 text-black rounded-lg font-black uppercase text-xs tracking-widest hover:bg-slate-300 transition-colors"
+                            >
+                                Back
+                            </button>
                         )}
-                        <button 
-                            onClick={handleNext}
-                            disabled={isProcessing}
-                            className="flex-1 bg-blue-600 text-white p-4 rounded-lg font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg"
-                        >
-                            {isProcessing ? (
-                                <><Loader2 className="animate-spin" size={14} /> Syncing...</>
-                            ) : (
-                                <>{step === 3 ? 'Start Application' : 'Next Step'} <ChevronRight size={14} /></>
-                            )}
-                        </button>
+                        
+                        {mode === 'setup' ? (
+                            <button 
+                                onClick={handleNext}
+                                disabled={isProcessing}
+                                className="flex-1 bg-blue-600 text-white p-4 rounded-lg font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isProcessing ? (
+                                    <><Loader2 className="animate-spin" size={14} /> Syncing...</>
+                                ) : (
+                                    <>{step === 3 ? 'Start Application' : 'Next Step'} <ChevronRight size={14} /></>
+                                )}
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={handleRecover}
+                                disabled={isProcessing}
+                                className="flex-1 bg-orange-600 text-white p-4 rounded-lg font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isProcessing ? (
+                                    <><Loader2 className="animate-spin" size={14} /> Validating...</>
+                                ) : (
+                                    <>Recover Identity <CheckCircle2 size={14} /></>
+                                )}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
