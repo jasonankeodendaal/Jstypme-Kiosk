@@ -379,7 +379,7 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                 doc.addImage(companyAsset.imgData, companyAsset.format, pageWidth - margin - w, topY, w, h);
             }
             doc.setTextColor(0, 0, 0); doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-            const titleText = pricelist.kind === 'promotion' ? "PROMOTION LIST" : "PRICE LIST";
+            const titleText = pricelist.kind === 'promotion' ? "PROMOTION" : "PRICE LIST";
             doc.text(titleText, margin, topY + 18);
             doc.setTextColor(30, 41, 59); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
             doc.text(pricelist.title.toUpperCase(), margin, topY + 23);
