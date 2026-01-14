@@ -222,9 +222,9 @@ const PricelistRow = React.memo(({ item, showImages, showSku, showDesc, showNorm
         )}
         {showSku && <td className="sku-cell border-r border-slate-100"><span className="sku-font font-bold text-slate-900 uppercase">{item.sku || ''}</span></td>}
         {showDesc && <td className="desc-cell border-r border-slate-100"><span className="font-bold text-slate-900 uppercase tracking-tight group-hover:text-[#c0810d] transition-colors whitespace-normal break-words leading-tight">{item.description}</span></td>}
-        {showNormal && <td className={`price-cell text-right ${showPromo ? 'border-r border-slate-100' : ''} whitespace-nowrap`}><span className="font-bold text-slate-900">{item.normalPrice || ''}</span></td>}
+        {showNormal && <td className={`price-cell text-left ${showPromo ? 'border-r border-slate-100' : ''} whitespace-nowrap`}><span className="font-bold text-slate-900">{item.normalPrice || ''}</span></td>}
         {showPromo && (
-            <td className="price-cell text-right bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter">{item.promoPrice}</span>) : null}</td>
+            <td className="price-cell text-left bg-slate-50/10 whitespace-nowrap">{item.promoPrice ? (<span className="font-black text-[#ef4444] tracking-tighter">{item.promoPrice}</span>) : null}</td>
         )}
     </tr>
 ));
@@ -370,10 +370,11 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
         const descX = currentX + 1.5;
         if (hasDescription) currentX += descW;
         
-        const normalPriceX = currentX + normalW - 1.5;
+        // Left Align X Coordinates for Prices
+        const normalPriceX = currentX + 1.5; 
         if (hasNormalPrice) currentX += normalW;
         
-        const promoPriceX = currentX + promoW - 1.5;
+        const promoPriceX = currentX + 1.5;
         if (hasPromoPrice) currentX += promoW;
         
         const rightEdge = margin + innerWidth;
@@ -437,8 +438,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             if (effectiveShowImages) doc.text("MEDIA", mediaX, startY);
             if (hasSku) doc.text((headers.sku || "SKU").toUpperCase(), skuX, startY); 
             if (hasDescription) doc.text((headers.description || "DESCRIPTION").toUpperCase(), descX, startY);
-            if (hasNormalPrice) doc.text((headers.normalPrice || "NORMAL").toUpperCase(), normalPriceX, startY, { align: 'right' });
-            if (hasPromoPrice) doc.text((headers.promoPrice || "PROMO").toUpperCase(), promoPriceX, startY, { align: 'right' });
+            if (hasNormalPrice) doc.text((headers.normalPrice || "NORMAL").toUpperCase(), normalPriceX, startY);
+            if (hasPromoPrice) doc.text((headers.promoPrice || "PROMO").toUpperCase(), promoPriceX, startY);
             return startY + 4;
         };
 
@@ -501,12 +502,12 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
             if (hasDescription) drawTextFit(item.description?.toUpperCase() || '', descX, currentY, descMaxW, 7.5);
             
             doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0); // Enforce Black Text
-            if (hasNormalPrice) drawTextFit(item.normalPrice || '', normalPriceX, currentY, normalW - 3, 7.5, 'right');
+            if (hasNormalPrice) drawTextFit(item.normalPrice || '', normalPriceX, currentY, normalW - 3, 7.5, 'left');
             
             if (hasPromoPrice) {
                 if (item.promoPrice) {
                     doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'bold'); // Enforce Black & Bold
-                    drawTextFit(item.promoPrice, promoPriceX, currentY, promoW > 0 ? promoW - 3 : 10, 8.0, 'right');
+                    drawTextFit(item.promoPrice, promoPriceX, currentY, promoW > 0 ? promoW - 3 : 10, 8.0, 'left');
                 }
             }
 
@@ -596,8 +597,8 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                         {hasImages && <th className="p-2 md:p-3 shrink-cell text-white">Media</th>}
                         {hasSku && <th className="p-2 md:p-3 sku-cell text-white">{headers.sku || "SKU"}</th>}
                         {hasDescription && <th className="p-2 md:p-3 desc-cell text-white">{headers.description || "Description"}</th>}
-                        {hasNormalPrice && <th className="p-2 md:p-3 price-cell text-right text-white">{headers.normalPrice || "Normal Price"}</th>}
-                        {hasPromoPrice && <th className="p-2 md:p-3 price-cell text-right text-white">{headers.promoPrice || "Promo Price"}</th>}
+                        {hasNormalPrice && <th className="p-2 md:p-3 price-cell text-left text-white">{headers.normalPrice || "Normal Price"}</th>}
+                        {hasPromoPrice && <th className="p-2 md:p-3 price-cell text-left text-white">{headers.promoPrice || "Promo Price"}</th>}
                     </tr>
                   </thead>
                   <tbody>
