@@ -123,6 +123,7 @@ export interface Pricelist {
   kind?: 'standard' | 'promotion'; // Distinguish standard vs promotion lists
   startDate?: string; // Optional scheduling start
   endDate?: string;   // Optional scheduling end
+  promoText?: string; // New: Promotional sub-header text
   headers?: {         // Custom table headers
     sku?: string;
     description?: string;

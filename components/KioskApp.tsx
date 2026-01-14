@@ -529,6 +529,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                  topY += 6; 
             }
 
+            if (pricelist.promoText) {
+                doc.setTextColor(220, 38, 38);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.text(pricelist.promoText.toUpperCase(), boxX + (boxW / 2), boxY + 10, { align: 'center' });
+                topY += 8;
+            }
+
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
             doc.line(margin, topY + 26, pageWidth - margin, topY + 26);
             return topY + 32;
@@ -682,6 +690,14 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
              <button onClick={onClose} className="p-2 bg-white/20 rounded-full hover:bg-white/30 border border-white/5"><X size={20}/></button>
           </div>
         </div>
+
+        {pricelist.promoText && (
+            <div className="w-full bg-slate-50 border-b border-slate-200 py-3 px-4 text-center print:hidden shrink-0 z-10 shadow-sm relative">
+                <p className="text-slate-900 font-black uppercase tracking-widest text-xs md:text-sm leading-relaxed">
+                    {pricelist.promoText}
+                </p>
+            </div>
+        )}
 
         <div 
             ref={scrollContainerRef}
@@ -1173,3 +1189,4 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 };
 
 export default KioskApp;
+    

@@ -876,14 +876,25 @@ const PricelistManager = ({
                              </div>
                              
                              {item.kind === 'promotion' ? (
-                                <div className="grid grid-cols-2 gap-2 p-2 bg-purple-50 rounded-lg border border-purple-100">
-                                    <div>
-                                        <label className="block text-[8px] font-bold text-purple-800 uppercase mb-1">Start</label>
-                                        <input type="date" value={item.startDate || ''} onChange={(e) => updatePricelist(item.id, { startDate: e.target.value, dateAdded: new Date().toISOString() })} className="w-full text-[9px] font-bold p-1 bg-white border border-purple-200 rounded text-purple-900 outline-none focus:border-purple-500" />
+                                <div className="flex flex-col gap-2 p-2 bg-purple-50 rounded-lg border border-purple-100">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-[8px] font-bold text-purple-800 uppercase mb-1">Start</label>
+                                            <input type="date" value={item.startDate || ''} onChange={(e) => updatePricelist(item.id, { startDate: e.target.value, dateAdded: new Date().toISOString() })} className="w-full text-[9px] font-bold p-1 bg-white border border-purple-200 rounded text-purple-900 outline-none focus:border-purple-500" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[8px] font-bold text-purple-800 uppercase mb-1">End</label>
+                                            <input type="date" value={item.endDate || ''} onChange={(e) => updatePricelist(item.id, { endDate: e.target.value, dateAdded: new Date().toISOString() })} className="w-full text-[9px] font-bold p-1 bg-white border border-purple-200 rounded text-purple-900 outline-none focus:border-purple-500" />
+                                        </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[8px] font-bold text-purple-800 uppercase mb-1">End</label>
-                                        <input type="date" value={item.endDate || ''} onChange={(e) => updatePricelist(item.id, { endDate: e.target.value, dateAdded: new Date().toISOString() })} className="w-full text-[9px] font-bold p-1 bg-white border border-purple-200 rounded text-purple-900 outline-none focus:border-purple-500" />
+                                        <label className="block text-[8px] font-bold text-purple-800 uppercase mb-1">Promotional Sub-Header</label>
+                                        <textarea 
+                                            value={item.promoText || ''} 
+                                            onChange={(e) => updatePricelist(item.id, { promoText: e.target.value, dateAdded: new Date().toISOString() })} 
+                                            className="w-full text-[9px] font-bold p-1.5 bg-white border border-purple-200 rounded text-purple-900 outline-none focus:border-purple-500 resize-none h-12 placeholder:text-purple-300"
+                                            placeholder="Enter promotional text..."
+                                        />
                                     </div>
                                 </div>
                              ) : (
