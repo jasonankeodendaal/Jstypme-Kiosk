@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -119,7 +120,6 @@ const SystemDocumentation = () => {
     );
 };
 
-// ... Auth Component Unchanged ...
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
@@ -204,11 +204,10 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
       };
 
       const uploadSingle = async (file: File) => {
-           const localBase64 = await readFileAsBase64(file);
-           
+           // OPTIMIZATION: Try Cloud Upload FIRST to avoid reading large files into memory/base64
            try {
               const url = await uploadFileToStorage(file);
-              return { url, base64: localBase64 };
+              return { url, base64: null }; 
            } catch (e) {
               console.error("Cloud Upload Failed:", e);
               
@@ -216,11 +215,12 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
               // This corrupts the localStorage quota and causes "Sync Failed" loops.
               // Threshold: 300KB (Small icons/thumbnails are fine, PDFs/Videos are not)
               if (file.size > 300 * 1024) {
-                  alert(`UPLOAD ERROR: Could not upload "${file.name}" to Cloud Storage.\n\nReason: ${(e as any).message || "Connection Failed"}\n\nThis file is too large (${(file.size/1024/1024).toFixed(1)}MB) to save offline. Check your internet or Supabase bucket.`);
+                  alert(`UPLOAD ERROR: Could not upload "${file.name}" to Cloud Storage.\n\nReason: ${(e as any).message || "Connection Failed"}\n\nThis file is too large (${(file.size/1024/1024).toFixed(1)}MB) to save offline (Quota Exceeded Prevention). Check your internet or Supabase bucket.`);
                   throw e; // Abort the upload process
               }
               
               console.warn("Upload failed, falling back to local base64 for small file.");
+              const localBase64 = await readFileAsBase64(file);
               return { url: localBase64, base64: localBase64 };
            }
       };
@@ -232,7 +232,8 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
               for(let i=0; i<files.length; i++) {
                   const res = await uploadSingle(files[i]);
                   results.push(res.url);
-                  base64s.push(res.base64);
+                  // Only push base64 if it exists (fallback)
+                  if (res.base64) base64s.push(res.base64); 
                   setUploadProgress(((i+1)/files.length)*100);
               }
               onUpload(results, fileType, base64s);
@@ -277,22 +278,12 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
   );
 };
 
-// ... Rest of AdminDashboard components (InputField, CatalogueManager, etc.) remain unchanged ...
-// They are large so I am not repeating them here unless they need changes.
-// Assuming the rest of the file content follows standard React component structure.
-
 const InputField = ({ label, val, onChange, placeholder, isArea = false, half = false, type = 'text' }: any) => (
     <div className={`mb-4 ${half ? 'w-full' : ''}`}>
       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 ml-1">{label}</label>
       {isArea ? <textarea value={val} onChange={onChange} className="w-full p-3 bg-white text-black border border-slate-300 rounded-xl h-24 focus:ring-2 focus:ring-blue-500 outline-none resize-none text-sm" placeholder={placeholder} /> : <input type={type} value={val} onChange={onChange} className="w-full p-3 bg-white text-black border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm" placeholder={placeholder} />}
     </div>
 );
-
-// ... (Rest of AdminDashboard.tsx logic) ...
-
-// IMPORTANT: Re-exporting AdminDashboard at the end
-// This is a partial replacement for brevity, but in a real scenario I would output the full file.
-// Since the prompt requires "Full content of file", I will paste the entire file below with the fix applied.
 
 const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalogue[], onSave: (c: Catalogue[], immediate: boolean) => void, brandId?: string }) => {
     const [localList, setLocalList] = useState(catalogues || []);
@@ -775,16 +766,6 @@ const PricelistManager = ({
         </div>
     );
 };
-
-// ... Rest of component exports (ProductEditor, KioskEditorModal, etc.) remain as is ...
-// Reusing exact same definitions for brevity in this patch response.
-// Just ensuring the AdminDashboard component is correctly exported.
-
-// ... (ProductEditor, KioskEditorModal, MoveProductModal, TVModelEditor, AdminManager, importZip, downloadZip definitions) ...
-
-// Assuming standard structure for remaining components. 
-// For full file replacement, these helper components would be included here.
-// I will output AdminDashboard main component now.
 
 const ProductEditor = ({ product, onSave, onCancel }: { product: Product, onSave: (p: Product) => void, onCancel: () => void }) => {
     // Defensive initialization for arrays to prevent crashes on legacy or missing data
