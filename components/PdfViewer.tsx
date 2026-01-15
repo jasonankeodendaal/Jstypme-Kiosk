@@ -52,9 +52,23 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
 
   useEffect(() => {
     const loadPdf = async () => {
+      console.log(`[PdfViewer] Starting load for URL: "${url}"`);
+      
+      if (!url) {
+          console.error('[PdfViewer] No URL provided');
+          setError("No document URL provided.");
+          setLoading(false);
+          return;
+      }
+
       try {
         setLoading(true); setError(null); setPageNum(1);
-        if (loadingTaskRef.current) loadingTaskRef.current.destroy().catch(() => {});
+        if (loadingTaskRef.current) {
+            console.log('[PdfViewer] Destroying previous loading task');
+            loadingTaskRef.current.destroy().catch((e: any) => console.warn('[PdfViewer] Destroy warning:', e));
+        }
+        
+        console.log('[PdfViewer] Calling pdfjs.getDocument...');
         const loadingTask = pdfjs.getDocument({
             url,
             cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
@@ -62,16 +76,36 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
             disableRange: false,
             disableStream: false,
         });
+        
+        loadingTask.onProgress = (progressData: any) => {
+            const percent = progressData.total ? Math.round((progressData.loaded / progressData.total) * 100) : 0;
+            console.debug(`[PdfViewer] Progress: ${percent}% (${progressData.loaded} bytes)`);
+        };
+
         loadingTaskRef.current = loadingTask;
         const doc = await loadingTask.promise;
+        console.log(`[PdfViewer] Document loaded successfully. Pages: ${doc.numPages}`);
+
         if (loadingTaskRef.current === loadingTask) { 
             setPdf(doc);
             // Optimization: Keep loading true until first page render finishes
         }
       } catch (err: any) {
-        if (err?.message !== 'Loading aborted') { setError("Unable to load document."); setLoading(false); }
+        console.error('[PdfViewer] Load Error:', err);
+        
+        if (err.name === 'MissingPDFException') {
+            console.error('[PdfViewer] File not found or 404');
+        } else if (err.name === 'InvalidPDFException') {
+            console.error('[PdfViewer] Invalid PDF format');
+        }
+
+        if (err?.message !== 'Loading aborted') { 
+            setError(`Unable to load document: ${err.message || 'Unknown error'}`); 
+            setLoading(false); 
+        }
       }
     };
+    
     loadPdf();
     return () => { if (loadingTaskRef.current) loadingTaskRef.current.destroy().catch(() => {}); };
   }, [url]);
@@ -124,7 +158,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
         }
       } catch (err: any) { 
           if (err?.name !== 'RenderingCancelledException') {
-              console.error("Render Error", err); 
+              console.error("[PdfViewer] Render Error:", err); 
               setLoading(false);
           }
       }
