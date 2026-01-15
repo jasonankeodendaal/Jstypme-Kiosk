@@ -249,6 +249,11 @@ ON CONFLICT (id) DO UPDATE SET public = true;
 ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
 
+-- DROP EXISTING POLICIES TO PREVENT ERRORS
+DROP POLICY IF EXISTS "Public Read/Write" ON public.store_config;
+DROP POLICY IF EXISTS "Public Read/Write" ON public.kiosks;
+DROP POLICY IF EXISTS "Media Storage" ON storage.objects;
+
 CREATE POLICY "Public Read/Write" ON public.store_config FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Read/Write" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Media Storage" ON storage.objects FOR ALL USING (bucket_id = 'kiosk-media');
@@ -352,6 +357,13 @@ ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelist_brands ENABLE ROW LEVEL SECURITY;
+
+-- DROP EXISTING POLICIES TO PREVENT ERRORS
+DROP POLICY IF EXISTS "Public Read/Write Brands" ON public.brands;
+DROP POLICY IF EXISTS "Public Read/Write Categories" ON public.categories;
+DROP POLICY IF EXISTS "Public Read/Write Products" ON public.products;
+DROP POLICY IF EXISTS "Public Read/Write Pricelists" ON public.pricelists;
+DROP POLICY IF EXISTS "Public Read/Write PL Brands" ON public.pricelist_brands;
 
 CREATE POLICY "Public Read/Write Brands" ON public.brands FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Read/Write Categories" ON public.categories FOR ALL USING (true) WITH CHECK (true);
