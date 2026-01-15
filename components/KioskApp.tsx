@@ -526,20 +526,24 @@ const ManualPricelistViewer = ({ pricelist, onClose, companyLogo, brandLogo, bra
                  const end = formatDate(pricelist.endDate || '');
                  const dateText = `Valid: ${start || 'Now'} - ${end || 'Until Stock Lasts'}`;
                  doc.text(dateText, margin, topY + 28);
-                 topY += 6; 
             }
 
-            if (pricelist.promoText) {
-                doc.setTextColor(220, 38, 38);
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'bold');
-                doc.text(pricelist.promoText.toUpperCase(), boxX + (boxW / 2), boxY + 10, { align: 'center' });
-                topY += 8;
-            }
-
+            const lineY = topY + 30;
             doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.1);
-            doc.line(margin, topY + 26, pageWidth - margin, topY + 26);
-            return topY + 32;
+            doc.line(margin, lineY, pageWidth - margin, lineY);
+            
+            let nextSectionY = lineY + 6;
+
+            // Draw Promo Banner Text centered above columns
+            if (pricelist.promoText) {
+                doc.setTextColor(15, 23, 42); // Dark Slate
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'black'); // Heavy/Black font
+                doc.text(pricelist.promoText.toUpperCase(), pageWidth / 2, nextSectionY + 2, { align: 'center' });
+                nextSectionY += 8; 
+            }
+
+            return nextSectionY;
         };
 
         const drawTableHeaders = (startY: number) => {
@@ -1189,4 +1193,3 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 };
 
 export default KioskApp;
-    
