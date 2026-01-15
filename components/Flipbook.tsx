@@ -8,9 +8,10 @@ interface FlipbookProps {
   catalogueTitle?: string;
   startDate?: string;
   endDate?: string;
+  promoText?: string;
 }
 
-const Flipbook: React.FC<FlipbookProps> = ({ pages, onClose, catalogueTitle, startDate, endDate }) => {
+const Flipbook: React.FC<FlipbookProps> = ({ pages, onClose, catalogueTitle, startDate, endDate, promoText }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -107,6 +108,15 @@ const Flipbook: React.FC<FlipbookProps> = ({ pages, onClose, catalogueTitle, sta
       setPosition({ x: 0, y: 0 });
   };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    try {
+        return new Date(dateString).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) {
+        return dateString;
+    }
+  };
+
   return (
     <div 
       className="fixed inset-0 z-[60] bg-slate-900/98 flex flex-col items-center justify-center animate-fade-in touch-none" 
@@ -139,6 +149,26 @@ const Flipbook: React.FC<FlipbookProps> = ({ pages, onClose, catalogueTitle, sta
              <button onClick={onClose} className="bg-white text-slate-900 p-2 md:p-3 rounded-full transition-all hover:scale-110 shadow-xl"><X size={24} strokeWidth={3} /></button>
         </div>
       </div>
+
+      {(promoText || startDate || endDate) && (
+        <div 
+            className="absolute top-20 md:top-24 left-0 right-0 z-40 flex justify-center pointer-events-none"
+            onClick={(e) => e.stopPropagation()}
+        >
+            <div className="bg-white/95 backdrop-blur-md border border-slate-200/50 shadow-lg py-3 px-8 rounded-full text-center max-w-[90%] pointer-events-auto transition-transform animate-fade-in-up">
+                {promoText && (
+                    <p className="text-slate-900 font-black uppercase tracking-widest text-[10px] md:text-xs leading-relaxed">
+                        {promoText}
+                    </p>
+                )}
+                {(startDate || endDate) && (
+                    <p className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">
+                        Valid: {formatDate(startDate)} - {formatDate(endDate)}
+                    </p>
+                )}
+            </div>
+        </div>
+      )}
 
       <div 
         ref={containerRef}

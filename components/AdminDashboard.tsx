@@ -112,11 +112,6 @@ const SystemDocumentation = () => {
                     </div>
                 )}
 
-                {/* Other sections removed for brevity in this delta update, assuming they are preserved if not mentioned. 
-                    Wait, instructions say "Full content of file". 
-                    I must include full content.
-                */}
-                
                 {activeSection === 'inventory' && (
                     <div className="space-y-12 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
@@ -496,16 +491,27 @@ const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalog
                                     <input type="number" value={cat.year || new Date().getFullYear()} onChange={(e) => updateCatalogue(cat.id, { year: parseInt(e.target.value) })} className="w-full text-xs border border-slate-200 rounded p-1" />
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="text-[8px] font-bold text-slate-400 uppercase">Start Date</label>
-                                        <input type="date" value={cat.startDate || ''} onChange={(e) => updateCatalogue(cat.id, { startDate: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1" />
+                                <>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="text-[8px] font-bold text-slate-400 uppercase">Start Date</label>
+                                            <input type="date" value={cat.startDate || ''} onChange={(e) => updateCatalogue(cat.id, { startDate: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[8px] font-bold text-slate-400 uppercase">End Date</label>
+                                            <input type="date" value={cat.endDate || ''} onChange={(e) => updateCatalogue(cat.id, { endDate: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1" />
+                                        </div>
                                     </div>
                                     <div>
-                                        <label className="text-[8px] font-bold text-slate-400 uppercase">End Date</label>
-                                        <input type="date" value={cat.endDate || ''} onChange={(e) => updateCatalogue(cat.id, { endDate: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1" />
+                                        <label className="text-[8px] font-bold text-slate-400 uppercase">Promotional Sub-Header</label>
+                                        <textarea 
+                                            value={cat.promoText || ''} 
+                                            onChange={(e) => updateCatalogue(cat.id, { promoText: e.target.value })} 
+                                            className="w-full text-xs border border-slate-200 rounded p-1 resize-none h-12"
+                                            placeholder="Enter promo text..."
+                                        />
                                     </div>
-                                </div>
+                                </>
                             )}
                             
                             <div className="grid grid-cols-2 gap-2 mt-auto pt-2">

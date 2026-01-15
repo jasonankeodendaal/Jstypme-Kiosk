@@ -1,3 +1,4 @@
+
 export interface DimensionSet {
   label?: string; // e.g. "Device", "Stand", "Box 1"
   width: string;
@@ -88,6 +89,7 @@ export interface Catalogue {
   year?: number; // For Catalogues
   startDate?: string; // For Pamphlets
   endDate?: string;   // For Pamphlets (Auto-expiry)
+  promoText?: string; // New: Promotional sub-header text
   pdfUrl?: string; 
   thumbnailUrl?: string; // New Cover/Thumbnail Image
   pages: string[]; // Legacy support for image-based flipbooks
