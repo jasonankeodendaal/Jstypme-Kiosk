@@ -1,3 +1,4 @@
+
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand } from "../types";
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
@@ -169,11 +170,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
     // 1. Local Persistence (Atomic)
     try {
         localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
-    } catch (e: any) {
-        console.error("Local Save Error:", e);
-        if (e.name === 'QuotaExceededError' || e.code === 22) {
-             alert("SYSTEM ERROR: Storage Quota Exceeded.\n\nThe last update was too large to save locally. Please check if you have large PDFs or Videos saved offline (Base64) instead of Cloud Links.");
-        }
+    } catch (e) {
         const { archive, ...smallerData } = data;
         try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(smallerData)); } catch (innerE) {}
     }

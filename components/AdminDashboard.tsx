@@ -112,7 +112,169 @@ const SystemDocumentation = () => {
                     </div>
                 )}
 
-                {/* Other sections unchanged... */}
+                {activeSection === 'inventory' && (
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-orange-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-orange-500/20">Module 02: Data Structure</div>
+                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">The Inventory Tree</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Products exist within a strict hierarchical lineage. This ensures navigation is always logical.</p>
+                        </div>
+                        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden p-10 relative">
+                            <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none"><GitBranch size={200} /></div>
+                            <div className="flex flex-col gap-8 relative z-10">
+                                <div className="flex items-center gap-6">
+                                    <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-xl z-20"><Box size={32}/></div>
+                                    <div className="flex-1 p-4 bg-slate-50 rounded-2xl border border-slate-100"><div className="text-xs font-black uppercase text-slate-400 mb-1">Root Level</div><div className="text-2xl font-black text-slate-900">Brand</div><div className="text-xs text-slate-500 mt-1">Samsung, Apple, Sony...</div></div>
+                                </div>
+                                <div className="ml-8 border-l-4 border-slate-100 pl-8 py-4 -my-4 flex flex-col gap-8">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg z-20"><LayoutGrid size={28}/></div>
+                                        <div className="flex-1 p-4 bg-blue-50 rounded-2xl border border-blue-100"><div className="text-xs font-black uppercase text-blue-400 mb-1">Branch Level</div><div className="text-xl font-black text-blue-900">Category</div><div className="text-xs text-blue-600 mt-1">Smartphones, TVs, Laptops...</div></div>
+                                    </div>
+                                    <div className="ml-8 border-l-4 border-blue-100 pl-8 py-4 -my-4 flex flex-col gap-8">
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-12 h-12 bg-white border-2 border-slate-200 text-slate-400 rounded-2xl flex items-center justify-center shadow-sm z-20"><Smartphone size={24}/></div>
+                                            <div className="flex-1 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm"><div className="text-xs font-black uppercase text-slate-400 mb-1">Leaf Level</div><div className="text-lg font-black text-slate-900">Product</div><div className="text-xs text-slate-500 mt-1">Galaxy S24 Ultra, iPhone 15...</div></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'pricelists' && (
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20">Module 03: Pricing Engine</div>
+                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Dynamic Price Matrix</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The system converts raw spreadsheet rows into high-fidelity, printable PDF documents on the fly.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-col items-center text-center">
+                                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 text-green-600"><FileSpreadsheet size={32} /></div>
+                                <h3 className="font-black text-slate-900 uppercase">1. Raw Input</h3>
+                                <p className="text-xs text-slate-500 mt-2 font-medium">You upload Excel/CSV or type manually. The system parses SKU, Desc, and Price.</p>
+                            </div>
+                            <div className="flex items-center justify-center text-slate-300"><ArrowRight size={32} /></div>
+                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-col items-center text-center">
+                                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 text-blue-600"><Cpu size={32} /></div>
+                                <h3 className="font-black text-slate-900 uppercase">2. Logic Engine</h3>
+                                <p className="text-xs text-slate-500 mt-2 font-medium">Rounding logic applies: <code>.99</code> becomes <code>.00</code>. Prices ending in <code>9</code> are bumped.</p>
+                            </div>
+                            <div className="flex items-center justify-center text-slate-300"><ArrowRight size={32} /></div>
+                            <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 flex flex-col items-center text-center shadow-xl text-white">
+                                <div className="w-16 h-16 bg-white/10 rounded-2xl shadow-inner flex items-center justify-center mb-4 text-red-400"><FileText size={32} /></div>
+                                <h3 className="font-black uppercase">3. PDF Render</h3>
+                                <p className="text-xs text-slate-400 mt-2 font-medium">A vector PDF is drawn client-side using <code>jspdf</code>, ready for A4 printing.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'screensaver' && (
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20">Module 04: Visual Loop</div>
+                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Smart Playlist Algorithm</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The screensaver isn't random. It constructs a balanced playlist mixing product highlights, pamphlets, and paid ads.</p>
+                        </div>
+                        <div className="bg-slate-900 rounded-[2.5rem] p-10 overflow-hidden relative shadow-2xl">
+                            <div className="absolute inset-0 bg-gradient-to-r from-purple-900/20 to-blue-900/20"></div>
+                            <div className="relative z-10 flex flex-col gap-8">
+                                <div className="flex items-center justify-between text-white border-b border-white/10 pb-4 mb-4">
+                                    <div className="text-xs font-black uppercase tracking-widest">Playlist Sequence</div>
+                                    <div className="text-xs font-mono text-purple-400">Loop Duration: ~4m</div>
+                                </div>
+                                <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
+                                    {[
+                                        { type: 'Ad', color: 'bg-yellow-500', w: 'w-24' },
+                                        { type: 'Prod', color: 'bg-blue-600', w: 'w-16' },
+                                        { type: 'Prod', color: 'bg-blue-600', w: 'w-16' },
+                                        { type: 'Cat', color: 'bg-green-500', w: 'w-20' },
+                                        { type: 'Ad', color: 'bg-yellow-500', w: 'w-24' },
+                                        { type: 'Prod', color: 'bg-blue-600', w: 'w-16' },
+                                    ].map((item, i) => (
+                                        <div key={i} className={`${item.w} h-16 rounded-xl ${item.color} flex items-center justify-center shrink-0 shadow-lg border border-white/10`}>
+                                            <span className="text-[10px] font-black text-white uppercase">{item.type}</span>
+                                        </div>
+                                    ))}
+                                    <div className="w-10 h-16 rounded-xl bg-white/5 flex items-center justify-center shrink-0 border border-dashed border-white/20"><RotateCcw size={16} className="text-white/30"/></div>
+                                </div>
+                                <div className="flex gap-8">
+                                    <div className="flex items-center gap-2 text-white"><div className="w-3 h-3 bg-yellow-500 rounded-full"></div><span className="text-xs font-bold uppercase">Sponsored Ad</span></div>
+                                    <div className="flex items-center gap-2 text-white"><div className="w-3 h-3 bg-blue-600 rounded-full"></div><span className="text-xs font-bold uppercase">Product Highlight</span></div>
+                                    <div className="flex items-center gap-2 text-white"><div className="w-3 h-3 bg-green-500 rounded-full"></div><span className="text-xs font-bold uppercase">Catalogue Cover</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fleet' && (
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-blue-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-blue-500/20">Module 05: Telemetry</div>
+                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Heartbeat Protocol</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">Devices send a "pulse" every 60 seconds. If a pulse is missed for 5 minutes, the dashboard marks it Offline.</p>
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-8">
+                            <div className="flex-1 bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-4 right-4 animate-pulse"><Activity className="text-green-500" size={24} /></div>
+                                <h3 className="font-black text-slate-900 uppercase mb-6">Packet Structure</h3>
+                                <div className="bg-slate-900 p-6 rounded-2xl text-blue-300 font-mono text-xs leading-relaxed shadow-inner">
+                                    {`{
+  "id": "LOC-8821",
+  "status": "online",
+  "wifi_strength": 92,
+  "last_seen": "2024-03-15T10:00:00Z",
+  "version": "2.4.1"
+}`}
+                                </div>
+                            </div>
+                            <div className="w-full md:w-64 flex flex-col gap-4">
+                                <div className="bg-green-50 p-6 rounded-2xl border border-green-100 flex flex-col items-center justify-center text-center flex-1">
+                                    <Wifi size={32} className="text-green-600 mb-2" />
+                                    <div className="font-black text-green-900 uppercase text-xs">Online</div>
+                                    <div className="text-[10px] text-green-600 font-bold opacity-60">Last seen &lt; 5m</div>
+                                </div>
+                                <div className="bg-red-50 p-6 rounded-2xl border border-red-100 flex flex-col items-center justify-center text-center flex-1">
+                                    <WifiOff size={32} className="text-red-600 mb-2" />
+                                    <div className="font-black text-red-900 uppercase text-xs">Offline</div>
+                                    <div className="text-[10px] text-red-600 font-bold opacity-60">Last seen &gt; 5m</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'tv' && (
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-slate-800 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-black/20">Module 06: Display Wall</div>
+                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">TV State Machine</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">TV Mode removes all interactive elements. It locks into a specific "Brand Channel" or cycles the "Global Loop".</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                                <div className="relative z-10">
+                                    <div className="w-16 h-10 border-2 border-white/20 rounded-lg mb-6 flex items-center justify-center"><Play size={20} className="text-white fill-current" /></div>
+                                    <h3 className="text-2xl font-black uppercase tracking-tight mb-2">Global Loop</h3>
+                                    <p className="text-slate-400 text-sm font-medium">Plays ALL available videos from ALL brands in a randomized shuffle. Ideal for general store signage.</p>
+                                </div>
+                            </div>
+                            <div className="bg-blue-600 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-6 opacity-20"><Tv size={80} /></div>
+                                <div className="relative z-10">
+                                    <div className="w-10 h-10 bg-white rounded-full mb-6 flex items-center justify-center text-blue-600 font-black">S</div>
+                                    <h3 className="text-2xl font-black uppercase tracking-tight mb-2">Brand Channel</h3>
+                                    <p className="text-blue-100 text-sm font-medium">Locked to a specific brand (e.g. Samsung). Only cycles videos belonging to that manufacturer.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 <div className="h-40"></div>
             </div>
@@ -204,23 +366,12 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
       };
 
       const uploadSingle = async (file: File) => {
-           // OPTIMIZATION: Try Cloud Upload FIRST to avoid reading large files into memory/base64
+           const localBase64 = await readFileAsBase64(file);
+           
            try {
               const url = await uploadFileToStorage(file);
-              return { url, base64: null }; 
+              return { url, base64: localBase64 };
            } catch (e) {
-              console.error("Cloud Upload Failed:", e);
-              
-              // CRITICAL FIX: Prevent massive files from falling back to Base64
-              // This corrupts the localStorage quota and causes "Sync Failed" loops.
-              // Threshold: 300KB (Small icons/thumbnails are fine, PDFs/Videos are not)
-              if (file.size > 300 * 1024) {
-                  alert(`UPLOAD ERROR: Could not upload "${file.name}" to Cloud Storage.\n\nReason: ${(e as any).message || "Connection Failed"}\n\nThis file is too large (${(file.size/1024/1024).toFixed(1)}MB) to save offline (Quota Exceeded Prevention). Check your internet or Supabase bucket.`);
-                  throw e; // Abort the upload process
-              }
-              
-              console.warn("Upload failed, falling back to local base64 for small file.");
-              const localBase64 = await readFileAsBase64(file);
               return { url: localBase64, base64: localBase64 };
            }
       };
@@ -232,8 +383,7 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
               for(let i=0; i<files.length; i++) {
                   const res = await uploadSingle(files[i]);
                   results.push(res.url);
-                  // Only push base64 if it exists (fallback)
-                  if (res.base64) base64s.push(res.base64); 
+                  base64s.push(res.base64);
                   setUploadProgress(((i+1)/files.length)*100);
               }
               onUpload(results, fileType, base64s);
@@ -242,10 +392,7 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
               setUploadProgress(100);
               onUpload(res.url, fileType, res.base64);
           }
-      } catch (err) { 
-          // Error alert handled in uploadSingle
-          console.error("Batch upload aborted");
-      } 
+      } catch (err) { alert("Upload error"); } 
       finally { setTimeout(() => { setIsProcessing(false); setUploadProgress(0); }, 500); }
     }
   };
