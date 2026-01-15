@@ -6,7 +6,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 const pdfjs: any = pdfjsLib;
 
 if (pdfjs.GlobalWorkerOptions) {
-  pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  // Use LEGACY worker build for Android 5 / Chrome 37 compatibility
+  pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
 }
 
 interface PdfViewerProps {
