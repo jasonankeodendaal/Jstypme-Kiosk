@@ -891,7 +891,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [showFlipbook, setShowFlipbook] = useState(false);
   const [flipbookPages, setFlipbookPages] = useState<string[]>([]);
   const [flipbookTitle, setFlipbookTitle] = useState<string | undefined>(undefined); 
-  const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
+  const [viewingPdf, setViewingPdf] = useState<Pricelist | { url: string; title: string } | null>(null);
   const [viewingManualList, setViewingManualList] = useState<Pricelist | null>(null);
   const [viewingWebsite, setViewingWebsite] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -1150,10 +1150,17 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                            if (now > end) return false;
                        }
                        return true;
-                   }).map(pl => (<button key={pl.id} onClick={() => { navigateDeeper(); if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf({url: pl.url, title: pl.title}); }} className={`group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border-2 flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-white hover:border-green-400'}`}><div className="aspect-[3/4] bg-slate-50 relative p-2 md:p-3 overflow-hidden">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded shadow-sm" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-200">{pl.type === 'manual' ? <List size={32}/> : <FileText size={32} />}</div>}<div className={`absolute top-2 right-2 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm z-10 ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-50'}`}>{pl.type === 'manual' ? 'TABLE' : 'PDF'}</div></div><div className="p-3 flex-1 flex flex-col justify-between bg-white"><h3 className="font-black text-slate-900 text-[10px] md:text-sm uppercase leading-tight line-clamp-2">{pl.title}</h3><div className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-2">{pl.month} {pl.year}</div></div></button>))}</div></div>) : <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4"><RIcon size={64} className="opacity-10" /></div>}</div></div></div></div>
+                   }).map(pl => (<button key={pl.id} onClick={() => { navigateDeeper(); if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf(pl); }} className={`group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border-2 flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-white hover:border-green-400'}`}><div className="aspect-[3/4] bg-slate-50 relative p-2 md:p-3 overflow-hidden">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded shadow-sm" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-200">{pl.type === 'manual' ? <List size={32}/> : <FileText size={32} />}</div>}<div className={`absolute top-2 right-2 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm z-10 ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-50'}`}>{pl.type === 'manual' ? 'TABLE' : 'PDF'}</div></div><div className="p-3 flex-1 flex flex-col justify-between bg-white"><h3 className="font-black text-slate-900 text-[10px] md:text-sm uppercase leading-tight line-clamp-2">{pl.title}</h3><div className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-2">{pl.month} {pl.year}</div></div></button>))}</div></div>) : <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4"><RIcon size={64} className="opacity-10" /></div>}</div></div></div></div>
        )}
        {showFlipbook && <Flipbook pages={flipbookPages} onClose={() => window.history.back()} catalogueTitle={flipbookTitle} />}
-       {viewingPdf && <PdfViewer url={viewingPdf.url} title={viewingPdf.title} onClose={() => window.history.back()} />}
+       {viewingPdf && (
+           <PdfViewer 
+             url={viewingPdf.url} 
+             title={viewingPdf.title} 
+             pricelist={'kind' in viewingPdf ? viewingPdf as Pricelist : undefined}
+             onClose={() => window.history.back()} 
+           />
+       )}
        {viewingManualList && (
           <ManualPricelistViewer 
             pricelist={viewingManualList} 

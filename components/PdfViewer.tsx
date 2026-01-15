@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
+import { Pricelist } from '../types';
 
 // Robust reference for Vite/ESM/Legacy environments
 const pdfjs: any = pdfjsLib;
@@ -15,9 +16,10 @@ interface PdfViewerProps {
   url: string;
   title: string;
   onClose: () => void;
+  pricelist?: Pricelist;
 }
 
-const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
+const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist }) => {
   const [pdf, setPdf] = useState<any>(null);
   const [pageNum, setPageNum] = useState(1);
   const [scale, setScale] = useState(0); 
@@ -163,6 +165,15 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   const handleTouchStart = (e: React.TouchEvent) => { if (e.touches.length === 1) onStart(e.touches[0].pageX, e.touches[0].pageY); };
   const handleTouchMove = (e: React.TouchEvent) => { if (isDragging && e.touches.length === 1) { e.preventDefault(); onMove(e.touches[0].pageX, e.touches[0].pageY); } };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    try {
+        return new Date(dateString).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) {
+        return dateString;
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex flex-col animate-fade-in" onClick={onClose}>
        <div className="flex items-center justify-between p-4 bg-slate-900 text-white border-b border-slate-800 shrink-0 z-20" onClick={e => e.stopPropagation()}>
@@ -180,6 +191,21 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
           </div>
           <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={24} /></button>
        </div>
+
+       {pricelist?.kind === 'promotion' && (
+            <div className="w-full bg-slate-50 border-b border-slate-200 py-3 px-4 text-center shrink-0 z-10 shadow-sm relative animate-fade-in" onClick={e => e.stopPropagation()}>
+                {pricelist.promoText && (
+                    <p className="text-slate-900 font-black uppercase tracking-widest text-xs md:text-sm leading-relaxed">
+                        {pricelist.promoText}
+                    </p>
+                )}
+                {(pricelist.startDate || pricelist.endDate) && (
+                    <p className="text-[10px] font-bold text-slate-500 uppercase mt-1">
+                        Valid: {formatDate(pricelist.startDate)} - {formatDate(pricelist.endDate)}
+                    </p>
+                )}
+            </div>
+       )}
 
        <div 
          ref={containerRef}
