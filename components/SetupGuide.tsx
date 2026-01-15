@@ -9,7 +9,7 @@ import {
   FileText, ArrowRight, Sparkles, ServerCrash, Share, Download, FastForward, 
   Search, Columns, FileType, FileOutput, Maximize, GitBranch, Box, Eye, 
   MessageSquare, ListCheck, Cloud, Layout, MousePointer2, Wifi, Bot, SmartphoneNfc, 
-  Container, Braces, Wand2, MonitorSmartphone
+  Container, Braces, Wand2, MonitorSmartphone, Split, DatabaseZap
 } from 'lucide-react';
 
 interface SetupGuideProps {
@@ -17,7 +17,7 @@ interface SetupGuideProps {
 }
 
 const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'supabase' | 'apk' | 'ai' | 'pricelists' | 'build'>('supabase');
+  const [activeTab, setActiveTab] = useState<'supabase' | 'apk' | 'ai' | 'pricelists' | 'build' | 'migration'>('supabase');
   const [copiedStep, setCopiedStep] = useState<string | null>(null);
   const [roundDemoValue, setRoundDemoValue] = useState(799);
 
@@ -154,10 +154,11 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
             <nav className="space-y-4">
                 {[
                     { id: 'supabase', label: '1. Cloud Infrastructure', sub: 'PostgreSQL & Realtime', icon: Database, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-600' },
-                    { id: 'apk', label: '2. Android APK Native', sub: 'Hardware Packaging', icon: SmartphoneNfc, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-600' },
-                    { id: 'ai', label: '3. Gemini AI Engine', sub: 'LLM Content Synthesis', icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
-                    { id: 'build', label: '4. Asset Compiler', sub: 'Production Pipelines', icon: Container, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
-                    { id: 'pricelists', label: '5. Technical Matrix', sub: 'Pricelist Rounding', icon: Table, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-600' }
+                    { id: 'migration', label: '2. Relational Migration', sub: 'Fix 500 Payload Errors', icon: Split, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-600' },
+                    { id: 'apk', label: '3. Android APK Native', sub: 'Hardware Packaging', icon: SmartphoneNfc, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-600' },
+                    { id: 'ai', label: '4. Gemini AI Engine', sub: 'LLM Content Synthesis', icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-600' },
+                    { id: 'build', label: '5. Asset Compiler', sub: 'Production Pipelines', icon: Container, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-600' },
+                    { id: 'pricelists', label: '6. Technical Matrix', sub: 'Pricelist Rounding', icon: Table, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-600' }
                 ].map(tab => (
                     <button 
                         key={tab.id}
@@ -214,8 +215,8 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                         </div>
                     </div>
 
-                    <Step number="1" title="Production SQL Provisioning">
-                        <p className="font-medium text-slate-700 leading-relaxed">Execute this bootstrap protocol in your Supabase SQL Editor. This script creates the tables, storage buckets, and permissive RLS policies required for retail kiosks.</p>
+                    <Step number="1" title="Initial Bootstrap">
+                        <p className="font-medium text-slate-700 leading-relaxed">Execute this bootstrap protocol in your Supabase SQL Editor. This sets up the legacy Monolithic config and Kiosk Registry.</p>
                         <CodeBlock 
                           id="sql-complete"
                           label="Production Bootstrap Script"
@@ -257,8 +258,111 @@ INSERT INTO public.store_config (id, data) VALUES (1, '{}'::jsonb) ON CONFLICT (
                         />
                     </Step>
 
+                    <div className="p-6 bg-red-50 border-2 border-red-100 rounded-3xl mt-8">
+                        <div className="flex items-center gap-2 text-red-600 font-black uppercase text-xs mb-2">
+                            <ShieldAlert size={16} /> Important Upgrade
+                        </div>
+                        <p className="text-red-900/80 text-sm font-medium">If you are experiencing "500 Payload Too Large" errors, you MUST proceed to the <strong>Relational Migration</strong> tab to split the data into normalized tables.</p>
+                    </div>
+                </div>
+              )}
+
+              {/* SECTION: MIGRATION */}
+              {activeTab === 'migration' && (
+                <div className="p-10 md:p-20 animate-fade-in">
+                    <SectionHeading icon={DatabaseZap} subtitle="Splitting the monolithic JSON blob into normalized relational tables to fix size limits.">Database Normalization</SectionHeading>
+                    
+                    <WhyBox title="Relational Strategy" variant="orange">
+                        We are moving from `store_config` (One Big JSON) to `brands`, `products`, and `categories`. This allows us to sync data in small batches, fixing the 500 error when saving large catalogues.
+                    </WhyBox>
+
+                    <Step number="1" title="Execute Migration Script">
+                        <p className="font-medium text-slate-700 leading-relaxed">Run this SQL in Supabase to create the new high-performance tables. The App will automatically detect them and switch to Relational Mode.</p>
+                        <CodeBlock 
+                            id="sql-migration"
+                            label="Relational Tables SQL"
+                            code={`-- 1. Create BRANDS Table
+CREATE TABLE IF NOT EXISTS public.brands (
+    id text primary key,
+    name text,
+    logo_url text,
+    theme_color text,
+    updated_at timestamp with time zone default now()
+);
+
+-- 2. Create CATEGORIES Table
+CREATE TABLE IF NOT EXISTS public.categories (
+    id text primary key,
+    brand_id text references public.brands(id) ON DELETE CASCADE,
+    name text,
+    icon text,
+    updated_at timestamp with time zone default now()
+);
+
+-- 3. Create PRODUCTS Table (The Heavy Lifter)
+CREATE TABLE IF NOT EXISTS public.products (
+    id text primary key,
+    category_id text references public.categories(id) ON DELETE CASCADE,
+    name text,
+    sku text,
+    description text,
+    image_url text,
+    gallery_urls jsonb default '[]',
+    video_urls jsonb default '[]',
+    specs jsonb default '{}',
+    features jsonb default '[]',
+    box_contents jsonb default '[]',
+    manuals jsonb default '[]',
+    terms text,
+    dimensions jsonb default '[]',
+    date_added text,
+    updated_at timestamp with time zone default now()
+);
+
+-- 4. Create PRICELISTS Tables
+CREATE TABLE IF NOT EXISTS public.pricelist_brands (
+    id text primary key,
+    name text,
+    logo_url text,
+    updated_at timestamp with time zone default now()
+);
+
+CREATE TABLE IF NOT EXISTS public.pricelists (
+    id text primary key,
+    brand_id text references public.pricelist_brands(id) ON DELETE CASCADE,
+    title text,
+    month text,
+    year text,
+    url text,
+    thumbnail_url text,
+    type text,
+    kind text,
+    start_date text,
+    end_date text,
+    promo_text text,
+    items jsonb default '[]',
+    headers jsonb default '{}',
+    date_added text,
+    updated_at timestamp with time zone default now()
+);
+
+-- 5. Enable RLS
+ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pricelist_brands ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public Read/Write Brands" ON public.brands FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Read/Write Categories" ON public.categories FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Read/Write Products" ON public.products FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Read/Write Pricelists" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Read/Write PL Brands" ON public.pricelist_brands FOR ALL USING (true) WITH CHECK (true);`}
+                        />
+                    </Step>
+
                     <EngineerNote>
-                        Security Warning: For enterprise deployments, replace the `USING (true)` policies with `auth.uid()` checks. This demo uses open policies for rapid store-front deployment.
+                        After running this, the next time you visit the Admin Dashboard, your existing data will be automatically migrated to these tables when you click "Save Changes" or when the app loads (if auto-migration logic is triggered).
                     </EngineerNote>
                 </div>
               )}

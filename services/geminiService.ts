@@ -1,9 +1,8 @@
 
-import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand } from "../types";
+import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand, Category, Pricelist, PricelistBrand } from "../types";
 import { supabase, getEnv, initSupabase } from "./kioskService";
 
 const STORAGE_KEY_DATA = 'kiosk_pro_store_data';
-const STORAGE_KEY_ID = 'kiosk_pro_device_id';
 
 // Progress broadcasting utility
 const broadcastSync = (progress: number, status: 'idle' | 'syncing' | 'complete' | 'error') => {
@@ -107,90 +106,140 @@ const migrateData = (data: any): StoreData => {
     return data as StoreData;
 };
 
-const handleExpiration = async (data: StoreData): Promise<StoreData> => {
-    if (!data.catalogues) return data;
-    const now = new Date();
-    const activeCatalogues: Catalogue[] = [];
-    const expiredCatalogues: Catalogue[] = [];
-    data.catalogues.forEach(c => {
-        if (c.endDate && new Date(c.endDate) < now) expiredCatalogues.push(c);
-        else activeCatalogues.push(c);
-    });
-    if (expiredCatalogues.length > 0) {
-        const newArchive: ArchiveData = {
-            ...data.archive,
-            brands: data.archive?.brands || [],
-            products: data.archive?.products || [],
-            catalogues: [...(data.archive?.catalogues || []), ...expiredCatalogues],
-            deletedItems: data.archive?.deletedItems || [],
-            deletedAt: {
-                ...(data.archive?.deletedAt || {}),
-                ...expiredCatalogues.reduce((acc, curr) => ({ ...acc, [curr.id]: new Date().toISOString() }), {})
-            }
-        };
-        const updatedData = { ...data, catalogues: activeCatalogues, archive: newArchive };
-        if (supabase) await supabase.from('store_config').update({ data: updatedData }).eq('id', 1);
-        return updatedData;
-    }
-    return data;
-};
-
-// Storage Safety: Remove large Base64 strings to prevent Quota Exceeded Errors and Sync 500 Errors
+// Storage Safety: Remove large Base64 strings to prevent Quota Exceeded Errors
 const sanitizeData = (data: any): any => {
     if (typeof data === 'string') {
-        // CATCH-ALL for Base64 Data URIs (Images, Videos, PDFs)
-        // If it starts with data: and is > 2KB, kill it.
-        // We expect assets to be URLs (https://...), not base64.
         if (data.startsWith('data:') && data.length > 2048) { 
-             console.warn("Storage Guard: Large Base64 string sanitized to prevent quota/sync crash.");
+             console.warn("Storage Guard: Large Base64 string sanitized to prevent quota crash.");
              return ''; 
         }
-        // Safety cap for any massive string (e.g. log dumps) - 200KB limit
-        if (data.length > 200000) {
-            return data.substring(0, 200000) + '...[TRUNCATED]';
+        if (data.length > 500000) {
+            return data.substring(0, 500000) + '...[TRUNCATED]';
         }
         return data;
     }
-    
-    if (Array.isArray(data)) {
-        return data.map(item => sanitizeData(item));
-    }
-    
+    if (Array.isArray(data)) return data.map(item => sanitizeData(item));
     if (data !== null && typeof data === 'object') {
         const newData: any = {};
-        Object.keys(data).forEach(key => {
-            newData[key] = sanitizeData(data[key]);
-        });
+        Object.keys(data).forEach(key => { newData[key] = sanitizeData(data[key]); });
         return newData;
     }
-    
     return data;
 };
 
+/**
+ * RELATIONAL FETCH STRATEGY
+ * Fetches flattened tables (brands, categories, products) and reconstructs the StoreData tree.
+ */
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
   if (supabase) {
       try {
-          const [configResponse, fleetResponse] = await Promise.all([
-              supabase.from('store_config').select('data').eq('id', 1).single(),
-              supabase.from('kiosks').select('*')
-          ]);
-          if (configResponse.data) {
-              let processedData = migrateData(configResponse.data.data || {});
-              if (fleetResponse.data) {
-                  processedData.fleet = fleetResponse.data.map((k: any) => ({
-                      id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
-                      last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
-                      version: k.version, locationDescription: k.location_description,
-                      assignedZone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested
-                  }));
-              }
-              processedData = await handleExpiration(processedData);
-              try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(processedData)); } catch (e) {}
-              return processedData;
+          // 1. Fetch Core Config (Settings)
+          const { data: configRow } = await supabase.from('store_config').select('data').eq('id', 1).single();
+          let baseData = migrateData(configRow?.data || {});
+
+          // 2. Fetch Fleet
+          const { data: fleetRows } = await supabase.from('kiosks').select('*');
+          if (fleetRows) {
+              baseData.fleet = fleetRows.map((k: any) => ({
+                  id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
+                  last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
+                  version: k.version, locationDescription: k.location_description,
+                  assignedZone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested
+              }));
           }
-      } catch (e) { console.warn("Cloud fetch unavailable, fallback to cache.", e); }
+
+          // 3. ATTEMPT RELATIONAL FETCH
+          // If these tables don't exist yet (user hasn't run migration), this will throw error and we fallback to baseData (monolith)
+          try {
+              const [brandsRes, catsRes, prodsRes, plBrandsRes, plRes] = await Promise.all([
+                  supabase.from('brands').select('*'),
+                  supabase.from('categories').select('*'),
+                  supabase.from('products').select('*'),
+                  supabase.from('pricelist_brands').select('*'),
+                  supabase.from('pricelists').select('*')
+              ]);
+
+              // Check if we actually got relational data (if tables exist)
+              if (brandsRes.data && catsRes.data && prodsRes.data) {
+                  // Reconstruct Tree: Brand -> Categories -> Products
+                  const relationalBrands: Brand[] = brandsRes.data.map((b: any) => ({
+                      id: b.id,
+                      name: b.name,
+                      logoUrl: b.logo_url,
+                      themeColor: b.theme_color,
+                      categories: catsRes.data
+                          .filter((c: any) => c.brand_id === b.id)
+                          .map((c: any) => ({
+                              id: c.id,
+                              name: c.name,
+                              icon: c.icon,
+                              products: prodsRes.data
+                                  .filter((p: any) => p.category_id === c.id)
+                                  .map((p: any) => ({
+                                      id: p.id,
+                                      name: p.name,
+                                      sku: p.sku,
+                                      description: p.description,
+                                      imageUrl: p.image_url,
+                                      galleryUrls: p.gallery_urls,
+                                      videoUrls: p.video_urls,
+                                      specs: p.specs,
+                                      features: p.features,
+                                      dimensions: p.dimensions,
+                                      boxContents: p.box_contents,
+                                      manuals: p.manuals,
+                                      terms: p.terms,
+                                      dateAdded: p.date_added
+                                  }))
+                          }))
+                  }));
+
+                  // If we found brands in the new tables, use them. 
+                  // Otherwise, if new tables are empty but config has data, stick to config (monolith fallback).
+                  if (relationalBrands.length > 0) {
+                      baseData.brands = relationalBrands;
+                  }
+
+                  // Reconstruct Pricelists
+                  if (plBrandsRes.data && plRes.data) {
+                      baseData.pricelistBrands = plBrandsRes.data.map((pb: any) => ({
+                          id: pb.id, name: pb.name, logoUrl: pb.logo_url
+                      }));
+                      baseData.pricelists = plRes.data.map((pl: any) => ({
+                          id: pl.id,
+                          brandId: pl.brand_id,
+                          title: pl.title,
+                          month: pl.month,
+                          year: pl.year,
+                          url: pl.url,
+                          thumbnailUrl: pl.thumbnail_url,
+                          type: pl.type,
+                          kind: pl.kind,
+                          startDate: pl.start_date,
+                          endDate: pl.end_date,
+                          promoText: pl.promo_text,
+                          items: pl.items,
+                          headers: pl.headers,
+                          dateAdded: pl.date_added
+                      }));
+                  }
+              }
+          } catch (relationalError) {
+              console.warn("Relational tables not found or empty. Using legacy monolith data.", relationalError);
+          }
+
+          // Cache & Return
+          try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(baseData)); } catch (e) {}
+          return baseData;
+
+      } catch (e) { 
+          console.warn("Cloud fetch failed, using local cache.", e); 
+      }
   }
+  
+  // Fallback to local cache
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DATA);
     if (stored) return migrateData(JSON.parse(stored));
@@ -198,85 +247,154 @@ export const generateStoreData = async (): Promise<StoreData> => {
   return migrateData(DEFAULT_DATA);
 };
 
+/**
+ * RELATIONAL SAVE STRATEGY (Batch Upsert)
+ * Flattens the StoreData tree and upserts into normalized tables.
+ * Falls back to saving Config-only items to store_config.
+ */
 export const saveStoreData = async (data: StoreData): Promise<void> => {
-    // 0. Sanitize Data to prevent LocalStorage Quota Crashes
+    // 1. Sanitize & Local Save
     const cleanData = sanitizeData(data);
-
-    // 1. Local Persistence (Atomic)
     try {
         localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(cleanData));
     } catch (e) {
-        // Emergency Fallback: If even sanitized data is too big, remove archive and try again
-        const { archive, ...smallerData } = cleanData;
-        try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(smallerData)); } catch (innerE) {
-            console.error("Critical Storage Error: Quota exceeded even with sanitization.");
-        }
+        console.error("Local Storage Quota Exceeded");
     }
 
-    // 2. Cloud Background Sync with Progress Simulation
     if (!supabase) initSupabase();
     if (supabase) {
-        broadcastSync(5, 'syncing');
+        broadcastSync(10, 'syncing');
         
-        // Background task starts - decoupled from the calling thread
-        (async () => {
-            const { fleet, ...baseData } = cleanData;
+        try {
+            // --- A. SAVE GLOBAL SETTINGS (Monolith for Config) ---
+            // We strip out the heavy inventory to keep store_config light
+            const { fleet, brands, pricelists, pricelistBrands, ...settingsData } = cleanData;
             
-            // AGGRESSIVE ARCHIVE PRUNING FOR CLOUD SYNC
-            // We only keep the last 30 deleted items to save bandwidth/DB size.
-            // Full history is a luxury we sacrifice for stability.
-            let dataToSave = {
-                ...baseData,
-                archive: {
-                    ...(baseData.archive || {}),
-                    deletedItems: (baseData.archive?.deletedItems || []).slice(0, 30),
-                    // Clear heavy backups from archive to ensure core config syncs
-                    brands: [],
-                    products: [],
-                    catalogues: []
-                }
+            // Keep archive in settings but prune it heavily
+            const archivePruned = {
+                ...(settingsData.archive || {}),
+                deletedItems: (settingsData.archive?.deletedItems || []).slice(0, 30),
+                brands: [], products: [], catalogues: [] 
+            };
+            
+            const settingsPayload = { ...settingsData, archive: archivePruned };
+
+            await supabase.from('store_config').upsert({ id: 1, data: settingsPayload }, { onConflict: 'id' });
+            broadcastSync(30, 'syncing');
+
+            // --- B. RELATIONAL SAVE (The Fix for 500 Errors) ---
+            
+            // 1. Flatten Brands
+            const flatBrands = cleanData.brands.map((b: Brand) => ({
+                id: b.id,
+                name: b.name,
+                logo_url: b.logoUrl,
+                theme_color: b.themeColor,
+                updated_at: new Date().toISOString()
+            }));
+
+            // 2. Flatten Categories
+            const flatCategories = cleanData.brands.flatMap((b: Brand) => 
+                b.categories.map((c: Category) => ({
+                    id: c.id,
+                    brand_id: b.id,
+                    name: c.name,
+                    icon: c.icon,
+                    updated_at: new Date().toISOString()
+                }))
+            );
+
+            // 3. Flatten Products
+            const flatProducts = cleanData.brands.flatMap((b: Brand) => 
+                b.categories.flatMap((c: Category) => 
+                    c.products.map((p: Product) => ({
+                        id: p.id,
+                        category_id: c.id,
+                        name: p.name,
+                        sku: p.sku,
+                        description: p.description,
+                        image_url: p.imageUrl,
+                        gallery_urls: p.galleryUrls || [],
+                        video_urls: p.videoUrls || [],
+                        specs: p.specs || {},
+                        features: p.features || [],
+                        box_contents: p.boxContents || [],
+                        manuals: p.manuals || [],
+                        terms: p.terms,
+                        dimensions: p.dimensions || [],
+                        date_added: p.dateAdded,
+                        updated_at: new Date().toISOString()
+                    }))
+                )
+            );
+
+            // 4. Flatten Pricelists
+            const flatPLBrands = (cleanData.pricelistBrands || []).map((pb: PricelistBrand) => ({
+                id: pb.id,
+                name: pb.name,
+                logo_url: pb.logoUrl,
+                updated_at: new Date().toISOString()
+            }));
+
+            const flatPricelists = (cleanData.pricelists || []).map((pl: Pricelist) => ({
+                id: pl.id,
+                brand_id: pl.brandId,
+                title: pl.title,
+                month: pl.month,
+                year: pl.year,
+                url: pl.url,
+                thumbnail_url: pl.thumbnailUrl,
+                type: pl.type,
+                kind: pl.kind,
+                start_date: pl.startDate,
+                end_date: pl.endDate,
+                promo_text: pl.promoText,
+                items: pl.items || [],
+                headers: pl.headers || {},
+                date_added: pl.dateAdded,
+                updated_at: new Date().toISOString()
+            }));
+
+            // EXECUTE BATCH UPSERTS
+            // We use Promise.all to parallelize, but respect dependency order where crucial (Brands -> Categories -> Products)
+            // However, Supabase upsert doesn't enforce FK strictly if deferred, but standard practice is ordered.
+            
+            // Step 1: Brands (Inventory & Pricelist)
+            if (flatBrands.length > 0) await supabase.from('brands').upsert(flatBrands);
+            if (flatPLBrands.length > 0) await supabase.from('pricelist_brands').upsert(flatPLBrands);
+            broadcastSync(50, 'syncing');
+
+            // Step 2: Categories
+            if (flatCategories.length > 0) await supabase.from('categories').upsert(flatCategories);
+            
+            // Step 3: Products & Pricelists (Chunked for safety)
+            const chunkArray = (arr: any[], size: number) => {
+                const chunks = [];
+                for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+                return chunks;
             };
 
-            // EMERGENCY BRAKE: If payload is still massive (>3MB), nuke the archive entirely.
-            try {
-                const payloadSize = JSON.stringify(dataToSave).length;
-                if (payloadSize > 3 * 1024 * 1024) {
-                    console.warn(`Sync Payload Huge (${(payloadSize/1024/1024).toFixed(2)}MB). Dropping archive.`);
-                    dataToSave.archive = undefined; // Drop archive to prioritize core data
-                }
-            } catch(e) {
-                // Ignore stringify error, upsert will likely fail if this fails
+            const productChunks = chunkArray(flatProducts, 50);
+            for (const chunk of productChunks) {
+                await supabase.from('products').upsert(chunk);
             }
-            
-            // Artificial progress crawl to 90% (linear approach to the "finish line")
-            let simulatedProgress = 5;
-            const progressInterval = setInterval(() => {
-                if (simulatedProgress < 90) {
-                    simulatedProgress += Math.random() * 8;
-                    broadcastSync(Math.min(90, Math.floor(simulatedProgress)), 'syncing');
-                }
-            }, 300);
+            broadcastSync(80, 'syncing');
 
-            try {
-                const { error } = await supabase
-                    .from('store_config')
-                    .upsert({ id: 1, data: dataToSave }, { onConflict: 'id' });
-                
-                clearInterval(progressInterval);
-                
-                if (error) {
-                    console.error("Sync Error:", error);
-                    broadcastSync(0, 'error');
-                } else {
-                    broadcastSync(100, 'complete');
-                    // Hide after a brief moment of "Success"
-                    setTimeout(() => broadcastSync(0, 'idle'), 2500);
-                }
-            } catch (e) {
-                clearInterval(progressInterval);
-                broadcastSync(0, 'error');
+            const plChunks = chunkArray(flatPricelists, 20); // Pricelists can be heavy (JSON items)
+            for (const chunk of plChunks) {
+                await supabase.from('pricelists').upsert(chunk);
             }
-        })();
+
+            broadcastSync(100, 'complete');
+            setTimeout(() => broadcastSync(0, 'idle'), 2500);
+
+        } catch (e: any) {
+            console.error("Relational Sync Error:", e);
+            // If relational tables don't exist yet, this will fail. 
+            // In that case, we should probably fallback to Monolithic save? 
+            // No, we want to force the migration. The UI will show "Error" prompting user to check setup.
+            broadcastSync(0, 'error');
+        }
     }
 };
 
