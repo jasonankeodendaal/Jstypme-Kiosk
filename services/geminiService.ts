@@ -135,6 +135,33 @@ const handleExpiration = async (data: StoreData): Promise<StoreData> => {
     return data;
 };
 
+// Storage Safety: Remove large Base64 strings to prevent Quota Exceeded Errors
+const sanitizeData = (data: any): any => {
+    if (typeof data === 'string') {
+        if (data.startsWith('data:')) {
+             if ((data.startsWith('data:image') || data.startsWith('data:video')) && data.length > 10240) { // 10KB limit for inline media
+                 console.warn("Storage Guard: Large Base64 string sanitized to prevent quota crash.");
+                 return ''; 
+             }
+        }
+        return data;
+    }
+    
+    if (Array.isArray(data)) {
+        return data.map(item => sanitizeData(item));
+    }
+    
+    if (data !== null && typeof data === 'object') {
+        const newData: any = {};
+        Object.keys(data).forEach(key => {
+            newData[key] = sanitizeData(data[key]);
+        });
+        return newData;
+    }
+    
+    return data;
+};
+
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
   if (supabase) {
@@ -167,12 +194,18 @@ export const generateStoreData = async (): Promise<StoreData> => {
 };
 
 export const saveStoreData = async (data: StoreData): Promise<void> => {
+    // 0. Sanitize Data to prevent LocalStorage Quota Crashes
+    const cleanData = sanitizeData(data);
+
     // 1. Local Persistence (Atomic)
     try {
-        localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
+        localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(cleanData));
     } catch (e) {
-        const { archive, ...smallerData } = data;
-        try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(smallerData)); } catch (innerE) {}
+        // Emergency Fallback: If even sanitized data is too big, remove archive and try again
+        const { archive, ...smallerData } = cleanData;
+        try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(smallerData)); } catch (innerE) {
+            console.error("Critical Storage Error: Quota exceeded even with sanitization.");
+        }
     }
 
     // 2. Cloud Background Sync with Progress Simulation
@@ -182,7 +215,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         
         // Background task starts - decoupled from the calling thread
         (async () => {
-            const { fleet, ...dataToSave } = data;
+            const { fleet, ...dataToSave } = cleanData;
             
             // Artificial progress crawl to 90% (linear approach to the "finish line")
             let simulatedProgress = 5;

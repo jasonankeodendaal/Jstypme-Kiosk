@@ -112,6 +112,11 @@ const SystemDocumentation = () => {
                     </div>
                 )}
 
+                {/* Other sections removed for brevity in this delta update, assuming they are preserved if not mentioned. 
+                    Wait, instructions say "Full content of file". 
+                    I must include full content.
+                */}
+                
                 {activeSection === 'inventory' && (
                     <div className="space-y-12 animate-fade-in max-w-5xl">
                         <div className="space-y-4">
@@ -357,43 +362,48 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
       const files = Array.from(e.target.files) as File[];
       let fileType = files[0].type.startsWith('video') ? 'video' : files[0].type === 'application/pdf' ? 'pdf' : files[0].type.startsWith('audio') ? 'audio' : 'image';
 
-      const readFileAsBase64 = (file: File): Promise<string> => {
-          return new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(file);
-          });
-      };
-
       const uploadSingle = async (file: File) => {
-           const localBase64 = await readFileAsBase64(file);
-           
            try {
               const url = await uploadFileToStorage(file);
-              return { url, base64: localBase64 };
-           } catch (e) {
-              return { url: localBase64, base64: localBase64 };
+              return url;
+           } catch (e: any) {
+              const msg = e.message || "Storage Access Error";
+              alert(`Upload Failed: ${msg}\n\nPlease ensure your device is online and has access to Cloud Storage.`);
+              throw e;
            }
       };
 
       try {
           if (allowMultiple) {
               const results: string[] = [];
-              const base64s: string[] = [];
               for(let i=0; i<files.length; i++) {
-                  const res = await uploadSingle(files[i]);
-                  results.push(res.url);
-                  base64s.push(res.base64);
+                  try {
+                    const url = await uploadSingle(files[i]);
+                    results.push(url);
+                  } catch (e) {
+                    // Prevent pushing undefined/null
+                  }
                   setUploadProgress(((i+1)/files.length)*100);
               }
-              onUpload(results, fileType, base64s);
+              if (results.length > 0) {
+                  onUpload(results, fileType);
+              }
           } else {
-              const res = await uploadSingle(files[0]);
-              setUploadProgress(100);
-              onUpload(res.url, fileType, res.base64);
+              try {
+                const url = await uploadSingle(files[0]);
+                setUploadProgress(100);
+                onUpload(url, fileType);
+              } catch (e) {
+                // Alert handled in uploadSingle
+              }
           }
-      } catch (err) { alert("Upload error"); } 
-      finally { setTimeout(() => { setIsProcessing(false); setUploadProgress(0); }, 500); }
+      } catch (err) { 
+          console.error(err);
+      } 
+      finally { 
+          setTimeout(() => { setIsProcessing(false); setUploadProgress(0); }, 500); 
+          e.target.value = ''; // Reset input to allow re-selecting same file if needed
+      }
     }
   };
 
@@ -416,8 +426,8 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
                <img src={currentUrl} className="w-full h-full object-contain" />
            ) : React.cloneElement(icon, { size: 16 })}
         </div>
-        <label className={`flex-1 text-center cursor-pointer bg-slate-900 text-white px-2 py-2 rounded-lg font-bold text-[9px] uppercase whitespace-nowrap overflow-hidden text-ellipsis ${isProcessing ? 'opacity-50' : ''}`}>
-              <Upload size={10} className="inline mr-1" /> {isProcessing ? '...' : 'Select'}
+        <label className={`flex-1 text-center cursor-pointer bg-slate-900 text-white px-2 py-2 rounded-lg font-bold text-[9px] uppercase whitespace-nowrap overflow-hidden text-ellipsis ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              <Upload size={10} className="inline mr-1" /> {isProcessing ? 'Uploading...' : 'Select File'}
               <input type="file" className="hidden" accept={accept} onChange={handleFileChange} disabled={isProcessing} multiple={allowMultiple}/>
         </label>
       </div>
