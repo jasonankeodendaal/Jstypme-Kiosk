@@ -266,9 +266,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         broadcastSync(10, 'syncing');
         
         try {
-            // --- PREPARE DATA ---
-            
-            // A. Settings (Monolith)
+            // --- A. SAVE GLOBAL SETTINGS (Monolith for Config) ---
             // We strip out the heavy inventory to keep store_config light
             const { fleet, brands, pricelists, pricelistBrands, ...settingsData } = cleanData;
             
@@ -281,7 +279,10 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             
             const settingsPayload = { ...settingsData, archive: archivePruned };
 
-            // B. Relational Data (Flattened)
+            await supabase.from('store_config').upsert({ id: 1, data: settingsPayload }, { onConflict: 'id' });
+            broadcastSync(30, 'syncing');
+
+            // --- B. RELATIONAL SAVE (The Fix for 500 Errors) ---
             
             // 1. Flatten Brands
             const flatBrands = cleanData.brands.map((b: Brand) => ({
@@ -354,45 +355,35 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
                 updated_at: new Date().toISOString()
             }));
 
-            // --- EXECUTE BATCH UPSERTS (PARALLEL) ---
+            // EXECUTE BATCH UPSERTS
+            // We use Promise.all to parallelize, but respect dependency order where crucial (Brands -> Categories -> Products)
+            // However, Supabase upsert doesn't enforce FK strictly if deferred, but standard practice is ordered.
             
-            // Phase 1: Independent Roots (Settings, Brands, PL Brands)
-            const phase1Promises = [];
-            phase1Promises.push(supabase.from('store_config').upsert({ id: 1, data: settingsPayload }, { onConflict: 'id' }));
-            if (flatBrands.length > 0) phase1Promises.push(supabase.from('brands').upsert(flatBrands));
-            if (flatPLBrands.length > 0) phase1Promises.push(supabase.from('pricelist_brands').upsert(flatPLBrands));
-            
-            await Promise.all(phase1Promises);
-            broadcastSync(40, 'syncing');
+            // Step 1: Brands (Inventory & Pricelist)
+            if (flatBrands.length > 0) await supabase.from('brands').upsert(flatBrands);
+            if (flatPLBrands.length > 0) await supabase.from('pricelist_brands').upsert(flatPLBrands);
+            broadcastSync(50, 'syncing');
 
-            // Phase 2: Dependencies Level 1 (Categories)
-            // Categories depend on Brands existing, so we wait for Phase 1
-            if (flatCategories.length > 0) {
-                await supabase.from('categories').upsert(flatCategories);
-            }
-            broadcastSync(60, 'syncing');
+            // Step 2: Categories
+            if (flatCategories.length > 0) await supabase.from('categories').upsert(flatCategories);
             
-            // Phase 3: Leaves (Products & Pricelists) - Parallel Chunks
-            const phase3Promises = [];
+            // Step 3: Products & Pricelists (Chunked for safety)
             const chunkArray = (arr: any[], size: number) => {
                 const chunks = [];
                 for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
                 return chunks;
             };
 
-            // Increased chunk size for speed (100 products per request)
-            const productChunks = chunkArray(flatProducts, 100);
-            productChunks.forEach(chunk => {
-                phase3Promises.push(supabase.from('products').upsert(chunk));
-            });
+            const productChunks = chunkArray(flatProducts, 50);
+            for (const chunk of productChunks) {
+                await supabase.from('products').upsert(chunk);
+            }
+            broadcastSync(80, 'syncing');
 
-            // Increased chunk size for pricelists (50 per request)
-            const plChunks = chunkArray(flatPricelists, 50);
-            plChunks.forEach(chunk => {
-                phase3Promises.push(supabase.from('pricelists').upsert(chunk));
-            });
-
-            await Promise.all(phase3Promises);
+            const plChunks = chunkArray(flatPricelists, 20); // Pricelists can be heavy (JSON items)
+            for (const chunk of plChunks) {
+                await supabase.from('pricelists').upsert(chunk);
+            }
 
             broadcastSync(100, 'complete');
             setTimeout(() => broadcastSync(0, 'idle'), 2500);
@@ -400,6 +391,8 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         } catch (e: any) {
             console.error("Relational Sync Error:", e);
             // If relational tables don't exist yet, this will fail. 
+            // In that case, we should probably fallback to Monolithic save? 
+            // No, we want to force the migration. The UI will show "Error" prompting user to check setup.
             broadcastSync(0, 'error');
         }
     }
