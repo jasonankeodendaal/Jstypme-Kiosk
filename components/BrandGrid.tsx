@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef, useMemo, memo } from 'react';
 import { Brand, Catalogue, HeroConfig, AdConfig, AdItem } from '../types';
-import { BookOpen, Globe, ChevronRight, X, Grid } from 'lucide-react';
+import { BookOpen, Globe, ChevronRight, X, Grid, Library } from 'lucide-react';
 
 interface BrandGridProps {
   brands: Brand[];
@@ -151,8 +151,20 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const globalPamphlets = allCatalogs?.filter(c => !c.brandId) || [];
-  const mainPamphlet = globalPamphlets[0]; 
+  // Sort pamphlets by date (Newest First) so Hero gets the latest
+  const sortedPamphlets = useMemo(() => {
+      const list = allCatalogs?.filter(c => !c.brandId) || [];
+      return list.sort((a, b) => {
+           // Sort by startDate descending (newest first)
+           const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
+           const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
+           if (dateA !== dateB) return dateB - dateA;
+           // Fallback to year
+           return (b.year || 0) - (a.year || 0);
+      });
+  }, [allCatalogs]);
+
+  const mainPamphlet = sortedPamphlets[0]; 
 
   const sortedBrands = useMemo(() => {
       return [...brands].sort((a, b) => a.name.localeCompare(b.name));
@@ -242,6 +254,44 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             )}
         </div>
       </div>
+
+      {/* Tiny Strip Carousel - Only if > 1 pamphlet */}
+      {sortedPamphlets.length > 1 && (
+          <div className="w-full bg-slate-100 border-b border-slate-200 py-3 px-4 md:px-8 shadow-inner relative z-20 animate-fade-in">
+              <div className="flex items-center gap-4 md:gap-6 overflow-x-auto no-scrollbar max-w-[1700px] mx-auto pb-1">
+                  <div className="flex flex-col items-center justify-center shrink-0 pr-4 md:pr-6 border-r border-slate-300/50 text-slate-400 gap-1 opacity-80">
+                      <Library size={20} />
+                      <span className="text-[8px] font-black uppercase tracking-widest text-center leading-tight">All<br/>Issues</span>
+                  </div>
+                  {sortedPamphlets.map((pamphlet) => (
+                      <button 
+                          key={pamphlet.id}
+                          onClick={() => onViewGlobalCatalog(pamphlet)}
+                          className="group relative flex flex-col items-center shrink-0 w-16 md:w-20 transition-all duration-300 hover:-translate-y-1"
+                          title={pamphlet.title}
+                      >
+                          <div className="w-full aspect-[2/3] bg-white rounded-md shadow-sm group-hover:shadow-md border border-slate-200 overflow-hidden relative">
+                              {pamphlet.thumbnailUrl || (pamphlet.pages && pamphlet.pages[0]) ? (
+                                  <img 
+                                      src={pamphlet.thumbnailUrl || pamphlet.pages[0]} 
+                                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                                      alt={pamphlet.title}
+                                      loading="lazy"
+                                  />
+                              ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-300">
+                                      <BookOpen size={16} />
+                                  </div>
+                              )}
+                          </div>
+                          <span className="text-[7px] md:text-[8px] font-bold text-slate-500 uppercase mt-1.5 text-center line-clamp-1 w-full group-hover:text-blue-600 transition-colors">
+                              {pamphlet.title}
+                          </span>
+                      </button>
+                  ))}
+              </div>
+          </div>
+      )}
 
       <div className="w-full bg-white pt-10 pb-6 text-center border-b border-slate-100">
             <h2 className="text-xl md:text-4xl font-black text-slate-900 uppercase tracking-[0.2em] inline-block px-10 pb-2 relative">
