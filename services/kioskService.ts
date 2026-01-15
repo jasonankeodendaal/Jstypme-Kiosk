@@ -249,7 +249,10 @@ export const uploadFileToStorage = async (file: File): Promise<string> => {
         const filePath = fileName;
 
         const { error } = await supabase.storage.from('kiosk-media').upload(filePath, file);
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase Storage Upload Error:", error);
+            throw error;
+        }
 
         const { data: { publicUrl } } = supabase.storage.from('kiosk-media').getPublicUrl(filePath);
         return publicUrl;
