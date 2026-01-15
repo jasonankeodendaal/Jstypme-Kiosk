@@ -75,6 +75,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   }, [url]);
 
   useEffect(() => {
+    let active = true;
     const renderPage = async () => {
       if (!pdf || !canvasRef.current || !containerRef.current) return;
       
@@ -88,6 +89,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
       }
 
       try {
+        if (!active) return;
         setLoading(true); // Visual feedback during rendering
         const page = await pdf.getPage(pageNum);
         
@@ -115,19 +117,28 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
             canvas.style.height = Math.floor(viewport.height) + "px";
             const transform = [dpr, 0, 0, dpr, 0, 0];
             const renderContext = { canvasContext: context, viewport: viewport, transform: transform };
+            
             const task = page.render(renderContext);
             renderTaskRef.current = task;
             await task.promise;
-            setLoading(false); // Only finish loading state when drawing is complete
+            
+            if (active) setLoading(false); // Only finish loading state when drawing is complete
         }
       } catch (err: any) { 
           if (err?.name !== 'RenderingCancelledException') {
               console.error("Render Error", err); 
-              setLoading(false);
+              if (active) setLoading(false);
           }
       }
     };
     renderPage();
+
+    return () => {
+        active = false;
+        if (renderTaskRef.current) {
+            renderTaskRef.current.cancel().catch(() => {});
+        }
+    };
   }, [pdf, pageNum, scale, containerSize]);
 
   const changePage = (delta: number) => {
