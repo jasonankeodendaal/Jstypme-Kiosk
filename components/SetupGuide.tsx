@@ -237,6 +237,8 @@ CREATE TABLE IF NOT EXISTS public.kiosks (
     ip_address text,
     version text,
     assigned_zone text default 'Unassigned',
+    location_description text,
+    notes text,
     restart_requested boolean default false
 );
 
