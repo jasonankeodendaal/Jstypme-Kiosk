@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -61,7 +62,10 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
         });
         loadingTaskRef.current = loadingTask;
         const doc = await loadingTask.promise;
-        if (loadingTaskRef.current === loadingTask) { setPdf(doc); setLoading(false); }
+        if (loadingTaskRef.current === loadingTask) { 
+            setPdf(doc);
+            // Optimization: Keep loading true until first page render finishes
+        }
       } catch (err: any) {
         if (err?.message !== 'Loading aborted') { setError("Unable to load document."); setLoading(false); }
       }
@@ -73,9 +77,20 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
   useEffect(() => {
     const renderPage = async () => {
       if (!pdf || !canvasRef.current || !containerRef.current) return;
+      
+      // Robust Cancellation: Ensure previous render is stopped before starting new one
+      if (renderTaskRef.current) {
+          try {
+              await renderTaskRef.current.cancel();
+          } catch(e) {
+              // Expected error when cancelling
+          }
+      }
+
       try {
-        if (renderTaskRef.current) await renderTaskRef.current.cancel();
+        setLoading(true); // Visual feedback during rendering
         const page = await pdf.getPage(pageNum);
+        
         const viewportUnscaled = page.getViewport({ scale: 1.0 });
         let renderScale = scale;
         if (renderScale <= 0) {
@@ -86,7 +101,10 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
             const scaleY = availableHeight / viewportUnscaled.height;
             renderScale = Math.min(scaleX, scaleY, 2.0);
         }
-        const dpr = window.devicePixelRatio || 1;
+        
+        // Optimization: Cap DPR at 1.5 to prevent memory crashes on tablets with high-res screens
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        
         const viewport = page.getViewport({ scale: renderScale }); 
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
@@ -100,8 +118,14 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose }) => {
             const task = page.render(renderContext);
             renderTaskRef.current = task;
             await task.promise;
+            setLoading(false); // Only finish loading state when drawing is complete
         }
-      } catch (err: any) { if (err?.name !== 'RenderingCancelledException') console.error("Render Error", err); }
+      } catch (err: any) { 
+          if (err?.name !== 'RenderingCancelledException') {
+              console.error("Render Error", err); 
+              setLoading(false);
+          }
+      }
     };
     renderPage();
   }, [pdf, pageNum, scale, containerSize]);
