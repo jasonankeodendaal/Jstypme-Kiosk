@@ -135,14 +135,19 @@ const handleExpiration = async (data: StoreData): Promise<StoreData> => {
     return data;
 };
 
-// Storage Safety: Remove large Base64 strings to prevent Quota Exceeded Errors
+// Storage Safety: Remove large Base64 strings to prevent Quota Exceeded Errors and Sync 500 Errors
 const sanitizeData = (data: any): any => {
     if (typeof data === 'string') {
-        if (data.startsWith('data:')) {
-             if ((data.startsWith('data:image') || data.startsWith('data:video')) && data.length > 10240) { // 10KB limit for inline media
-                 console.warn("Storage Guard: Large Base64 string sanitized to prevent quota crash.");
-                 return ''; 
-             }
+        // CATCH-ALL for Base64 Data URIs (Images, Videos, PDFs)
+        // If it starts with data: and is > 2KB, kill it.
+        // We expect assets to be URLs (https://...), not base64.
+        if (data.startsWith('data:') && data.length > 2048) { 
+             console.warn("Storage Guard: Large Base64 string sanitized to prevent quota/sync crash.");
+             return ''; 
+        }
+        // Safety cap for any massive string (e.g. log dumps) - 200KB limit
+        if (data.length > 200000) {
+            return data.substring(0, 200000) + '...[TRUNCATED]';
         }
         return data;
     }
@@ -215,7 +220,33 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         
         // Background task starts - decoupled from the calling thread
         (async () => {
-            const { fleet, ...dataToSave } = cleanData;
+            const { fleet, ...baseData } = cleanData;
+            
+            // AGGRESSIVE ARCHIVE PRUNING FOR CLOUD SYNC
+            // We only keep the last 30 deleted items to save bandwidth/DB size.
+            // Full history is a luxury we sacrifice for stability.
+            let dataToSave = {
+                ...baseData,
+                archive: {
+                    ...(baseData.archive || {}),
+                    deletedItems: (baseData.archive?.deletedItems || []).slice(0, 30),
+                    // Clear heavy backups from archive to ensure core config syncs
+                    brands: [],
+                    products: [],
+                    catalogues: []
+                }
+            };
+
+            // EMERGENCY BRAKE: If payload is still massive (>3MB), nuke the archive entirely.
+            try {
+                const payloadSize = JSON.stringify(dataToSave).length;
+                if (payloadSize > 3 * 1024 * 1024) {
+                    console.warn(`Sync Payload Huge (${(payloadSize/1024/1024).toFixed(2)}MB). Dropping archive.`);
+                    dataToSave.archive = undefined; // Drop archive to prioritize core data
+                }
+            } catch(e) {
+                // Ignore stringify error, upsert will likely fail if this fails
+            }
             
             // Artificial progress crawl to 90% (linear approach to the "finish line")
             let simulatedProgress = 5;
