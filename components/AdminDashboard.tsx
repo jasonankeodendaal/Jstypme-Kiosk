@@ -1042,7 +1042,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const checkSkuDuplicate = (sku: string, currentId: string) => { if (!sku || !localData) return false; for (const b of localData.brands) { for (const c of b.categories) { for (const p of c.products) { if (p.sku && p.sku.toLowerCase() === sku.toLowerCase() && p.id !== currentId) return true; } } } return false; };
   const handleGlobalSave = () => { if (localData) { onUpdateData(localData); setHasUnsavedChanges(false); } };
   
-  const updateFleetMember = async (kiosk: KioskRegistry) => { 
+  const updateFleetMember = async (kiosk: KioskRegistry): Promise<boolean> => { 
       if(supabase) { 
           try {
               const payload = { 
@@ -1055,18 +1055,21 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
               const { error } = await supabase.from('kiosks').upsert(payload); 
               if (error) throw error;
               onRefresh(); 
+              return true;
           } catch (e: any) {
               console.error("Fleet update failed", e);
               // Handle missing column errors (400) or other DB constraints
               if (e.code === '42703' || e.message?.includes('show_pricelists')) {
-                  alert("Update Failed: The 'show_pricelists' column is missing from the database. Please run the Fleet Repair script in the System Guide.");
+                  alert("Database Error: 'show_pricelists' column missing.\n\nFix: Go to 'System Guide' and run the updated 'Fleet Repair' script (it now includes a cache reload command).");
               } else if (e.code === 'PGRST204') {
                    alert("Update Failed: Database table is missing required columns. Please check Setup Guide > Migration.");
               } else {
                   alert("Update Failed: " + (e.message || "Unknown error"));
               }
+              return false;
           }
       } 
+      return false;
   };
   
   const removeFleetMember = async (id: string) => {
@@ -1214,7 +1217,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
         {editingProduct && <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center animate-fade-in"><ProductEditor product={editingProduct} onSave={(p) => { if (!selectedBrand || !selectedCategory) return; if (p.sku && checkSkuDuplicate(p.sku, p.id)) { alert(`SKU "${p.sku}" is already used by another product.`); return; } const isNew = !selectedCategory.products.find(x => x.id === p.id); const newProducts = isNew ? [...selectedCategory.products, p] : selectedCategory.products.map(x => x.id === p.id ? p : x); const updatedCat = { ...selectedCategory, products: newProducts }; const updatedBrand = { ...selectedBrand, categories: selectedBrand.categories.map(c => c.id === updatedCat.id ? updatedCat : c) }; const newArchive = addToArchive('product', p.name, p, isNew ? 'create' : 'update'); handleLocalUpdate({ ...localData, brands: brands.map(b => b.id === updatedBrand.id ? updatedBrand : b), archive: newArchive }, true); setEditingProduct(null); }} onCancel={() => setEditingProduct(null)} /></div>}
         {movingProduct && <MoveProductModal product={movingProduct} allBrands={brands} currentBrandId={selectedBrand?.id || ''} currentCategoryId={selectedCategory?.id || ''} onClose={() => setMovingProduct(null)} onMove={(product, targetBrand, targetCategory) => handleMoveProduct(product, targetBrand, targetCategory)} />}
-        {editingKiosk && <KioskEditorModal kiosk={editingKiosk} onSave={(k) => { updateFleetMember(k); setEditingKiosk(null); }} onClose={() => setEditingKiosk(null)} />}
+        {editingKiosk && <KioskEditorModal kiosk={editingKiosk} onSave={async (k) => { const success = await updateFleetMember(k); if(success) setEditingKiosk(null); }} onClose={() => setEditingKiosk(null)} />}
         {editingTVModel && <TVModelEditor model={editingTVModel} onSave={(m) => { if (!selectedTVBrand) return; const isNew = !selectedTVBrand.models.find(x => x.id === m.id); const newModels = isNew ? [...selectedTVBrand.models, m] : selectedTVBrand.models.map(x => x.id === m.id ? m : x); const updatedTVBrand = { ...selectedTVBrand, models: newModels }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: tvBrands.map(b => b.id === selectedTVBrand.id ? updatedTVBrand : b) } as TVConfig, archive: addToArchive('tv_model', m.name, m, isNew ? 'create' : 'update') }, true); setEditingTVModel(null); }} onClose={() => setEditingTVModel(null)} />}
         {showGuide && <SetupGuide onClose={() => setShowGuide(false)} />}
     </div>

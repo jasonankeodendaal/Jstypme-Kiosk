@@ -407,7 +407,7 @@ FOR ALL USING (true) WITH CHECK (true);`}
                                       <h3 className="text-lg font-black text-white uppercase tracking-tight mb-4 flex items-center gap-2"><Sparkles size={16} className="text-yellow-400"/> Feature Migrations</h3>
                                       <p className="text-xs text-slate-400 mb-4">Run these additional snippets to enable newer features like the <strong className="text-white">Pricelist Toggle</strong>.</p>
                                       <CodeSnippet 
-                                        label="Fleet Update: Pricelists"
+                                        label="Fleet Update: Pricelists (Includes Schema Reload)"
                                         id="sql-mig-fleet"
                                         code={`-- REPAIR/UPDATE FLEET TABLE
 ALTER TABLE public.kiosks 
@@ -419,7 +419,10 @@ ADD COLUMN IF NOT EXISTS version text,
 ADD COLUMN IF NOT EXISTS location_description text,
 ADD COLUMN IF NOT EXISTS notes text,
 ADD COLUMN IF NOT EXISTS restart_requested boolean DEFAULT false,
-ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;`}
+ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;
+
+-- FORCE REFRESH OF API CACHE (CRITICAL)
+NOTIFY pgrst, 'reload schema';`}
                                       />
                                   </div>
                               </div>
