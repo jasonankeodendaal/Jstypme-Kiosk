@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   X, Database, Settings, Smartphone, Tablet, Tv, Terminal, 
@@ -372,34 +373,131 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
                               <div>
                                   <h3 className="text-xl font-black text-white uppercase tracking-tight mb-4">Bootstrap Protocol</h3>
-                                  <p className="text-sm text-slate-400 leading-relaxed mb-6">Initialize the backend state using this SQL. This establishes the legacy monolithic storage and security policies.</p>
+                                  <p className="text-sm text-slate-400 leading-relaxed mb-6">Initialize the backend state using this SQL. This establishes the full database schema, RLS policies, and storage required for the app.</p>
                                   <CodeSnippet 
-                                    label="SQL Editor"
+                                    label="SQL Editor (Run This First)"
                                     id="sql-boot"
-                                    code={`-- CORE TABLES
+                                    code={`-- 1. CONFIGURATION & FLEET
 CREATE TABLE IF NOT EXISTS public.store_config (
-  id bigint primary key default 1,
-  data jsonb not null default '{}'::jsonb
+  id bigint PRIMARY KEY DEFAULT 1,
+  data jsonb NOT NULL DEFAULT '{}'::jsonb
 );
 
 CREATE TABLE IF NOT EXISTS public.kiosks (
-  id text primary key,
-  name text not null,
-  status text default 'online',
-  last_seen timestamptz default now()
+  id text PRIMARY KEY,
+  name text NOT NULL,
+  status text DEFAULT 'online',
+  last_seen timestamptz DEFAULT now(),
+  device_type text,
+  assigned_zone text,
+  wifi_strength int,
+  ip_address text,
+  version text,
+  location_description text,
+  notes text,
+  restart_requested boolean DEFAULT false,
+  show_pricelists boolean DEFAULT true
 );
 
--- STORAGE & SECURITY
+-- 2. INVENTORY RELATIONAL TABLES
+CREATE TABLE IF NOT EXISTS public.brands (
+    id text PRIMARY KEY,
+    name text,
+    logo_url text,
+    theme_color text,
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.categories (
+    id text PRIMARY KEY,
+    brand_id text REFERENCES public.brands(id),
+    name text,
+    icon text,
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.products (
+    id text PRIMARY KEY,
+    category_id text REFERENCES public.categories(id),
+    name text,
+    sku text,
+    description text,
+    specs jsonb DEFAULT '{}'::jsonb,
+    features jsonb DEFAULT '[]'::jsonb,
+    image_url text,
+    gallery_urls jsonb DEFAULT '[]'::jsonb,
+    video_urls jsonb DEFAULT '[]'::jsonb,
+    manuals jsonb DEFAULT '[]'::jsonb,
+    box_contents jsonb DEFAULT '[]'::jsonb,
+    dimensions jsonb DEFAULT '[]'::jsonb,
+    terms text,
+    date_added timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+-- 3. PRICELIST MANAGEMENT
+CREATE TABLE IF NOT EXISTS public.pricelist_brands (
+    id text PRIMARY KEY,
+    name text,
+    logo_url text,
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.pricelists (
+    id text PRIMARY KEY,
+    brand_id text, -- Loose reference for robustness
+    title text,
+    month text,
+    year text,
+    url text,
+    thumbnail_url text,
+    type text,
+    kind text,
+    start_date text,
+    end_date text,
+    promo_text text,
+    items jsonb DEFAULT '[]'::jsonb,
+    headers jsonb DEFAULT '{}'::jsonb,
+    date_added timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+-- 4. ENABLE RLS & PUBLIC ACCESS
+ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pricelist_brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
+
+-- Reset policies to allow anon full access (Client-Side Key Logic)
+DROP POLICY IF EXISTS "Public Access" ON public.store_config;
+DROP POLICY IF EXISTS "Public Access" ON public.kiosks;
+DROP POLICY IF EXISTS "Public Access" ON public.brands;
+DROP POLICY IF EXISTS "Public Access" ON public.categories;
+DROP POLICY IF EXISTS "Public Access" ON public.products;
+DROP POLICY IF EXISTS "Public Access" ON public.pricelist_brands;
+DROP POLICY IF EXISTS "Public Access" ON public.pricelists;
+
+CREATE POLICY "Public Access" ON public.store_config FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.brands FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.categories FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.products FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.pricelist_brands FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
+
+-- 5. STORAGE BUCKET CONFIGURATION
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('kiosk-media', 'kiosk-media', true) 
-ON CONFLICT DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET public = true;
 
-ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public Media Access" ON storage.objects;
+CREATE POLICY "Public Media Access" ON storage.objects FOR ALL USING (bucket_id = 'kiosk-media') WITH CHECK (bucket_id = 'kiosk-media');
 
--- SAFE POLICY CREATION
-DROP POLICY IF EXISTS "Public Access" ON public.store_config;
-CREATE POLICY "Public Access" ON public.store_config 
-FOR ALL USING (true) WITH CHECK (true);`}
+-- 6. REFRESH SCHEMA CACHE
+NOTIFY pgrst, 'reload schema';`}
                                   />
                               </div>
                               <div className="space-y-6">
