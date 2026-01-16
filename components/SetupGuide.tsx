@@ -8,7 +8,7 @@ import {
   SmartphoneNfc, Container, Split, DatabaseZap, Code2, 
   Wifi, Clock, CloudLightning, FileJson, CheckCircle2, 
   AlertTriangle, Play, Pause, ChevronRight, Calculator,
-  Braces, ShieldCheck
+  Braces, ShieldCheck, FileDigit
 } from 'lucide-react';
 
 interface SetupGuideProps {
@@ -117,6 +117,25 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
     </div>
   );
 
+  const DiagramBuildPipeline = () => (
+      <div className="relative h-48 bg-slate-900 rounded-3xl border border-slate-700/50 overflow-hidden mb-8 flex items-center justify-center p-8 gap-6">
+          <div className="flex flex-col items-center">
+              <div className="w-14 h-14 bg-[#F7DF1E]/10 border border-[#F7DF1E] rounded-xl flex items-center justify-center mb-2"><Code2 className="text-[#F7DF1E]" size={28}/></div>
+              <span className="text-[10px] font-black text-[#F7DF1E] uppercase">ES6+ Source</span>
+          </div>
+          <ArrowRight className="text-slate-600" />
+          <div className="flex flex-col items-center relative">
+              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.5)] z-10"><Zap className="text-white" size={32}/></div>
+              <div className="absolute -bottom-6 text-[10px] font-black text-blue-400 uppercase">Vite Legacy</div>
+          </div>
+          <ArrowRight className="text-slate-600" />
+          <div className="flex flex-col items-center">
+              <div className="w-14 h-14 bg-green-500/10 border border-green-500 rounded-xl flex items-center justify-center mb-2"><Smartphone className="text-green-500" size={28}/></div>
+              <span className="text-[10px] font-black text-green-500 uppercase">Android 5.0+</span>
+          </div>
+      </div>
+  );
+
   // --- CONTENT HELPERS ---
 
   const ArchitectNote = ({ title, children }: { title: string, children?: React.ReactNode }) => (
@@ -195,8 +214,8 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                       { id: 'migration', label: 'Migration Scripts', icon: DatabaseZap, color: 'text-orange-400' },
                       { id: 'supabase', label: 'Cloud Infrastructure', icon: Database, color: 'text-blue-400' },
                       { id: 'apk', label: 'Native Build', icon: SmartphoneNfc, color: 'text-green-400' },
-                      { id: 'ai', label: 'AI Synthesis', icon: Bot, color: 'text-purple-400' },
-                      { id: 'build', label: 'Asset Compiler', icon: Container, color: 'text-yellow-400' },
+                      { id: 'ai', label: 'Algorithmic Logic', icon: Bot, color: 'text-purple-400' },
+                      { id: 'build', label: 'Legacy Compiler', icon: Container, color: 'text-yellow-400' },
                       { id: 'pricelists', label: 'Price Engine', icon: Table, color: 'text-red-400' },
                   ].map(tab => (
                       <button 
@@ -243,7 +262,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                               <div className="p-6 bg-red-900/20 border border-red-500/30 rounded-xl">
                                   <h4 className="text-red-400 font-black uppercase text-sm mb-2 flex items-center gap-2"><AlertTriangle size={16}/> Critical Action Required</h4>
                                   <p className="text-slate-300 font-medium text-xs leading-relaxed">
-                                      The app now uses a <strong>Cloud-Direct Write Strategy</strong>. If you are seeing 404 errors when saving, it means your Supabase project is missing the required relational tables. Run the script below in the <strong>Supabase SQL Editor</strong> to fix this immediately.
+                                      The app uses a <strong>Cloud-Direct Write Strategy</strong>. If you encounter 404 errors when saving, it means your Supabase project is missing the required relational tables. Run the script below in the <strong>Supabase SQL Editor</strong>.
                                   </p>
                               </div>
 
@@ -385,11 +404,229 @@ CREATE POLICY "Public Media Upload" ON storage.objects FOR INSERT WITH CHECK ( b
                               <ArchitectNote title="Snapshot Strategy">
                                   We use a "Snapshot-First" architecture. Devices pull a massive JSON blob into local IndexedDB. This ensures <span className="text-white">Zero Latency</span> UI interactions, as the tablet never waits for a network request to render a product page.
                               </ArchitectNote>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+                                      <h4 className="text-blue-400 font-bold uppercase text-xs mb-2">Relational Sync</h4>
+                                      <p className="text-sm text-slate-400 leading-relaxed">Changes in the admin panel are written to 5 separate normalized tables (`brands`, `categories`, etc.) simultaneously. The Kiosk reassembles this into a single cohesive state object on load.</p>
+                                  </div>
+                                  <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+                                      <h4 className="text-green-400 font-bold uppercase text-xs mb-2">Realtime Channel</h4>
+                                      <p className="text-sm text-slate-400 leading-relaxed">Devices subscribe to the `public:store_config` channel. When any row changes, the cloud pushes a signal to all 50+ tablets to re-fetch the latest snapshot instantly.</p>
+                                  </div>
+                              </div>
                           </div>
                       </div>
                   )}
 
-                  {/* ... other tabs would be here (truncated for brevity since user only needs migration script urgently) ... */}
+                  {activeTab === 'apk' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={SmartphoneNfc} title="Android Native Bridge" subtitle="Capacitor v6 Integration" />
+                          <div className="space-y-8">
+                              <div className="p-6 bg-slate-900 rounded-2xl border border-slate-800 relative overflow-hidden">
+                                  <div className="relative z-10 flex items-start gap-4">
+                                      <div className="p-3 bg-green-500/20 rounded-xl text-green-400 border border-green-500/30"><Container size={24} /></div>
+                                      <div>
+                                          <h4 className="text-white font-bold uppercase text-sm mb-2">WebView Container</h4>
+                                          <p className="text-sm text-slate-400 leading-relaxed max-w-xl">
+                                              The app runs inside a native Android WebView. Capacitor acts as the bridge, injecting the `window.Capacitor` object to allow JavaScript to communicate with native hardware (Filesystem, Status Bar, etc.).
+                                          </p>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div>
+                                      <h4 className="text-slate-500 font-black uppercase text-xs tracking-widest mb-4">Compilation Sequence</h4>
+                                      <ol className="space-y-4 relative border-l-2 border-slate-800 ml-3 pl-6">
+                                          <li className="relative">
+                                              <span className="absolute -left-[31px] top-0 w-6 h-6 bg-slate-800 rounded-full flex items-center justify-center text-[10px] font-black text-white border-2 border-slate-900">1</span>
+                                              <div className="font-bold text-white text-sm">Build Web Assets</div>
+                                              <div className="text-xs text-slate-500 mt-1">Compiles React to `dist/` folder.</div>
+                                          </li>
+                                          <li className="relative">
+                                              <span className="absolute -left-[31px] top-0 w-6 h-6 bg-slate-800 rounded-full flex items-center justify-center text-[10px] font-black text-white border-2 border-slate-900">2</span>
+                                              <div className="font-bold text-white text-sm">Sync Native Layer</div>
+                                              <div className="text-xs text-slate-500 mt-1">Copies `dist/` into Android project `assets`.</div>
+                                          </li>
+                                          <li className="relative">
+                                              <span className="absolute -left-[31px] top-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-black text-white border-2 border-slate-900 shadow-lg shadow-blue-500/50">3</span>
+                                              <div className="font-bold text-blue-400 text-sm">Compile APK</div>
+                                              <div className="text-xs text-slate-500 mt-1">Gradle builds the final binary.</div>
+                                          </li>
+                                      </ol>
+                                  </div>
+                                  <div>
+                                      <CodeSnippet 
+                                          label="Build Command Chain"
+                                          id="apk-cmd"
+                                          code={`# 1. Clean & Build Web
+npm run build
+
+# 2. Update Android Project
+npx cap sync android
+
+# 3. Open Android Studio
+npx cap open android`}
+                                      />
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'ai' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={Bot} title="Algorithmic Intelligence" subtitle="Smart Shuffle & Heuristics" />
+                          <div className="grid grid-cols-1 gap-8">
+                              <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 relative overflow-hidden">
+                                  <div className="absolute top-0 right-0 p-6 opacity-5"><Cpu size={120}/></div>
+                                  <h3 className="text-purple-400 font-black uppercase text-sm tracking-widest mb-4">Screensaver Logic</h3>
+                                  <div className="flex flex-col gap-4">
+                                      <div className="flex items-center gap-4 p-4 bg-slate-950/50 rounded-xl border border-slate-800">
+                                          <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400"><Sparkles size={24}/></div>
+                                          <div>
+                                              <div className="text-white font-bold text-sm">Newness Bias</div>
+                                              <div className="text-slate-500 text-xs">Products added in the last 30 days are given a <strong>3x weight</strong> in the shuffle algorithm, ensuring fresh stock is seen more often.</div>
+                                          </div>
+                                      </div>
+                                      <div className="flex items-center gap-4 p-4 bg-slate-950/50 rounded-xl border border-slate-800">
+                                          <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400"><Activity size={24}/></div>
+                                          <div>
+                                              <div className="text-white font-bold text-sm">Sleep Heuristic</div>
+                                              <div className="text-slate-500 text-xs">The system checks <code>activeHours</code> every minute. If outside business hours, it overrides the video loop with a generic black screen to prevent panel burn-in.</div>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800">
+                                  <h3 className="text-indigo-400 font-black uppercase text-sm tracking-widest mb-4">TV Mode Interleaving</h3>
+                                  <p className="text-slate-400 text-sm mb-4">
+                                      To keep the TV experience engaging, we use a <strong>Fixed-Ratio Injection</strong> algorithm for the playlist generation.
+                                  </p>
+                                  <div className="flex items-center gap-2 overflow-x-auto pb-4">
+                                      <div className="shrink-0 w-24 h-16 bg-slate-800 rounded-lg flex items-center justify-center text-xs font-bold text-white border-b-4 border-blue-500">Video A</div>
+                                      <ArrowRight size={16} className="text-slate-600"/>
+                                      <div className="shrink-0 w-24 h-16 bg-slate-800 rounded-lg flex items-center justify-center text-xs font-bold text-white border-b-4 border-blue-500">Video B</div>
+                                      <ArrowRight size={16} className="text-slate-600"/>
+                                      <div className="shrink-0 w-24 h-16 bg-indigo-900/50 rounded-lg flex items-center justify-center text-xs font-bold text-indigo-400 border-2 border-indigo-500 border-dashed">Ad / Promo</div>
+                                      <ArrowRight size={16} className="text-slate-600"/>
+                                      <div className="shrink-0 w-24 h-16 bg-slate-800 rounded-lg flex items-center justify-center text-xs font-bold text-white border-b-4 border-blue-500">Video C</div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'build' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={Container} title="Legacy Compiler" subtitle="Vite + Terser Configuration" />
+                          <DiagramBuildPipeline />
+                          
+                          <div className="space-y-6">
+                              <div className="p-6 bg-yellow-900/20 border border-yellow-500/30 rounded-2xl">
+                                  <h4 className="text-yellow-400 font-black uppercase text-xs mb-2 flex items-center gap-2"><AlertTriangle size={14}/> Why Legacy Mode?</h4>
+                                  <p className="text-slate-300 font-medium text-xs leading-relaxed">
+                                      Many industrial Android tablets run <strong>Android 5.1 (Lollipop)</strong> which uses Chrome 37 WebView. This browser version predates ES6 classes, arrow functions, and the Fetch API. We must transpile heavily.
+                                  </p>
+                              </div>
+
+                              <CodeSnippet 
+                                  label="vite.config.ts"
+                                  id="vite-config"
+                                  code={`import legacy from '@vitejs/plugin-legacy';
+
+export default defineConfig({
+  plugins: [
+    legacy({
+      // Target ancient browsers specifically
+      targets: ['chrome >= 37', 'android >= 5'],
+      additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
+      renderLegacyChunks: true,
+      modernPolyfills: true
+    })
+  ],
+  build: {
+    target: 'es5', // Force ES5 output
+    minify: 'terser', // Esbuild often misses obscure ES5 edge cases
+    terserOptions: {
+      ecma: 5,
+      safari10: true
+    }
+  }
+});`}
+                              />
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'pricelists' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={Table} title="Dynamic PDF Engine" subtitle="Client-Side Vector Generation" />
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                              <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+                                  <h4 className="text-red-400 font-black uppercase text-xs mb-3 flex items-center gap-2"><FileText size={14}/> Layout Engine</h4>
+                                  <p className="text-slate-400 text-xs leading-relaxed mb-4">
+                                      We do not use HTML-to-Canvas (which is blurry). We use <strong>jsPDF</strong> to draw vector text and lines. The engine calculates X/Y coordinates dynamically based on active columns.
+                                  </p>
+                                  <div className="flex flex-col gap-2">
+                                      <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                                          <div className="w-12 text-right">SKU</div>
+                                          <div className="flex-1 h-2 bg-slate-800 rounded relative"><div className="absolute left-0 w-[20%] h-full bg-blue-500/50"></div></div>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                                          <div className="w-12 text-right">DESC</div>
+                                          <div className="flex-1 h-2 bg-slate-800 rounded relative"><div className="absolute left-[20%] w-[60%] h-full bg-green-500/50"></div></div>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                                          <div className="w-12 text-right">PRICE</div>
+                                          <div className="flex-1 h-2 bg-slate-800 rounded relative"><div className="absolute right-0 w-[20%] h-full bg-red-500/50"></div></div>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+                                  <h4 className="text-blue-400 font-black uppercase text-xs mb-3 flex items-center gap-2"><Calculator size={14}/> Auto-Rounding</h4>
+                                  <p className="text-slate-400 text-xs leading-relaxed mb-4">
+                                      To maintain a premium aesthetic, raw inputs like "199.99" are automatically sanitized during data entry.
+                                  </p>
+                                  <ul className="space-y-2">
+                                      <li className="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-800 text-xs font-mono text-slate-300">
+                                          <span>129.99</span> <ArrowRight size={12} className="text-slate-600"/> <span className="text-green-400 font-bold">130</span>
+                                      </li>
+                                      <li className="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-800 text-xs font-mono text-slate-300">
+                                          <span>112.00</span> <ArrowRight size={12} className="text-slate-600"/> <span className="text-blue-400 font-bold">112</span>
+                                      </li>
+                                      <li className="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-800 text-xs font-mono text-slate-300">
+                                          <span>799.00</span> <ArrowRight size={12} className="text-slate-600"/> <span className="text-green-400 font-bold">800</span>
+                                      </li>
+                                  </ul>
+                              </div>
+                          </div>
+
+                          <CodeSnippet 
+                              label="PDF Column Logic (Abstract)"
+                              id="pdf-logic"
+                              code={`// Dynamic Width Calculation
+const availableWidth = pageWidth - margin * 2;
+let skuWidth = 0;
+let descWidth = 0;
+
+if (hasDescription) {
+    skuWidth = hasSku ? 25 : 0;
+    descWidth = availableWidth - skuWidth - priceWidth;
+} else {
+    // If no description, SKU takes available space
+    skuWidth = availableWidth - priceWidth;
+}
+
+// Draw Loop
+doc.text(item.sku, margin, y);
+doc.text(item.description, margin + skuWidth, y);`}
+                          />
+                      </div>
+                  )}
 
               </div>
           </div>
