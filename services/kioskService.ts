@@ -139,7 +139,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   initSupabase();
   if (supabase) {
       try {
-        const kioskData = {
+        const kioskData: any = {
           id,
           name: shopName,
           device_type: deviceType,
@@ -153,8 +153,27 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
           restart_requested: false,
           show_pricelists: true // Default to visible
         };
-        await supabase.from('kiosks').upsert(kioskData);
+        const { error } = await supabase.from('kiosks').upsert(kioskData);
+        if (error) throw error;
       } catch(e: any) {
+        // Fallback: If show_pricelists doesn't exist yet, retry without it to prevent crash
+        if (e.code === '42703' || e.message?.includes('show_pricelists')) {
+            console.warn("Schema mismatch: Retrying setup without show_pricelists column.");
+            try {
+                const legacyData = {
+                    id,
+                    name: shopName,
+                    device_type: deviceType,
+                    status: 'online',
+                    last_seen: new Date().toISOString()
+                };
+                await supabase.from('kiosks').upsert(legacyData);
+                return true; // Success on fallback
+            } catch (retryError) {
+                console.error("Critical Setup Error", retryError);
+                return false;
+            }
+        }
         console.warn("Cloud registration deferred.", e.message);
       }
   }

@@ -8,7 +8,7 @@ import {
   SmartphoneNfc, Container, Split, DatabaseZap, Code2, 
   Wifi, Clock, CloudLightning, FileJson, CheckCircle2, 
   AlertTriangle, Play, Pause, ChevronRight, Calculator,
-  Braces, ShieldCheck
+  Braces, ShieldCheck, Wrench
 } from 'lucide-react';
 
 interface SetupGuideProps {
@@ -324,7 +324,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
               <div className="space-y-1">
                   {[
                       { id: 'supabase', label: 'Cloud Infrastructure', icon: Database, color: 'text-blue-400' },
-                      { id: 'migration', label: 'Relational Migration', icon: DatabaseZap, color: 'text-orange-400' },
+                      { id: 'migration', label: 'Migration & Repair', icon: DatabaseZap, color: 'text-orange-400' },
                       { id: 'apk', label: 'Native Build', icon: SmartphoneNfc, color: 'text-green-400' },
                       { id: 'ai', label: 'AI Synthesis', icon: Bot, color: 'text-purple-400' },
                       { id: 'build', label: 'Asset Compiler', icon: Container, color: 'text-yellow-400' },
@@ -402,29 +402,6 @@ DROP POLICY IF EXISTS "Public Access" ON public.store_config;
 CREATE POLICY "Public Access" ON public.store_config 
 FOR ALL USING (true) WITH CHECK (true);`}
                                   />
-                                  
-                                  <div className="mt-8 border-t border-slate-800 pt-8">
-                                      <h3 className="text-lg font-black text-white uppercase tracking-tight mb-4 flex items-center gap-2"><Sparkles size={16} className="text-yellow-400"/> Feature Migrations</h3>
-                                      <p className="text-xs text-slate-400 mb-4">Run these additional snippets to enable newer features like the <strong className="text-white">Pricelist Toggle</strong>.</p>
-                                      <CodeSnippet 
-                                        label="Fleet Update: Pricelists (Includes Schema Reload)"
-                                        id="sql-mig-fleet"
-                                        code={`-- REPAIR/UPDATE FLEET TABLE
-ALTER TABLE public.kiosks 
-ADD COLUMN IF NOT EXISTS device_type text,
-ADD COLUMN IF NOT EXISTS assigned_zone text,
-ADD COLUMN IF NOT EXISTS wifi_strength int,
-ADD COLUMN IF NOT EXISTS ip_address text,
-ADD COLUMN IF NOT EXISTS version text,
-ADD COLUMN IF NOT EXISTS location_description text,
-ADD COLUMN IF NOT EXISTS notes text,
-ADD COLUMN IF NOT EXISTS restart_requested boolean DEFAULT false,
-ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;
-
--- FORCE REFRESH OF API CACHE (CRITICAL)
-NOTIFY pgrst, 'reload schema';`}
-                                      />
-                                  </div>
                               </div>
                               <div className="space-y-6">
                                   <ArchitectNote title="Snapshot Strategy">
@@ -442,58 +419,124 @@ NOTIFY pgrst, 'reload schema';`}
 
                   {activeTab === 'migration' && (
                       <div className="animate-fade-in">
-                          <SectionHeader icon={DatabaseZap} title="Normalization" subtitle="Relational Data Migration" />
+                          <SectionHeader icon={DatabaseZap} title="Normalization & Repair" subtitle="Relational Data Migration" />
                           <DiagramNormalization />
                           
                           <div className="mt-12 space-y-8">
-                              <p className="text-slate-300 font-medium leading-relaxed border-l-2 border-orange-500 pl-4">
-                                  The <span className="text-white font-bold">Monolith Strategy</span> (single JSON blob) fails when catalogue sizes exceed 10MB. 
-                                  We must shatter the blob into relational tables (`brands`, `products`, `categories`) to enable granular syncing.
-                              </p>
+                              <div className="bg-red-900/30 border-l-4 border-red-500 p-6 rounded-r-xl">
+                                  <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><Wrench size={16}/> Emergency Repair</h3>
+                                  <p className="text-slate-300 text-xs mt-2 leading-relaxed">
+                                      If you see <strong>404 Not Found</strong> errors for <code>brands</code> or <strong>400 Bad Request</strong> for <code>kiosks</code>, run this script immediately. It forces creation of all missing tables and refreshes the API cache.
+                                  </p>
+                              </div>
 
                               <CodeSnippet 
-                                label="Migration SQL"
-                                id="mig-sql"
-                                code={`-- 1. SPLIT TABLES
+                                label="Master Repair Script"
+                                id="mig-master"
+                                code={`-- 1. FIX KIOSKS TABLE
+CREATE TABLE IF NOT EXISTS public.kiosks (
+    id text PRIMARY KEY,
+    name text NOT NULL,
+    status text DEFAULT 'online',
+    last_seen timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS device_type text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS assigned_zone text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS wifi_strength int;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS ip_address text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS version text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS location_description text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS restart_requested boolean DEFAULT false;
+
+-- 2. FIX INVENTORY TABLES
 CREATE TABLE IF NOT EXISTS public.brands (
-  id text primary key,
-  name text,
-  logo_url text
+    id text PRIMARY KEY,
+    name text,
+    logo_url text,
+    theme_color text,
+    updated_at timestamptz DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.categories (
-  id text primary key,
-  brand_id text references public.brands(id),
-  name text,
-  icon text
+    id text PRIMARY KEY,
+    brand_id text REFERENCES public.brands(id),
+    name text,
+    icon text,
+    updated_at timestamptz DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.products (
-  id text primary key,
-  category_id text references public.categories(id),
-  name text,
-  specs jsonb default '{}'::jsonb
+    id text PRIMARY KEY,
+    category_id text REFERENCES public.categories(id),
+    name text,
+    sku text,
+    description text,
+    specs jsonb DEFAULT '{}'::jsonb,
+    features jsonb DEFAULT '[]'::jsonb,
+    image_url text,
+    gallery_urls jsonb DEFAULT '[]'::jsonb,
+    video_urls jsonb DEFAULT '[]'::jsonb,
+    manuals jsonb DEFAULT '[]'::jsonb,
+    box_contents jsonb DEFAULT '[]'::jsonb,
+    dimensions jsonb DEFAULT '[]'::jsonb,
+    terms text,
+    date_added timestamptz,
+    updated_at timestamptz DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.pricelist_brands (
-  id text primary key,
-  name text,
-  logo_url text
+    id text PRIMARY KEY,
+    name text,
+    logo_url text,
+    updated_at timestamptz DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.pricelists (
-  id text primary key,
-  brand_id text,
-  title text,
-  data jsonb default '{}'::jsonb
+    id text PRIMARY KEY,
+    brand_id text,
+    title text,
+    month text,
+    year text,
+    url text,
+    thumbnail_url text,
+    type text,
+    kind text,
+    start_date text,
+    end_date text,
+    promo_text text,
+    items jsonb DEFAULT '[]'::jsonb,
+    headers jsonb DEFAULT '{}'::jsonb,
+    date_added timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
 );
 
--- 2. ENABLE BATCH SYNC
+-- 3. ENABLE PERMISSIONS (Fixes RLS errors)
+ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pricelist_brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Sync Access" ON public.products;
-CREATE POLICY "Sync Access" ON public.products 
-FOR ALL USING (true);`}
+DROP POLICY IF EXISTS "Allow All" ON public.kiosks;
+DROP POLICY IF EXISTS "Allow All" ON public.brands;
+DROP POLICY IF EXISTS "Allow All" ON public.categories;
+DROP POLICY IF EXISTS "Allow All" ON public.products;
+DROP POLICY IF EXISTS "Allow All" ON public.pricelist_brands;
+DROP POLICY IF EXISTS "Allow All" ON public.pricelists;
+
+CREATE POLICY "Allow All" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow All" ON public.brands FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow All" ON public.categories FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow All" ON public.products FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow All" ON public.pricelist_brands FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow All" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
+
+-- 4. HARD RELOAD CACHE
+NOTIFY pgrst, 'reload schema';`}
                               />
                           </div>
                       </div>
