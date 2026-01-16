@@ -3,8 +3,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Product } from '../types';
 import Flipbook from './Flipbook';
 import PdfViewer from './PdfViewer';
+import { fetchProductDetails } from '../services/geminiService';
 // Fix: Added ChevronRight to imports from lucide-react
-import { ChevronLeft, ChevronRight, Info, PlayCircle, FileText, Check, Box as BoxIcon, ChevronRight as RightArrow, ChevronLeft as LeftArrow, X, Image as ImageIcon, Tag, Layers, Ruler, Package, LayoutGrid, Settings, BookOpen, CornerDownRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Info, PlayCircle, FileText, Check, Box as BoxIcon, ChevronRight as RightArrow, ChevronLeft as LeftArrow, X, Image as ImageIcon, Tag, Layers, Ruler, Package, LayoutGrid, Settings, BookOpen, CornerDownRight, Loader2 } from 'lucide-react';
 
 interface ProductDetailProps {
   product: Product;
@@ -15,12 +16,35 @@ interface ProductDetailProps {
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
+  // Merge prop product (light) with fetched detailed product (heavy)
+  const [detailedProduct, setDetailedProduct] = useState<Product>(product);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0); 
   const [showEnlargedMedia, setShowEnlargedMedia] = useState(false);
   const [enlargedMediaIndex, setEnlargedMediaIndex] = useState(0);
   const [flipbookData, setFlipbookData] = useState<{ isOpen: boolean, pages: string[], title: string }>({ isOpen: false, pages: [], title: '' });
   const [viewingPdf, setViewingPdf] = useState<{ url: string; title: string } | null>(null);
   const [scrolled, setScrolled] = useState(false);
+
+  // Auto-Fetch Details on Mount if missing
+  useEffect(() => {
+      // Heuristic: If specs are empty and description is empty, assume we have a "Light" object
+      const hasSpecs = Object.keys(product.specs || {}).length > 0;
+      const hasDesc = product.description && product.description.length > 0;
+      
+      if (!hasSpecs && !hasDesc) {
+          setIsLoadingDetails(true);
+          fetchProductDetails(product.id).then((details) => {
+              if (details) {
+                  setDetailedProduct(prev => ({ ...prev, ...details }));
+              }
+              setIsLoadingDetails(false);
+          });
+      } else {
+          setDetailedProduct(product);
+      }
+  }, [product.id]);
 
   useEffect(() => {
     const handleScroll = (e: any) => {
@@ -32,45 +56,45 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
   }, []);
 
   const dimensionSets = useMemo(() => {
-      if (Array.isArray(product.dimensions)) return product.dimensions;
-      if (typeof product.dimensions === 'object' && product.dimensions) {
-          return [{ label: "Device", ...(product.dimensions as any) }];
+      if (Array.isArray(detailedProduct.dimensions)) return detailedProduct.dimensions;
+      if (typeof detailedProduct.dimensions === 'object' && detailedProduct.dimensions) {
+          return [{ label: "Device", ...(detailedProduct.dimensions as any) }];
       }
       return [];
-  }, [product.dimensions]);
+  }, [detailedProduct.dimensions]);
 
   const allMedia = useMemo(() => {
     const media: { type: 'image' | 'video', url: string }[] = [];
-    if (product.imageUrl) {
-      media.push({ type: 'image', url: product.imageUrl });
+    if (detailedProduct.imageUrl) {
+      media.push({ type: 'image', url: detailedProduct.imageUrl });
     }
-    product.galleryUrls?.forEach(url => {
+    detailedProduct.galleryUrls?.forEach(url => {
       media.push({ type: 'image', url });
     });
-    if (product.videoUrl) {
-      media.push({ type: 'video', url: product.videoUrl });
+    if (detailedProduct.videoUrl) {
+      media.push({ type: 'video', url: detailedProduct.videoUrl });
     }
-    product.videoUrls?.forEach(url => {
-        if (url !== product.videoUrl) {
+    detailedProduct.videoUrls?.forEach(url => {
+        if (url !== detailedProduct.videoUrl) {
              media.push({ type: 'video', url });
         }
     });
     return media;
-  }, [product]);
+  }, [detailedProduct]);
 
   const allManuals = useMemo(() => {
-      const mans = product.manuals || [];
-      if (mans.length === 0 && (product.manualUrl || (product.manualImages && product.manualImages.length > 0))) {
+      const mans = detailedProduct.manuals || [];
+      if (mans.length === 0 && (detailedProduct.manualUrl || (detailedProduct.manualImages && detailedProduct.manualImages.length > 0))) {
           return [{
               id: 'legacy',
               title: 'User Manual',
-              images: product.manualImages || [],
-              pdfUrl: product.manualUrl,
-              thumbnailUrl: product.manualImages?.[0] || undefined
+              images: detailedProduct.manualImages || [],
+              pdfUrl: detailedProduct.manualUrl,
+              thumbnailUrl: detailedProduct.manualImages?.[0] || undefined
           }];
       }
       return mans;
-  }, [product]);
+  }, [detailedProduct]);
 
   const handleNextMedia = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -107,7 +131,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
         
         {scrolled && (
             <div className="flex-1 px-6 animate-fade-in">
-                <h2 className="font-black text-slate-900 uppercase text-xs truncate max-w-[200px] md:max-w-md">{product.name}</h2>
+                <h2 className="font-black text-slate-900 uppercase text-xs truncate max-w-[200px] md:max-w-md">{detailedProduct.name}</h2>
             </div>
         )}
 
@@ -128,7 +152,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                             <img 
                                 src={currentMedia.url} 
                                 className="max-w-full max-h-full object-contain cursor-zoom-in transition-transform duration-700 hover:scale-105" 
-                                alt={product.name} 
+                                alt={detailedProduct.name} 
                                 onClick={() => { setEnlargedMediaIndex(currentMediaIndex); setShowEnlargedMedia(true); }} 
                             />
                         ) : (
@@ -189,9 +213,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                 {/* Title & Sku */}
                 <div className="mb-12">
                     <div className="flex items-center gap-3 mb-6">
-                        {product.sku && (
+                        {detailedProduct.sku && (
                             <div className="bg-slate-900 text-white px-3 py-1 rounded-lg font-mono font-bold text-[10px] tracking-widest uppercase">
-                                SKU: {product.sku}
+                                SKU: {detailedProduct.sku}
                             </div>
                         )}
                         <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg font-black text-[9px] uppercase tracking-[0.2em] border border-blue-100">
@@ -199,23 +223,32 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                         </div>
                     </div>
                     <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 leading-none tracking-tighter uppercase mb-8">
-                        {product.name}
+                        {detailedProduct.name}
                     </h1>
-                    <p className="text-lg md:text-2xl text-slate-600 leading-relaxed font-medium">
-                        {product.description || "A premium showcase item with exclusive technical architecture."}
-                    </p>
+                    
+                    {isLoadingDetails ? (
+                        <div className="space-y-4 animate-pulse">
+                            <div className="h-4 bg-slate-200 rounded w-full"></div>
+                            <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                            <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                        </div>
+                    ) : (
+                        <p className="text-lg md:text-2xl text-slate-600 leading-relaxed font-medium">
+                            {detailedProduct.description || "A premium showcase item with exclusive technical architecture."}
+                        </p>
+                    )}
                 </div>
 
                 <div className="space-y-16 lg:space-y-24">
                     
                     {/* KEY FEATURES SECTION */}
-                    {product.features && product.features.length > 0 && (
+                    {detailedProduct.features && detailedProduct.features.length > 0 && (
                         <div className="animate-slide-up">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 flex items-center gap-4">
                                 <span className="w-10 h-0.5 bg-slate-200"></span> 01. Key Features
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {product.features.map((f, i) => (
+                                {detailedProduct.features.map((f, i) => (
                                     <div key={i} className="flex items-start gap-4 p-5 bg-white border border-slate-100 rounded-[1.5rem] shadow-sm hover:shadow-md transition-shadow group">
                                         <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-all">
                                             <Check size={20} strokeWidth={3} />
@@ -228,13 +261,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                     )}
 
                     {/* TECHNICAL SPEC GRID */}
-                    {product.specs && Object.keys(product.specs).length > 0 && (
+                    {detailedProduct.specs && Object.keys(detailedProduct.specs).length > 0 && (
                         <div className="animate-slide-up">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 flex items-center gap-4">
                                 <span className="w-10 h-0.5 bg-slate-200"></span> 02. Data Matrix
                             </h3>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                {Object.entries(product.specs).map(([key, value], idx) => (
+                                {Object.entries(detailedProduct.specs).map(([key, value], idx) => (
                                     <div key={idx} className="bg-slate-50 border border-slate-100 p-5 rounded-2xl">
                                         <span className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{key}</span>
                                         <span className="block text-sm font-black text-slate-900 leading-tight">{/* DEFENSIVE: Render non-strings as JSON */ typeof value === 'object' ? JSON.stringify(value) : value}</span>
@@ -301,11 +334,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                     )}
 
                     {/* BOTTOM LEGAL SPACE */}
-                    {product.terms && (
+                    {detailedProduct.terms && (
                         <div className="pt-20 pb-10">
                             <div className="bg-slate-100 p-8 rounded-[2rem] border border-slate-200">
                                 <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Manufacturer Warranty & Protocol</h4>
-                                <p className="text-[11px] font-medium text-slate-500 leading-relaxed whitespace-pre-wrap">{product.terms}</p>
+                                <p className="text-[11px] font-medium text-slate-500 leading-relaxed whitespace-pre-wrap">{detailedProduct.terms}</p>
                             </div>
                         </div>
                     )}

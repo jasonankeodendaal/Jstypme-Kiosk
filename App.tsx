@@ -1,12 +1,21 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { KioskApp } from './components/KioskApp';
-import { AdminDashboard } from './components/AdminDashboard';
-import AboutPage from './components/AboutPage';
 import { generateStoreData, saveStoreData } from './services/geminiService';
 import { initSupabase, supabase, getKioskId } from './services/kioskService';
 import { StoreData } from './types';
 import { Loader2, Cloud, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
+
+// Lazy Load Heavy Components for initial render speed
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
+const AboutPage = React.lazy(() => import('./components/AboutPage'));
+
+const FullScreenLoader = () => (
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0f172a] text-white">
+        <Loader2 className="animate-spin mb-4 text-blue-500" size={40} />
+        <div className="uppercase text-[10px] tracking-[0.2em] font-black text-slate-500">Loading System Module...</div>
+    </div>
+);
 
 /**
  * Global Background Sync Progress Popup
@@ -190,24 +199,26 @@ export default function App() {
       {storeData && <AppIconUpdater storeData={storeData} />}
       <SyncStatusPopup />
       
-      {isAdmin ? (
-        <AdminDashboard 
-            storeData={storeData}
-            onUpdateData={handleUpdateData}
-            onRefresh={() => fetchData(false)} 
-        />
-      ) : currentRoute === '/about' ? (
-        <AboutPage 
-            storeData={storeData!} 
-            onBack={() => { window.history.pushState({}, '', '/'); setCurrentRoute('/'); }}
-        />
-      ) : (
-        <KioskApp 
-          storeData={storeData}
-          lastSyncTime={lastSyncTime}
-          onSyncRequest={() => fetchData(true)}
-        />
-      )}
+      <Suspense fallback={<FullScreenLoader />}>
+          {isAdmin ? (
+            <AdminDashboard 
+                storeData={storeData}
+                onUpdateData={handleUpdateData}
+                onRefresh={() => fetchData(false)} 
+            />
+          ) : currentRoute === '/about' ? (
+            <AboutPage 
+                storeData={storeData!} 
+                onBack={() => { window.history.pushState({}, '', '/'); setCurrentRoute('/'); }}
+            />
+          ) : (
+            <KioskApp 
+              storeData={storeData}
+              lastSyncTime={lastSyncTime}
+              onSyncRequest={() => fetchData(true)}
+            />
+          )}
+      </Suspense>
     </>
   );
 }

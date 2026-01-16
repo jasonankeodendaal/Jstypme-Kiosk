@@ -28,33 +28,6 @@ const DEFAULT_ADMIN: AdminUser = {
     }
 };
 
-const MOCK_BRANDS: Brand[] = [
-  {
-    id: 'b-apple',
-    name: 'Apple',
-    logoUrl: 'https://www.apple.com/ac/structured-data/images/knowledge_graph_logo.png',
-    categories: [
-      {
-        id: 'c-iphone',
-        name: 'Smartphone',
-        icon: 'Smartphone',
-        products: [
-          {
-            id: 'p-iphone15pm',
-            sku: 'APL-I15PM',
-            name: 'iPhone 15 Pro Max',
-            description: 'Forged in titanium and featuring the groundbreaking A17 Pro chip, a customizable Action button, and a more versatile Pro camera system.',
-            specs: { 'Chip': 'A17 Pro', 'Display': '6.7-inch Super Retina XDR', 'Camera': '48MP Main | Ultra Wide | Telephoto' },
-            features: ['Titanium design', 'Action button', 'USB-C with USB 3 speeds', 'All-day battery life'],
-            dimensions: [{ label: 'Device', width: '76.7 mm', height: '159.9 mm', depth: '8.25 mm', weight: '221 g' }],
-            imageUrl: 'https://images.unsplash.com/photo-1696446701796-da61225697cc?w=800&auto=format&fit=crop'
-          }
-        ]
-      }
-    ]
-  }
-];
-
 const DEFAULT_DATA: StoreData = {
   companyLogoUrl: "https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png",
   hero: {
@@ -76,7 +49,7 @@ const DEFAULT_DATA: StoreData = {
   catalogues: [],
   pricelists: [],
   pricelistBrands: [],
-  brands: MOCK_BRANDS,
+  brands: [],
   tv: { brands: [] },
   ads: { homeBottomLeft: [], homeBottomRight: [], screensaver: [] },
   fleet: [],
@@ -90,7 +63,7 @@ const DEFAULT_DATA: StoreData = {
 };
 
 const migrateData = (data: any): StoreData => {
-    if (!data.brands || !Array.isArray(data.brands)) data.brands = [...MOCK_BRANDS];
+    if (!data.brands || !Array.isArray(data.brands)) data.brands = [];
     if (!data.catalogues || !Array.isArray(data.catalogues)) data.catalogues = [];
     if (!data.pricelists || !Array.isArray(data.pricelists)) data.pricelists = [];
     if (!data.pricelistBrands || !Array.isArray(data.pricelistBrands)) data.pricelistBrands = [];
@@ -110,7 +83,6 @@ const migrateData = (data: any): StoreData => {
 const sanitizeData = (data: any): any => {
     if (typeof data === 'string') {
         if (data.startsWith('data:') && data.length > 2048) { 
-             console.warn("Storage Guard: Large Base64 string sanitized to prevent quota crash.");
              return ''; 
         }
         if (data.length > 500000) {
@@ -128,22 +100,63 @@ const sanitizeData = (data: any): any => {
 };
 
 /**
- * RELATIONAL FETCH STRATEGY
- * Fetches flattened tables (brands, categories, products) and reconstructs the StoreData tree.
+ * FETCH FULL PRODUCT DETAILS (On-Demand)
+ * Fetches heavy columns (specs, description, videos) only when requested.
+ */
+export const fetchProductDetails = async (productId: string): Promise<Partial<Product> | null> => {
+    if (!supabase) initSupabase();
+    if (!supabase) return null;
+
+    try {
+        const { data, error } = await supabase
+            .from('products')
+            .select('description, specs, features, box_contents, video_urls, manuals, terms, dimensions, gallery_urls')
+            .eq('id', productId)
+            .single();
+
+        if (error || !data) return null;
+
+        return {
+            description: data.description,
+            specs: data.specs,
+            features: data.features,
+            boxContents: data.box_contents,
+            videoUrls: data.video_urls,
+            manuals: data.manuals,
+            terms: data.terms,
+            dimensions: data.dimensions,
+            galleryUrls: data.gallery_urls
+        };
+    } catch (e) {
+        console.error("Detail fetch failed", e);
+        return null;
+    }
+};
+
+/**
+ * RELATIONAL FETCH STRATEGY (Cloud First, Local Fallback)
+ * Fetches flattened tables and reconstructs the StoreData tree.
+ * OPTIMIZED: Only fetches lightweight columns for initial grid rendering.
  */
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
+  
+  // Start with default structure
+  let assembledData: StoreData = { ...DEFAULT_DATA };
+
   if (supabase) {
       try {
-          // 1. Fetch Core Config (Settings)
+          // 1. Fetch Global Config (Hero, Ads, Settings, Admins) from 'store_config'
           const { data: configRow } = await supabase.from('store_config').select('data').eq('id', 1).single();
-          let baseData = migrateData(configRow?.data || {});
+          if (configRow?.data) {
+              assembledData = migrateData(configRow.data);
+          }
 
-          // 2. Fetch Fleet
+          // 2. Fetch Fleet Status
           try {
               const { data: fleetRows } = await supabase.from('kiosks').select('*');
               if (fleetRows) {
-                  baseData.fleet = fleetRows.map((k: any) => ({
+                  assembledData.fleet = fleetRows.map((k: any) => ({
                       id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
                       last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
                       version: k.version, locationDescription: k.location_description,
@@ -151,283 +164,266 @@ export const generateStoreData = async (): Promise<StoreData> => {
                       showPricelists: k.show_pricelists
                   }));
               }
-          } catch(e) {
-              console.warn("Fleet fetch error", e);
-          }
+          } catch(e) {}
 
-          // 3. ATTEMPT RELATIONAL FETCH
-          try {
-              // We do a probe first to avoid Promise.all failure if tables don't exist
-              const probe = await supabase.from('brands').select('id').limit(1);
-              if (probe.error) throw new Error("Relational tables not ready");
+          // 3. Fetch Relational Inventory (Cloud Source of Truth)
+          // We fetch all relational tables in parallel.
+          // OPTIMIZATION: Select specific lightweight columns for products
+          const [brandsRes, catsRes, prodsRes, plBrandsRes, plRes] = await Promise.all([
+              supabase.from('brands').select('*'),
+              supabase.from('categories').select('*'),
+              supabase.from('products').select('id, category_id, name, sku, image_url, date_added'), // LIGHTWEIGHT FETCH
+              supabase.from('pricelist_brands').select('*'),
+              supabase.from('pricelists').select('*')
+          ]);
 
-              const [brandsRes, catsRes, prodsRes, plBrandsRes, plRes] = await Promise.all([
-                  supabase.from('brands').select('*'),
-                  supabase.from('categories').select('*'),
-                  supabase.from('products').select('*'),
-                  supabase.from('pricelist_brands').select('*'),
-                  supabase.from('pricelists').select('*')
-              ]);
+          // Check if we successfully got relational data
+          if (!brandsRes.error && brandsRes.data) {
+              
+              // Reconstruct Brands -> Categories -> Products Tree
+              const relationalBrands: Brand[] = brandsRes.data.map((b: any) => ({
+                  id: b.id,
+                  name: b.name,
+                  logoUrl: b.logo_url,
+                  themeColor: b.theme_color,
+                  categories: (catsRes.data || [])
+                      .filter((c: any) => c.brand_id === b.id)
+                      .map((c: any) => ({
+                          id: c.id,
+                          name: c.name,
+                          icon: c.icon,
+                          products: (prodsRes.data || [])
+                              .filter((p: any) => p.category_id === c.id)
+                              .map((p: any) => ({
+                                  id: p.id,
+                                  name: p.name,
+                                  sku: p.sku,
+                                  imageUrl: p.image_url,
+                                  dateAdded: p.date_added,
+                                  // Fill heavy fields with empty defaults until detail fetch
+                                  description: '', 
+                                  galleryUrls: [],
+                                  videoUrls: [],
+                                  specs: {},
+                                  features: [],
+                                  dimensions: [],
+                                  boxContents: [],
+                                  manuals: [],
+                                  terms: ''
+                              }))
+                      }))
+              }));
 
-              // Check if we actually got relational data (if tables exist)
-              if (brandsRes.data && catsRes.data && prodsRes.data) {
-                  // Reconstruct Tree: Brand -> Categories -> Products
-                  const relationalBrands: Brand[] = brandsRes.data.map((b: any) => ({
-                      id: b.id,
-                      name: b.name,
-                      logoUrl: b.logo_url,
-                      themeColor: b.theme_color,
-                      categories: catsRes.data
-                          .filter((c: any) => c.brand_id === b.id)
-                          .map((c: any) => ({
-                              id: c.id,
-                              name: c.name,
-                              icon: c.icon,
-                              products: prodsRes.data
-                                  .filter((p: any) => p.category_id === c.id)
-                                  .map((p: any) => ({
-                                      id: p.id,
-                                      name: p.name,
-                                      sku: p.sku,
-                                      description: p.description,
-                                      imageUrl: p.image_url,
-                                      galleryUrls: p.gallery_urls,
-                                      videoUrls: p.video_urls,
-                                      specs: p.specs,
-                                      features: p.features,
-                                      dimensions: p.dimensions,
-                                      boxContents: p.box_contents,
-                                      manuals: p.manuals,
-                                      terms: p.terms,
-                                      dateAdded: p.date_added
-                                  }))
-                          }))
-                  }));
-
-                  // IMPORTANT: Only override if we actually found brands. 
-                  // If relational tables are empty but valid, we use them (implies empty store).
-                  // If baseData has brands (from config backup) and relational has 0, we might want to merge? 
-                  // For now, if relational fetch succeeds, it is the source of truth.
-                  if (brandsRes.data) {
-                      baseData.brands = relationalBrands;
-                  }
-
-                  // Reconstruct Pricelists
-                  if (plBrandsRes.data && plRes.data) {
-                      baseData.pricelistBrands = plBrandsRes.data.map((pb: any) => ({
-                          id: pb.id, name: pb.name, logoUrl: pb.logo_url
-                      }));
-                      baseData.pricelists = plRes.data.map((pl: any) => ({
-                          id: pl.id,
-                          brandId: pl.brand_id,
-                          title: pl.title,
-                          month: pl.month,
-                          year: pl.year,
-                          url: pl.url,
-                          thumbnailUrl: pl.thumbnail_url,
-                          type: pl.type,
-                          kind: pl.kind,
-                          startDate: pl.start_date,
-                          endDate: pl.end_date,
-                          promoText: pl.promo_text,
-                          items: pl.items,
-                          headers: pl.headers,
-                          dateAdded: pl.date_added
-                      }));
-                  }
+              // If relational brands exist, they override whatever was in store_config
+              if (relationalBrands.length > 0 || (brandsRes.data.length === 0 && configRow?.data?.brands?.length === 0)) {
+                   assembledData.brands = relationalBrands;
               }
-          } catch (relationalError) {
-              console.warn("Relational tables not found or empty. Using legacy monolith data from store_config.", relationalError);
-              // Fallback is automatic since we started with baseData from store_config
           }
 
-          // Cache & Return
-          try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(baseData)); } catch (e) {}
-          return baseData;
+          // Reconstruct Pricelists
+          if (!plBrandsRes.error && plBrandsRes.data) {
+              assembledData.pricelistBrands = plBrandsRes.data.map((pb: any) => ({
+                  id: pb.id, name: pb.name, logoUrl: pb.logo_url
+              }));
+          }
+          if (!plRes.error && plRes.data) {
+              assembledData.pricelists = plRes.data.map((pl: any) => ({
+                  id: pl.id,
+                  brandId: pl.brand_id,
+                  title: pl.title,
+                  month: pl.month,
+                  year: pl.year,
+                  url: pl.url,
+                  thumbnailUrl: pl.thumbnail_url,
+                  type: pl.type,
+                  kind: pl.kind,
+                  startDate: pl.start_date,
+                  endDate: pl.end_date,
+                  promoText: pl.promo_text,
+                  items: pl.items,
+                  headers: pl.headers,
+                  dateAdded: pl.date_added
+              }));
+          }
+
+          // Cache the fresh cloud data to local storage for offline resilience
+          try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(assembledData)); } catch (e) {}
+          
+          return assembledData;
 
       } catch (e) { 
           console.warn("Cloud fetch failed, using local cache.", e); 
       }
   }
   
-  // Fallback to local cache
+  // Fallback: Offline Mode
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DATA);
     if (stored) return migrateData(JSON.parse(stored));
   } catch (e) {}
-  return migrateData(DEFAULT_DATA);
+  
+  return assembledData;
 };
 
 /**
- * RELATIONAL SAVE STRATEGY (Batch Upsert)
- * Flattens the StoreData tree and upserts into normalized tables.
- * Falls back to saving Config-only items to store_config.
+ * CLOUD-DIRECT WRITE STRATEGY
+ * 1. Validates connection.
+ * 2. Writes purely to Supabase (Config + Relational Tables).
+ * 3. Throws Error on failure (No silent local fallback).
+ * 4. Updates local cache ONLY after successful cloud write.
  */
 export const saveStoreData = async (data: StoreData): Promise<void> => {
-    // 1. Sanitize & Local Save
-    const cleanData = sanitizeData(data);
-    try {
-        localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(cleanData));
-    } catch (e) {
-        console.error("Local Storage Quota Exceeded");
-    }
-
     if (!supabase) initSupabase();
-    if (supabase) {
-        broadcastSync(10, 'syncing');
+    if (!supabase) throw new Error("Cloud Sync Error: Connection not initialized.");
+
+    const cleanData = sanitizeData(data);
+    broadcastSync(10, 'syncing');
         
-        try {
-            // --- CHECK FOR RELATIONAL TABLE EXISTENCE ---
-            // If the user hasn't run the migration SQL, these tables won't exist.
-            // We must NOT strip the inventory from store_config if these tables are missing.
-            let relationalTablesExist = false;
-            try {
-                const check = await supabase.from('brands').select('id').limit(1);
-                // If error code is 404 or 42P01 (undefined_table), then tables don't exist.
-                // Supabase-js returns error object, not throw.
-                if (!check.error) {
-                    relationalTablesExist = true;
-                }
-            } catch(e) {
-                relationalTablesExist = false;
-            }
+    try {
+        // --- 1. SAVE GLOBAL SETTINGS TO STORE_CONFIG ---
+        const settingsPayload = { ...cleanData };
+        delete (settingsPayload as any).brands;
+        delete (settingsPayload as any).pricelists;
+        delete (settingsPayload as any).pricelistBrands;
+        delete (settingsPayload as any).fleet;
+        
+        // Prune archive log to keep config lightweight
+        const archivePruned = {
+            ...(settingsPayload.archive || {}),
+            deletedItems: (settingsPayload.archive?.deletedItems || []).slice(0, 30),
+            brands: [], products: [], catalogues: [] 
+        };
+        settingsPayload.archive = archivePruned;
 
-            // --- A. SAVE GLOBAL SETTINGS ---
-            let settingsPayload = { ...cleanData };
-            
-            // Only strip heavy data if we are SURE we can save it to relational tables
-            if (relationalTablesExist) {
-                const { fleet, brands, pricelists, pricelistBrands, ...settingsData } = cleanData;
-                settingsPayload = settingsData;
-            } else {
-                console.warn("Relational tables missing. Performing FULL MONOLITH save to store_config to prevent data loss.");
-            }
-            
-            // Prune archive for settings payload regardless
-            const archivePruned = {
-                ...(settingsPayload.archive || {}),
-                deletedItems: (settingsPayload.archive?.deletedItems || []).slice(0, 30),
-                brands: [], products: [], catalogues: [] 
-            };
-            settingsPayload.archive = archivePruned;
+        const { error: configError } = await supabase.from('store_config').upsert({ id: 1, data: settingsPayload }, { onConflict: 'id' });
+        if (configError) throw new Error(`Settings Save Failed: ${configError.message}`);
+        
+        broadcastSync(30, 'syncing');
 
-            await supabase.from('store_config').upsert({ id: 1, data: settingsPayload }, { onConflict: 'id' });
-            broadcastSync(30, 'syncing');
+        // --- 2. PREPARE RELATIONAL DATA ---
+        
+        const flatBrands = cleanData.brands.map((b: Brand) => ({
+            id: b.id,
+            name: b.name,
+            logo_url: b.logoUrl,
+            theme_color: b.themeColor,
+            updated_at: new Date().toISOString()
+        }));
 
-            // --- B. RELATIONAL SAVE (Only if tables exist) ---
-            if (relationalTablesExist) {
-                
-                // 1. Flatten Brands
-                const flatBrands = cleanData.brands.map((b: Brand) => ({
-                    id: b.id,
-                    name: b.name,
-                    logo_url: b.logoUrl,
-                    theme_color: b.themeColor,
+        const flatCategories = cleanData.brands.flatMap((b: Brand) => 
+            b.categories.map((c: Category) => ({
+                id: c.id,
+                brand_id: b.id,
+                name: c.name,
+                icon: c.icon,
+                updated_at: new Date().toISOString()
+            }))
+        );
+
+        const flatProducts = cleanData.brands.flatMap((b: Brand) => 
+            b.categories.flatMap((c: Category) => 
+                c.products.map((p: Product) => ({
+                    id: p.id,
+                    category_id: c.id,
+                    name: p.name,
+                    sku: p.sku,
+                    description: p.description,
+                    image_url: p.imageUrl,
+                    gallery_urls: p.galleryUrls || [],
+                    video_urls: p.videoUrls || [],
+                    specs: p.specs || {},
+                    features: p.features || [],
+                    box_contents: p.boxContents || [],
+                    manuals: p.manuals || [],
+                    terms: p.terms,
+                    dimensions: p.dimensions || [],
+                    date_added: p.dateAdded,
                     updated_at: new Date().toISOString()
-                }));
+                }))
+            )
+        );
 
-                // 2. Flatten Categories
-                const flatCategories = cleanData.brands.flatMap((b: Brand) => 
-                    b.categories.map((c: Category) => ({
-                        id: c.id,
-                        brand_id: b.id,
-                        name: c.name,
-                        icon: c.icon,
-                        updated_at: new Date().toISOString()
-                    }))
-                );
+        const flatPLBrands = (cleanData.pricelistBrands || []).map((pb: PricelistBrand) => ({
+            id: pb.id,
+            name: pb.name,
+            logo_url: pb.logoUrl,
+            updated_at: new Date().toISOString()
+        }));
 
-                // 3. Flatten Products
-                const flatProducts = cleanData.brands.flatMap((b: Brand) => 
-                    b.categories.flatMap((c: Category) => 
-                        c.products.map((p: Product) => ({
-                            id: p.id,
-                            category_id: c.id,
-                            name: p.name,
-                            sku: p.sku,
-                            description: p.description,
-                            image_url: p.imageUrl,
-                            gallery_urls: p.galleryUrls || [],
-                            video_urls: p.videoUrls || [],
-                            specs: p.specs || {},
-                            features: p.features || [],
-                            box_contents: p.boxContents || [],
-                            manuals: p.manuals || [],
-                            terms: p.terms,
-                            dimensions: p.dimensions || [],
-                            date_added: p.dateAdded,
-                            updated_at: new Date().toISOString()
-                        }))
-                    )
-                );
+        const flatPricelists = (cleanData.pricelists || []).map((pl: Pricelist) => ({
+            id: pl.id,
+            brand_id: pl.brandId,
+            title: pl.title,
+            month: pl.month,
+            year: pl.year,
+            url: pl.url,
+            thumbnail_url: pl.thumbnailUrl,
+            type: pl.type,
+            kind: pl.kind,
+            start_date: pl.startDate,
+            end_date: pl.endDate,
+            promo_text: pl.promoText,
+            items: pl.items || [],
+            headers: pl.headers || {},
+            date_added: pl.dateAdded,
+            updated_at: new Date().toISOString()
+        }));
 
-                // 4. Flatten Pricelists
-                const flatPLBrands = (cleanData.pricelistBrands || []).map((pb: PricelistBrand) => ({
-                    id: pb.id,
-                    name: pb.name,
-                    logo_url: pb.logoUrl,
-                    updated_at: new Date().toISOString()
-                }));
-
-                const flatPricelists = (cleanData.pricelists || []).map((pl: Pricelist) => ({
-                    id: pl.id,
-                    brand_id: pl.brandId,
-                    title: pl.title,
-                    month: pl.month,
-                    year: pl.year,
-                    url: pl.url,
-                    thumbnail_url: pl.thumbnailUrl,
-                    type: pl.type,
-                    kind: pl.kind,
-                    start_date: pl.startDate,
-                    end_date: pl.endDate,
-                    promo_text: pl.promoText,
-                    items: pl.items || [],
-                    headers: pl.headers || {},
-                    date_added: pl.dateAdded,
-                    updated_at: new Date().toISOString()
-                }));
-
-                // EXECUTE BATCH UPSERTS
-                // Step 1: Brands (Inventory & Pricelist)
-                if (flatBrands.length > 0) await supabase.from('brands').upsert(flatBrands);
-                if (flatPLBrands.length > 0) await supabase.from('pricelist_brands').upsert(flatPLBrands);
-                broadcastSync(50, 'syncing');
-
-                // Step 2: Categories
-                if (flatCategories.length > 0) await supabase.from('categories').upsert(flatCategories);
-                
-                // Step 3: Products & Pricelists (Chunked for safety)
-                const chunkArray = (arr: any[], size: number) => {
-                    const chunks = [];
-                    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
-                    return chunks;
-                };
-
-                const productChunks = chunkArray(flatProducts, 50);
-                for (const chunk of productChunks) {
-                    await supabase.from('products').upsert(chunk);
-                }
-                broadcastSync(80, 'syncing');
-
-                const plChunks = chunkArray(flatPricelists, 20); // Pricelists can be heavy (JSON items)
-                for (const chunk of plChunks) {
-                    await supabase.from('pricelists').upsert(chunk);
-                }
-            }
-
-            broadcastSync(100, 'complete');
-            setTimeout(() => broadcastSync(0, 'idle'), 2500);
-
-        } catch (e: any) {
-            console.error("Save Sync Error:", e);
-            broadcastSync(0, 'error');
+        // --- 3. EXECUTE BATCH UPSERTS ---
+        
+        if (flatBrands.length > 0) {
+            const { error } = await supabase.from('brands').upsert(flatBrands);
+            if (error) throw new Error(`Brands Sync Failed: ${error.message}`);
         }
+        
+        if (flatPLBrands.length > 0) {
+            const { error } = await supabase.from('pricelist_brands').upsert(flatPLBrands);
+            if (error) throw new Error(`Pricelist Brands Sync Failed: ${error.message}`);
+        }
+        broadcastSync(50, 'syncing');
+
+        if (flatCategories.length > 0) {
+            const { error } = await supabase.from('categories').upsert(flatCategories);
+            if (error) throw new Error(`Categories Sync Failed: ${error.message}`);
+        }
+        
+        const chunkArray = (arr: any[], size: number) => {
+            const chunks = [];
+            for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+            return chunks;
+        };
+
+        const productChunks = chunkArray(flatProducts, 50);
+        for (const chunk of productChunks) {
+            const { error } = await supabase.from('products').upsert(chunk);
+            if (error) throw new Error(`Product Sync Failed: ${error.message}`);
+        }
+        broadcastSync(80, 'syncing');
+
+        const plChunks = chunkArray(flatPricelists, 10);
+        for (const chunk of plChunks) {
+            const { error } = await supabase.from('pricelists').upsert(chunk);
+            if (error) throw new Error(`Pricelist Sync Failed: ${error.message}`);
+        }
+
+        // --- 4. SUCCESS: UPDATE LOCAL CACHE ---
+        try {
+            localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(cleanData));
+        } catch (e) {
+            console.error("Local Storage Quota Exceeded (Cache Only)");
+        }
+
+        broadcastSync(100, 'complete');
+        setTimeout(() => broadcastSync(0, 'idle'), 2500);
+
+    } catch (e: any) {
+        console.error("Save Sync Error:", e);
+        broadcastSync(0, 'error');
+        throw e;
     }
 };
 
 export const resetStoreData = async (): Promise<StoreData> => {
-    // If resetting, we try to clear all tables
     if (!supabase) initSupabase();
     if (supabase) {
         try {

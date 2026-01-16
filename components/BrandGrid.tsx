@@ -173,6 +173,12 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
   const visibleBrands = sortedBrands.slice(0, displayLimit);
   const hasMoreBrands = sortedBrands.length > displayLimit;
 
+  // Optimized styles for legacy rendering performance
+  const gridStyle: React.CSSProperties = {
+      contentVisibility: 'auto',
+      contain: 'layout paint style',
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-y-auto animate-fade-in pb-40 md:pb-24">
       
@@ -303,7 +309,11 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
       <div className="flex-1 p-4 md:p-12 max-w-[1700px] mx-auto w-full flex flex-col gap-10">
         <div className="flex-1 flex flex-col gap-12">
             {/* Grid updated to support 10 columns (xl:grid-cols-10) and smaller icon sizes (max-w-[100px]) */}
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 md:gap-4 w-full place-items-center">
+            {/* Applied optimization styles */}
+            <div 
+                className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 md:gap-4 w-full place-items-center"
+                style={gridStyle}
+            >
               {visibleBrands.map((brand) => (
                 <button
                   key={brand.id}
@@ -368,7 +378,10 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             </div>
             
             <div className="flex-1 overflow-y-auto max-w-7xl mx-auto w-full no-scrollbar pb-20">
-               <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4 md:gap-8 p-4 place-items-center">
+               <div 
+                   className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4 md:gap-8 p-4 place-items-center"
+                   style={gridStyle}
+                >
                  {sortedBrands.map((brand) => (
                     <button
                       key={brand.id}
