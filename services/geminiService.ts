@@ -322,7 +322,7 @@ export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
   if (supabase) {
       try {
-          // 1. Fetch Core Config (Settings)
+          // 1. Fetch Core Config (Settings & Backup)
           const { data: configRow } = await supabase.from('store_config').select('data').eq('id', 1).single();
           let baseData = migrateData(configRow?.data || {});
 
@@ -391,17 +391,25 @@ export const generateStoreData = async (): Promise<StoreData> => {
                           }))
                   }));
 
-                  // IMPORTANT: Only override if we actually found brands. 
-                  if (brandsRes.data) {
+                  // DUAL-MODE FALLBACK:
+                  // If relational tables are returned but empty (e.g., due to RLS blocking read), 
+                  // and we have a backup in baseData (store_config), rely on baseData.
+                  // Only overwrite if relational data is actually present or explicitly empty (user deleted all).
+                  if (relationalBrands.length > 0) {
+                      baseData.brands = relationalBrands;
+                  } else if (baseData.brands && baseData.brands.length > 0) {
+                      console.warn("Relational tables empty (RLS?), falling back to store_config backup.");
+                  } else {
+                      // Both are empty, or it's a fresh start.
                       baseData.brands = relationalBrands;
                   }
 
                   // Reconstruct Pricelists
                   if (plBrandsRes.data && plRes.data) {
-                      baseData.pricelistBrands = plBrandsRes.data.map((pb: any) => ({
+                      const relPricelistBrands = plBrandsRes.data.map((pb: any) => ({
                           id: pb.id, name: pb.name, logoUrl: pb.logo_url
                       }));
-                      baseData.pricelists = plRes.data.map((pl: any) => ({
+                      const relPricelists = plRes.data.map((pl: any) => ({
                           id: pl.id,
                           brandId: pl.brand_id,
                           title: pl.title,
@@ -418,6 +426,17 @@ export const generateStoreData = async (): Promise<StoreData> => {
                           headers: pl.headers,
                           dateAdded: pl.date_added
                       }));
+
+                      // Same fallback logic for Pricelists
+                      if (relPricelistBrands.length > 0) {
+                          baseData.pricelistBrands = relPricelistBrands;
+                          baseData.pricelists = relPricelists;
+                      } else if (baseData.pricelistBrands && baseData.pricelistBrands.length > 0) {
+                          console.warn("Relational pricelists empty, using backup.");
+                      } else {
+                          baseData.pricelistBrands = relPricelistBrands;
+                          baseData.pricelists = relPricelists;
+                      }
                   }
               }
           } catch (relationalError) {
@@ -472,13 +491,10 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             }
 
             // --- A. SAVE GLOBAL SETTINGS ---
+            // DUAL-WRITE STRATEGY: 
+            // We ALWAYS save the full dataset to `store_config` (Monolith) as a safety backup.
+            // This ensures that even if relational tables fail (RLS, schema mismatch), data is safe.
             let settingsPayload = { ...cleanData };
-            
-            // Only strip heavy data if we are SURE we can save it to relational tables
-            if (relationalTablesExist) {
-                const { fleet, brands, pricelists, pricelistBrands, ...settingsData } = cleanData;
-                settingsPayload = settingsData;
-            }
             
             // Prune archive for settings payload regardless
             const archivePruned = {
@@ -493,10 +509,6 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
 
             // --- B. RELATIONAL SAVE (Only if tables exist) ---
             if (relationalTablesExist) {
-                // We perform a full sync here to ensure consistency, 
-                // but arguably we could skip this if we trusted granular updates 100%.
-                // For safety in this version, we keep the full sync but chunk it effectively.
-                
                 // 1. Flatten Brands
                 const flatBrands = cleanData.brands.map((b: Brand) => flattenBrand(b));
 
