@@ -1,8 +1,9 @@
 
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand, Category, Pricelist, PricelistBrand } from "../types";
-import { supabase, getEnv, initSupabase } from "./kioskService";
+import { supabase, getEnv, initSupabase, checkCloudConnection } from "./kioskService";
 
 const STORAGE_KEY_DATA = 'kiosk_pro_store_data';
+const STORAGE_KEY_OFFLINE_QUEUE = 'kiosk_pro_offline_queue';
 
 // Progress broadcasting utility
 const broadcastSync = (progress: number, status: 'idle' | 'syncing' | 'complete' | 'error') => {
@@ -127,6 +128,192 @@ const sanitizeData = (data: any): any => {
     return data;
 };
 
+// --- OFFLINE QUEUE SYSTEM ---
+
+interface SyncAction {
+    type: 'BRAND' | 'CATEGORY' | 'PRODUCT' | 'PRICELIST' | 'PRICELIST_BRAND' | 'ARCHIVE' | 'DELETE_ITEM';
+    subtype?: 'upsert' | 'delete';
+    data: any;
+    id: string;
+    timestamp: number;
+}
+
+class OfflineQueue {
+    private queue: SyncAction[] = [];
+
+    constructor() {
+        this.load();
+    }
+
+    private load() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY_OFFLINE_QUEUE);
+            if (stored) {
+                this.queue = JSON.parse(stored);
+            }
+        } catch (e) {
+            console.error("Failed to load offline queue", e);
+        }
+    }
+
+    private save() {
+        try {
+            localStorage.setItem(STORAGE_KEY_OFFLINE_QUEUE, JSON.stringify(this.queue));
+        } catch (e) {
+            console.error("Failed to save offline queue", e);
+        }
+    }
+
+    add(action: SyncAction) {
+        // Optimize: Remove previous pending actions for the same ID to prevent redundant writes
+        this.queue = this.queue.filter(a => !(a.type === action.type && a.id === action.id));
+        this.queue.push(action);
+        this.save();
+    }
+
+    async process() {
+        if (this.queue.length === 0) return;
+        if (!supabase) initSupabase();
+        if (!supabase) return;
+
+        // Check connection specifically before processing queue
+        const online = await checkCloudConnection();
+        if (!online) return;
+
+        console.log(`Processing ${this.queue.length} offline actions...`);
+        broadcastSync(10, 'syncing');
+
+        const remaining: SyncAction[] = [];
+        let successCount = 0;
+
+        for (const action of this.queue) {
+            try {
+                if (action.subtype === 'delete') {
+                    const tableMap: any = {
+                        'BRAND': 'brands', 'CATEGORY': 'categories', 'PRODUCT': 'products',
+                        'PRICELIST': 'pricelists', 'PRICELIST_BRAND': 'pricelist_brands'
+                    };
+                    const table = tableMap[action.type];
+                    if (table) {
+                        await supabase.from(table).delete().eq('id', action.id);
+                    }
+                } else {
+                    // Upsert logic
+                    if (action.type === 'BRAND') await supabase.from('brands').upsert(action.data);
+                    else if (action.type === 'CATEGORY') await supabase.from('categories').upsert(action.data);
+                    else if (action.type === 'PRODUCT') await supabase.from('products').upsert(action.data);
+                    else if (action.type === 'PRICELIST') await supabase.from('pricelists').upsert(action.data);
+                    else if (action.type === 'PRICELIST_BRAND') await supabase.from('pricelist_brands').upsert(action.data);
+                }
+                successCount++;
+            } catch (e) {
+                console.error("Sync action failed", action, e);
+                remaining.push(action); // Keep in queue
+            }
+        }
+
+        this.queue = remaining;
+        this.save();
+        
+        if (successCount > 0) {
+            broadcastSync(100, 'complete');
+            setTimeout(() => broadcastSync(0, 'idle'), 2000);
+        }
+    }
+}
+
+const offlineQueue = new OfflineQueue();
+
+// --- GRANULAR SYNC FUNCTIONS ---
+
+// Helpers to flatten data for SQL
+const flattenBrand = (b: Brand) => ({
+    id: b.id, name: b.name, logo_url: b.logoUrl, theme_color: b.themeColor, updated_at: new Date().toISOString()
+});
+const flattenCategory = (c: Category, brandId: string) => ({
+    id: c.id, brand_id: brandId, name: c.name, icon: c.icon, updated_at: new Date().toISOString()
+});
+const flattenProduct = (p: Product, categoryId: string) => ({
+    id: p.id, category_id: categoryId, name: p.name, sku: p.sku, description: p.description,
+    image_url: p.imageUrl, gallery_urls: p.galleryUrls || [], video_urls: p.videoUrls || [],
+    specs: p.specs || {}, features: p.features || [], box_contents: p.boxContents || [],
+    manuals: p.manuals || [], terms: p.terms, dimensions: p.dimensions || [],
+    date_added: p.dateAdded, updated_at: new Date().toISOString()
+});
+const flattenPricelist = (pl: Pricelist) => ({
+    id: pl.id, brand_id: pl.brandId, title: pl.title, month: pl.month, year: pl.year,
+    url: pl.url, thumbnail_url: pl.thumbnailUrl, type: pl.type, kind: pl.kind,
+    start_date: pl.startDate, end_date: pl.endDate, promo_text: pl.promoText,
+    items: pl.items || [], headers: pl.headers || {}, date_added: pl.dateAdded, updated_at: new Date().toISOString()
+});
+
+/**
+ * Updates a single brand in the cloud or queues it.
+ * NOTE: This assumes you handle local state update in UI separately or via reload.
+ */
+export const upsertBrand = async (brand: Brand) => {
+    if (!supabase) initSupabase();
+    try {
+        await supabase.from('brands').upsert(flattenBrand(brand));
+    } catch (e) {
+        offlineQueue.add({ type: 'BRAND', data: flattenBrand(brand), id: brand.id, timestamp: Date.now() });
+    }
+};
+
+export const upsertCategory = async (category: Category, brandId: string) => {
+    if (!supabase) initSupabase();
+    try {
+        await supabase.from('categories').upsert(flattenCategory(category, brandId));
+    } catch (e) {
+        offlineQueue.add({ type: 'CATEGORY', data: flattenCategory(category, brandId), id: category.id, timestamp: Date.now() });
+    }
+};
+
+export const upsertProduct = async (product: Product, categoryId: string) => {
+    if (!supabase) initSupabase();
+    try {
+        await supabase.from('products').upsert(flattenProduct(product, categoryId));
+    } catch (e) {
+        offlineQueue.add({ type: 'PRODUCT', data: flattenProduct(product, categoryId), id: product.id, timestamp: Date.now() });
+    }
+};
+
+export const upsertPricelist = async (pricelist: Pricelist) => {
+    if (!supabase) initSupabase();
+    try {
+        await supabase.from('pricelists').upsert(flattenPricelist(pricelist));
+    } catch (e) {
+        offlineQueue.add({ type: 'PRICELIST', data: flattenPricelist(pricelist), id: pricelist.id, timestamp: Date.now() });
+    }
+};
+
+export const upsertPricelistBrand = async (pb: PricelistBrand) => {
+    if (!supabase) initSupabase();
+    const data = { id: pb.id, name: pb.name, logo_url: pb.logoUrl, updated_at: new Date().toISOString() };
+    try {
+        await supabase.from('pricelist_brands').upsert(data);
+    } catch (e) {
+        offlineQueue.add({ type: 'PRICELIST_BRAND', data, id: pb.id, timestamp: Date.now() });
+    }
+};
+
+export const deleteItem = async (type: 'BRAND' | 'CATEGORY' | 'PRODUCT' | 'PRICELIST' | 'PRICELIST_BRAND', id: string) => {
+    if (!supabase) initSupabase();
+    const tableMap: any = {
+        'BRAND': 'brands', 'CATEGORY': 'categories', 'PRODUCT': 'products',
+        'PRICELIST': 'pricelists', 'PRICELIST_BRAND': 'pricelist_brands'
+    };
+    try {
+        if (tableMap[type]) await supabase.from(tableMap[type]).delete().eq('id', id);
+    } catch (e) {
+        offlineQueue.add({ type, subtype: 'delete', data: null, id, timestamp: Date.now() });
+    }
+};
+
+// Process offline queue on init
+setTimeout(() => offlineQueue.process(), 5000);
+setInterval(() => offlineQueue.process(), 60000);
+
 /**
  * RELATIONAL FETCH STRATEGY
  * Fetches flattened tables (brands, categories, products) and reconstructs the StoreData tree.
@@ -205,9 +392,6 @@ export const generateStoreData = async (): Promise<StoreData> => {
                   }));
 
                   // IMPORTANT: Only override if we actually found brands. 
-                  // If relational tables are empty but valid, we use them (implies empty store).
-                  // If baseData has brands (from config backup) and relational has 0, we might want to merge? 
-                  // For now, if relational fetch succeeds, it is the source of truth.
                   if (brandsRes.data) {
                       baseData.brands = relationalBrands;
                   }
@@ -238,7 +422,6 @@ export const generateStoreData = async (): Promise<StoreData> => {
               }
           } catch (relationalError) {
               console.warn("Relational tables not found or empty. Using legacy monolith data from store_config.", relationalError);
-              // Fallback is automatic since we started with baseData from store_config
           }
 
           // Cache & Return
@@ -260,8 +443,8 @@ export const generateStoreData = async (): Promise<StoreData> => {
 
 /**
  * RELATIONAL SAVE STRATEGY (Batch Upsert)
- * Flattens the StoreData tree and upserts into normalized tables.
- * Falls back to saving Config-only items to store_config.
+ * Now smarter: It can optionally skip heavy inventory syncs if granular updates are used.
+ * But we keep it robust for "Save Settings" or bulk migrations.
  */
 export const saveStoreData = async (data: StoreData): Promise<void> => {
     // 1. Sanitize & Local Save
@@ -278,13 +461,9 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         
         try {
             // --- CHECK FOR RELATIONAL TABLE EXISTENCE ---
-            // If the user hasn't run the migration SQL, these tables won't exist.
-            // We must NOT strip the inventory from store_config if these tables are missing.
             let relationalTablesExist = false;
             try {
                 const check = await supabase.from('brands').select('id').limit(1);
-                // If error code is 404 or 42P01 (undefined_table), then tables don't exist.
-                // Supabase-js returns error object, not throw.
                 if (!check.error) {
                     relationalTablesExist = true;
                 }
@@ -299,8 +478,6 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             if (relationalTablesExist) {
                 const { fleet, brands, pricelists, pricelistBrands, ...settingsData } = cleanData;
                 settingsPayload = settingsData;
-            } else {
-                console.warn("Relational tables missing. Performing FULL MONOLITH save to store_config to prevent data loss.");
             }
             
             // Prune archive for settings payload regardless
@@ -316,88 +493,39 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
 
             // --- B. RELATIONAL SAVE (Only if tables exist) ---
             if (relationalTablesExist) {
+                // We perform a full sync here to ensure consistency, 
+                // but arguably we could skip this if we trusted granular updates 100%.
+                // For safety in this version, we keep the full sync but chunk it effectively.
                 
                 // 1. Flatten Brands
-                const flatBrands = cleanData.brands.map((b: Brand) => ({
-                    id: b.id,
-                    name: b.name,
-                    logo_url: b.logoUrl,
-                    theme_color: b.themeColor,
-                    updated_at: new Date().toISOString()
-                }));
+                const flatBrands = cleanData.brands.map((b: Brand) => flattenBrand(b));
 
                 // 2. Flatten Categories
                 const flatCategories = cleanData.brands.flatMap((b: Brand) => 
-                    b.categories.map((c: Category) => ({
-                        id: c.id,
-                        brand_id: b.id,
-                        name: c.name,
-                        icon: c.icon,
-                        updated_at: new Date().toISOString()
-                    }))
+                    b.categories.map((c: Category) => flattenCategory(c, b.id))
                 );
 
                 // 3. Flatten Products
                 const flatProducts = cleanData.brands.flatMap((b: Brand) => 
                     b.categories.flatMap((c: Category) => 
-                        c.products.map((p: Product) => ({
-                            id: p.id,
-                            category_id: c.id,
-                            name: p.name,
-                            sku: p.sku,
-                            description: p.description,
-                            image_url: p.imageUrl,
-                            gallery_urls: p.galleryUrls || [],
-                            video_urls: p.videoUrls || [],
-                            specs: p.specs || {},
-                            features: p.features || [],
-                            box_contents: p.boxContents || [],
-                            manuals: p.manuals || [],
-                            terms: p.terms,
-                            dimensions: p.dimensions || [],
-                            date_added: p.dateAdded,
-                            updated_at: new Date().toISOString()
-                        }))
+                        c.products.map((p: Product) => flattenProduct(p, c.id))
                     )
                 );
 
                 // 4. Flatten Pricelists
                 const flatPLBrands = (cleanData.pricelistBrands || []).map((pb: PricelistBrand) => ({
-                    id: pb.id,
-                    name: pb.name,
-                    logo_url: pb.logoUrl,
-                    updated_at: new Date().toISOString()
+                    id: pb.id, name: pb.name, logo_url: pb.logoUrl, updated_at: new Date().toISOString()
                 }));
 
-                const flatPricelists = (cleanData.pricelists || []).map((pl: Pricelist) => ({
-                    id: pl.id,
-                    brand_id: pl.brandId,
-                    title: pl.title,
-                    month: pl.month,
-                    year: pl.year,
-                    url: pl.url,
-                    thumbnail_url: pl.thumbnailUrl,
-                    type: pl.type,
-                    kind: pl.kind,
-                    start_date: pl.startDate,
-                    end_date: pl.endDate,
-                    promo_text: pl.promoText,
-                    items: pl.items || [],
-                    headers: pl.headers || {},
-                    date_added: pl.dateAdded,
-                    updated_at: new Date().toISOString()
-                }));
+                const flatPricelists = (cleanData.pricelists || []).map((pl: Pricelist) => flattenPricelist(pl));
 
                 // EXECUTE BATCH UPSERTS
-                // Step 1: Brands (Inventory & Pricelist)
                 if (flatBrands.length > 0) await supabase.from('brands').upsert(flatBrands);
                 if (flatPLBrands.length > 0) await supabase.from('pricelist_brands').upsert(flatPLBrands);
                 broadcastSync(50, 'syncing');
 
-                // Step 2: Categories
                 if (flatCategories.length > 0) await supabase.from('categories').upsert(flatCategories);
                 
-                // Step 3: Products & Pricelists (Chunked for safety)
                 const chunkArray = (arr: any[], size: number) => {
                     const chunks = [];
                     for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
@@ -410,7 +538,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
                 }
                 broadcastSync(80, 'syncing');
 
-                const plChunks = chunkArray(flatPricelists, 20); // Pricelists can be heavy (JSON items)
+                const plChunks = chunkArray(flatPricelists, 20); 
                 for (const chunk of plChunks) {
                     await supabase.from('pricelists').upsert(chunk);
                 }

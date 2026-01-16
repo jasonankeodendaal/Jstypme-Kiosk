@@ -268,22 +268,90 @@ export const sendHeartbeat = async (currentLocalShowPricelists?: boolean): Promi
   return null;
 };
 
-export const uploadFileToStorage = async (file: File): Promise<string> => {
-    if (!supabase) initSupabase();
-    if (!supabase) throw new Error("Cloud Storage unavailable.");
+// --- SMART UPLOADER WITH CONCURRENCY QUEUE ---
 
-    try {
-        const fileExt = file.name.split('.').pop();
+interface QueueItem {
+    id: string;
+    file: File;
+    resolve: (url: string) => void;
+    reject: (err: any) => void;
+    retries: number;
+}
+
+class UploadQueue {
+    private queue: QueueItem[] = [];
+    private activeCount = 0;
+    private maxConcurrent = 3;
+    private maxRetries = 3;
+
+    add(file: File): Promise<string> {
+        return new Promise((resolve, reject) => {
+            this.queue.push({
+                id: Math.random().toString(36).substr(2, 9),
+                file,
+                resolve,
+                reject,
+                retries: 0
+            });
+            this.process();
+        });
+    }
+
+    private async process() {
+        if (this.activeCount >= this.maxConcurrent || this.queue.length === 0) return;
+
+        const item = this.queue.shift();
+        if (!item) return;
+
+        this.activeCount++;
+        
+        try {
+            const url = await this.uploadWithRetry(item);
+            item.resolve(url);
+        } catch (e) {
+            item.reject(e);
+        } finally {
+            this.activeCount--;
+            this.process(); // Process next item
+        }
+    }
+
+    private async uploadWithRetry(item: QueueItem): Promise<string> {
+        if (!supabase) initSupabase();
+        if (!supabase) throw new Error("Cloud Storage unavailable.");
+
+        const fileExt = item.file.name.split('.').pop();
         const fileName = Math.random().toString(36).substring(2, 15) + '_' + Date.now() + '.' + fileExt;
         const filePath = fileName;
 
-        const { error } = await supabase.storage.from('kiosk-media').upload(filePath, file);
-        if (error) throw error;
+        try {
+            const { error } = await supabase.storage.from('kiosk-media').upload(filePath, item.file);
+            if (error) throw error;
 
-        const { data: { publicUrl } } = supabase.storage.from('kiosk-media').getPublicUrl(filePath);
-        return publicUrl;
-    } catch (e: any) {
-        console.error("Storage error", e);
-        throw e;
+            const { data: { publicUrl } } = supabase.storage.from('kiosk-media').getPublicUrl(filePath);
+            return publicUrl;
+        } catch (e) {
+            if (item.retries < this.maxRetries) {
+                console.warn(`Upload failed for ${item.file.name}, retrying (${item.retries + 1}/${this.maxRetries})...`);
+                item.retries++;
+                // Exponential backoff
+                await new Promise(r => setTimeout(r, 1000 * Math.pow(2, item.retries)));
+                return this.uploadWithRetry(item);
+            }
+            throw e;
+        }
     }
+}
+
+const uploader = new UploadQueue();
+
+export const smartUpload = (file: File): Promise<string> => {
+    return uploader.add(file);
+};
+
+/**
+ * Legacy upload function kept for backward compatibility, now proxies to smartUpload
+ */
+export const uploadFileToStorage = async (file: File): Promise<string> => {
+    return smartUpload(file);
 };
