@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { StoreData, TVBrand, TVModel } from '../types';
-import { Play, Tv, ArrowLeft, ChevronLeft, ChevronRight, Pause, RotateCcw, MonitorPlay, MonitorStop, Film, LayoutGrid, SkipForward, Monitor, PlayCircle, Info, VolumeX, Loader2 } from 'lucide-react';
+import { Play, Tv, ArrowLeft, ChevronLeft, ChevronRight, Pause, RotateCcw, MonitorPlay, MonitorStop, Film, LayoutGrid, SkipForward, Monitor, PlayCircle, Info, VolumeX, Loader2, Image as ImageIcon } from 'lucide-react';
 
 interface TVModeProps {
   storeData: StoreData;
@@ -11,23 +11,107 @@ interface TVModeProps {
   isAudioUnlocked: boolean;
 }
 
+interface TVPlaylistItem {
+  id: string;
+  url: string;
+  type: 'video' | 'image';
+  title?: string;
+  subtitle?: string;
+  duration?: number; // in seconds (for images)
+}
+
 const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnabled, onToggleScreensaver, isAudioUnlocked }) => {
   const [viewingBrand, setViewingBrand] = useState<TVBrand | null>(null);
-  const [viewingModel, setViewingModel] = useState<TVModel | null>(null);
   
-  const [activePlaylist, setActivePlaylist] = useState<string[]>([]);
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [activePlaylist, setActivePlaylist] = useState<TVPlaylistItem[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false); 
   const [isPaused, setIsPaused] = useState(false); 
   const [isLoading, setIsLoading] = useState(false);
-
   const [showControls, setShowControls] = useState(true);
   
   const videoRef = useRef<HTMLVideoElement>(null);
+  const imageTimerRef = useRef<number | null>(null);
   const controlsTimeout = useRef<number | null>(null);
   const watchdogRef = useRef<number | null>(null);
 
   const tvBrands = storeData.tv?.brands || [];
+
+  // --- MIXED MEDIA ENGINE ---
+
+  const getInjectionPool = useMemo(() => {
+      const pool: TVPlaylistItem[] = [];
+      
+      // 1. Add Screensaver Ads
+      if (storeData.ads?.screensaver) {
+          storeData.ads.screensaver.forEach(ad => {
+              pool.push({
+                  id: `ad-${ad.id}`,
+                  url: ad.url,
+                  type: ad.type, // 'image' or 'video'
+                  title: 'Sponsored',
+                  subtitle: 'Advertisement',
+                  duration: 10
+              });
+          });
+      }
+
+      // 2. Add Random Product Images (Max 20)
+      const products = storeData.brands.flatMap(b => b.categories.flatMap(c => c.products)).filter(p => p.imageUrl);
+      // Shuffle products
+      for (let i = products.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [products[i], products[j]] = [products[j], products[i]];
+      }
+      products.slice(0, 20).forEach(p => {
+          pool.push({
+              id: `prod-${p.id}`,
+              url: p.imageUrl,
+              type: 'image',
+              title: p.brandName,
+              subtitle: p.name,
+              duration: 10
+          });
+      });
+
+      // Shuffle the final pool
+      for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+
+      return pool;
+  }, [storeData]);
+
+  const generateMixedPlaylist = (videoUrls: string[], contextTitle: string, contextSubtitle?: string): TVPlaylistItem[] => {
+      const playlist: TVPlaylistItem[] = [];
+      let injectionIndex = 0;
+
+      videoUrls.forEach((url, index) => {
+          // Add Primary Video
+          playlist.push({
+              id: `tv-vid-${index}-${Date.now()}`,
+              url: url,
+              type: 'video',
+              title: contextTitle,
+              subtitle: contextSubtitle || `Clip ${index + 1}`
+          });
+
+          // Inject Ad/Image every 2 videos
+          if ((index + 1) % 2 === 0 && getInjectionPool.length > 0) {
+              const injectItem = getInjectionPool[injectionIndex % getInjectionPool.length];
+              playlist.push({
+                  ...injectItem,
+                  id: `inject-${index}-${injectItem.id}-${Date.now()}` // Ensure unique ID
+              });
+              injectionIndex++;
+          }
+      });
+
+      return playlist;
+  };
+
+  // --- CONTROLS LOGIC ---
 
   const handleUserActivity = () => {
       setShowControls(true);
@@ -47,175 +131,196 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
           window.removeEventListener('touchstart', handleUserActivity);
           window.removeEventListener('keydown', handleUserActivity);
           if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
+          if (imageTimerRef.current) clearTimeout(imageTimerRef.current);
       };
   }, [isPlaying]);
+
+  const startPlaylist = (list: TVPlaylistItem[], startIndex: number = 0) => {
+      if (list.length === 0) return;
+      setActivePlaylist(list);
+      setCurrentIndex(startIndex);
+      setIsPlaying(true);
+      setIsPaused(false);
+  };
 
   const handlePlayGlobal = () => {
       if (tvBrands.length === 0) return;
       const allVideos = tvBrands.flatMap(b => (b.models || []).flatMap(m => m.videoUrls || []));
-      if (allVideos.length === 0) return;
-      
-      const shuffled = [...allVideos];
-      for (let i = shuffled.length - 1; i > 0; i--) {
+      // Shuffle videos first
+      for (let i = allVideos.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
-          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          [allVideos[i], allVideos[j]] = [allVideos[j], allVideos[i]];
       }
-
-      setActivePlaylist(shuffled);
-      setCurrentVideoIndex(0);
-      setIsPlaying(true);
-      setIsPaused(false);
+      const list = generateMixedPlaylist(allVideos, "Global Loop", "Mixed Showcase");
+      startPlaylist(list);
   };
 
-  const handlePlayModel = (model: TVModel, startIndex: number = 0) => {
+  const handlePlayModel = (model: TVModel) => {
       if (!model.videoUrls?.length) return;
-      setActivePlaylist(model.videoUrls);
-      setCurrentVideoIndex(startIndex);
-      setIsPlaying(true);
-      setIsPaused(false);
+      const list = generateMixedPlaylist(model.videoUrls, model.name, "Model Showcase");
+      startPlaylist(list);
   };
 
   const handlePlayBrandLoop = (brand: TVBrand) => {
       const allBrandVideos = (brand.models || []).flatMap(m => m.videoUrls || []);
-      if (!allBrandVideos.length) return;
-      setActivePlaylist(allBrandVideos);
-      setCurrentVideoIndex(0);
-      setIsPlaying(true);
-      setIsPaused(false);
+      const list = generateMixedPlaylist(allBrandVideos, brand.name, "Brand Collection");
+      startPlaylist(list);
   };
 
   const skipToNext = () => {
-      const nextIndex = (currentVideoIndex + 1) % activePlaylist.length;
-      if (nextIndex === currentVideoIndex) {
-          if (videoRef.current) {
-              videoRef.current.currentTime = 0;
-              videoRef.current.play().catch(() => {
-                  console.warn("Retrying play muted...");
-                  if (videoRef.current) {
-                      videoRef.current.muted = true;
-                      videoRef.current.play().catch(e => console.error("Playback totally blocked", e));
-                  }
-              });
-          }
-      } else {
-          setCurrentVideoIndex(nextIndex);
-      }
-  };
-
-  useEffect(() => {
-    if (isPlaying && activePlaylist.length > 0) {
-        if (watchdogRef.current) clearTimeout(watchdogRef.current);
-        watchdogRef.current = window.setTimeout(() => {
-            console.warn("TV Mode Watchdog Triggered");
-            skipToNext();
-        }, 120000); 
-    }
-    return () => { if (watchdogRef.current) clearTimeout(watchdogRef.current); };
-  }, [currentVideoIndex, isPlaying, activePlaylist.length]);
-
-  // Robust Autoplay Effect
-  useEffect(() => {
-      if (isPlaying && videoRef.current) {
-          setIsLoading(true);
-          const playPromise = videoRef.current.play();
-          if (playPromise !== undefined) {
-              playPromise.then(() => {
-                  setIsPaused(false);
-                  setIsLoading(false);
-              }).catch((error) => {
-                  console.warn("Autoplay blocked by browser policy. Muting and retrying.", error);
-                  if (videoRef.current) {
-                      videoRef.current.muted = true;
-                      videoRef.current.play().catch(e => console.error("Critical playback failure", e));
-                  }
-              });
-          }
-      }
-  }, [currentVideoIndex, isPlaying]);
-
-  const handleVideoEnded = () => {
-      skipToNext();
-  };
-
-  const handleNext = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      skipToNext();
+      const nextIndex = (currentIndex + 1) % activePlaylist.length;
+      setCurrentIndex(nextIndex);
   };
 
   const handlePrev = (e: React.MouseEvent) => {
       e.stopPropagation();
-      const prevIndex = (currentVideoIndex - 1 + activePlaylist.length) % activePlaylist.length;
-      if (prevIndex === currentVideoIndex && videoRef.current) {
-           videoRef.current.currentTime = 0;
-           videoRef.current.play().catch(() => {
-               if (videoRef.current) {
-                   videoRef.current.muted = true;
-                   videoRef.current.play();
-               }
-           });
-      } else {
-           setCurrentVideoIndex(prevIndex);
-      }
+      const prevIndex = (currentIndex - 1 + activePlaylist.length) % activePlaylist.length;
+      setCurrentIndex(prevIndex);
   };
-  
-  const handleVideoError = () => {
-      console.error("Source error on video:", activePlaylist[currentVideoIndex]);
-      setTimeout(skipToNext, 2000);
-  }
+
+  // Watchdog: If stuck on one item for > 2 mins, force skip
+  useEffect(() => {
+    if (isPlaying && activePlaylist.length > 0) {
+        if (watchdogRef.current) clearTimeout(watchdogRef.current);
+        watchdogRef.current = window.setTimeout(() => {
+            console.warn("TV Mode Watchdog Triggered - Skipping stuck media");
+            skipToNext();
+        }, 120000); 
+    }
+    return () => { if (watchdogRef.current) clearTimeout(watchdogRef.current); };
+  }, [currentIndex, isPlaying, activePlaylist.length]);
+
+  // Main Playback Effect
+  useEffect(() => {
+      if (!isPlaying || activePlaylist.length === 0) return;
+      
+      const currentItem = activePlaylist[currentIndex];
+      setIsLoading(true);
+      if (imageTimerRef.current) clearTimeout(imageTimerRef.current);
+
+      if (currentItem.type === 'image') {
+          // IMAGE LOGIC
+          // Simulate loading time
+          setTimeout(() => setIsLoading(false), 500);
+          
+          // Set duration timer
+          const duration = (currentItem.duration || 10) * 1000;
+          imageTimerRef.current = window.setTimeout(() => {
+              if (!isPaused) skipToNext();
+          }, duration);
+
+      } else {
+          // VIDEO LOGIC
+          // handled by <video> refs and events
+          if (videoRef.current) {
+              videoRef.current.load(); // Ensure source update
+              const playPromise = videoRef.current.play();
+              if (playPromise !== undefined) {
+                  playPromise.then(() => {
+                      setIsPaused(false);
+                      setIsLoading(false);
+                  }).catch((error) => {
+                      console.warn("Autoplay blocked. Muting and retrying.", error);
+                      if (videoRef.current) {
+                          videoRef.current.muted = true;
+                          videoRef.current.play().catch(e => console.error("Critical playback failure", e));
+                      }
+                  });
+              }
+          }
+      }
+  }, [currentIndex, isPlaying]);
+
+  // Pause logic for Images (Videos handle it via ref)
+  useEffect(() => {
+      const currentItem = activePlaylist[currentIndex];
+      if (currentItem?.type === 'image') {
+          if (isPaused) {
+              if (imageTimerRef.current) clearTimeout(imageTimerRef.current);
+          } else {
+              // Resume timer (simplified: just restart full duration for now)
+              if (imageTimerRef.current) clearTimeout(imageTimerRef.current);
+              imageTimerRef.current = window.setTimeout(() => skipToNext(), 10000);
+          }
+      }
+  }, [isPaused]);
 
   const exitPlayer = () => {
       setIsPlaying(false);
       setActivePlaylist([]);
+      if (imageTimerRef.current) clearTimeout(imageTimerRef.current);
   };
 
-  // Preload next video in playlist to reduce buffering gap
-  const nextVideoUrl = activePlaylist.length > 0 
-      ? activePlaylist[(currentVideoIndex + 1) % activePlaylist.length] 
-      : null;
-
-  // 1. Fullscreen Video Player UI
+  // 1. Fullscreen Player UI
   if (isPlaying && activePlaylist.length > 0) {
-      const currentUrl = activePlaylist[currentVideoIndex];
+      const currentItem = activePlaylist[currentIndex];
+      const nextItem = activePlaylist[(currentIndex + 1) % activePlaylist.length];
+
       return (
           <div className="fixed inset-0 bg-black z-[200] flex flex-col items-center justify-center overflow-hidden group cursor-none">
               
-              {/* Hidden Preloader: Ensures next video is in browser cache */}
-              {nextVideoUrl && nextVideoUrl !== currentUrl && (
-                  <video 
-                      className="absolute w-0 h-0 opacity-0 pointer-events-none"
-                      src={nextVideoUrl} 
-                      preload="auto" 
-                      muted 
-                      playsInline 
-                  />
-              )}
+              {/* Media Container */}
+              <div className="absolute inset-0 bg-black flex items-center justify-center">
+                  {currentItem.type === 'video' ? (
+                      <video 
+                          ref={videoRef}
+                          src={currentItem.url} 
+                          className="w-full h-full object-contain"
+                          playsInline
+                          muted={!isAudioUnlocked}
+                          onEnded={skipToNext}
+                          onError={() => setTimeout(skipToNext, 1000)}
+                          onPlay={() => { setIsPaused(false); setIsLoading(false); }}
+                          onPause={() => setIsPaused(true)}
+                          onLoadStart={() => setIsLoading(true)}
+                          onCanPlay={() => setIsLoading(false)}
+                      />
+                  ) : (
+                      <div className="w-full h-full relative">
+                          {/* Ken Burns Effect Background */}
+                          <div 
+                              key={currentItem.id} // Re-trigger animation
+                              className="absolute inset-0 bg-cover bg-center animate-[kenburns_15s_ease-out_forwards]"
+                              style={{ backgroundImage: `url(${currentItem.url})` }}
+                          ></div>
+                          <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]"></div>
+                          {/* Main Image */}
+                          <img 
+                              src={currentItem.url} 
+                              className="absolute inset-0 w-full h-full object-contain z-10 animate-fade-in"
+                              alt={currentItem.title}
+                              onLoad={() => setIsLoading(false)}
+                          />
+                          <style>{`
+                              @keyframes kenburns {
+                                  0% { transform: scale(1.0); }
+                                  100% { transform: scale(1.1); }
+                              }
+                          `}</style>
+                      </div>
+                  )}
+              </div>
 
-              <video 
-                  key={`${currentUrl}-${currentVideoIndex}`} 
-                  ref={videoRef}
-                  src={currentUrl} 
-                  className="w-full h-full object-contain"
-                  autoPlay
-                  playsInline
-                  muted={!isAudioUnlocked}
-                  onEnded={handleVideoEnded}
-                  onError={handleVideoError}
-                  onPlay={() => { setIsPaused(false); setIsLoading(false); }}
-                  onPause={() => setIsPaused(true)}
-                  onLoadStart={() => setIsLoading(true)}
-                  onCanPlay={() => setIsLoading(false)}
-              />
+              {/* Preloader for Next Item */}
+              <div className="hidden">
+                  {nextItem.type === 'video' ? (
+                      <video src={nextItem.url} preload="auto" muted />
+                  ) : (
+                      <img src={nextItem.url} />
+                  )}
+              </div>
               
               {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-10">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-20 pointer-events-none">
                       <div className="flex flex-col items-center gap-4">
                           <Loader2 size={48} className="text-blue-500 animate-spin" />
-                          <span className="text-white text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Buffering Source...</span>
+                          <span className="text-white text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Loading Media...</span>
                       </div>
                   </div>
               )}
 
-              <div className={`absolute inset-0 flex flex-col justify-between p-4 md:p-8 transition-opacity duration-300 bg-gradient-to-b from-black/60 via-transparent to-black/60 ${showControls ? 'opacity-100 pointer-events-auto cursor-auto' : 'opacity-0 pointer-events-none'}`}>
+              {/* Controls Overlay */}
+              <div className={`absolute inset-0 flex flex-col justify-between p-4 md:p-8 transition-opacity duration-300 bg-gradient-to-b from-black/60 via-transparent to-black/60 z-30 ${showControls ? 'opacity-100 pointer-events-auto cursor-auto' : 'opacity-0 pointer-events-none'}`}>
                   <div className="flex justify-between items-start">
                       <button onClick={exitPlayer} className="bg-white/10 hover:bg-white/20 text-white p-3 md:p-4 rounded-full border border-white/10">
                           <ArrowLeft size={24} className="md:w-8 md:h-8" />
@@ -223,15 +328,16 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
                       
                       <div className="flex flex-col gap-2 items-end">
                         <div className="bg-black/60 px-6 py-2 rounded-xl border border-white/10 text-center">
-                            <h2 className="text-white font-black uppercase tracking-widest text-sm md:text-lg">TV Channel Loop</h2>
+                            <h2 className="text-white font-black uppercase tracking-widest text-sm md:text-lg">{currentItem.title || "TV Mode"}</h2>
                             <div className="text-blue-400 text-[10px] md:text-xs font-bold uppercase mt-1 flex items-center justify-center gap-2">
-                                <Film size={12} /> Video {currentVideoIndex + 1} of {activePlaylist.length}
+                                {currentItem.type === 'video' ? <Film size={12} /> : <ImageIcon size={12} />} 
+                                {currentItem.subtitle || (currentItem.type === 'video' ? `Clip ${currentIndex + 1}` : 'Feature')}
                             </div>
                         </div>
-                        {!isAudioUnlocked && (
+                        {currentItem.type === 'video' && !isAudioUnlocked && (
                             <div className="bg-orange-500/80 backdrop-blur-md px-4 py-1.5 rounded-lg border border-orange-400 flex items-center gap-2 animate-pulse">
                                 <VolumeX size={14} className="text-white" />
-                                <span className="text-white font-black text-[9px] uppercase tracking-wider">Sound Muted: Tap screen to unlock</span>
+                                <span className="text-white font-black text-[9px] uppercase tracking-wider">Sound Muted</span>
                             </div>
                         )}
                       </div>
@@ -243,24 +349,26 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
                       </button>
                       <button 
                         onClick={() => {
-                            if (videoRef.current) {
+                            if (currentItem.type === 'video' && videoRef.current) {
                                 if (isPaused) videoRef.current.play().catch(() => {});
                                 else videoRef.current.pause();
+                            } else {
+                                setIsPaused(!isPaused);
                             }
                         }} 
                         className="p-6 md:p-8 bg-white text-black rounded-full shadow-[0_0_50px_rgba(255,255,255,0.4)] hover:scale-110 transition-transform flex items-center justify-center"
                       >
                           {isPaused ? <Play size={40} fill="currentColor" className="ml-2 md:w-12 md:h-12" /> : <Pause size={40} fill="currentColor" className="md:w-12 md:h-12" />}
                       </button>
-                      <button onClick={handleNext} className="p-4 md:p-6 bg-white/10 hover:bg-white/20 rounded-full text-white border border-white/10 group">
+                      <button onClick={skipToNext} className="p-4 md:p-6 bg-white/10 hover:bg-white/20 rounded-full text-white border border-white/10 group">
                           <ChevronRight size={32} className="md:w-12 md:h-12 group-hover:translate-x-1 transition-transform" />
                       </button>
                   </div>
                   
                   <div className="flex items-center gap-4">
-                      <div className="text-white text-xs font-mono font-bold">{currentVideoIndex + 1} / {activePlaylist.length}</div>
+                      <div className="text-white text-xs font-mono font-bold">{currentIndex + 1} / {activePlaylist.length}</div>
                       <div className="flex-1 bg-white/10 h-1.5 rounded-full overflow-hidden">
-                           <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${((currentVideoIndex + 1) / activePlaylist.length) * 100}%` }}></div>
+                           <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${((currentIndex + 1) / activePlaylist.length) * 100}%` }}></div>
                       </div>
                   </div>
               </div>
