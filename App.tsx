@@ -108,8 +108,9 @@ export default function App() {
   const kioskId = getKioskId();
   const isAdmin = currentRoute.startsWith('/admin');
 
+  // Modified to allow background updates for admins (enabling Live Fleet Monitor)
   const fetchData = useCallback(async (isBackground = false) => {
-      if (isAdmin && isBackground) return;
+      // Removed isAdmin restriction to ensure background fleet updates occur
       if (!isBackground && isFirstLoad) setIsSyncing(true);
       
       try {
@@ -117,7 +118,8 @@ export default function App() {
         if (data) {
            setStoreData(prev => {
                if (!prev) return data;
-               if (isAdmin && isBackground) return prev; 
+               // Always return new data so Admin Dashboard receives live Fleet updates.
+               // Note: AdminDashboard handles its own "unsaved changes" logic to prevent form overwrites.
                return { ...data };
            });
            setLastSyncTime(new Date().toLocaleTimeString());
@@ -128,22 +130,29 @@ export default function App() {
         setIsFirstLoad(false);
         setIsSyncing(false);
       }
-  }, [isAdmin, isFirstLoad]);
+  }, [isFirstLoad]);
 
   useEffect(() => {
     initSupabase();
-    fetchData();
-    let interval: any = null;
-    if (!isAdmin) {
-        interval = setInterval(() => {
-            fetchData(true);
-        }, 60000); 
-    }
+    fetchData(); // Initial Fetch
+
+    // Polling is now active for EVERYONE (Admins need it for Fleet, Kiosks for Content)
+    const interval = setInterval(() => {
+        fetchData(true);
+    }, 30000); // 30s heartbeat for quicker fleet updates
+
     let channel: any = null;
-    if (supabase && !isAdmin) {
+    if (supabase) {
+        // Subscribe to both 'store_config' (content) and 'kiosks' (fleet status)
         channel = supabase
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
+            () => {
+              if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
+              syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
+            }
+          )
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
             () => {
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
               syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
@@ -155,7 +164,7 @@ export default function App() {
         if (channel) supabase.removeChannel(channel);
         if (interval) clearInterval(interval);
     };
-  }, [fetchData, kioskId, isAdmin]);
+  }, [fetchData, kioskId]); // Removed isAdmin from deps so it runs for admin too
 
   const handleUpdateData = async (newData: StoreData) => {
     setStoreData({ ...newData }); 
