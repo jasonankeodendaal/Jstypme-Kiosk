@@ -399,6 +399,18 @@ ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public Access" ON public.store_config 
 FOR ALL USING (true) WITH CHECK (true);`}
                                   />
+                                  
+                                  <div className="mt-8 border-t border-slate-800 pt-8">
+                                      <h3 className="text-lg font-black text-white uppercase tracking-tight mb-4 flex items-center gap-2"><Sparkles size={16} className="text-yellow-400"/> Feature Migrations</h3>
+                                      <p className="text-xs text-slate-400 mb-4">Run these additional snippets to enable newer features like the <strong className="text-white">Pricelist Toggle</strong>.</p>
+                                      <CodeSnippet 
+                                        label="Fleet Update: Pricelists"
+                                        id="sql-mig-fleet"
+                                        code={`-- ADD PRICELIST TOGGLE
+ALTER TABLE public.kiosks 
+ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;`}
+                                      />
+                                  </div>
                               </div>
                               <div className="space-y-6">
                                   <ArchitectNote title="Snapshot Strategy">
