@@ -878,22 +878,10 @@ const SearchModal = ({ storeData, onClose, onSelectProduct }: { storeData: Store
 export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData: StoreData | null, lastSyncTime?: string, onSyncRequest?: () => void }) => {
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
   const [kioskId, setKioskId] = useState(getKioskId());
-  
-  // Local state for pricelist visibility to react instantly to heartbeats
-  const [localShowPricelists, setLocalShowPricelists] = useState<boolean | undefined>(undefined);
-
   const myFleetEntry = useMemo(() => storeData?.fleet?.find(f => f.id === kioskId), [storeData?.fleet, kioskId]);
   
-  // Sync local state with storeData when it updates (source of truth)
-  useEffect(() => {
-      if (myFleetEntry) {
-          setLocalShowPricelists(myFleetEntry.showPricelists);
-      }
-  }, [myFleetEntry]);
-
   // Feature Flag: Respect fleet visibility setting for pricelists (Default to true if undefined)
-  // Logic: Use local override if set (from heartbeat), otherwise fallback to storeData, otherwise true.
-  const showPricelistsEnabled = localShowPricelists ?? (myFleetEntry?.showPricelists ?? true);
+  const showPricelistsEnabled = myFleetEntry?.showPricelists ?? true;
 
   const currentShopName = myFleetEntry?.name || getShopName() || "New Device";
   const deviceType = myFleetEntry?.deviceType || getDeviceType() || 'kiosk';
@@ -984,30 +972,16 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
     const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
     window.addEventListener('online', () => setIsOnline(true)); window.addEventListener('offline', () => setIsOnline(false));
     checkCloudConnection().then(setIsCloudConnected);
-    
     if (isSetup) {
       const syncCycle = async () => {
-         // Pass current local pricelist state to check for divergence
-         const syncResult = await sendHeartbeat(showPricelistsEnabled);
-         
-         if (syncResult?.deleted) { 
-             resetDeviceIdentity(); 
-         } else if (syncResult?.restart) { 
-             window.location.reload(); 
-         } else if (syncResult?.showPricelists !== undefined) {
-             // If remote changed, update local immediately and trigger full sync
-             if (syncResult.showPricelists !== localShowPricelists) {
-                 setLocalShowPricelists(syncResult.showPricelists);
-                 if (onSyncRequest) onSyncRequest();
-             }
-         }
+         const syncResult = await sendHeartbeat();
+         if (syncResult?.deleted) { resetDeviceIdentity(); } else if (syncResult?.restart) { window.location.reload(); }
       };
-      syncCycle(); 
-      const interval = setInterval(syncCycle, 30000);
+      syncCycle(); const interval = setInterval(syncCycle, 30000);
       return () => { clearInterval(interval); clearInterval(clockInterval); };
     }
     return () => { clearInterval(clockInterval); };
-  }, [resetIdleTimer, isSetup, resetDeviceIdentity, showPricelistsEnabled, localShowPricelists, onSyncRequest]);
+  }, [resetIdleTimer, isSetup, resetDeviceIdentity]);
 
   // --- HARDWARE BACK BUTTON LOGIC ---
   useEffect(() => {
