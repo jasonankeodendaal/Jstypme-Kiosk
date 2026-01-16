@@ -150,7 +150,8 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
           version: '1.0.5',
           location_description: 'Newly Registered',
           assigned_zone: 'Unassigned',
-          restart_requested: false
+          restart_requested: false,
+          show_pricelists: true // Default to visible
         };
         await supabase.from('kiosks').upsert(kioskData);
       } catch(e: any) {
@@ -160,7 +161,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   return true;
 };
 
-export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean } | null> => {
+export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean, showPricelists?: boolean } | null> => {
   const id = getKioskId();
   if (!id) return null;
   if (!supabase) initSupabase();
@@ -170,12 +171,13 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
   let currentZone = "Unassigned";
   let configChanged = false;
   let restartFlag = false;
+  let remoteShowPricelists = true;
 
   try {
       if (supabase) {
           const { data: remoteData, error: fetchError } = await supabase
               .from('kiosks')
-              .select('name, device_type, assigned_zone, restart_requested')
+              .select('name, device_type, assigned_zone, restart_requested, show_pricelists')
               .eq('id', id)
               .maybeSingle();
 
@@ -196,6 +198,7 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               }
               if (remoteData.assigned_zone) currentZone = remoteData.assigned_zone;
               if (remoteData.restart_requested) restartFlag = true;
+              if (remoteData.show_pricelists !== undefined) remoteShowPricelists = remoteData.show_pricelists;
           }
       }
 
@@ -229,7 +232,7 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
       }
 
       if (restartFlag || configChanged) {
-          return { deviceType: currentDeviceType, name: currentName, restart: restartFlag };
+          return { deviceType: currentDeviceType, name: currentName, restart: restartFlag, showPricelists: remoteShowPricelists };
       }
 
   } catch (e) {

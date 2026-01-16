@@ -176,6 +176,7 @@ export interface KioskRegistry {
   assignedZone?: string;
   notes?: string;
   restartRequested?: boolean; 
+  showPricelists?: boolean;
 }
 
 export interface ArchivedItem {

@@ -147,7 +147,8 @@ export const generateStoreData = async (): Promise<StoreData> => {
                       id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
                       last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
                       version: k.version, locationDescription: k.location_description,
-                      assignedZone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested
+                      assignedZone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested,
+                      showPricelists: k.show_pricelists
                   }));
               }
           } catch(e) {
