@@ -396,6 +396,9 @@ VALUES ('kiosk-media', 'kiosk-media', true)
 ON CONFLICT DO NOTHING;
 
 ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
+
+-- SAFE POLICY CREATION
+DROP POLICY IF EXISTS "Public Access" ON public.store_config;
 CREATE POLICY "Public Access" ON public.store_config 
 FOR ALL USING (true) WITH CHECK (true);`}
                                   />
@@ -449,21 +452,43 @@ ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;`}
                                 label="Migration SQL"
                                 id="mig-sql"
                                 code={`-- 1. SPLIT TABLES
-CREATE TABLE public.brands (
+CREATE TABLE IF NOT EXISTS public.brands (
   id text primary key,
   name text,
   logo_url text
 );
 
-CREATE TABLE public.products (
+CREATE TABLE IF NOT EXISTS public.categories (
   id text primary key,
-  category_id text references categories(id),
+  brand_id text references public.brands(id),
   name text,
-  specs jsonb default '{}'
+  icon text
+);
+
+CREATE TABLE IF NOT EXISTS public.products (
+  id text primary key,
+  category_id text references public.categories(id),
+  name text,
+  specs jsonb default '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS public.pricelist_brands (
+  id text primary key,
+  name text,
+  logo_url text
+);
+
+CREATE TABLE IF NOT EXISTS public.pricelists (
+  id text primary key,
+  brand_id text,
+  title text,
+  data jsonb default '{}'::jsonb
 );
 
 -- 2. ENABLE BATCH SYNC
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Sync Access" ON public.products;
 CREATE POLICY "Sync Access" ON public.products 
 FOR ALL USING (true);`}
                               />
