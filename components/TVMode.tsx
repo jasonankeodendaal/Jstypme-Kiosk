@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { StoreData, TVBrand, TVModel } from '../types';
-import { Play, Tv, ArrowLeft, ChevronLeft, ChevronRight, Pause, RotateCcw, MonitorPlay, MonitorStop, Film, LayoutGrid, SkipForward, Monitor, PlayCircle, Info, VolumeX, Loader2 } from 'lucide-react';
+import { Play, Tv, ArrowLeft, ChevronLeft, ChevronRight, Pause, MonitorPlay, MonitorStop, Film, SkipForward, Monitor, VolumeX, Loader2, AlertCircle } from 'lucide-react';
 
 interface TVModeProps {
   storeData: StoreData;
@@ -13,22 +13,45 @@ interface TVModeProps {
 
 const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnabled, onToggleScreensaver, isAudioUnlocked }) => {
   const [viewingBrand, setViewingBrand] = useState<TVBrand | null>(null);
-  const [viewingModel, setViewingModel] = useState<TVModel | null>(null);
   
+  // Playlist State
   const [activePlaylist, setActivePlaylist] = useState<string[]>([]);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false); 
   const [isPaused, setIsPaused] = useState(false); 
-  const [isLoading, setIsLoading] = useState(false);
+  
+  // Double Buffer State
+  const [activeSlot, setActiveSlot] = useState<'A' | 'B'>('A');
+  const [showUpNext, setShowUpNext] = useState(false);
+  const [nextTitle, setNextTitle] = useState('');
 
+  // UI State
   const [showControls, setShowControls] = useState(true);
   
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // Refs
+  const refA = useRef<HTMLVideoElement>(null);
+  const refB = useRef<HTMLVideoElement>(null);
   const controlsTimeout = useRef<number | null>(null);
   const watchdogRef = useRef<number | null>(null);
+  const stallCounter = useRef<number>(0);
+  const lastTimeRef = useRef<number>(0);
 
   const tvBrands = storeData.tv?.brands || [];
 
+  // Helper to find video title
+  const getVideoTitle = (url: string) => {
+      for (const b of tvBrands) {
+          for (const m of b.models) {
+              const idx = m.videoUrls.indexOf(url);
+              if (idx !== -1) {
+                  return m.videoUrls.length > 1 ? `${m.name} (${idx + 1}/${m.videoUrls.length})` : m.name;
+              }
+          }
+      }
+      return url.split('/').pop() || 'Unknown Clip';
+  };
+
+  // Activity Monitor
   const handleUserActivity = () => {
       setShowControls(true);
       if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
@@ -50,11 +73,13 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
       };
   }, [isPlaying]);
 
+  // Playlist Generators
   const handlePlayGlobal = () => {
       if (tvBrands.length === 0) return;
       const allVideos = tvBrands.flatMap(b => (b.models || []).flatMap(m => m.videoUrls || []));
       if (allVideos.length === 0) return;
       
+      // Fisher-Yates Shuffle
       const shuffled = [...allVideos];
       for (let i = shuffled.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -63,14 +88,16 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
 
       setActivePlaylist(shuffled);
       setCurrentVideoIndex(0);
+      setActiveSlot('A');
       setIsPlaying(true);
       setIsPaused(false);
   };
 
-  const handlePlayModel = (model: TVModel, startIndex: number = 0) => {
+  const handlePlayModel = (model: TVModel) => {
       if (!model.videoUrls?.length) return;
       setActivePlaylist(model.videoUrls);
-      setCurrentVideoIndex(startIndex);
+      setCurrentVideoIndex(0);
+      setActiveSlot('A');
       setIsPlaying(true);
       setIsPaused(false);
   };
@@ -80,179 +107,191 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
       if (!allBrandVideos.length) return;
       setActivePlaylist(allBrandVideos);
       setCurrentVideoIndex(0);
+      setActiveSlot('A');
       setIsPlaying(true);
       setIsPaused(false);
   };
 
+  // Gapless Engine Logic
+  const srcA = activePlaylist.length > 0 
+      ? (activeSlot === 'A' ? activePlaylist[currentVideoIndex] : activePlaylist[(currentVideoIndex + 1) % activePlaylist.length]) 
+      : '';
+  
+  const srcB = activePlaylist.length > 0 
+      ? (activeSlot === 'B' ? activePlaylist[currentVideoIndex] : activePlaylist[(currentVideoIndex + 1) % activePlaylist.length]) 
+      : '';
+
   const skipToNext = () => {
       const nextIndex = (currentVideoIndex + 1) % activePlaylist.length;
-      if (nextIndex === currentVideoIndex) {
-          if (videoRef.current) {
-              videoRef.current.currentTime = 0;
-              videoRef.current.play().catch(() => {
-                  console.warn("Retrying play muted...");
-                  if (videoRef.current) {
-                      videoRef.current.muted = true;
-                      videoRef.current.play().catch(e => console.error("Playback totally blocked", e));
-                  }
-              });
-          }
-      } else {
-          setCurrentVideoIndex(nextIndex);
-      }
-  };
-
-  useEffect(() => {
-    if (isPlaying && activePlaylist.length > 0) {
-        if (watchdogRef.current) clearTimeout(watchdogRef.current);
-        watchdogRef.current = window.setTimeout(() => {
-            console.warn("TV Mode Watchdog Triggered");
-            skipToNext();
-        }, 120000); 
-    }
-    return () => { if (watchdogRef.current) clearTimeout(watchdogRef.current); };
-  }, [currentVideoIndex, isPlaying, activePlaylist.length]);
-
-  // Robust Autoplay Effect
-  useEffect(() => {
-      if (isPlaying && videoRef.current) {
-          setIsLoading(true);
-          const playPromise = videoRef.current.play();
-          if (playPromise !== undefined) {
-              playPromise.then(() => {
-                  setIsPaused(false);
-                  setIsLoading(false);
-              }).catch((error) => {
-                  console.warn("Autoplay blocked by browser policy. Muting and retrying.", error);
-                  if (videoRef.current) {
-                      videoRef.current.muted = true;
-                      videoRef.current.play().catch(e => console.error("Critical playback failure", e));
-                  }
-              });
-          }
-      }
-  }, [currentVideoIndex, isPlaying]);
-
-  const handleVideoEnded = () => {
-      skipToNext();
-  };
-
-  const handleNext = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      skipToNext();
+      const nextSlot = activeSlot === 'A' ? 'B' : 'A';
+      
+      // Update State for Swap
+      setCurrentVideoIndex(nextIndex);
+      setActiveSlot(nextSlot);
+      setShowUpNext(false);
+      setIsPaused(false);
+      
+      // Reset Watchdogs
+      stallCounter.current = 0;
+      lastTimeRef.current = 0;
   };
 
   const handlePrev = (e: React.MouseEvent) => {
       e.stopPropagation();
       const prevIndex = (currentVideoIndex - 1 + activePlaylist.length) % activePlaylist.length;
-      if (prevIndex === currentVideoIndex && videoRef.current) {
-           videoRef.current.currentTime = 0;
-           videoRef.current.play().catch(() => {
-               if (videoRef.current) {
-                   videoRef.current.muted = true;
-                   videoRef.current.play();
-               }
-           });
-      } else {
-           setCurrentVideoIndex(prevIndex);
-      }
+      const nextSlot = activeSlot === 'A' ? 'B' : 'A';
+      
+      // Force manual swap to prev
+      // Note: This breaks the preloading chain slightly but is acceptable for manual navigation
+      setCurrentVideoIndex(prevIndex);
+      setActiveSlot(nextSlot);
+      setShowUpNext(false);
+      setIsPaused(false);
   };
-  
-  const handleVideoError = () => {
-      console.error("Source error on video:", activePlaylist[currentVideoIndex]);
-      setTimeout(skipToNext, 2000);
-  }
+
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+      const vid = e.currentTarget;
+      if (vid.duration - vid.currentTime <= 5 && !showUpNext) {
+          const nextIdx = (currentVideoIndex + 1) % activePlaylist.length;
+          const title = getVideoTitle(activePlaylist[nextIdx]);
+          setNextTitle(title);
+          setShowUpNext(true);
+      }
+      // Watchdog Heartbeat
+      lastTimeRef.current = vid.currentTime;
+      stallCounter.current = 0; 
+  };
 
   const exitPlayer = () => {
       setIsPlaying(false);
       setActivePlaylist([]);
+      setShowUpNext(false);
   };
 
-  // Preload next video in playlist to reduce buffering gap
-  const nextVideoUrl = activePlaylist.length > 0 
-      ? activePlaylist[(currentVideoIndex + 1) % activePlaylist.length] 
-      : null;
+  // Watchdog Effect
+  useEffect(() => {
+      if (!isPlaying || isPaused) return;
+      
+      const interval = setInterval(() => {
+          const activeRef = activeSlot === 'A' ? refA.current : refB.current;
+          
+          // Check if stalled
+          if (activeRef && !activeRef.paused && !activeRef.ended && activeRef.readyState < 3) {
+              // Standard buffer wait, do nothing yet
+          } else if (activeRef && Math.abs(activeRef.currentTime - lastTimeRef.current) < 0.1) {
+              stallCounter.current += 1;
+          } else {
+              stallCounter.current = 0;
+          }
 
-  // 1. Fullscreen Video Player UI
+          if (stallCounter.current > 5) { // 5 seconds of no progress
+              console.warn("Watchdog: Video Stalled. Skipping...");
+              skipToNext();
+          }
+          
+          if (activeRef) lastTimeRef.current = activeRef.currentTime;
+
+      }, 1000);
+
+      return () => clearInterval(interval);
+  }, [isPlaying, isPaused, activeSlot, currentVideoIndex]);
+
+  // Auto-Play Effect
+  useEffect(() => {
+      if (!isPlaying) return;
+
+      const activeRef = activeSlot === 'A' ? refA.current : refB.current;
+      const bufferRef = activeSlot === 'A' ? refB.current : refA.current;
+
+      if (activeRef) {
+          const p = activeRef.play();
+          if (p) {
+              p.catch(e => {
+                  console.warn("Autoplay Blocked", e);
+                  activeRef.muted = true;
+                  activeRef.play().catch(console.error);
+              });
+          }
+      }
+
+      if (bufferRef) {
+          // Ensure buffer is ready but paused
+          bufferRef.load();
+          // We don't call pause() immediately as load() stops playback usually, 
+          // but we want it to buffer. 
+      }
+
+  }, [activeSlot, currentVideoIndex, isPlaying]);
+
+  // Render
   if (isPlaying && activePlaylist.length > 0) {
-      const currentUrl = activePlaylist[currentVideoIndex];
       return (
           <div className="fixed inset-0 bg-black z-[200] flex flex-col items-center justify-center overflow-hidden group cursor-none">
               
-              {/* Hidden Preloader: Ensures next video is in browser cache */}
-              {nextVideoUrl && nextVideoUrl !== currentUrl && (
-                  <video 
-                      className="absolute w-0 h-0 opacity-0 pointer-events-none"
-                      src={nextVideoUrl} 
-                      preload="auto" 
-                      muted 
-                      playsInline 
-                  />
-              )}
-
+              {/* SLOT A */}
               <video 
-                  key={`${currentUrl}-${currentVideoIndex}`} 
-                  ref={videoRef}
-                  src={currentUrl} 
-                  className="w-full h-full object-contain"
-                  autoPlay
-                  playsInline
+                  ref={refA}
+                  src={srcA}
+                  className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-500 ${activeSlot === 'A' ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                   muted={!isAudioUnlocked}
-                  onEnded={handleVideoEnded}
-                  onError={handleVideoError}
-                  onPlay={() => { setIsPaused(false); setIsLoading(false); }}
-                  onPause={() => setIsPaused(true)}
-                  onLoadStart={() => setIsLoading(true)}
-                  onCanPlay={() => setIsLoading(false)}
+                  playsInline
+                  onEnded={skipToNext}
+                  onError={() => { console.error("Error Slot A"); if(activeSlot === 'A') skipToNext(); }}
+                  onTimeUpdate={activeSlot === 'A' ? handleTimeUpdate : undefined}
               />
-              
-              {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-10">
-                      <div className="flex flex-col items-center gap-4">
-                          <Loader2 size={48} className="text-blue-500 animate-spin" />
-                          <span className="text-white text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Buffering Source...</span>
-                      </div>
-                  </div>
-              )}
 
-              <div className={`absolute inset-0 flex flex-col justify-between p-4 md:p-8 transition-opacity duration-300 bg-gradient-to-b from-black/60 via-transparent to-black/60 ${showControls ? 'opacity-100 pointer-events-auto cursor-auto' : 'opacity-0 pointer-events-none'}`}>
+              {/* SLOT B */}
+              <video 
+                  ref={refB}
+                  src={srcB}
+                  className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-500 ${activeSlot === 'B' ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                  muted={!isAudioUnlocked}
+                  playsInline
+                  onEnded={skipToNext}
+                  onError={() => { console.error("Error Slot B"); if(activeSlot === 'B') skipToNext(); }}
+                  onTimeUpdate={activeSlot === 'B' ? handleTimeUpdate : undefined}
+              />
+
+              {/* CONTROLS OVERLAY */}
+              <div className={`absolute inset-0 flex flex-col justify-between p-4 md:p-8 transition-opacity duration-300 z-20 ${showControls ? 'opacity-100 pointer-events-auto cursor-auto' : 'opacity-0 pointer-events-none'}`}>
                   <div className="flex justify-between items-start">
-                      <button onClick={exitPlayer} className="bg-white/10 hover:bg-white/20 text-white p-3 md:p-4 rounded-full border border-white/10">
+                      <button onClick={exitPlayer} className="bg-black/40 hover:bg-black/60 text-white p-3 md:p-4 rounded-full border border-white/10 backdrop-blur-md transition-all">
                           <ArrowLeft size={24} className="md:w-8 md:h-8" />
                       </button>
                       
                       <div className="flex flex-col gap-2 items-end">
-                        <div className="bg-black/60 px-6 py-2 rounded-xl border border-white/10 text-center">
-                            <h2 className="text-white font-black uppercase tracking-widest text-sm md:text-lg">TV Channel Loop</h2>
-                            <div className="text-blue-400 text-[10px] md:text-xs font-bold uppercase mt-1 flex items-center justify-center gap-2">
-                                <Film size={12} /> Video {currentVideoIndex + 1} of {activePlaylist.length}
+                        <div className="bg-black/60 px-6 py-2 rounded-xl border border-white/10 text-center backdrop-blur-md">
+                            <h2 className="text-white font-black uppercase tracking-widest text-xs md:text-sm">Now Playing</h2>
+                            <div className="text-blue-400 text-[10px] md:text-xs font-bold uppercase mt-1 flex items-center justify-center gap-2 max-w-[200px] truncate">
+                                <Film size={12} /> {getVideoTitle(activePlaylist[currentVideoIndex])}
                             </div>
                         </div>
                         {!isAudioUnlocked && (
                             <div className="bg-orange-500/80 backdrop-blur-md px-4 py-1.5 rounded-lg border border-orange-400 flex items-center gap-2 animate-pulse">
                                 <VolumeX size={14} className="text-white" />
-                                <span className="text-white font-black text-[9px] uppercase tracking-wider">Sound Muted: Tap screen to unlock</span>
+                                <span className="text-white font-black text-[9px] uppercase tracking-wider">Muted</span>
                             </div>
                         )}
                       </div>
                   </div>
                   
                   <div className="flex items-center justify-center gap-8 md:gap-16">
-                      <button onClick={handlePrev} className="p-4 md:p-6 bg-white/10 hover:bg-white/20 rounded-full text-white border border-white/10 group">
+                      <button onClick={handlePrev} className="p-4 md:p-6 bg-white/10 hover:bg-white/20 rounded-full text-white border border-white/10 group backdrop-blur-sm">
                           <ChevronLeft size={32} className="md:w-12 md:h-12 group-hover:-translate-x-1 transition-transform" />
                       </button>
                       <button 
                         onClick={() => {
-                            if (videoRef.current) {
-                                if (isPaused) videoRef.current.play().catch(() => {});
-                                else videoRef.current.pause();
+                            const activeRef = activeSlot === 'A' ? refA.current : refB.current;
+                            if (activeRef) {
+                                if (isPaused) { activeRef.play(); setIsPaused(false); }
+                                else { activeRef.pause(); setIsPaused(true); }
                             }
                         }} 
                         className="p-6 md:p-8 bg-white text-black rounded-full shadow-[0_0_50px_rgba(255,255,255,0.4)] hover:scale-110 transition-transform flex items-center justify-center"
                       >
                           {isPaused ? <Play size={40} fill="currentColor" className="ml-2 md:w-12 md:h-12" /> : <Pause size={40} fill="currentColor" className="md:w-12 md:h-12" />}
                       </button>
-                      <button onClick={handleNext} className="p-4 md:p-6 bg-white/10 hover:bg-white/20 rounded-full text-white border border-white/10 group">
+                      <button onClick={skipToNext} className="p-4 md:p-6 bg-white/10 hover:bg-white/20 rounded-full text-white border border-white/10 group backdrop-blur-sm">
                           <ChevronRight size={32} className="md:w-12 md:h-12 group-hover:translate-x-1 transition-transform" />
                       </button>
                   </div>
@@ -264,10 +303,25 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
                       </div>
                   </div>
               </div>
+
+              {/* UP NEXT TOAST (Independent of Controls) */}
+              <div className={`absolute bottom-8 right-8 z-30 transition-all duration-700 transform ${showUpNext ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
+                  <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 p-4 rounded-2xl shadow-2xl flex items-center gap-4 max-w-sm">
+                      <div className="relative w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+                          <div className="absolute inset-0 border-[3px] border-blue-500 rounded-xl border-t-transparent animate-spin"></div>
+                          <SkipForward size={20} className="text-white" />
+                      </div>
+                      <div className="min-w-0">
+                          <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-0.5">Up Next</div>
+                          <div className="text-sm font-bold text-white truncate leading-tight">{nextTitle}</div>
+                      </div>
+                  </div>
+              </div>
           </div>
       );
   }
 
+  // --- STANDARD BROWSE UI (Unchanged) ---
   return (
     <div className="h-screen w-screen bg-slate-900 text-white flex flex-col animate-fade-in overflow-hidden relative">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-900 to-slate-900 z-0 pointer-events-none"></div>
@@ -321,7 +375,7 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
 
         <div className="relative z-10 flex-1 overflow-y-auto p-6 md:p-10 no-scrollbar">
             {viewingBrand ? (
-                // 2. Models View (Drill-down)
+                // Models View
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
                     {viewingBrand.models.map((model) => (
                         <div 
@@ -370,7 +424,7 @@ const TVMode: React.FC<TVModeProps> = ({ storeData, onRefresh, screensaverEnable
                     )}
                 </div>
             ) : (
-                // 3. Brands Grid View
+                // Brands Grid View
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 md:gap-8">
                     {tvBrands.map((brand) => (
                         <button 

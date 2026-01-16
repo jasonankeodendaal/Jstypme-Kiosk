@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -59,6 +60,9 @@ const SystemDocumentation = () => {
                 .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
                 @keyframes orbit { 0% { transform: rotate(0deg) translateX(50px) rotate(0deg); } 100% { transform: rotate(360deg) translateX(50px) rotate(-360deg); } }
                 .orbit-item { animation: orbit 8s linear infinite; }
+                @keyframes swap-buffer { 0%, 45% { opacity: 1; z-index: 10; transform: scale(1); } 50%, 95% { opacity: 0.5; z-index: 0; transform: scale(0.9); } 100% { opacity: 1; z-index: 10; transform: scale(1); } }
+                .buffer-a { animation: swap-buffer 6s infinite; }
+                .buffer-b { animation: swap-buffer 6s infinite reverse; }
             `}</style>
 
             <div className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
@@ -112,7 +116,175 @@ const SystemDocumentation = () => {
                         </div>
                     </div>
                 )}
-                {/* ... other sections ... */}
+
+                {activeSection === 'inventory' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20">Module 02: Data Structure</div>
+                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter">The "Tree" Concept</h2>
+                            <p className="text-lg text-slate-500 max-w-2xl">Products don't float freely. They hang on branches (Categories) which belong to a trunk (Brand).</p>
+                        </div>
+                        
+                        <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+                            
+                            <div className="flex flex-col items-center gap-8 relative z-10 w-full max-w-3xl">
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center gap-3">
+                                        <Box size={20} className="text-blue-400" />
+                                        Brand Entity
+                                    </div>
+                                    <div className="h-8 w-0.5 bg-slate-300"></div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-16 w-full relative">
+                                    <div className="absolute top-0 left-1/4 right-1/4 h-0.5 bg-slate-300 -translate-y-full"></div>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="h-4 w-0.5 bg-slate-300 absolute -top-4"></div>
+                                        <div className="bg-white border-2 border-slate-200 px-6 py-3 rounded-xl font-bold text-slate-600 text-xs uppercase flex items-center gap-2 shadow-sm">
+                                            <Grid size={14} /> Category A
+                                        </div>
+                                        <div className="h-6 w-0.5 bg-slate-200"></div>
+                                        <div className="flex gap-2">
+                                            <div className="w-10 h-12 bg-slate-100 rounded border border-slate-200"></div>
+                                            <div className="w-10 h-12 bg-slate-100 rounded border border-slate-200"></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="h-4 w-0.5 bg-slate-300 absolute -top-4"></div>
+                                        <div className="bg-white border-2 border-slate-200 px-6 py-3 rounded-xl font-bold text-slate-600 text-xs uppercase flex items-center gap-2 shadow-sm">
+                                            <Grid size={14} /> Category B
+                                        </div>
+                                        <div className="h-6 w-0.5 bg-slate-200"></div>
+                                        <div className="flex gap-2">
+                                            <div className="w-10 h-12 bg-purple-50 rounded border border-purple-100"></div>
+                                            <div className="w-10 h-12 bg-purple-50 rounded border border-purple-100"></div>
+                                            <div className="w-10 h-12 bg-purple-50 rounded border border-purple-100"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'pricelists' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-red-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-red-500/20">Module 03: Dynamic Pricing</div>
+                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter">Psychological Math</h2>
+                            <p className="text-lg text-slate-500 max-w-2xl">Raw Excel data is ugly. The kiosk automatically cleans, rounds, and formats prices to look "Premium" before they hit the screen.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="bg-slate-50 border border-slate-200 p-8 rounded-3xl">
+                                <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Input (Spreadsheet)</div>
+                                <div className="space-y-3 font-mono text-sm text-slate-600">
+                                    <div className="flex justify-between border-b border-slate-200 pb-2"><span>R 129.99</span><X size={16} className="text-red-400"/></div>
+                                    <div className="flex justify-between border-b border-slate-200 pb-2"><span>R 499.00</span><X size={16} className="text-red-400"/></div>
+                                    <div className="flex justify-between border-b border-slate-200 pb-2"><span>R 845.50</span><X size={16} className="text-red-400"/></div>
+                                </div>
+                            </div>
+                            <div className="bg-slate-900 text-white p-8 rounded-3xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-6 opacity-10"><Sparkles size={80} /></div>
+                                <div className="text-xs font-black text-blue-400 uppercase tracking-widest mb-6">Output (Kiosk Display)</div>
+                                <div className="space-y-3 font-mono text-xl font-bold">
+                                    <div className="flex justify-between border-b border-slate-800 pb-2"><span className="text-green-400">R 130</span><Check size={20} className="text-green-500"/></div>
+                                    <div className="flex justify-between border-b border-slate-800 pb-2"><span className="text-green-400">R 500</span><Check size={20} className="text-green-500"/></div>
+                                    <div className="flex justify-between border-b border-slate-800 pb-2"><span className="text-green-400">R 846</span><Check size={20} className="text-green-500"/></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'screensaver' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-yellow-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-yellow-500/20">Module 04: Visual Engine</div>
+                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter">Double-Buffer Logic</h2>
+                            <p className="text-lg text-slate-500 max-w-2xl">To prevent "black flashes" between images/videos, we run two invisible players. Player B loads while Player A is showing. Then they fade-swap instantly.</p>
+                        </div>
+
+                        <div className="relative h-64 bg-slate-100 rounded-3xl border border-slate-200 flex items-center justify-center gap-12 overflow-hidden">
+                            <div className="absolute inset-0 grid grid-cols-2 opacity-10 pointer-events-none">
+                                <div className="bg-slate-300"></div><div className="bg-slate-200"></div>
+                            </div>
+                            
+                            <div className="w-40 h-56 bg-slate-900 rounded-xl shadow-2xl flex flex-col items-center justify-center text-white relative z-10 buffer-a border-4 border-white">
+                                <ImageIcon size={32} className="text-blue-400 mb-2" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Buffer A</span>
+                                <span className="text-[9px] text-green-400 mt-1 font-mono">VISIBLE</span>
+                            </div>
+
+                            <RefreshCw size={32} className="text-slate-400 animate-spin-slow" />
+
+                            <div className="w-40 h-56 bg-white rounded-xl shadow-lg flex flex-col items-center justify-center text-slate-400 relative z-0 buffer-b border-4 border-slate-100 scale-90 opacity-50">
+                                <Loader2 size={32} className="animate-spin mb-2" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Buffer B</span>
+                                <span className="text-[9px] text-orange-400 mt-1 font-mono">LOADING...</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fleet' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-cyan-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-cyan-500/20">Module 05: Telemetry</div>
+                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter">The Heartbeat</h2>
+                            <p className="text-lg text-slate-500 max-w-2xl">Every 30 seconds, each kiosk "pings" the cloud. If a ping is missed for > 5 minutes, the dashboard marks it as OFFLINE.</p>
+                        </div>
+
+                        <div className="bg-slate-950 rounded-3xl p-12 border border-slate-800 flex items-center justify-between relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/graphy.png')] opacity-10"></div>
+                            
+                            <div className="flex flex-col items-center gap-4 relative z-10">
+                                <div className="w-20 h-28 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center">
+                                    <Tablet size={40} className="text-slate-500" />
+                                </div>
+                                <span className="text-xs font-black text-slate-500 uppercase">Kiosk 01</span>
+                            </div>
+
+                            <div className="flex-1 h-0.5 bg-slate-800 relative mx-8">
+                                <div className="absolute top-1/2 -translate-y-1/2 left-0 w-3 h-3 bg-cyan-500 rounded-full shadow-[0_0_15px_rgba(6,182,212,1)] animate-[travel_3s_infinite_linear]"></div>
+                            </div>
+
+                            <div className="flex flex-col items-center gap-4 relative z-10">
+                                <div className="w-24 h-24 bg-slate-900 rounded-full border-2 border-cyan-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(6,182,212,0.2)]">
+                                    <Activity size={32} className="text-cyan-400 animate-pulse" />
+                                </div>
+                                <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">Cloud Listener</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'tv' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20">Module 06: TV Protocol</div>
+                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter">Playlist Queue</h2>
+                            <p className="text-lg text-slate-500 max-w-2xl">TV Mode strips away the UI and focuses on content loops. It can play a specific Brand's loop or a "Global Mix" of everything.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg flex flex-col gap-4 transform transition-transform hover:-translate-y-2">
+                                    <div className="aspect-video bg-slate-900 rounded-lg flex items-center justify-center relative overflow-hidden group">
+                                        <PlayCircle size={32} className="text-white opacity-50 group-hover:opacity-100 transition-opacity" />
+                                        <div className="absolute bottom-2 right-2 text-[8px] font-mono text-white bg-black/50 px-1 rounded">00:{15 * i}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-black text-indigo-600 uppercase mb-1">Queue Item 0{i}</div>
+                                        <div className="text-sm font-bold text-slate-800">Promo Video {i}.mp4</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className="h-40"></div>
             </div>
         </div>
