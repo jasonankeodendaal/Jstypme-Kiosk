@@ -406,8 +406,16 @@ FOR ALL USING (true) WITH CHECK (true);`}
                                       <CodeSnippet 
                                         label="Fleet Update: Pricelists"
                                         id="sql-mig-fleet"
-                                        code={`-- ADD PRICELIST TOGGLE
+                                        code={`-- REPAIR/UPDATE FLEET TABLE
 ALTER TABLE public.kiosks 
+ADD COLUMN IF NOT EXISTS device_type text,
+ADD COLUMN IF NOT EXISTS assigned_zone text,
+ADD COLUMN IF NOT EXISTS wifi_strength int,
+ADD COLUMN IF NOT EXISTS ip_address text,
+ADD COLUMN IF NOT EXISTS version text,
+ADD COLUMN IF NOT EXISTS location_description text,
+ADD COLUMN IF NOT EXISTS notes text,
+ADD COLUMN IF NOT EXISTS restart_requested boolean DEFAULT false,
 ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;`}
                                       />
                                   </div>

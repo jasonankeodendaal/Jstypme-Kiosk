@@ -1044,15 +1044,28 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   
   const updateFleetMember = async (kiosk: KioskRegistry) => { 
       if(supabase) { 
-          const payload = { 
-              id: kiosk.id, 
-              name: kiosk.name, 
-              device_type: kiosk.deviceType, 
-              assigned_zone: kiosk.assignedZone,
-              show_pricelists: kiosk.showPricelists ?? true
-          }; 
-          await supabase.from('kiosks').upsert(payload); 
-          onRefresh(); 
+          try {
+              const payload = { 
+                  id: kiosk.id, 
+                  name: kiosk.name, 
+                  device_type: kiosk.deviceType, 
+                  assigned_zone: kiosk.assignedZone,
+                  show_pricelists: kiosk.showPricelists ?? true
+              }; 
+              const { error } = await supabase.from('kiosks').upsert(payload); 
+              if (error) throw error;
+              onRefresh(); 
+          } catch (e: any) {
+              console.error("Fleet update failed", e);
+              // Handle missing column errors (400) or other DB constraints
+              if (e.code === '42703' || e.message?.includes('show_pricelists')) {
+                  alert("Update Failed: The 'show_pricelists' column is missing from the database. Please run the Fleet Repair script in the System Guide.");
+              } else if (e.code === 'PGRST204') {
+                   alert("Update Failed: Database table is missing required columns. Please check Setup Guide > Migration.");
+              } else {
+                  alert("Update Failed: " + (e.message || "Unknown error"));
+              }
+          }
       } 
   };
   

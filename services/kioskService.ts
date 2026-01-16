@@ -161,7 +161,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   return true;
 };
 
-export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean, showPricelists?: boolean } | null> => {
+export const sendHeartbeat = async (currentLocalShowPricelists?: boolean): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean, showPricelists?: boolean } | null> => {
   const id = getKioskId();
   if (!id) return null;
   if (!supabase) initSupabase();
@@ -198,7 +198,14 @@ export const sendHeartbeat = async (): Promise<{ deviceType?: string, name?: str
               }
               if (remoteData.assigned_zone) currentZone = remoteData.assigned_zone;
               if (remoteData.restart_requested) restartFlag = true;
-              if (remoteData.show_pricelists !== undefined) remoteShowPricelists = remoteData.show_pricelists;
+              
+              if (remoteData.show_pricelists !== undefined && remoteData.show_pricelists !== null) {
+                  remoteShowPricelists = remoteData.show_pricelists;
+                  // If local state doesn't match remote state, trigger config update
+                  if (currentLocalShowPricelists !== undefined && currentLocalShowPricelists !== remoteShowPricelists) {
+                      configChanged = true;
+                  }
+              }
           }
       }
 
