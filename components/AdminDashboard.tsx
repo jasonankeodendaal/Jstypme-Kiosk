@@ -233,7 +233,7 @@ const SystemDocumentation = () => {
                         <div className="space-y-4">
                             <div className="bg-cyan-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-cyan-500/20">Module 05: Telemetry</div>
                             <h2 className="text-5xl font-black text-slate-900 tracking-tighter">The Heartbeat</h2>
-                            <p className="text-lg text-slate-500 max-w-2xl">Every 30 seconds, each kiosk "pings" the cloud. If a ping is missed for > 5 minutes, the dashboard marks it as OFFLINE.</p>
+                            <p className="text-lg text-slate-500 max-w-2xl">Every 30 seconds, each kiosk "pings" the cloud. If a ping is missed for &gt; 5 minutes, the dashboard marks it as OFFLINE.</p>
                         </div>
 
                         <div className="bg-slate-950 rounded-3xl p-12 border border-slate-800 flex items-center justify-between relative overflow-hidden">
