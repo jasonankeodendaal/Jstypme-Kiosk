@@ -44,11 +44,11 @@ const SystemDocumentation = () => {
     
     const sections = [
         { id: 'architecture', label: '1. How it Works', icon: <Network size={16} />, desc: 'The "Brain" of the Kiosk' },
-        { id: 'inventory', label: '2. Product Sorting', icon: <Box size={16}/>, desc: 'How items are organized' },
-        { id: 'pricelists', label: '3. Price Logic', icon: <Table size={16}/>, desc: 'Converting Excel to PDF' },
-        { id: 'screensaver', label: '4. Visual Loop', icon: <Zap size={16}/>, desc: 'Automatic slideshow rules' },
-        { id: 'fleet', label: '5. Fleet Watch', icon: <Activity size={16}/>, desc: 'Remote tracking & control' },
-        { id: 'tv', label: '6. TV Protocol', icon: <Tv size={16}/>, desc: 'Large scale video loops' },
+        { id: 'inventory', label: '2. Product Sorting', icon: <Box size={16}/>, desc: 'Hierarchy & Data JSONB' },
+        { id: 'pricelists', label: '3. Price Logic', icon: <Table size={16}/>, desc: 'Auto-Rounding & PDF' },
+        { id: 'screensaver', label: '4. Visual Loop', icon: <Zap size={16}/>, desc: 'Double-Buffer Engine' },
+        { id: 'fleet', label: '5. Fleet Watch', icon: <Activity size={16}/>, desc: 'Telemetry & Heartbeat' },
+        { id: 'tv', label: '6. TV Protocol', icon: <Tv size={16}/>, desc: 'Playlist Management' },
     ];
 
     return (
@@ -58,6 +58,8 @@ const SystemDocumentation = () => {
                 .data-flow { animation: flow-horizontal 3s linear infinite; }
                 @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2.4); opacity: 0; } }
                 .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
+                @keyframes orbit { 0% { transform: rotate(0deg) translateX(50px) rotate(0deg); } 100% { transform: rotate(360deg) translateX(50px) rotate(-360deg); } }
+                .orbit-item { animation: orbit 8s linear infinite; }
             `}</style>
 
             <div className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
@@ -112,13 +114,260 @@ const SystemDocumentation = () => {
                     </div>
                 )}
 
-                {/* Other documentation sections omitted for brevity */}
-                
+                {activeSection === 'inventory' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20">Module 02: Data Structure</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Relational Hierarchy</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">
+                                Products are organized in a strict <strong className="text-purple-600">3-Tier Tree</strong>. This ensures navigation is always intuitive: Brand &rarr; Category &rarr; Product.
+                            </p>
+                        </div>
+
+                        <div className="relative p-12 bg-slate-50 rounded-[3rem] border border-slate-200 overflow-hidden min-h-[400px] flex items-center justify-center">
+                             <div className="flex items-center gap-8 relative z-10">
+                                 {/* Brand Node */}
+                                 <div className="flex flex-col items-center gap-2">
+                                     <div className="w-20 h-20 bg-white border-2 border-purple-200 rounded-2xl flex items-center justify-center shadow-lg"><HexagonIcon size={40} className="text-purple-600" /></div>
+                                     <span className="text-xs font-black uppercase tracking-widest text-slate-400">Brand</span>
+                                 </div>
+                                 <div className="w-12 h-0.5 bg-slate-300"></div>
+                                 {/* Category Node */}
+                                 <div className="flex flex-col items-center gap-2">
+                                     <div className="w-20 h-20 bg-white border-2 border-blue-200 rounded-2xl flex items-center justify-center shadow-lg"><Box size={40} className="text-blue-600" /></div>
+                                     <span className="text-xs font-black uppercase tracking-widest text-slate-400">Category</span>
+                                 </div>
+                                 <div className="w-12 h-0.5 bg-slate-300"></div>
+                                 {/* Product Node */}
+                                 <div className="flex flex-col items-center gap-2">
+                                     <div className="w-20 h-20 bg-white border-2 border-green-200 rounded-2xl flex items-center justify-center shadow-lg"><Smartphone size={40} className="text-green-600" /></div>
+                                     <span className="text-xs font-black uppercase tracking-widest text-slate-400">Product</span>
+                                 </div>
+                             </div>
+                             <div className="absolute inset-0 border-[20px] border-slate-100 rounded-[3rem] pointer-events-none"></div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="bg-slate-900 text-white p-8 rounded-3xl">
+                                <h3 className="text-xl font-black uppercase tracking-tight mb-4 flex items-center gap-2"><Binary size={20} className="text-blue-400"/> JSONB Storage</h3>
+                                <p className="text-sm text-slate-400 leading-relaxed">
+                                    Technical Specs (like "Screen Size", "Processor") are stored as a flexible JSON Blob. This means you can add <strong>infinite custom fields</strong> to any product without needing a developer to update the database schema.
+                                </p>
+                            </div>
+                            <div className="bg-slate-100 p-8 rounded-3xl border border-slate-200">
+                                <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-4 flex items-center gap-2"><Search size={20} className="text-purple-500"/> Search Flattening</h3>
+                                <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                                    When you type in the search bar, the system "flattens" the 3-Tier Tree into a single list of thousands of items in milliseconds. This allows instant filtering by SKU, Name, or Description across all brands simultaneously.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'pricelists' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-red-500/20">Module 03: Price Engine</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Auto-Rounding Logic</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">
+                                The system ensures premium aesthetics by cleaning up messy price inputs automatically.
+                            </p>
+                        </div>
+
+                        <div className="relative p-12 bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden min-h-[300px] flex items-center justify-center gap-12">
+                             <div className="flex flex-col items-center gap-2 opacity-50">
+                                 <span className="font-mono text-2xl text-slate-400 line-through decoration-red-500 decoration-2">R 199.99</span>
+                                 <span className="text-[10px] font-black text-slate-600 uppercase">Input</span>
+                             </div>
+                             <ArrowRight size={32} className="text-slate-600" />
+                             <div className="flex flex-col items-center gap-2">
+                                 <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(37,99,235,0.6)] animate-pulse">
+                                     <CalculatorIcon size={32} className="text-white" />
+                                 </div>
+                                 <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-900/30 px-2 py-1 rounded">Algorithm</span>
+                             </div>
+                             <ArrowRight size={32} className="text-slate-600" />
+                             <div className="flex flex-col items-center gap-2">
+                                 <span className="font-mono text-4xl text-white font-black drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">R 200</span>
+                                 <span className="text-[10px] font-black text-green-400 uppercase">Output</span>
+                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-black text-slate-900 uppercase">Ruleset</h3>
+                                <ul className="space-y-3">
+                                    <li className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-sm font-bold text-slate-700">
+                                        <div className="w-6 h-6 bg-slate-100 rounded flex items-center justify-center text-xs text-slate-500">1</div>
+                                        <span>Decimals are always rounded <strong>UP</strong> (Ceiling).</span>
+                                    </li>
+                                    <li className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-sm font-bold text-slate-700">
+                                        <div className="w-6 h-6 bg-slate-100 rounded flex items-center justify-center text-xs text-slate-500">2</div>
+                                        <span>Prices ending in <strong>.9</strong> bump to the next whole number.</span>
+                                    </li>
+                                    <li className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-sm font-bold text-slate-700">
+                                        <div className="w-6 h-6 bg-slate-100 rounded flex items-center justify-center text-xs text-slate-500">3</div>
+                                        <span>Empty columns (e.g. no SKUs) are auto-hidden in PDF.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                <div className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={14}/> Client-Side Rendering</div>
+                                <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                                    We use the <code>jsPDF</code> engine to generate the PDF directly on your device. This means no server usage limits, and your data never leaves your browser during generation. The exact X/Y coordinates of every text element are calculated dynamically based on how many columns are visible.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'screensaver' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-orange-500/20">Module 04: Visual Loop</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Double-Buffer Engine</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">
+                                To achieve <strong>seamless transitions</strong> between high-res videos and images, we use two invisible video players that swap instantly.
+                            </p>
+                        </div>
+
+                        <div className="relative p-12 bg-black rounded-[3rem] overflow-hidden min-h-[350px] flex items-center justify-center border border-slate-800">
+                             <div className="absolute inset-0 opacity-30 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b')] bg-cover mix-blend-overlay"></div>
+                             
+                             <div className="relative z-10 grid grid-cols-2 gap-12 w-full max-w-2xl">
+                                 <div className="bg-slate-900/80 backdrop-blur-xl border border-blue-500 rounded-2xl p-6 text-center shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+                                     <div className="text-blue-400 font-black text-2xl mb-1">Buffer A</div>
+                                     <div className="text-[10px] uppercase font-bold text-white tracking-widest bg-green-500 px-2 py-0.5 rounded inline-block mb-4">Playing</div>
+                                     <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-blue-500 w-2/3"></div></div>
+                                 </div>
+                                 <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700 rounded-2xl p-6 text-center opacity-50 scale-95">
+                                     <div className="text-slate-500 font-black text-2xl mb-1">Buffer B</div>
+                                     <div className="text-[10px] uppercase font-bold text-white tracking-widest bg-orange-500 px-2 py-0.5 rounded inline-block mb-4">Preloading</div>
+                                     <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-orange-500 w-1/4 animate-pulse"></div></div>
+                                 </div>
+                             </div>
+                             <div className="absolute bottom-8 text-white/50 text-xs font-mono uppercase tracking-[0.2em] animate-pulse">Cross-Fade Active</div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4">
+                            {[
+                                { title: "Idle Trigger", desc: "Starts automatically after 60s of no touch events." },
+                                { title: "Smart Shuffle", desc: "Prioritizes products added in the last 30 days." },
+                                { title: "Sleep Mode", desc: "Goes black outside business hours (e.g. 8PM - 8AM)." }
+                            ].map((card, i) => (
+                                <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                    <h4 className="font-black text-slate-900 uppercase text-xs mb-2">{card.title}</h4>
+                                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{card.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fleet' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-green-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-green-500/20">Module 05: Fleet Watch</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Live Telemetry</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">
+                                Every 30 seconds, each kiosk sends a tiny "Heartbeat" packet to the cloud to report its health status.
+                            </p>
+                        </div>
+
+                        <div className="relative p-12 bg-slate-900 rounded-[3rem] border border-slate-800 overflow-hidden min-h-[400px] flex items-center justify-center">
+                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(34,197,94,0.1)_0%,_transparent_70%)]"></div>
+                             
+                             {/* Central Hub */}
+                             <div className="relative w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center border-4 border-green-500/30 z-20 shadow-[0_0_50px_rgba(34,197,94,0.3)]">
+                                 <Radio size={40} className="text-green-500" />
+                             </div>
+
+                             {/* Orbiting Devices */}
+                             <div className="absolute w-[300px] h-[300px] border border-white/5 rounded-full animate-[spin_20s_linear_infinite]">
+                                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 p-2 rounded-xl border border-slate-700 text-blue-400 shadow-xl"><Tablet size={20} /></div>
+                                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 bg-slate-900 p-2 rounded-xl border border-slate-700 text-purple-400 shadow-xl"><Smartphone size={20} /></div>
+                             </div>
+                             <div className="absolute w-[200px] h-[200px] border border-white/5 rounded-full animate-[spin_15s_linear_infinite_reverse]">
+                                 <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 bg-slate-900 p-2 rounded-xl border border-slate-700 text-indigo-400 shadow-xl"><Tv size={20} /></div>
+                             </div>
+
+                             <div className="absolute bottom-8 left-8 text-green-500/50 font-mono text-[10px] uppercase">Ping: 34ms</div>
+                        </div>
+
+                        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl">
+                            <h3 className="text-lg font-black text-slate-900 uppercase mb-6 flex items-center gap-2"><Activity size={18}/> Heartbeat Payload</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase mb-1">Last Seen</div>
+                                    <div className="font-mono font-bold text-slate-800 text-xs">Timestamp</div>
+                                </div>
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase mb-1">Signal</div>
+                                    <div className="font-mono font-bold text-slate-800 text-xs">WiFi (0-100)</div>
+                                </div>
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase mb-1">Config</div>
+                                    <div className="font-mono font-bold text-slate-800 text-xs">Hash Check</div>
+                                </div>
+                                <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                                    <div className="text-[10px] font-black text-red-400 uppercase mb-1">Command</div>
+                                    <div className="font-mono font-bold text-red-800 text-xs">Remote Restart</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'tv' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-4">
+                            <div className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20">Module 06: TV Protocol</div>
+                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Passive Loop Mode</h2>
+                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">
+                                Unlike Kiosk Mode, TV Mode is designed for zero interaction. It suppresses UI controls and loops playlists infinitely.
+                            </p>
+                        </div>
+
+                        <div className="relative p-12 bg-slate-100 rounded-[3rem] border border-slate-200 overflow-hidden min-h-[300px] flex items-center justify-center">
+                             <div className="flex items-center gap-4">
+                                 {[1,2,3].map(i => (
+                                     <div key={i} className="w-32 h-48 bg-slate-900 rounded-xl border-4 border-white shadow-2xl relative flex items-center justify-center group overflow-hidden">
+                                         <div className="absolute top-2 left-2 text-[10px] font-black text-white/50">0{i}</div>
+                                         <PlayCircle size={32} className="text-white opacity-50 group-hover:opacity-100 transition-opacity" />
+                                         <div className="absolute bottom-0 left-0 w-full h-1 bg-indigo-500"></div>
+                                     </div>
+                                 ))}
+                                 <RefreshCw size={32} className="text-slate-300 animate-spin-slow ml-4" />
+                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100">
+                                <h4 className="font-black text-indigo-900 uppercase text-xs mb-2">No Sleep</h4>
+                                <p className="text-xs text-indigo-800 leading-relaxed font-medium">The idle timer and screensaver logic are completely disabled in TV mode to prevent interruption of the video loop.</p>
+                            </div>
+                            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
+                                <h4 className="font-black text-slate-900 uppercase text-xs mb-2">Auto-Hide UI</h4>
+                                <p className="text-xs text-slate-600 leading-relaxed font-medium">Player controls (Play/Pause, Next) automatically fade out after 4 seconds of inactivity to keep the screen clean.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="h-40"></div>
             </div>
         </div>
     );
 };
+
+// Icons not imported in main list
+const HexagonIcon = ({ size, className }: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+);
+
+const CalculatorIcon = ({ size, className }: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+);
 
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
   const [name, setName] = useState('');
@@ -379,7 +628,6 @@ const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalog
     );
 };
 
-// ... ManualPricelistEditor, PricelistManager, ProductEditor ...
 const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pricelist, onSave: (pl: Pricelist) => void, onClose: () => void }) => {
   const [items, setItems] = useState<PricelistItem[]>(pricelist.items || []);
   const [title, setTitle] = useState(pricelist.title || ''); 
