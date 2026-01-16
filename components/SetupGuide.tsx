@@ -538,6 +538,20 @@ CREATE POLICY "Allow All" ON public.pricelists FOR ALL USING (true) WITH CHECK (
 -- 4. HARD RELOAD CACHE
 NOTIFY pgrst, 'reload schema';`}
                               />
+
+                              <div className="bg-orange-900/30 border-l-4 border-orange-500 p-6 rounded-r-xl mt-8">
+                                  <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><RefreshCw size={16}/> Fix "Column Not Found" / Stale Cache</h3>
+                                  <p className="text-slate-300 text-xs mt-2 leading-relaxed">
+                                      If you see an error saying <strong>"show_pricelists already exists"</strong> but the Fleet page says it <strong>does not exist</strong>, your database API cache is stuck. Run this simple command to refresh it:
+                                  </p>
+                                  <div className="mt-4">
+                                      <CodeSnippet 
+                                          label="Force API Refresh"
+                                          id="cache-refresh"
+                                          code={`NOTIFY pgrst, 'reload schema';`}
+                                      />
+                                  </div>
+                              </div>
                           </div>
                       </div>
                   )}

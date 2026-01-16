@@ -1080,7 +1080,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
           } catch (e: any) {
               console.error("Fleet update failed", e);
               if (e.code === '42703' || e.message?.includes('show_pricelists')) {
-                  alert("Database Error: 'show_pricelists' column missing.\n\nFix: Go to 'System Guide' and run the updated 'Fleet Repair' script.");
+                  alert("Sync Error: The database has the column, but the API cannot see it yet.\n\nFix: Go to 'System Guide' -> 'Migration' and run the 'Force API Refresh' script.");
               } else if (e.code === 'PGRST204') {
                    alert("Update Failed: Database table is missing required columns. Please check Setup Guide > Migration.");
               } else {
