@@ -100,43 +100,8 @@ const sanitizeData = (data: any): any => {
 };
 
 /**
- * FETCH FULL PRODUCT DETAILS (On-Demand)
- * Fetches heavy columns (specs, description, videos) only when requested.
- */
-export const fetchProductDetails = async (productId: string): Promise<Partial<Product> | null> => {
-    if (!supabase) initSupabase();
-    if (!supabase) return null;
-
-    try {
-        const { data, error } = await supabase
-            .from('products')
-            .select('description, specs, features, box_contents, video_urls, manuals, terms, dimensions, gallery_urls')
-            .eq('id', productId)
-            .single();
-
-        if (error || !data) return null;
-
-        return {
-            description: data.description,
-            specs: data.specs,
-            features: data.features,
-            boxContents: data.box_contents,
-            videoUrls: data.video_urls,
-            manuals: data.manuals,
-            terms: data.terms,
-            dimensions: data.dimensions,
-            galleryUrls: data.gallery_urls
-        };
-    } catch (e) {
-        console.error("Detail fetch failed", e);
-        return null;
-    }
-};
-
-/**
  * RELATIONAL FETCH STRATEGY (Cloud First, Local Fallback)
  * Fetches flattened tables and reconstructs the StoreData tree.
- * OPTIMIZED: Only fetches lightweight columns for initial grid rendering.
  */
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
@@ -168,16 +133,17 @@ export const generateStoreData = async (): Promise<StoreData> => {
 
           // 3. Fetch Relational Inventory (Cloud Source of Truth)
           // We fetch all relational tables in parallel.
-          // OPTIMIZATION: Select specific lightweight columns for products
           const [brandsRes, catsRes, prodsRes, plBrandsRes, plRes] = await Promise.all([
               supabase.from('brands').select('*'),
               supabase.from('categories').select('*'),
-              supabase.from('products').select('id, category_id, name, sku, image_url, date_added'), // LIGHTWEIGHT FETCH
+              supabase.from('products').select('*'),
               supabase.from('pricelist_brands').select('*'),
               supabase.from('pricelists').select('*')
           ]);
 
           // Check if we successfully got relational data
+          // Note: If a table is empty, data is [], error is null.
+          // If table DOES NOT EXIST, error is 404/42P01.
           if (!brandsRes.error && brandsRes.data) {
               
               // Reconstruct Brands -> Categories -> Products Tree
@@ -198,18 +164,17 @@ export const generateStoreData = async (): Promise<StoreData> => {
                                   id: p.id,
                                   name: p.name,
                                   sku: p.sku,
+                                  description: p.description,
                                   imageUrl: p.image_url,
-                                  dateAdded: p.date_added,
-                                  // Fill heavy fields with empty defaults until detail fetch
-                                  description: '', 
-                                  galleryUrls: [],
-                                  videoUrls: [],
-                                  specs: {},
-                                  features: [],
-                                  dimensions: [],
-                                  boxContents: [],
-                                  manuals: [],
-                                  terms: ''
+                                  galleryUrls: p.gallery_urls,
+                                  videoUrls: p.video_urls,
+                                  specs: p.specs,
+                                  features: p.features,
+                                  dimensions: p.dimensions,
+                                  boxContents: p.box_contents,
+                                  manuals: p.manuals,
+                                  terms: p.terms,
+                                  dateAdded: p.date_added
                               }))
                       }))
               }));
@@ -281,6 +246,8 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         
     try {
         // --- 1. SAVE GLOBAL SETTINGS TO STORE_CONFIG ---
+        // We strip heavy inventory data (brands/pricelists) from the config blob.
+        // Fleet is also managed separately.
         const settingsPayload = { ...cleanData };
         delete (settingsPayload as any).brands;
         delete (settingsPayload as any).pricelists;
@@ -302,6 +269,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
 
         // --- 2. PREPARE RELATIONAL DATA ---
         
+        // Flatten Brands
         const flatBrands = cleanData.brands.map((b: Brand) => ({
             id: b.id,
             name: b.name,
@@ -310,6 +278,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             updated_at: new Date().toISOString()
         }));
 
+        // Flatten Categories
         const flatCategories = cleanData.brands.flatMap((b: Brand) => 
             b.categories.map((c: Category) => ({
                 id: c.id,
@@ -320,6 +289,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             }))
         );
 
+        // Flatten Products
         const flatProducts = cleanData.brands.flatMap((b: Brand) => 
             b.categories.flatMap((c: Category) => 
                 c.products.map((p: Product) => ({
@@ -343,6 +313,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             )
         );
 
+        // Flatten Pricelists
         const flatPLBrands = (cleanData.pricelistBrands || []).map((pb: PricelistBrand) => ({
             id: pb.id,
             name: pb.name,
@@ -371,6 +342,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
 
         // --- 3. EXECUTE BATCH UPSERTS ---
         
+        // Step A: Brands (Parent Table)
         if (flatBrands.length > 0) {
             const { error } = await supabase.from('brands').upsert(flatBrands);
             if (error) throw new Error(`Brands Sync Failed: ${error.message}`);
@@ -382,11 +354,13 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         }
         broadcastSync(50, 'syncing');
 
+        // Step B: Categories (Depends on Brands)
         if (flatCategories.length > 0) {
             const { error } = await supabase.from('categories').upsert(flatCategories);
             if (error) throw new Error(`Categories Sync Failed: ${error.message}`);
         }
         
+        // Step C: Products & Pricelists (Chunked for reliability)
         const chunkArray = (arr: any[], size: number) => {
             const chunks = [];
             for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
@@ -407,6 +381,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         }
 
         // --- 4. SUCCESS: UPDATE LOCAL CACHE ---
+        // Only update local storage if the cloud write succeeded.
         try {
             localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(cleanData));
         } catch (e) {
@@ -419,6 +394,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
     } catch (e: any) {
         console.error("Save Sync Error:", e);
         broadcastSync(0, 'error');
+        // CRITICAL: Re-throw so the UI knows the save failed
         throw e;
     }
 };

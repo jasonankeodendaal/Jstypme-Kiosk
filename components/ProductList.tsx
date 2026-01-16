@@ -39,19 +39,12 @@ const ProductList: React.FC<ProductListProps> = ({
       const lowerQuery = searchQuery.toLowerCase();
       result = category.products.filter(p => 
          p.name.toLowerCase().includes(lowerQuery) || 
-         (p.sku && p.sku.toLowerCase().includes(lowerQuery)) ||
-         (p.description && p.description.toLowerCase().includes(lowerQuery))
+         (p.sku && p.sku.toLowerCase().includes(lowerQuery))
       );
     }
     // Sort alphabetically by name
     return result.sort((a, b) => a.name.localeCompare(b.name));
   }, [category.products, searchQuery]);
-
-  // Optimization Style for Grid
-  const listStyle: React.CSSProperties = {
-      contentVisibility: 'auto',
-      contain: 'layout paint style'
-  };
 
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-fade-in relative">
@@ -123,14 +116,11 @@ const ProductList: React.FC<ProductListProps> = ({
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 md:p-8 bg-slate-50 pb-40 md:pb-8">
-        <div 
-            className={`grid gap-2 md:gap-6 pb-12 transition-all duration-500 ${
-                viewCols === 1 ? 'grid-cols-1 max-w-4xl mx-auto' : 
-                viewCols === 2 ? 'grid-cols-2' : 
-                'grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
-            }`}
-            style={listStyle}
-        >
+        <div className={`grid gap-2 md:gap-6 pb-12 transition-all duration-500 ${
+            viewCols === 1 ? 'grid-cols-1 max-w-4xl mx-auto' : 
+            viewCols === 2 ? 'grid-cols-2' : 
+            'grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+        }`}>
           {filteredProducts.map((product) => {
             const isSelected = selectedForCompare.includes(product.id);
             return (
@@ -149,7 +139,6 @@ const ProductList: React.FC<ProductListProps> = ({
                         <img 
                           src={product.imageUrl} 
                           alt={product.name} 
-                          loading="lazy"
                           className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
                         />
                     ) : (
