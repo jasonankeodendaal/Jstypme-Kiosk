@@ -879,6 +879,10 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
   const [isSetup, setIsSetup] = useState(isKioskConfigured());
   const [kioskId, setKioskId] = useState(getKioskId());
   const myFleetEntry = useMemo(() => storeData?.fleet?.find(f => f.id === kioskId), [storeData?.fleet, kioskId]);
+  
+  // Feature Flag: Respect fleet visibility setting for pricelists (Default to true if undefined)
+  const showPricelistsEnabled = myFleetEntry?.showPricelists ?? true;
+
   const currentShopName = myFleetEntry?.name || getShopName() || "New Device";
   const deviceType = myFleetEntry?.deviceType || getDeviceType() || 'kiosk';
   const [activeBrand, setActiveBrand] = useState<Brand | null>(null);
@@ -1152,7 +1156,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
               <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 shrink-0"><span className="font-black text-slate-300 uppercase hidden md:inline">ID:</span><span className="font-mono font-bold text-slate-600">{kioskId}</span></div>
               <div className="flex items-center gap-1 border-l border-slate-200 pl-2 md:pl-4 truncate"><RefreshCw size={8} className="text-slate-300 hidden md:inline" /><span className="font-bold uppercase text-slate-400">Sync: {lastSyncTime || '--:--'}</span></div>
           </div>
-          {pricelistBrands.length > 0 && (
+          {pricelistBrands.length > 0 && showPricelistsEnabled && (
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center">
                   <button onClick={() => { navigateDeeper(); setSelectedBrandForPricelist(pricelistBrands[0]?.id || null); setShowPricelistModal(true); }} className="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all border-2 border-white ring-8 ring-blue-600/5 group"><RIcon size={16} className="text-white group-hover:scale-110 transition-transform" /></button>
               </div>
