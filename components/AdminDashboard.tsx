@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -1065,23 +1064,40 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   
   const updateFleetMember = async (kiosk: KioskRegistry): Promise<boolean> => { 
       if(supabase) { 
+          const payload = { 
+              id: kiosk.id, 
+              name: kiosk.name, 
+              device_type: kiosk.deviceType, 
+              assigned_zone: kiosk.assignedZone,
+              show_pricelists: kiosk.showPricelists ?? true
+          }; 
+
           try {
-              const payload = { 
-                  id: kiosk.id, 
-                  name: kiosk.name, 
-                  device_type: kiosk.deviceType, 
-                  assigned_zone: kiosk.assignedZone,
-                  show_pricelists: kiosk.showPricelists ?? true
-              }; 
               const { error } = await supabase.from('kiosks').upsert(payload); 
               if (error) throw error;
               onRefresh(); 
               return true;
           } catch (e: any) {
               console.error("Fleet update failed", e);
+              
+              // Fallback logic for 'show_pricelists' column missing error
               if (e.code === '42703' || e.message?.includes('show_pricelists')) {
-                  alert("Sync Error: The database has the column, but the API cannot see it yet.\n\nFix: Go to 'System Guide' -> 'Migration' and run the 'Force API Refresh' script.");
-              } else if (e.code === 'PGRST204') {
+                  console.warn("Retrying fleet update without show_pricelists column...");
+                  const { show_pricelists, ...legacyPayload } = payload;
+                  
+                  try {
+                      const { error: secondError } = await supabase.from('kiosks').upsert(legacyPayload);
+                      if (!secondError) {
+                          alert("Warning: Basic settings saved, but 'Show Pricelists' setting could not be applied.\n\nThe database column 'show_pricelists' is missing or not visible to the API yet. Please run the 'Nuclear Column Reset' script in the Setup Guide.");
+                          onRefresh();
+                          return true;
+                      }
+                  } catch (retryError) {
+                      console.error("Retry failed", retryError);
+                  }
+              }
+
+              if (e.code === 'PGRST204') {
                    alert("Update Failed: Database table is missing required columns. Please check Setup Guide > Migration.");
               } else {
                   alert("Update Failed: " + (e.message || "Unknown error"));

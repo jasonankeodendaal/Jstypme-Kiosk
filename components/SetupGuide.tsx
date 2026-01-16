@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   X, Database, Settings, Smartphone, Tablet, Tv, Terminal, 
@@ -540,15 +539,18 @@ NOTIFY pgrst, 'reload schema';`}
                               />
 
                               <div className="bg-orange-900/30 border-l-4 border-orange-500 p-6 rounded-r-xl mt-8">
-                                  <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><RefreshCw size={16}/> Fix "Column Not Found" / Stale Cache</h3>
+                                  <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><RefreshCw size={16}/> Fix "API Cannot See Column" (Force Refresh)</h3>
                                   <p className="text-slate-300 text-xs mt-2 leading-relaxed">
-                                      If you see an error saying <strong>"show_pricelists already exists"</strong> but the Fleet page says it <strong>does not exist</strong>, your database API cache is stuck. Run this simple command to refresh it:
+                                      If the "Force API Refresh" above didn't work and you still see errors about <strong>show_pricelists</strong>, run this <strong>Nuclear Option</strong>. It will delete and recreate the specific column to force a schema update.
                                   </p>
                                   <div className="mt-4">
                                       <CodeSnippet 
-                                          label="Force API Refresh"
-                                          id="cache-refresh"
-                                          code={`NOTIFY pgrst, 'reload schema';`}
+                                          label="Nuclear Column Reset"
+                                          id="nuclear-reset"
+                                          code={`-- NUCLEAR OPTION: DROP AND RECREATE COLUMN
+ALTER TABLE public.kiosks DROP COLUMN IF EXISTS show_pricelists;
+ALTER TABLE public.kiosks ADD COLUMN show_pricelists boolean DEFAULT true;
+NOTIFY pgrst, 'reload schema';`}
                                       />
                                   </div>
                               </div>
@@ -696,38 +698,26 @@ Output JSON format:
                       <div className="animate-fade-in">
                           <SectionHeader icon={Container} title="Asset Compiler" subtitle="Vite + Rollup Pipeline" />
                           
-                          <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-xl mb-12">
-                              <h3 className="text-yellow-400 font-black uppercase text-sm mb-6 flex items-center gap-2"><Split size={16}/> Chunk Splitting Strategy</h3>
-                              <div className="flex flex-col md:flex-row gap-8">
-                                  <div className="flex-1 space-y-4">
-                                      <p className="text-slate-400 text-sm leading-relaxed">
-                                          To support legacy Android WebViews (v5.0 / Chrome 37), we cannot ship a single massive JS bundle. The compiler splits heavy libraries (`pdf.js`, `xlsx`) into separate chunks that load on-demand.
-                                      </p>
-                                      <div className="flex gap-2">
-                                          <span className="text-[10px] font-black uppercase bg-red-900/30 text-red-400 px-2 py-1 rounded border border-red-500/20">Chrome 37 Target</span>
-                                          <span className="text-[10px] font-black uppercase bg-blue-900/30 text-blue-400 px-2 py-1 rounded border border-blue-500/20">ES5 Transpile</span>
-                                      </div>
-                                  </div>
-                                  <div className="flex-1">
-                                      <CodeSnippet 
-                                        label="vite.config.ts"
-                                        id="vite-conf"
-                                        code={`manualChunks: {
-  'heavy-pdf': ['pdfjs-dist', 'jspdf'],
-  'heavy-data': ['xlsx', 'jszip'],
-  'vendor': ['react', 'react-dom']
-}`}
-                                      />
-                                  </div>
-                              </div>
+                          <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl mb-8">
+                              <h3 className="text-white font-black uppercase text-xl mb-4">Legacy Engine Support</h3>
+                              <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                                  To support Android 5.0 (Lollipop) and Chrome 37 WebViews, the build pipeline injects aggressive polyfills. The <code>@vitejs/plugin-legacy</code> handles the transpilation of modern ES6+ code down to ES5.
+                              </p>
+                              <CodeSnippet 
+                                label="Vite Legacy Config"
+                                id="vite-config"
+                                code={`legacy({
+  targets: ['chrome >= 37', 'android >= 5'],
+  additionalLegacyPolyfills: [
+    'regenerator-runtime/runtime', 
+    'core-js/stable/promise'
+  ],
+  modernPolyfills: true
+})`}
+                              />
                           </div>
-                          
-                          <ArchitectNote title="Legacy Polyfills">
-                              Older tablets lack modern JS features like `Promise` or `Map`. We inject <span className="text-white">core-js</span> and <span className="text-white">regenerator-runtime</span> directly into the HTML head to patch the environment before React even attempts to boot.
-                          </ArchitectNote>
                       </div>
                   )}
-
               </div>
           </div>
       </div>
