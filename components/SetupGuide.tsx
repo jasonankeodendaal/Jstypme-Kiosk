@@ -243,7 +243,7 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                               <div className="p-6 bg-red-900/20 border border-red-500/30 rounded-xl">
                                   <h4 className="text-red-400 font-black uppercase text-sm mb-2 flex items-center gap-2"><AlertTriangle size={16}/> Critical Action Required</h4>
                                   <p className="text-slate-300 font-medium text-xs leading-relaxed">
-                                      The app now uses a <strong>Cloud-Direct Write Strategy</strong>. If you are seeing 404 errors when saving, it means your Supabase project is missing the required relational tables. Run the script below in the <strong>Supabase SQL Editor</strong> to fix this immediately.
+                                      The app uses a <strong>Cloud-Direct Write Strategy</strong>. Run the script below in the <strong>Supabase SQL Editor</strong> to initialize all required tables, policies, and storage buckets. This script is idempotent (safe to run multiple times).
                                   </p>
                               </div>
 
@@ -335,7 +335,7 @@ CREATE TABLE IF NOT EXISTS public.pricelists (
   updated_at timestamptz default now()
 );
 
--- 4. SECURITY & STORAGE POLICIES
+-- 4. ENABLE RLS
 ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
@@ -344,34 +344,51 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelist_brands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
 
--- Allow public read/write (Standard for Single-Project Kiosk)
-DROP POLICY IF EXISTS "Public Config" ON public.store_config;
-CREATE POLICY "Public Config" ON public.store_config FOR ALL USING (true) WITH CHECK (true);
+-- 5. IDEMPOTENT POLICIES (Permissive Public Access)
+DO $$
+DECLARE
+    tbl text;
+BEGIN
+    -- Loop through all tables to create policies if they don't exist
+    FOREACH tbl IN ARRAY ARRAY['store_config', 'kiosks', 'brands', 'categories', 'products', 'pricelist_brands', 'pricelists']
+    LOOP
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_policies WHERE tablename = tbl AND policyname = 'Public Access ' || tbl
+        ) THEN
+            EXECUTE format('CREATE POLICY "Public Access %s" ON public.%I FOR ALL USING (true) WITH CHECK (true)', tbl, tbl);
+        END IF;
+    END LOOP;
+END $$;
 
-DROP POLICY IF EXISTS "Public Kiosks" ON public.kiosks;
-CREATE POLICY "Public Kiosks" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
+-- 6. STORAGE BUCKET INITIALIZATION
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('kiosk-media', 'kiosk-media', true) 
+ON CONFLICT (id) DO NOTHING;
 
-DROP POLICY IF EXISTS "Public Brands" ON public.brands;
-CREATE POLICY "Public Brands" ON public.brands FOR ALL USING (true) WITH CHECK (true);
+-- 7. STORAGE POLICIES (Idempotent)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Public Media Select') THEN
+        CREATE POLICY "Public Media Select" ON storage.objects FOR SELECT USING (bucket_id = 'kiosk-media');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Public Media Insert') THEN
+        CREATE POLICY "Public Media Insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'kiosk-media');
+    END IF;
 
-DROP POLICY IF EXISTS "Public Categories" ON public.categories;
-CREATE POLICY "Public Categories" ON public.categories FOR ALL USING (true) WITH CHECK (true);
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Public Media Update') THEN
+        CREATE POLICY "Public Media Update" ON storage.objects FOR UPDATE USING (bucket_id = 'kiosk-media');
+    END IF;
 
-DROP POLICY IF EXISTS "Public Products" ON public.products;
-CREATE POLICY "Public Products" ON public.products FOR ALL USING (true) WITH CHECK (true);
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'objects' AND policyname = 'Public Media Delete') THEN
+        CREATE POLICY "Public Media Delete" ON storage.objects FOR DELETE USING (bucket_id = 'kiosk-media');
+    END IF;
+END $$;
 
-DROP POLICY IF EXISTS "Public PL Brands" ON public.pricelist_brands;
-CREATE POLICY "Public PL Brands" ON public.pricelist_brands FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public Pricelists" ON public.pricelists;
-CREATE POLICY "Public Pricelists" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
-
--- Storage Bucket Initialization
-INSERT INTO storage.buckets (id, name, public) VALUES ('kiosk-media', 'kiosk-media', true) ON CONFLICT DO NOTHING;
-DROP POLICY IF EXISTS "Public Media Access" ON storage.objects;
-CREATE POLICY "Public Media Access" ON storage.objects FOR ALL USING ( bucket_id = 'kiosk-media' );
-DROP POLICY IF EXISTS "Public Media Upload" ON storage.objects;
-CREATE POLICY "Public Media Upload" ON storage.objects FOR INSERT WITH CHECK ( bucket_id = 'kiosk-media' );`}
+-- 8. DEFAULT DATA SEEDING
+INSERT INTO public.store_config (id, data)
+VALUES (1, '{}'::jsonb)
+ON CONFLICT (id) DO NOTHING;`}
                               />
                           </div>
                       </div>
@@ -389,7 +406,54 @@ CREATE POLICY "Public Media Upload" ON storage.objects FOR INSERT WITH CHECK ( b
                       </div>
                   )}
 
-                  {/* ... other tabs would be here (truncated for brevity since user only needs migration script urgently) ... */}
+                  {activeTab === 'apk' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={SmartphoneNfc} title="Native Compilation" subtitle="Android Capacitor Build" />
+                          <div className="space-y-6">
+                              <ArchitectNote title="Legacy Engine">
+                                  The build pipeline targets <span className="text-white">Android 5.0 (Lollipop)</span> and Chrome 37 WebViews. We use Babel and Polyfills to ensure modern React 18+ runs on 2014-era hardware.
+                              </ArchitectNote>
+                              <CodeSnippet 
+                                label="Terminal Command"
+                                id="cmd-apk"
+                                code="npm run build && npx cap sync android && npx cap open android"
+                              />
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'ai' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={Bot} title="AI Synthesis" subtitle="Gemini Data Generation" />
+                          <div className="space-y-6">
+                              <ArchitectNote title="Spec Generation">
+                                  You can ask the AI to "Generate a JSON product list for Samsung TVs". The system will format the response to match the internal Kiosk Schema automatically.
+                              </ArchitectNote>
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'build' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={Container} title="Asset Compiler" subtitle="Vite + Rollup Optimization" />
+                          <div className="space-y-6">
+                              <ArchitectNote title="Chunk Splitting">
+                                  Large libraries like <code>jspdf</code> and <code>xlsx</code> are split into separate chunks. They are only loaded when the user opens the "Export" or "Pricelist" modules, keeping the initial boot instant.
+                              </ArchitectNote>
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'pricelists' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={Table} title="Price Engine" subtitle="PDF Logic" />
+                          <div className="space-y-6">
+                              <ArchitectNote title="Client-Side PDF">
+                                  PDFs are generated entirely on the tablet using <code>jspdf</code>. No server is required. The system auto-calculates column widths based on the data present (e.g. hiding "Promo Price" column if no items have promos).
+                              </ArchitectNote>
+                          </div>
+                      </div>
+                  )}
 
               </div>
           </div>
