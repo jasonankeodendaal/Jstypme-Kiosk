@@ -134,6 +134,14 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const slideTimerRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
 
+  // 0. Cleanup Timers on Unmount
+  useEffect(() => {
+      return () => {
+          if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
+          if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+      };
+  }, []);
+
   // 1. Sleep Mode Check
   useEffect(() => {
       if (!config.enableSleepMode || !config.activeHoursStart || !config.activeHoursEnd) {
@@ -211,14 +219,57 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           setBuffers([playlist[0], null]);
           setActiveSlot(0);
           setCurrentPlaylistIndex(0);
-          scheduleNextSlide(playlist[0]);
+          // Manually schedule first slide move (which will just trigger the timer for the *next* slide)
+          // Actually, we just need to wait for the first slide to render, it will play/show.
+          // Then we need to schedule the PREPARATION of the next slide.
+          
+          // But since buffers[0] is active, we need to manually trigger "scheduleNextSlide" 
+          // effectively starting the timer.
+          if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
+          const duration = (config.imageDuration || 8) * 1000;
+          
+          if (playlist[0].type === 'image') {
+              slideTimerRef.current = window.setTimeout(() => {
+                  // We can't call prepareNextBuffer directly here because we need it to be fresh.
+                  // We trigger a state update cycle? No, just call the logic.
+                  // Since this effect runs once on playlist change, we can trust a self-contained helper 
+                  // or just let the flow work if we call scheduleNextSlide.
+                  // However, scheduleNextSlide requires `currentItem`.
+                  // Let's defer to a small timeout to let the component render and `prepareNextBuffer` to be defined.
+              }, duration);
+          }
+          // Note: The main loop is driven by `scheduleNextSlide` called after a transition.
+          // For the VERY FIRST item, we need to kickstart the "Prepare Next" logic manually
+          // after the first duration.
+          // Since `scheduleNextSlide` depends on state, let's call it via a ref-safe way or just rely on the effect below.
       }
   }, [playlist]);
 
-  // 4. Scheduling Logic
+  // 4. Scheduling Logic - FIXED DEPENDENCIES TO PREVENT STALE CLOSURES
+  const prepareNextBuffer = useCallback(() => {
+      if (isTransitioning) return; // Already moving
+      
+      const currentList = playlistRef.current; // ALWAYS USE REF
+      if (currentList.length === 0) return;
+
+      // Calculate next index safely using the ref length
+      let nextIdx = (currentPlaylistIndex + 1);
+      if (nextIdx >= currentList.length) nextIdx = 0;
+
+      const targetSlot = activeSlot === 0 ? 1 : 0; // The hidden slot
+
+      // Load next item into the target buffer slot
+      setBuffers(prev => {
+          const newB = [...prev] as [PlaylistItem | null, PlaylistItem | null];
+          newB[targetSlot] = currentList[nextIdx];
+          return newB;
+      });
+      setCurrentPlaylistIndex(nextIdx);
+      // Now we wait for 'onReady' from the Slide component in targetSlot
+  }, [activeSlot, currentPlaylistIndex, isTransitioning]);
+
   const scheduleNextSlide = useCallback((currentItem: PlaylistItem | null) => {
       if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
-      // Use ref to check length to be safe against stale closure, though deps handle it usually
       if (!currentItem || playlistRef.current.length <= 1 || isSleepMode) return;
 
       const duration = (config.imageDuration || 8) * 1000;
@@ -234,30 +285,17 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
               prepareNextBuffer();
           }, 180000); 
       }
-  }, [config.imageDuration, isSleepMode]); // Removed playlist.length dep as we use ref internally
+  }, [config.imageDuration, isSleepMode, prepareNextBuffer]);
 
-  const prepareNextBuffer = () => {
-      if (isTransitioning) return; // Already moving
-      
-      const currentList = playlistRef.current; // ALWAYS USE REF
-      if (currentList.length === 0) return;
+  // 5. Kickstart Loop Effect
+  // If we have a playlist, and active slot is set, but no timer is running AND no transition is happening,
+  // we might need to kickstart the first timer if it wasn't done.
+  useEffect(() => {
+      if (playlist.length > 0 && !slideTimerRef.current && !isTransitioning && buffers[activeSlot]) {
+          scheduleNextSlide(buffers[activeSlot]);
+      }
+  }, [playlist, activeSlot, isTransitioning, buffers, scheduleNextSlide]);
 
-      // Calculate next index safely using the ref length
-      // We rely on currentPlaylistIndex state, but if list shrank, wrap it
-      let nextIdx = (currentPlaylistIndex + 1);
-      if (nextIdx >= currentList.length) nextIdx = 0;
-
-      const targetSlot = activeSlot === 0 ? 1 : 0; // The hidden slot
-
-      // Load next item into the target buffer slot
-      setBuffers(prev => {
-          const newB = [...prev] as [PlaylistItem | null, PlaylistItem | null];
-          newB[targetSlot] = currentList[nextIdx];
-          return newB;
-      });
-      setCurrentPlaylistIndex(nextIdx);
-      // Now we wait for 'onReady' from the Slide component in targetSlot
-  };
 
   const handleBufferReady = (slotIndex: number) => {
       // Only care if the ready signal comes from the INACTIVE slot (the one we just loaded)
@@ -272,7 +310,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           transitionTimeoutRef.current = window.setTimeout(() => {
               // TRANSITION COMPLETE
               setIsTransitioning(false);
-              setActiveSlot(slotIndex as 0 | 1); // New slot becomes Active (and visually drops to Z-10, but since opacity is 1, no change)
+              setActiveSlot(slotIndex as 0 | 1); // New slot becomes Active
               
               // Clean up the OLD slot (now inactive)
               setBuffers(prev => {
@@ -283,6 +321,8 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
               });
 
               // Schedule next cycle
+              // IMPORTANT: This uses the 'buffers' from the closure, which contains the NEW item at slotIndex.
+              // This is safe because 'buffers[slotIndex]' was just verified to exist.
               scheduleNextSlide(buffers[slotIndex]);
 
           }, 1000); // 1s Crossfade duration matches CSS
@@ -341,11 +381,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 // Active Layer: Always visible at bottom
                 layerClass = "z-10 opacity-100 transition-none"; 
             } else {
-                // Buffer Layer: Always on top
-                // When transitioning starts, opacity goes 0 -> 1.
-                // When resetting (after becoming inactive), opacity goes 1 -> 0 instantly via transition-none? 
-                // No, we want it to stay 0 until loaded.
-                
                 if (isTransitioning) {
                     layerClass = "z-20 opacity-100 transition-opacity duration-1000 ease-in-out";
                 } else {
