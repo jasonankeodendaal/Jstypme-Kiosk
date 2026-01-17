@@ -373,21 +373,33 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
                               <div>
                                   <h3 className="text-xl font-black text-white uppercase tracking-tight mb-4">Master Setup Protocol</h3>
-                                  <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                                      Run this script in your Supabase SQL Editor. It is <strong>Idempotent</strong>: it creates missing tables and adds missing columns (like 'kind', 'promo_text') without deleting existing data.
-                                  </p>
+                                  <div className="p-4 bg-red-900/30 border-l-4 border-red-500 mb-6 rounded-r-xl">
+                                      <h4 className="text-red-400 font-bold uppercase text-xs mb-1 flex items-center gap-2"><AlertTriangle size={14}/> Nuclear Option</h4>
+                                      <p className="text-[11px] text-slate-300">This script is a <strong>HARD RESET</strong>. It drops all tables and rebuilds the entire schema from scratch to guarantee compatibility. All existing data will be wiped.</p>
+                                  </div>
                                   <CodeSnippet 
-                                    label="SQL Master Setup (Run This)"
+                                    label="SQL Nuclear Reset (Run This)"
                                     id="sql-boot"
-                                    code={`-- ==========================================
--- 1. GLOBAL CONFIG & FLEET MANAGEMENT
--- ==========================================
-CREATE TABLE IF NOT EXISTS public.store_config (
+                                    code={`-- NUCLEAR RESET SCRIPT
+-- WARNING: THIS DELETES ALL DATA AND REBUILDS SCHEMA FROM SCRATCH
+
+-- 1. Clean Slate (Drop all known tables)
+DROP TABLE IF EXISTS public.products CASCADE;
+DROP TABLE IF EXISTS public.categories CASCADE;
+DROP TABLE IF EXISTS public.brands CASCADE;
+DROP TABLE IF EXISTS public.pricelists CASCADE;
+DROP TABLE IF EXISTS public.pricelist_brands CASCADE;
+DROP TABLE IF EXISTS public.kiosks CASCADE;
+DROP TABLE IF EXISTS public.store_config CASCADE;
+
+-- 2. Store Config (Monolith Backup)
+CREATE TABLE public.store_config (
   id bigint PRIMARY KEY DEFAULT 1,
   data jsonb NOT NULL DEFAULT '{}'::jsonb
 );
 
-CREATE TABLE IF NOT EXISTS public.kiosks (
+-- 3. Fleet Management
+CREATE TABLE public.kiosks (
   id text PRIMARY KEY,
   name text NOT NULL,
   status text DEFAULT 'online',
@@ -403,16 +415,8 @@ CREATE TABLE IF NOT EXISTS public.kiosks (
   show_pricelists boolean DEFAULT true
 );
 
--- Ensure fleet columns exist if table was already made
-ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;
-ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS device_type text;
-ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS assigned_zone text;
-ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS restart_requested boolean DEFAULT false;
-
--- ==========================================
--- 2. INVENTORY ARCHITECTURE
--- ==========================================
-CREATE TABLE IF NOT EXISTS public.brands (
+-- 4. Inventory System
+CREATE TABLE public.brands (
     id text PRIMARY KEY,
     name text,
     logo_url text,
@@ -420,17 +424,17 @@ CREATE TABLE IF NOT EXISTS public.brands (
     updated_at timestamptz DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS public.categories (
+CREATE TABLE public.categories (
     id text PRIMARY KEY,
-    brand_id text REFERENCES public.brands(id),
+    brand_id text REFERENCES public.brands(id) ON DELETE CASCADE,
     name text,
     icon text,
     updated_at timestamptz DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS public.products (
+CREATE TABLE public.products (
     id text PRIMARY KEY,
-    category_id text REFERENCES public.categories(id),
+    category_id text REFERENCES public.categories(id) ON DELETE CASCADE,
     name text,
     sku text,
     description text,
@@ -447,19 +451,17 @@ CREATE TABLE IF NOT EXISTS public.products (
     updated_at timestamptz DEFAULT now()
 );
 
--- ==========================================
--- 3. PRICING & MARKETING ENGINE
--- ==========================================
-CREATE TABLE IF NOT EXISTS public.pricelist_brands (
+-- 5. Pricing Engine
+CREATE TABLE public.pricelist_brands (
     id text PRIMARY KEY,
     name text,
     logo_url text,
     updated_at timestamptz DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS public.pricelists (
+CREATE TABLE public.pricelists (
     id text PRIMARY KEY,
-    brand_id text,
+    brand_id text, -- Loose coupling or FK, let's keep it loose for flexibility or FK if needed. Frontend uses loose ID match usually. Let's make it text.
     title text,
     month text,
     year text,
@@ -476,17 +478,7 @@ CREATE TABLE IF NOT EXISTS public.pricelists (
     updated_at timestamptz DEFAULT now()
 );
 
--- Force add columns to fix "400 Bad Request" errors
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS kind text;
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS start_date text;
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS end_date text;
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS promo_text text;
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS items jsonb DEFAULT '[]'::jsonb;
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS headers jsonb DEFAULT '{}'::jsonb;
-
--- ==========================================
--- 4. SECURITY & ACCESS (RLS)
--- ==========================================
+-- 6. Security (RLS - Open Access for Kiosk)
 ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
@@ -495,7 +487,8 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelist_brands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
 
--- Allow anonymous access (Required for this architecture)
+-- Drop existing policies if any (though tables were dropped)
+-- Create permissive policies
 DROP POLICY IF EXISTS "Public Access" ON public.store_config;
 DROP POLICY IF EXISTS "Public Access" ON public.kiosks;
 DROP POLICY IF EXISTS "Public Access" ON public.brands;
@@ -512,9 +505,7 @@ CREATE POLICY "Public Access" ON public.products FOR ALL USING (true) WITH CHECK
 CREATE POLICY "Public Access" ON public.pricelist_brands FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Public Access" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
 
--- ==========================================
--- 5. STORAGE BUCKET
--- ==========================================
+-- 7. Storage
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('kiosk-media', 'kiosk-media', true) 
 ON CONFLICT (id) DO UPDATE SET public = true;
@@ -522,7 +513,7 @@ ON CONFLICT (id) DO UPDATE SET public = true;
 DROP POLICY IF EXISTS "Public Media Access" ON storage.objects;
 CREATE POLICY "Public Media Access" ON storage.objects FOR ALL USING (bucket_id = 'kiosk-media') WITH CHECK (bucket_id = 'kiosk-media');
 
--- Force schema cache reload
+-- Force Reload
 NOTIFY pgrst, 'reload schema';`}
                                   />
                               </div>
