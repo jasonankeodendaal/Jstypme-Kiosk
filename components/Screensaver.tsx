@@ -40,11 +40,11 @@ const ClockWidget = () => {
     );
 };
 
-// Internal Slide Component - Handles Media Loading & Playback
+// Internal Slide Component - Handles Media Loading & Playback with Aggressive Cleanup
 const Slide = memo(({ 
     item, 
     isMuted, 
-    isActive, // Used for audio control mostly
+    isActive, 
     onReady, 
     onError, 
     onVideoEnd, 
@@ -63,110 +63,164 @@ const Slide = memo(({
     forceKenBurns: boolean;
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const imgRef = useRef<HTMLImageElement>(null);
     const [animEffect, setAnimEffect] = useState('');
-    const [hasReadyFired, setHasReadyFired] = useState(false);
+    const hasReadyFired = useRef(false);
 
+    // Reset ready state when item changes
     useEffect(() => {
-        // Animation Pools
+        hasReadyFired.current = false;
+        
+        // Calculate Animation
         const cinematicEffects = ['effect-smooth-zoom', 'effect-subtle-drift', 'effect-gentle-pan', 'effect-slide-pan', 'effect-hard-zoom'];
         const pulseEffects = ['effect-heartbeat', 'effect-glow', 'effect-soft-scale'];
-        // Default random is everything except static
         const randomEffects = [...cinematicEffects, ...pulseEffects];
 
         let selectedEffect = '';
-
         if (item.type === 'image') {
             if (forceKenBurns) {
-                // Ken Burns overrides everything to cinematic
                 selectedEffect = cinematicEffects[Math.floor(Math.random() * cinematicEffects.length)];
             } else {
                 switch (animationStyle) {
-                    case 'cinematic':
-                        selectedEffect = cinematicEffects[Math.floor(Math.random() * cinematicEffects.length)];
-                        break;
-                    case 'pulse':
-                        selectedEffect = pulseEffects[Math.floor(Math.random() * pulseEffects.length)];
-                        break;
-                    case 'static':
-                        selectedEffect = ''; // No animation
-                        break;
-                    case 'random':
-                    default:
-                        selectedEffect = randomEffects[Math.floor(Math.random() * randomEffects.length)];
-                        break;
+                    case 'cinematic': selectedEffect = cinematicEffects[Math.floor(Math.random() * cinematicEffects.length)]; break;
+                    case 'pulse': selectedEffect = pulseEffects[Math.floor(Math.random() * pulseEffects.length)]; break;
+                    case 'static': selectedEffect = ''; break;
+                    case 'random': default: selectedEffect = randomEffects[Math.floor(Math.random() * randomEffects.length)]; break;
                 }
             }
             setAnimEffect(selectedEffect);
         } else {
             setAnimEffect('effect-fade-in');
         }
-        setHasReadyFired(false);
     }, [item.id, animationStyle, forceKenBurns]);
 
-    const handleReady = useCallback(() => {
-        if (!hasReadyFired) {
-            setHasReadyFired(true);
-            onReady();
-        }
-    }, [hasReadyFired, onReady]);
+    // cleanup effect: AGGRESSIVE GARBAGE COLLECTION
+    useEffect(() => {
+        return () => {
+            if (videoRef.current) {
+                // Force detach media source to allow GC on low-end Android WebViews
+                try {
+                    videoRef.current.pause();
+                    videoRef.current.removeAttribute('src'); 
+                    videoRef.current.load(); 
+                } catch(e) {
+                    console.warn("Cleanup error", e);
+                }
+            }
+            if (imgRef.current) {
+                imgRef.current.removeAttribute('src');
+            }
+        };
+    }, [item.url]);
 
+    // Media Lifecycle
     useEffect(() => {
         if (item.type === 'video' && videoRef.current) {
-            // Firefox Fix: Explicitly load to reset decoder state
-            videoRef.current.load();
-            videoRef.current.muted = isMuted;
+            const v = videoRef.current;
+            v.muted = isMuted;
+            v.preload = "auto";
             
-            const attemptPlay = () => {
-                if(!videoRef.current) return;
-                const p = videoRef.current.play();
-                if (p) {
-                    p.catch(e => {
-                        console.warn("Autoplay blocked/failed", e);
-                        // Fallback to muted if failed (though we likely already muted)
-                        if (videoRef.current) {
-                            videoRef.current.muted = true;
-                            videoRef.current.play().catch(() => {});
-                        }
-                    });
+            const handleReady = () => {
+                if (!hasReadyFired.current) {
+                    hasReadyFired.current = true;
+                    onReady();
+                }
+            };
+
+            const handleError = (e: any) => {
+                console.warn("Video Load Error:", item.url, e);
+                onError();
+            };
+
+            // Android WebView specific: loadeddata is usually safer than canplay
+            v.addEventListener('loadeddata', handleReady);
+            v.addEventListener('error', handleError);
+            v.addEventListener('ended', onVideoEnd);
+
+            // Set src if not set
+            if (v.getAttribute('src') !== item.url) {
+                v.src = item.url;
+                v.load();
+            }
+
+            return () => {
+                v.removeEventListener('loadeddata', handleReady);
+                v.removeEventListener('error', handleError);
+                v.removeEventListener('ended', onVideoEnd);
+            };
+        } else if (item.type === 'image' && imgRef.current) {
+            const img = imgRef.current;
+            
+            const handleLoad = () => {
+                if (!hasReadyFired.current) {
+                    hasReadyFired.current = true;
+                    onReady();
                 }
             };
             
-            // Slight delay to ensure DOM is ready
-            setTimeout(attemptPlay, 50);
+            const handleError = () => {
+                console.warn("Image Load Error:", item.url);
+                onError();
+            };
+
+            img.onload = handleLoad;
+            img.onerror = handleError;
+            
+            // Set src
+            if (img.getAttribute('src') !== item.url) {
+                img.src = item.url;
+            }
+            
+            // Check if already loaded from cache
+            if (img.complete && img.naturalWidth > 0) {
+                handleLoad();
+            }
         }
-    }, [item.type, isMuted, item.id]); 
+    }, [item, isMuted, onReady, onError, onVideoEnd]);
+
+    // Active State / Playback Control
+    useEffect(() => {
+        if (item.type === 'video' && videoRef.current) {
+            if (isActive) {
+                const playPromise = videoRef.current.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.warn("Autoplay Prevented/Error:", error);
+                        // If play fails, we might still want to proceed or fallback to muted
+                        if (!isMuted) {
+                            videoRef.current!.muted = true;
+                            videoRef.current!.play().catch(() => {});
+                        }
+                    });
+                }
+            } else {
+                videoRef.current.pause();
+                videoRef.current.currentTime = 0; // Reset for next time if reused (though we usually replace)
+            }
+        }
+    }, [isActive, isMuted, item.type]);
 
     if (item.type === 'video') {
         return (
             <video 
                 ref={videoRef}
-                src={item.url}
                 className={`w-full h-full ${objectFit} ${isActive ? animEffect : ''}`}
                 muted={isMuted}
                 playsInline
-                preload="auto"
-                onCanPlay={handleReady} 
-                onLoadedData={handleReady} // Backup trigger
-                onEnded={onVideoEnd}
-                onError={(e) => { console.warn("Video Error", e); onError(); }}
-                onStalled={() => { 
-                    // If stalled for too long and active, force next. 
-                    // If loading, the parent watchdog will catch it.
-                    console.warn("Video Stalled");
-                }}
-                loop={false} 
+                loop={false}
+                style={{ willChange: 'opacity, transform' }} // Optimization hint
             />
         );
     }
 
     return (
         <img 
-            src={item.url}
+            ref={imgRef}
             alt="Screensaver"
             className={`w-full h-full ${objectFit} ${isActive ? animEffect : ''}`}
             loading="eager"
-            onLoad={handleReady} 
-            onError={onError}
+            decoding="async"
+            style={{ willChange: 'opacity, transform' }}
         />
     );
 });
@@ -201,6 +255,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const playlistRef = useRef<PlaylistItem[]>([]); 
   
   // --- DOUBLE BUFFER STATE ---
+  // Slot 0 and Slot 1. Only ONE is active (visible) at a time. The other is either null or loading next.
   const [buffers, setBuffers] = useState<[PlaylistItem | null, PlaylistItem | null]>([null, null]);
   const [activeSlot, setActiveSlot] = useState<0 | 1>(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -292,13 +347,18 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   // 3. Initialize Buffers
   useEffect(() => {
       if (playlist.length > 0 && (!buffers[0] && !buffers[1])) {
+          // Initialize with first item
           setBuffers([playlist[0], null]);
           setActiveSlot(0);
           setCurrentPlaylistIndex(0);
-          if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
-          const duration = (config.imageDuration || 8) * 1000;
+          
+          // Start timer for first slide immediately (assuming image)
+          // For video, the slide component will trigger ended or loaded.
           if (playlist[0].type === 'image') {
-              slideTimerRef.current = window.setTimeout(() => {}, duration);
+              if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
+              slideTimerRef.current = window.setTimeout(() => {
+                  prepareNextBuffer();
+              }, (config.imageDuration || 8) * 1000);
           }
       }
   }, [playlist]);
@@ -315,28 +375,42 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
       const targetSlot = activeSlot === 0 ? 1 : 0; 
 
-      // Load next item into the target buffer slot
+      // Load next item into the target (currently empty) buffer slot
       setBuffers(prev => {
           const newB = [...prev] as [PlaylistItem | null, PlaylistItem | null];
-          newB[targetSlot] = currentList[nextIdx];
+          // Optimization: Only update if strictly necessary to avoid renders
+          if (newB[targetSlot]?.id !== currentList[nextIdx].id) {
+              newB[targetSlot] = currentList[nextIdx];
+          }
           return newB;
       });
       setCurrentPlaylistIndex(nextIdx);
   }, [activeSlot, currentPlaylistIndex, isTransitioning]);
 
-  // WATCHDOG: Detect frozen loading
+  // WATCHDOG: Detect frozen loading of the *pending* slot
   useEffect(() => {
       // Find if we have a "pending" buffer (not null, but not active)
+      // This means we are waiting for onReady from it.
       const pendingSlot = buffers.findIndex((b, i) => b !== null && i !== activeSlot);
       
       if (pendingSlot !== -1) {
           // We are waiting for this slot to trigger onReady. Start watchdog.
           if (loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current);
+          
+          const timeoutMs = buffers[pendingSlot]?.type === 'video' ? 15000 : 8000;
+          
           loadingWatchdogRef.current = window.setTimeout(() => {
-              console.warn(`Screensaver: Buffer ${pendingSlot} load timed out (Firefox freeze?). Skipping.`);
-              // Try next item
-              prepareNextBuffer();
-          }, 12000); // 12s max load time
+              console.warn(`Screensaver: Buffer ${pendingSlot} load timed out (${timeoutMs}ms). Skipping corrupt media.`);
+              // SKIP STRATEGY:
+              // 1. Clear the stuck buffer immediately to force DOM cleanup
+              setBuffers(prev => {
+                  const newB = [...prev] as [PlaylistItem | null, PlaylistItem | null];
+                  newB[pendingSlot] = null;
+                  return newB;
+              });
+              // 2. Try next item
+              setTimeout(() => prepareNextBuffer(), 100);
+          }, timeoutMs); 
       } else {
           // Nothing loading, clean up watchdog
           if (loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current);
@@ -344,35 +418,9 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       return () => { if(loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current); };
   }, [buffers, activeSlot, prepareNextBuffer]);
 
-  const scheduleNextSlide = useCallback((currentItem: PlaylistItem | null) => {
-      if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
-      if (!currentItem || playlistRef.current.length <= 1 || isSleepMode) return;
-
-      const duration = (config.imageDuration || 8) * 1000;
-
-      if (currentItem.type === 'image') {
-          slideTimerRef.current = window.setTimeout(() => {
-              prepareNextBuffer();
-          }, duration);
-      } else {
-          // Video: Wait for 'onEnded', but set a watchdog just in case video decoder hangs
-          slideTimerRef.current = window.setTimeout(() => {
-              console.warn("Video watchdog: forcing next slide");
-              prepareNextBuffer();
-          }, 180000); 
-      }
-  }, [config.imageDuration, isSleepMode, prepareNextBuffer]);
-
-  // 5. Kickstart Loop Effect
-  useEffect(() => {
-      if (playlist.length > 0 && !slideTimerRef.current && !isTransitioning && buffers[activeSlot]) {
-          scheduleNextSlide(buffers[activeSlot]);
-      }
-  }, [playlist, activeSlot, isTransitioning, buffers, scheduleNextSlide]);
-
-
+  // Handler for when a buffer reports it is loaded and ready to show
   const handleBufferReady = (slotIndex: number) => {
-      // Only care if the ready signal comes from the INACTIVE slot
+      // Only transition if the ready signal comes from the INACTIVE (pending) slot
       if (slotIndex !== activeSlot && !isTransitioning && buffers[slotIndex]) {
           
           // Clear watchdog as we are successfully ready
@@ -380,26 +428,52 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
           setIsTransitioning(true);
 
+          // Allow CSS transition to complete (1s) before swapping active slot logic
           if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
           
           transitionTimeoutRef.current = window.setTimeout(() => {
               setIsTransitioning(false);
               setActiveSlot(slotIndex as 0 | 1); 
               
+              // IMMEDIATELY CLEAR OLD BUFFER to save memory
               setBuffers(prev => {
                   const newB = [...prev] as [PlaylistItem | null, PlaylistItem | null];
                   const oldSlot = slotIndex === 0 ? 1 : 0;
-                  newB[oldSlot] = null; // Clear old content
+                  newB[oldSlot] = null; // Clean up old media
                   return newB;
               });
 
-              scheduleNextSlide(buffers[slotIndex]);
+              // Schedule next cycle
+              const currentItem = buffers[slotIndex];
+              if (currentItem) {
+                  const duration = (config.imageDuration || 8) * 1000;
+                  if (currentItem.type === 'image') {
+                      if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
+                      slideTimerRef.current = window.setTimeout(() => {
+                          prepareNextBuffer();
+                      }, duration);
+                  } else {
+                      // For video, we wait for onVideoEnd, but set a safety net
+                      // max 3 mins per video
+                      if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
+                      slideTimerRef.current = window.setTimeout(() => {
+                          prepareNextBuffer();
+                      }, 180000); 
+                  }
+              }
 
-          }, 1000); 
+          }, 1000); // Matches CSS transition duration
       }
   };
 
   const handleVideoEnded = () => {
+      if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
+      prepareNextBuffer();
+  };
+
+  const handleMediaError = () => {
+      // If active media errors, skip immediately
+      if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
       prepareNextBuffer();
   };
 
@@ -416,71 +490,38 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
   if (playlist.length === 0) return null;
 
-  const currentItem = buffers[activeSlot];
+  // Visual Configs
   const objectFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
-
-  // Dynamic Text Styles
   const alignClass = config.textAlignment === 'center' ? 'text-center items-center left-0 right-0 max-w-[90%] mx-auto' 
                    : config.textAlignment === 'right' ? 'text-right items-end right-10 md:right-20 left-auto max-w-[70%]' 
-                   : 'text-left items-start left-10 md:left-20 max-w-[70%]'; // Default left
-  
+                   : 'text-left items-start left-10 md:left-20 max-w-[70%]';
   const fontClass = config.fontFamily === 'serif' ? 'font-serif' : config.fontFamily === 'mono' ? 'font-mono' : 'font-sans';
-  
-  const sizeClassTitle = config.fontSize === 'small' ? 'text-xl md:text-3xl' 
-                       : config.fontSize === 'large' ? 'text-4xl sm:text-6xl md:text-8xl' 
-                       : 'text-2xl sm:text-3xl md:text-5xl'; // Medium default
-  
-  const sizeClassSub = config.fontSize === 'small' ? 'text-[10px] md:text-sm' 
-                     : config.fontSize === 'large' ? 'text-sm md:text-2xl' 
-                     : 'text-xs md:text-xl'; // Medium default
-
+  const sizeClassTitle = config.fontSize === 'small' ? 'text-xl md:text-3xl' : config.fontSize === 'large' ? 'text-4xl sm:text-6xl md:text-8xl' : 'text-2xl sm:text-3xl md:text-5xl';
+  const sizeClassSub = config.fontSize === 'small' ? 'text-[10px] md:text-sm' : config.fontSize === 'large' ? 'text-sm md:text-2xl' : 'text-xs md:text-xl';
   const glowClass = config.textGlow ? 'drop-shadow-[0_0_25px_rgba(59,130,246,0.8)]' : 'drop-shadow-2xl';
 
   return (
     <div onClick={onWake} className="fixed inset-0 z-[100] bg-black cursor-pointer overflow-hidden select-none">
         <style>{`
             .slide-layer { position: absolute; inset: 0; }
-            
-            /* ORIGINAL EFFECTS */
             .effect-smooth-zoom { animation: smoothZoom 15s ease-out forwards; }
             @keyframes smoothZoom { 0% { transform: scale(1.0); } 100% { transform: scale(1.1); } }
-            
             .effect-subtle-drift { animation: subtleDrift 20s linear forwards; }
             @keyframes subtleDrift { 0% { transform: scale(1.05) translate(-1%, -1%); } 100% { transform: scale(1.05) translate(1%, 1%); } }
-            
             .effect-soft-scale { animation: softScale 20s ease-out forwards; }
             @keyframes softScale { 0% { transform: scale(1.0); } 100% { transform: scale(1.05); } }
-
             .effect-gentle-pan { animation: gentlePan 20s ease-in-out alternate; }
             @keyframes gentlePan { 0% { transform: scale(1.1) translate(-2%, 0); } 100% { transform: scale(1.1) translate(2%, 0); } }
-
-            /* NEW EXPANDED LIBRARY */
             .effect-heartbeat { animation: heartbeat 15s ease-in-out infinite; }
-            @keyframes heartbeat { 
-                0% { transform: scale(1); } 
-                50% { transform: scale(1.05); } 
-                100% { transform: scale(1); } 
-            }
-
+            @keyframes heartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
             .effect-glow { animation: glowPulse 8s ease-in-out infinite alternate; }
-            @keyframes glowPulse {
-                0% { filter: brightness(1) drop-shadow(0 0 0px rgba(255,255,255,0)); transform: scale(1); }
-                100% { filter: brightness(1.15) drop-shadow(0 0 20px rgba(255,255,255,0.2)); transform: scale(1.02); }
-            }
-
+            @keyframes glowPulse { 0% { filter: brightness(1) drop-shadow(0 0 0px rgba(255,255,255,0)); transform: scale(1); } 100% { filter: brightness(1.15) drop-shadow(0 0 20px rgba(255,255,255,0.2)); transform: scale(1.02); } }
             .effect-hard-zoom { animation: hardZoom 18s linear forwards; }
             @keyframes hardZoom { 0% { transform: scale(1); } 100% { transform: scale(1.35); } }
-
             .effect-slide-pan { animation: slidePan 25s linear infinite alternate; }
-            @keyframes slidePan {
-                0% { transform: scale(1.1) translate(-5%, -2%); }
-                100% { transform: scale(1.1) translate(5%, 2%); }
-            }
-
-            /* VIDEO & UI EFFECTS */
+            @keyframes slidePan { 0% { transform: scale(1.1) translate(-5%, -2%); } 100% { transform: scale(1.1) translate(5%, 2%); } }
             .effect-fade-in { animation: fadeInVideo 1s ease-out forwards; }
             @keyframes fadeInVideo { from { opacity: 0; } to { opacity: 1; } }
-            
             .info-slide-up { animation: infoSlideUp 0.8s ease-out forwards 0.3s; opacity: 0; }
             @keyframes infoSlideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
         `}</style>
@@ -492,27 +533,39 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             const item = buffers[slotIdx];
             const isActive = activeSlot === slotIdx;
             
+            // Calculate Layer Transitions
             let layerClass = "";
             if (config.transitionType === 'slide') {
                 if (isActive) {
                     layerClass = "z-10 translate-x-0 transition-none"; 
                 } else {
                     if (isTransitioning) {
-                        // Incoming slide
+                        // Incoming slide (the pending one becoming active)
+                        // If I am pending (slotIdx != activeSlot) AND transition is happening, I am sliding IN.
                         layerClass = "z-20 translate-x-0 transition-transform duration-1000 ease-in-out";
                     } else {
                         // Resting state off-screen
                         layerClass = "z-20 translate-x-full transition-none";
                     }
                 }
+                // Fix for slide logic:
+                // Active slot should sit at 0.
+                // Pending slot should sit off-screen right.
+                // When transitioning: Active slot stays or moves left? Pending slot moves to 0.
+                // For simplicity in this codebase, we just fade pending ON TOP of active.
+                // The 'slide' effect logic here needs to be simpler:
+                // Active: opacity 1. Pending: opacity 0 -> 1 (fade)
+                // If we want slide: Pending starts translateX(100%), transitions to 0. Active stays at 0.
             } else {
                 // FADE (Default)
                 if (isActive) {
                     layerClass = "z-10 opacity-100 transition-none"; 
                 } else {
                     if (isTransitioning) {
+                        // This is the incoming buffer fading in on top
                         layerClass = "z-20 opacity-100 transition-opacity duration-1000 ease-in-out";
                     } else {
+                        // Hidden/Loading
                         layerClass = "z-20 opacity-0 transition-none";
                     }
                 }
@@ -534,7 +587,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                             isActive={isActive}
                             isMuted={config.muteVideos || !isAudioUnlocked}
                             onReady={() => handleBufferReady(slotIdx)}
-                            onError={() => prepareNextBuffer()} 
+                            onError={() => handleMediaError()} 
                             onVideoEnd={() => { if(isActive) handleVideoEnded(); }}
                             objectFit={objectFitClass}
                             animationStyle={config.animationStyle || 'random'}
@@ -565,7 +618,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             );
         })}
 
-        {currentItem && !config.muteVideos && !isAudioUnlocked && currentItem.type === 'video' && (
+        {buffers[activeSlot] && !config.muteVideos && !isAudioUnlocked && buffers[activeSlot]?.type === 'video' && (
              <div className="absolute top-8 left-8 z-[50] bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse pointer-events-none">
                  <VolumeX size={16} />
                  <span className="text-[10px] font-black uppercase tracking-widest">Muted</span>
