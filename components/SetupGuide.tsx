@@ -372,12 +372,16 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                           
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
                               <div>
-                                  <h3 className="text-xl font-black text-white uppercase tracking-tight mb-4">Bootstrap Protocol</h3>
-                                  <p className="text-sm text-slate-400 leading-relaxed mb-6">Initialize the backend state using this SQL. This establishes the full database schema, RLS policies, and storage required for the app.</p>
+                                  <h3 className="text-xl font-black text-white uppercase tracking-tight mb-4">Master Setup Protocol</h3>
+                                  <p className="text-sm text-slate-400 leading-relaxed mb-6">
+                                      Run this script in your Supabase SQL Editor. It is <strong>Idempotent</strong>: it creates missing tables and adds missing columns (like 'kind', 'promo_text') without deleting existing data.
+                                  </p>
                                   <CodeSnippet 
-                                    label="SQL Editor (Run This First)"
+                                    label="SQL Master Setup (Run This)"
                                     id="sql-boot"
-                                    code={`-- 1. CONFIGURATION & FLEET
+                                    code={`-- ==========================================
+-- 1. GLOBAL CONFIG & FLEET MANAGEMENT
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.store_config (
   id bigint PRIMARY KEY DEFAULT 1,
   data jsonb NOT NULL DEFAULT '{}'::jsonb
@@ -399,156 +403,15 @@ CREATE TABLE IF NOT EXISTS public.kiosks (
   show_pricelists boolean DEFAULT true
 );
 
--- 2. INVENTORY RELATIONAL TABLES
-CREATE TABLE IF NOT EXISTS public.brands (
-    id text PRIMARY KEY,
-    name text,
-    logo_url text,
-    theme_color text,
-    updated_at timestamptz DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.categories (
-    id text PRIMARY KEY,
-    brand_id text REFERENCES public.brands(id),
-    name text,
-    icon text,
-    updated_at timestamptz DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.products (
-    id text PRIMARY KEY,
-    category_id text REFERENCES public.categories(id),
-    name text,
-    sku text,
-    description text,
-    specs jsonb DEFAULT '{}'::jsonb,
-    features jsonb DEFAULT '[]'::jsonb,
-    image_url text,
-    gallery_urls jsonb DEFAULT '[]'::jsonb,
-    video_urls jsonb DEFAULT '[]'::jsonb,
-    manuals jsonb DEFAULT '[]'::jsonb,
-    box_contents jsonb DEFAULT '[]'::jsonb,
-    dimensions jsonb DEFAULT '[]'::jsonb,
-    terms text,
-    date_added timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-);
-
--- 3. PRICELIST MANAGEMENT
-CREATE TABLE IF NOT EXISTS public.pricelist_brands (
-    id text PRIMARY KEY,
-    name text,
-    logo_url text,
-    updated_at timestamptz DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.pricelists (
-    id text PRIMARY KEY,
-    brand_id text, -- Loose reference for robustness
-    title text,
-    month text,
-    year text,
-    url text,
-    thumbnail_url text,
-    type text,
-    kind text,
-    start_date text,
-    end_date text,
-    promo_text text,
-    items jsonb DEFAULT '[]'::jsonb,
-    headers jsonb DEFAULT '{}'::jsonb,
-    date_added timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-);
-
--- 4. ENABLE RLS & PUBLIC ACCESS
-ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pricelist_brands ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
-
--- Reset policies to allow anon full access (Client-Side Key Logic)
-DROP POLICY IF EXISTS "Public Access" ON public.store_config;
-DROP POLICY IF EXISTS "Public Access" ON public.kiosks;
-DROP POLICY IF EXISTS "Public Access" ON public.brands;
-DROP POLICY IF EXISTS "Public Access" ON public.categories;
-DROP POLICY IF EXISTS "Public Access" ON public.products;
-DROP POLICY IF EXISTS "Public Access" ON public.pricelist_brands;
-DROP POLICY IF EXISTS "Public Access" ON public.pricelists;
-
-CREATE POLICY "Public Access" ON public.store_config FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON public.brands FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON public.categories FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON public.products FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON public.pricelist_brands FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public Access" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
-
--- 5. STORAGE BUCKET CONFIGURATION
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('kiosk-media', 'kiosk-media', true) 
-ON CONFLICT (id) DO UPDATE SET public = true;
-
-DROP POLICY IF EXISTS "Public Media Access" ON storage.objects;
-CREATE POLICY "Public Media Access" ON storage.objects FOR ALL USING (bucket_id = 'kiosk-media') WITH CHECK (bucket_id = 'kiosk-media');
-
--- 6. REFRESH SCHEMA CACHE
-NOTIFY pgrst, 'reload schema';`}
-                                  />
-                              </div>
-                              <div className="space-y-6">
-                                  <ArchitectNote title="Snapshot Strategy">
-                                      We use a "Snapshot-First" architecture. Devices pull a massive JSON blob into local IndexedDB. This ensures <span className="text-white">Zero Latency</span> UI interactions, as the tablet never waits for a network request to render a product page.
-                                  </ArchitectNote>
-                                  <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl">
-                                      <div className="text-blue-400 text-xs font-black uppercase mb-2 flex items-center gap-2"><Lock size={14}/> Row Level Security (RLS)</div>
-                                      <p className="text-[11px] text-slate-400 leading-relaxed">RLS acts as a firewall at the database row level. Even if the API key is exposed, the policies defined in SQL restrict what actions can be taken.</p>
-                                  </div>
-                              </div>
-                          </div>
-                          <DiagramTroubleshoot />
-                      </div>
-                  )}
-
-                  {activeTab === 'migration' && (
-                      <div className="animate-fade-in">
-                          <SectionHeader icon={DatabaseZap} title="Normalization & Repair" subtitle="Relational Data Migration" />
-                          <DiagramNormalization />
-                          
-                          <div className="mt-12 space-y-8">
-                              <div className="bg-red-900/30 border-l-4 border-red-500 p-6 rounded-r-xl">
-                                  <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><Wrench size={16}/> Emergency Repair</h3>
-                                  <p className="text-slate-300 text-xs mt-2 leading-relaxed">
-                                      If you see <strong>404 Not Found</strong> errors for <code>brands</code> or <strong>400 Bad Request</strong> for <code>kiosks</code>, run this script immediately. It forces creation of all missing tables and refreshes the API cache.
-                                  </p>
-                              </div>
-
-                              <CodeSnippet 
-                                label="Master Repair Script"
-                                id="mig-master"
-                                code={`-- 1. FIX KIOSKS TABLE
-CREATE TABLE IF NOT EXISTS public.kiosks (
-    id text PRIMARY KEY,
-    name text NOT NULL,
-    status text DEFAULT 'online',
-    last_seen timestamptz DEFAULT now()
-);
-
+-- Ensure fleet columns exist if table was already made
 ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;
 ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS device_type text;
 ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS assigned_zone text;
-ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS wifi_strength int;
-ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS ip_address text;
-ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS version text;
-ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS location_description text;
-ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS notes text;
 ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS restart_requested boolean DEFAULT false;
 
--- 2. FIX INVENTORY TABLES
+-- ==========================================
+-- 2. INVENTORY ARCHITECTURE
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.brands (
     id text PRIMARY KEY,
     name text,
@@ -580,10 +443,13 @@ CREATE TABLE IF NOT EXISTS public.products (
     box_contents jsonb DEFAULT '[]'::jsonb,
     dimensions jsonb DEFAULT '[]'::jsonb,
     terms text,
-    date_added timestamptz,
+    date_added timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
 );
 
+-- ==========================================
+-- 3. PRICING & MARKETING ENGINE
+-- ==========================================
 CREATE TABLE IF NOT EXISTS public.pricelist_brands (
     id text PRIMARY KEY,
     name text,
@@ -610,7 +476,18 @@ CREATE TABLE IF NOT EXISTS public.pricelists (
     updated_at timestamptz DEFAULT now()
 );
 
--- 3. ENABLE PERMISSIONS (Fixes RLS errors)
+-- Force add columns to fix "400 Bad Request" errors
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS kind text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS start_date text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS end_date text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS promo_text text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS items jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS headers jsonb DEFAULT '{}'::jsonb;
+
+-- ==========================================
+-- 4. SECURITY & ACCESS (RLS)
+-- ==========================================
+ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
@@ -618,21 +495,95 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelist_brands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Allow All" ON public.kiosks;
-DROP POLICY IF EXISTS "Allow All" ON public.brands;
-DROP POLICY IF EXISTS "Allow All" ON public.categories;
-DROP POLICY IF EXISTS "Allow All" ON public.products;
-DROP POLICY IF EXISTS "Allow All" ON public.pricelist_brands;
-DROP POLICY IF EXISTS "Allow All" ON public.pricelists;
+-- Allow anonymous access (Required for this architecture)
+DROP POLICY IF EXISTS "Public Access" ON public.store_config;
+DROP POLICY IF EXISTS "Public Access" ON public.kiosks;
+DROP POLICY IF EXISTS "Public Access" ON public.brands;
+DROP POLICY IF EXISTS "Public Access" ON public.categories;
+DROP POLICY IF EXISTS "Public Access" ON public.products;
+DROP POLICY IF EXISTS "Public Access" ON public.pricelist_brands;
+DROP POLICY IF EXISTS "Public Access" ON public.pricelists;
 
-CREATE POLICY "Allow All" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All" ON public.brands FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All" ON public.categories FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All" ON public.products FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All" ON public.pricelist_brands FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow All" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.store_config FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.brands FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.categories FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.products FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.pricelist_brands FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public Access" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
 
--- 4. HARD RELOAD CACHE
+-- ==========================================
+-- 5. STORAGE BUCKET
+-- ==========================================
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('kiosk-media', 'kiosk-media', true) 
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public Media Access" ON storage.objects;
+CREATE POLICY "Public Media Access" ON storage.objects FOR ALL USING (bucket_id = 'kiosk-media') WITH CHECK (bucket_id = 'kiosk-media');
+
+-- Force schema cache reload
+NOTIFY pgrst, 'reload schema';`}
+                                  />
+                              </div>
+                              <div className="space-y-6">
+                                  <ArchitectNote title="Snapshot Strategy">
+                                      We use a "Snapshot-First" architecture. Devices pull a massive JSON blob into local IndexedDB. This ensures <span className="text-white">Zero Latency</span> UI interactions, as the tablet never waits for a network request to render a product page.
+                                  </ArchitectNote>
+                                  <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl">
+                                      <div className="text-blue-400 text-xs font-black uppercase mb-2 flex items-center gap-2"><Lock size={14}/> Row Level Security (RLS)</div>
+                                      <p className="text-[11px] text-slate-400 leading-relaxed">RLS acts as a firewall at the database row level. Even if the API key is exposed, the policies defined in SQL restrict what actions can be taken.</p>
+                                  </div>
+                              </div>
+                          </div>
+                          <DiagramTroubleshoot />
+                      </div>
+                  )}
+
+                  {activeTab === 'migration' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={DatabaseZap} title="Normalization & Repair" subtitle="Relational Data Migration" />
+                          <DiagramNormalization />
+                          
+                          <div className="mt-12 space-y-8">
+                              <div className="bg-red-900/30 border-l-4 border-red-500 p-6 rounded-r-xl">
+                                  <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><Wrench size={16}/> Emergency Repair</h3>
+                                  <p className="text-slate-300 text-xs mt-2 leading-relaxed">
+                                      If you see <strong>404 Not Found</strong> errors for <code>brands</code> or <strong>400 Bad Request</strong> for <code>kiosks</code> or <code>pricelists</code>, run these scripts immediately. They force creation of all missing columns and refresh the API cache.
+                                  </p>
+                              </div>
+
+                              <CodeSnippet 
+                                label="Fix Pricelists Table (Fixes 400 Bad Request)"
+                                id="fix-pricelists"
+                                code={`-- FIX PRICELISTS TABLE SCHEMA
+CREATE TABLE IF NOT EXISTS public.pricelists (
+    id text PRIMARY KEY,
+    brand_id text,
+    title text,
+    month text,
+    year text,
+    url text,
+    thumbnail_url text,
+    type text,
+    kind text,
+    start_date text,
+    end_date text,
+    promo_text text,
+    items jsonb DEFAULT '[]'::jsonb,
+    headers jsonb DEFAULT '{}'::jsonb,
+    date_added timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+-- Ensure all columns exist
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS kind text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS start_date text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS end_date text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS promo_text text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS items jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS headers jsonb DEFAULT '{}'::jsonb;
+
 NOTIFY pgrst, 'reload schema';`}
                               />
 
