@@ -161,6 +161,18 @@ export interface ScreensaverSettings {
   activeHoursStart?: string; // e.g. "08:00"
   activeHoursEnd?: string;   // e.g. "20:00"
   enableSleepMode?: boolean; // Turn screen black outside active hours
+  animationStyle?: 'random' | 'cinematic' | 'pulse' | 'static'; // Legacy mapping
+  
+  // Visual Enhancements
+  enableKenBurns?: boolean; // Toggles specific Pan/Zoom effect
+  transitionStyle?: 'fade' | 'slide'; // "Cross-Dissolve" | "Slide-Over"
+  showClock?: boolean;
+  textOverlay?: {
+      align: 'left' | 'center' | 'right';
+      size: 'sm' | 'md' | 'lg' | 'xl';
+      font: 'sans' | 'serif' | 'mono';
+      glow: boolean;
+  };
 }
 
 export interface KioskRegistry {
