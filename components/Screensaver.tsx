@@ -255,12 +255,21 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const playlistRef = useRef<PlaylistItem[]>([]); 
   
   // --- DOUBLE BUFFER STATE ---
-  // Slot 0 and Slot 1. Only ONE is active (visible) at a time. The other is either null or loading next.
   const [buffers, setBuffers] = useState<[PlaylistItem | null, PlaylistItem | null]>([null, null]);
   const [activeSlot, setActiveSlot] = useState<0 | 1>(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0);
   const [isSleepMode, setIsSleepMode] = useState(false);
+
+  // --- STATE REFS FOR STABLE CALLBACKS ---
+  // These are critical to prevent stale closure bugs in setTimeout loops
+  const activeSlotRef = useRef(activeSlot);
+  const playlistIndexRef = useRef(currentPlaylistIndex);
+  const isTransitioningRef = useRef(isTransitioning);
+
+  useEffect(() => { activeSlotRef.current = activeSlot; }, [activeSlot]);
+  useEffect(() => { playlistIndexRef.current = currentPlaylistIndex; }, [currentPlaylistIndex]);
+  useEffect(() => { isTransitioningRef.current = isTransitioning; }, [isTransitioning]);
 
   // Timers
   const slideTimerRef = useRef<number | null>(null);
@@ -353,7 +362,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           setCurrentPlaylistIndex(0);
           
           // Start timer for first slide immediately (assuming image)
-          // For video, the slide component will trigger ended or loaded.
           if (playlist[0].type === 'image') {
               if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
               slideTimerRef.current = window.setTimeout(() => {
@@ -363,17 +371,21 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       }
   }, [playlist]);
 
-  // 4. Scheduling Logic
+  // 4. Scheduling Logic - USE REFS TO PREVENT STALE CLOSURES
   const prepareNextBuffer = useCallback(() => {
-      if (isTransitioning) return; 
+      // NOTE: Using refs ensures this function always sees the latest state 
+      // even if called from an old setTimeout closure.
+      if (isTransitioningRef.current) return; 
       
       const currentList = playlistRef.current;
       if (currentList.length === 0) return;
 
-      let nextIdx = (currentPlaylistIndex + 1);
+      const currentIdx = playlistIndexRef.current;
+      let nextIdx = (currentIdx + 1);
       if (nextIdx >= currentList.length) nextIdx = 0;
 
-      const targetSlot = activeSlot === 0 ? 1 : 0; 
+      const currentActive = activeSlotRef.current;
+      const targetSlot = currentActive === 0 ? 1 : 0; 
 
       // Load next item into the target (currently empty) buffer slot
       setBuffers(prev => {
@@ -385,34 +397,28 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           return newB;
       });
       setCurrentPlaylistIndex(nextIdx);
-  }, [activeSlot, currentPlaylistIndex, isTransitioning]);
+  }, []); // No dependencies - extremely stable!
 
   // WATCHDOG: Detect frozen loading of the *pending* slot
   useEffect(() => {
-      // Find if we have a "pending" buffer (not null, but not active)
-      // This means we are waiting for onReady from it.
       const pendingSlot = buffers.findIndex((b, i) => b !== null && i !== activeSlot);
       
       if (pendingSlot !== -1) {
-          // We are waiting for this slot to trigger onReady. Start watchdog.
           if (loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current);
           
           const timeoutMs = buffers[pendingSlot]?.type === 'video' ? 15000 : 8000;
           
           loadingWatchdogRef.current = window.setTimeout(() => {
               console.warn(`Screensaver: Buffer ${pendingSlot} load timed out (${timeoutMs}ms). Skipping corrupt media.`);
-              // SKIP STRATEGY:
-              // 1. Clear the stuck buffer immediately to force DOM cleanup
               setBuffers(prev => {
                   const newB = [...prev] as [PlaylistItem | null, PlaylistItem | null];
                   newB[pendingSlot] = null;
                   return newB;
               });
-              // 2. Try next item
+              // Try next item immediately
               setTimeout(() => prepareNextBuffer(), 100);
           }, timeoutMs); 
       } else {
-          // Nothing loading, clean up watchdog
           if (loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current);
       }
       return () => { if(loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current); };
@@ -421,14 +427,15 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   // Handler for when a buffer reports it is loaded and ready to show
   const handleBufferReady = (slotIndex: number) => {
       // Only transition if the ready signal comes from the INACTIVE (pending) slot
-      if (slotIndex !== activeSlot && !isTransitioning && buffers[slotIndex]) {
+      // Check ref too for extra safety
+      if (slotIndex !== activeSlot && !isTransitioningRef.current && buffers[slotIndex]) {
           
-          // Clear watchdog as we are successfully ready
           if (loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current);
 
           setIsTransitioning(true);
+          // Manually update ref for sync safety in this cycle
+          isTransitioningRef.current = true;
 
-          // Allow CSS transition to complete (1s) before swapping active slot logic
           if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
           
           transitionTimeoutRef.current = window.setTimeout(() => {
@@ -444,6 +451,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
               });
 
               // Schedule next cycle
+              // We use the buffer from the *current* closure, which is the one that just became active.
               const currentItem = buffers[slotIndex];
               if (currentItem) {
                   const duration = (config.imageDuration || 8) * 1000;
@@ -453,8 +461,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                           prepareNextBuffer();
                       }, duration);
                   } else {
-                      // For video, we wait for onVideoEnd, but set a safety net
-                      // max 3 mins per video
+                      // For video, wait for onVideoEnd, but set safety net
                       if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
                       slideTimerRef.current = window.setTimeout(() => {
                           prepareNextBuffer();
@@ -462,7 +469,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                   }
               }
 
-          }, 1000); // Matches CSS transition duration
+          }, 1000); 
       }
   };
 
@@ -472,7 +479,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   };
 
   const handleMediaError = () => {
-      // If active media errors, skip immediately
       if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
       prepareNextBuffer();
   };
@@ -528,44 +534,28 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
         {config.showClock && <ClockWidget />}
 
-        {/* Render Both Buffers */}
         {[0, 1].map((slotIdx) => {
             const item = buffers[slotIdx];
             const isActive = activeSlot === slotIdx;
             
-            // Calculate Layer Transitions
             let layerClass = "";
             if (config.transitionType === 'slide') {
                 if (isActive) {
                     layerClass = "z-10 translate-x-0 transition-none"; 
                 } else {
                     if (isTransitioning) {
-                        // Incoming slide (the pending one becoming active)
-                        // If I am pending (slotIdx != activeSlot) AND transition is happening, I am sliding IN.
                         layerClass = "z-20 translate-x-0 transition-transform duration-1000 ease-in-out";
                     } else {
-                        // Resting state off-screen
                         layerClass = "z-20 translate-x-full transition-none";
                     }
                 }
-                // Fix for slide logic:
-                // Active slot should sit at 0.
-                // Pending slot should sit off-screen right.
-                // When transitioning: Active slot stays or moves left? Pending slot moves to 0.
-                // For simplicity in this codebase, we just fade pending ON TOP of active.
-                // The 'slide' effect logic here needs to be simpler:
-                // Active: opacity 1. Pending: opacity 0 -> 1 (fade)
-                // If we want slide: Pending starts translateX(100%), transitions to 0. Active stays at 0.
             } else {
-                // FADE (Default)
                 if (isActive) {
                     layerClass = "z-10 opacity-100 transition-none"; 
                 } else {
                     if (isTransitioning) {
-                        // This is the incoming buffer fading in on top
                         layerClass = "z-20 opacity-100 transition-opacity duration-1000 ease-in-out";
                     } else {
-                        // Hidden/Loading
                         layerClass = "z-20 opacity-0 transition-none";
                     }
                 }
