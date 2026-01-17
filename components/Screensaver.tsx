@@ -301,17 +301,28 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
         // Only update if the pending slot is not already holding the correct item
         if (slots[pendingSlot]?.id !== nextItem.id) {
-            setSlots(prev => {
-                const newSlots = [...prev] as [PlaylistItem | null, PlaylistItem | null];
-                newSlots[pendingSlot] = nextItem;
-                return newSlots;
-            });
-            // Mark as loading immediately. Slide component will flip this to ready/error.
-            setSlotStatus(prev => {
-                const newStatus = [...prev] as [SlotStatus, SlotStatus];
-                newStatus[pendingSlot] = 'loading';
-                return newStatus;
-            });
+            // RESOURCE CONTENTION FIX:
+            // Delay the preloading of the NEXT slide by 2.5 seconds.
+            // This allows the CURRENT slide (especially video) to fill its buffer
+            // and start playing smoothly before we hog the bandwidth with the next download.
+            // This effectively serializes the heavy network usage.
+            const contentionDelay = 2500;
+
+            const timer = setTimeout(() => {
+                setSlots(prev => {
+                    const newSlots = [...prev] as [PlaylistItem | null, PlaylistItem | null];
+                    newSlots[pendingSlot] = nextItem;
+                    return newSlots;
+                });
+                // Mark as loading immediately. Slide component will flip this to ready/error.
+                setSlotStatus(prev => {
+                    const newStatus = [...prev] as [SlotStatus, SlotStatus];
+                    newStatus[pendingSlot] = 'loading';
+                    return newStatus;
+                });
+            }, contentionDelay);
+
+            return () => clearTimeout(timer);
         }
     }, [activeSlot, currentIdx, playlist]);
 
@@ -468,24 +479,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             {[0, 1].map((idx) => {
                 const item = slots[idx];
                 const isActiveSlot = activeSlot === idx;
-                
-                // Opacity Logic:
-                // Active slot is opacity 1.
-                // Pending slot is opacity 0 UNTIL isTransitioning becomes true (if transitionType is fade).
-                // Actually simpler: Active is 1. Pending is 0. 
-                // BUT during transition (1s), we swap activeSlot at the END of transition.
-                // So: if isTransitioning, current Active fades out? No, cross dissolve means NEW comes in.
-                
-                // Let's rely on standard logic:
-                // If isActiveSlot: opacity 1.
-                // If NOT isActiveSlot: opacity 0.
-                // But `activeSlot` only updates AFTER the timeout.
-                // So we need `isTransitioning` to manage the visual cross-fade?
-                // Actually, let's keep it simple: We map [0,1].
-                // The `activeSlot` state variable points to the slot that SHOULD be fully visible.
-                // Wait, in my logic above: `setActiveSlot(pendingSlot)` happens AFTER 1s timeout.
-                // So during `isTransitioning`, `activeSlot` is still the OLD one.
-                // So we need to visualize the PENDING slot fading IN during `isTransitioning`.
                 
                 let opacityClass = 'opacity-0 z-0';
                 if (isActiveSlot && !isTransitioning) {

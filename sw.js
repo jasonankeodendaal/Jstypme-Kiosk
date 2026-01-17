@@ -1,5 +1,5 @@
 
-// Service Worker for Kiosk Pro v5.2 (Firefox Stability Enhanced)
+// Service Worker for Kiosk Pro v5.3 (Media Stream Optimized)
 const CACHE_NAME = 'kiosk-pro-v5';
 
 const PRECACHE_URLS = [
@@ -34,66 +34,15 @@ self.addEventListener('activate', (event) => {
 });
 
 /**
- * Enhanced Range Request Handler for Firefox.
- * Fixes freezing issues where Firefox media probe hangs on partial content.
+ * Enhanced Range Request Handler.
+ * CRITICAL FIX: Bypasses Service Worker Cache for media files.
+ * Caching large video files in SW causes disk I/O contention on tablets,
+ * leading to playback freezes. We rely on the browser's native media cache instead.
  */
 const handleRangeRequest = async (request) => {
-  const cache = await caches.open(CACHE_NAME);
-  let response = await cache.match(request);
-
-  if (!response) {
-    try {
-      response = await fetch(request);
-      // Only cache full successful responses
-      if (response.status === 200) {
-        const copy = response.clone();
-        cache.put(request, copy);
-      } else if (response.status === 206) {
-          // If network returns 206 directly, just pass it through without caching
-          return response;
-      }
-    } catch (e) {
-      return new Response(null, { status: 404 });
-    }
-  }
-
-  const rangeHeader = request.headers.get('Range');
-  if (rangeHeader) {
-    try {
-      const arrayBuffer = await response.arrayBuffer();
-      const bytes = rangeHeader.replace(/bytes=/, "").split("-");
-      const start = parseInt(bytes[0], 10);
-      const total = arrayBuffer.byteLength;
-      const end = bytes[1] ? parseInt(bytes[1], 10) : total - 1;
-      
-      if (start >= total || end >= total) {
-          return new Response(null, { 
-              status: 416, 
-              headers: { 'Content-Range': `bytes */${total}` } 
-          });
-      }
-
-      const chunk = arrayBuffer.slice(start, end + 1);
-      
-      return new Response(chunk, {
-        status: 206,
-        statusText: 'Partial Content',
-        headers: new Headers({
-          'Content-Type': response.headers.get('Content-Type') || 'video/mp4',
-          'Accept-Ranges': 'bytes',
-          'Content-Range': `bytes ${start}-${end}/${total}`,
-          'Content-Length': chunk.byteLength.toString(),
-          'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'no-cache'
-        }),
-      });
-    } catch (e) {
-      // Fallback to network if slicing fails
-      return fetch(request);
-    }
-  }
-
-  return response;
+  // Pass through directly to network.
+  // The browser's native video player handles Range headers (206 Partial Content) efficiently.
+  return fetch(request);
 };
 
 self.addEventListener('fetch', (event) => {
@@ -119,6 +68,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then(res => {
+        // Only cache valid 200 responses
         if (res.status === 200 && event.request.method === 'GET') {
           const copy = res.clone();
           caches.open(CACHE_NAME).then(c => c.put(event.request, copy));
