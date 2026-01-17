@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef, memo, useCallback, useMemo } from 'react';
 import { FlatProduct, AdItem, Catalogue, ScreensaverSettings } from '../types';
-import { Moon, VolumeX, Loader2, AlertCircle } from 'lucide-react';
+import { Moon, VolumeX, Clock as ClockIcon } from 'lucide-react';
 
 interface ScreensaverProps {
   products: FlatProduct[];
@@ -23,6 +23,23 @@ interface PlaylistItem {
   dateAdded?: string;
 }
 
+// Clock Widget Component
+const ClockWidget = () => {
+    const [time, setTime] = useState(new Date());
+    useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+    return (
+        <div className="absolute top-8 right-8 z-[60] bg-black/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10 flex items-center gap-3 shadow-2xl animate-fade-in">
+            <ClockIcon className="text-blue-400" size={20} />
+            <div className="text-white font-mono font-bold text-xl tracking-widest">
+                {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+        </div>
+    );
+};
+
 // Internal Slide Component - Handles Media Loading & Playback
 const Slide = memo(({ 
     item, 
@@ -32,7 +49,8 @@ const Slide = memo(({
     onError, 
     onVideoEnd, 
     objectFit,
-    animationStyle
+    animationStyle,
+    forceKenBurns
 }: { 
     item: PlaylistItem; 
     isMuted: boolean; 
@@ -42,6 +60,7 @@ const Slide = memo(({
     onVideoEnd: () => void; 
     objectFit: string;
     animationStyle: 'random' | 'cinematic' | 'pulse' | 'static';
+    forceKenBurns: boolean;
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [animEffect, setAnimEffect] = useState('');
@@ -57,27 +76,32 @@ const Slide = memo(({
         let selectedEffect = '';
 
         if (item.type === 'image') {
-            switch (animationStyle) {
-                case 'cinematic':
-                    selectedEffect = cinematicEffects[Math.floor(Math.random() * cinematicEffects.length)];
-                    break;
-                case 'pulse':
-                    selectedEffect = pulseEffects[Math.floor(Math.random() * pulseEffects.length)];
-                    break;
-                case 'static':
-                    selectedEffect = ''; // No animation
-                    break;
-                case 'random':
-                default:
-                    selectedEffect = randomEffects[Math.floor(Math.random() * randomEffects.length)];
-                    break;
+            if (forceKenBurns) {
+                // Ken Burns overrides everything to cinematic
+                selectedEffect = cinematicEffects[Math.floor(Math.random() * cinematicEffects.length)];
+            } else {
+                switch (animationStyle) {
+                    case 'cinematic':
+                        selectedEffect = cinematicEffects[Math.floor(Math.random() * cinematicEffects.length)];
+                        break;
+                    case 'pulse':
+                        selectedEffect = pulseEffects[Math.floor(Math.random() * pulseEffects.length)];
+                        break;
+                    case 'static':
+                        selectedEffect = ''; // No animation
+                        break;
+                    case 'random':
+                    default:
+                        selectedEffect = randomEffects[Math.floor(Math.random() * randomEffects.length)];
+                        break;
+                }
             }
             setAnimEffect(selectedEffect);
         } else {
             setAnimEffect('effect-fade-in');
         }
         setHasReadyFired(false);
-    }, [item.id, animationStyle]);
+    }, [item.id, animationStyle, forceKenBurns]);
 
     const handleReady = useCallback(() => {
         if (!hasReadyFired) {
@@ -163,6 +187,13 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
       activeHoursStart: '08:00',
       activeHoursEnd: '20:00',
       animationStyle: 'random',
+      enableKenBurns: false,
+      transitionType: 'fade',
+      textGlow: false,
+      showClock: false,
+      textAlignment: 'left',
+      fontFamily: 'sans',
+      fontSize: 'medium',
       ...settings
   }), [settings]);
 
@@ -388,6 +419,23 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   const currentItem = buffers[activeSlot];
   const objectFitClass = config.displayStyle === 'cover' ? 'object-cover' : 'object-contain';
 
+  // Dynamic Text Styles
+  const alignClass = config.textAlignment === 'center' ? 'text-center items-center left-0 right-0 max-w-[90%] mx-auto' 
+                   : config.textAlignment === 'right' ? 'text-right items-end right-10 md:right-20 left-auto max-w-[70%]' 
+                   : 'text-left items-start left-10 md:left-20 max-w-[70%]'; // Default left
+  
+  const fontClass = config.fontFamily === 'serif' ? 'font-serif' : config.fontFamily === 'mono' ? 'font-mono' : 'font-sans';
+  
+  const sizeClassTitle = config.fontSize === 'small' ? 'text-xl md:text-3xl' 
+                       : config.fontSize === 'large' ? 'text-4xl sm:text-6xl md:text-8xl' 
+                       : 'text-2xl sm:text-3xl md:text-5xl'; // Medium default
+  
+  const sizeClassSub = config.fontSize === 'small' ? 'text-[10px] md:text-sm' 
+                     : config.fontSize === 'large' ? 'text-sm md:text-2xl' 
+                     : 'text-xs md:text-xl'; // Medium default
+
+  const glowClass = config.textGlow ? 'drop-shadow-[0_0_25px_rgba(59,130,246,0.8)]' : 'drop-shadow-2xl';
+
   return (
     <div onClick={onWake} className="fixed inset-0 z-[100] bg-black cursor-pointer overflow-hidden select-none">
         <style>{`
@@ -437,19 +485,36 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             @keyframes infoSlideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
         `}</style>
 
+        {config.showClock && <ClockWidget />}
+
         {/* Render Both Buffers */}
         {[0, 1].map((slotIdx) => {
             const item = buffers[slotIdx];
             const isActive = activeSlot === slotIdx;
             
             let layerClass = "";
-            if (isActive) {
-                layerClass = "z-10 opacity-100 transition-none"; 
-            } else {
-                if (isTransitioning) {
-                    layerClass = "z-20 opacity-100 transition-opacity duration-1000 ease-in-out";
+            if (config.transitionType === 'slide') {
+                if (isActive) {
+                    layerClass = "z-10 translate-x-0 transition-none"; 
                 } else {
-                    layerClass = "z-20 opacity-0 transition-none";
+                    if (isTransitioning) {
+                        // Incoming slide
+                        layerClass = "z-20 translate-x-0 transition-transform duration-1000 ease-in-out";
+                    } else {
+                        // Resting state off-screen
+                        layerClass = "z-20 translate-x-full transition-none";
+                    }
+                }
+            } else {
+                // FADE (Default)
+                if (isActive) {
+                    layerClass = "z-10 opacity-100 transition-none"; 
+                } else {
+                    if (isTransitioning) {
+                        layerClass = "z-20 opacity-100 transition-opacity duration-1000 ease-in-out";
+                    } else {
+                        layerClass = "z-20 opacity-0 transition-none";
+                    }
                 }
             }
 
@@ -473,14 +538,15 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                             onVideoEnd={() => { if(isActive) handleVideoEnded(); }}
                             objectFit={objectFitClass}
                             animationStyle={config.animationStyle || 'random'}
+                            forceKenBurns={!!config.enableKenBurns}
                         />
                     </div>
 
                     {config.showInfoOverlay && (item.title || item.subtitle) && (
-                        <div className="absolute bottom-12 left-10 md:bottom-20 md:left-20 max-w-[80%] md:max-w-[70%] z-30 pointer-events-none">
+                        <div className={`absolute bottom-12 md:bottom-20 z-30 pointer-events-none flex flex-col ${alignClass} ${fontClass}`}>
                             {item.title && (
                                 <div className={isActive ? "info-slide-up" : ""}>
-                                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white uppercase tracking-tighter drop-shadow-2xl mb-2 leading-tight">
+                                    <h1 className={`${sizeClassTitle} font-black text-white uppercase tracking-tighter mb-2 leading-tight ${glowClass}`}>
                                         {item.title}
                                     </h1>
                                     <div className="h-1.5 w-20 bg-blue-600 mt-2 mb-4 rounded-full shadow-lg shadow-blue-600/50"></div>
@@ -488,7 +554,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                             )}
                             {item.subtitle && (
                                 <div className={`bg-white/10 backdrop-blur-xl border border-white/20 px-5 py-2.5 rounded-2xl w-fit shadow-2xl ${isActive ? "info-slide-up" : ""}`}>
-                                    <p className="text-white text-xs md:text-xl font-black uppercase tracking-[0.2em]">
+                                    <p className={`${sizeClassSub} text-white font-black uppercase tracking-[0.2em] ${config.textGlow ? 'animate-pulse' : ''}`}>
                                         {item.subtitle}
                                     </p>
                                 </div>
@@ -500,7 +566,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         })}
 
         {currentItem && !config.muteVideos && !isAudioUnlocked && currentItem.type === 'video' && (
-             <div className="absolute top-8 right-8 z-[50] bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse pointer-events-none">
+             <div className="absolute top-8 left-8 z-[50] bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse pointer-events-none">
                  <VolumeX size={16} />
                  <span className="text-[10px] font-black uppercase tracking-widest">Muted</span>
              </div>

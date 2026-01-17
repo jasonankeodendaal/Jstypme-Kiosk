@@ -162,6 +162,14 @@ export interface ScreensaverSettings {
   activeHoursEnd?: string;   // e.g. "20:00"
   enableSleepMode?: boolean; // Turn screen black outside active hours
   animationStyle?: 'random' | 'cinematic' | 'pulse' | 'static'; // New: Visual Mood
+  // New Visual Enhancements
+  enableKenBurns?: boolean;
+  transitionType?: 'fade' | 'slide';
+  textGlow?: boolean;
+  showClock?: boolean;
+  textAlignment?: 'left' | 'center' | 'right';
+  fontFamily?: 'sans' | 'serif' | 'mono';
+  fontSize?: 'small' | 'medium' | 'large';
 }
 
 export interface KioskRegistry {
