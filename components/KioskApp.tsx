@@ -1053,7 +1053,12 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
 
   const allProductsFlat = useMemo(() => {
       if (!storeData?.brands) return [];
-      return storeData.brands.flatMap(b => (b.categories || []).flatMap(c => (c.products || []).map(p => ({...p, brandName: b.name, categoryName: c.name} as FlatProduct))));
+      return storeData.brands.flatMap(b => (b.categories || []).flatMap(c => (c.products || []).map(p => ({
+          ...p, 
+          brandName: b.name, 
+          categoryName: c.name,
+          brandThemeColor: b.themeColor
+      } as FlatProduct))));
   }, [storeData?.brands]);
 
   const pricelistBrands = useMemo(() => (storeData?.pricelistBrands || []).slice().sort((a, b) => a.name.localeCompare(b.name)), [storeData?.pricelistBrands]);

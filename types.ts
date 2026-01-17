@@ -262,4 +262,5 @@ export interface StoreData {
 export interface FlatProduct extends Product {
   brandName: string;
   categoryName: string;
+  brandThemeColor?: string;
 }

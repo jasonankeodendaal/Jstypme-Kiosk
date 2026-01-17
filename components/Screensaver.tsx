@@ -19,6 +19,7 @@ interface PlaylistItem {
   title?: string;
   subtitle?: string;
   dateAdded?: string;
+  themeColor?: string; // Brand theme color for ambient background
 }
 
 type SlotStatus = 'empty' | 'loading' | 'ready' | 'error';
@@ -264,10 +265,33 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         }
         products.forEach(p => {
             if (!shouldInclude(p.dateAdded)) return;
-            if (settings?.showProductImages && p.imageUrl) list.push({ id: `p-img-${p.id}`, type: 'image', url: p.imageUrl, title: p.brandName, subtitle: p.name });
+            if (settings?.showProductImages && p.imageUrl) list.push({ 
+                id: `p-img-${p.id}`, 
+                type: 'image', 
+                url: p.imageUrl, 
+                title: p.brandName, 
+                subtitle: p.name,
+                themeColor: p.brandThemeColor 
+            });
             if (settings?.showProductVideos) {
-                if (p.videoUrl) list.push({ id: `p-vid-${p.id}`, type: 'video', url: p.videoUrl, title: p.brandName, subtitle: p.name });
-                p.videoUrls?.forEach((v, i) => { if(v !== p.videoUrl) list.push({ id: `p-vid-${p.id}-${i}`, type: 'video', url: v, title: p.brandName, subtitle: p.name }); });
+                if (p.videoUrl) list.push({ 
+                    id: `p-vid-${p.id}`, 
+                    type: 'video', 
+                    url: p.videoUrl, 
+                    title: p.brandName, 
+                    subtitle: p.name,
+                    themeColor: p.brandThemeColor 
+                });
+                p.videoUrls?.forEach((v, i) => { 
+                    if(v !== p.videoUrl) list.push({ 
+                        id: `p-vid-${p.id}-${i}`, 
+                        type: 'video', 
+                        url: v, 
+                        title: p.brandName, 
+                        subtitle: p.name,
+                        themeColor: p.brandThemeColor 
+                    }); 
+                });
             }
         });
 
@@ -522,10 +546,12 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
                 return (
                     <div key={`slot-${idx}`} className={`slide-layer ${opacityClass}`}>
-                        {/* Background Blur */}
+                        {/* Background Gradient - Performance Optimized: Static color prevents dual video decode */}
                         <div 
-                            className="absolute inset-0 z-0 opacity-40 blur-[60px] scale-110 transition-all duration-1000"
-                            style={{ backgroundImage: `url(${item.url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                            className="absolute inset-0 z-0"
+                            style={{ 
+                                background: `radial-gradient(circle at center, ${item.themeColor || '#1e293b'} 0%, #000000 85%)` 
+                            }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 z-10" />
                         
