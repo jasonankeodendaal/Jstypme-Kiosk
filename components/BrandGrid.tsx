@@ -17,14 +17,17 @@ interface BrandGridProps {
   deviceType?: string;
 }
 
-// Improved AdUnit with robust playback logic for Firefox
+// Improved AdUnit with robust playback logic for Firefox & Error Recovery
 const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const timeoutRef = useRef<number | null>(null);
 
+    // Reset index safely when items array changes significantly (length diff)
     useEffect(() => {
-        setCurrentIndex(0);
+        if (!items || items.length === 0) return;
+        // Keep current index if valid, otherwise reset
+        setCurrentIndex(prev => prev >= items.length ? 0 : prev);
     }, [items?.length]);
 
     const activeItem = items && items.length > 0 ? items[currentIndex % items.length] : null;
@@ -33,24 +36,34 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
     const nextIndex = items && items.length > 0 ? (currentIndex + 1) % items.length : 0;
     const nextItem = items && items.length > 0 ? items[nextIndex] : null;
 
+    const advanceSlide = () => {
+        if (items && items.length > 0) {
+            setCurrentIndex(prev => (prev + 1) % items.length);
+        }
+    };
+
     useEffect(() => {
         if (!activeItem) return;
-        if (items && items.length <= 1 && activeItem.type !== 'video') return;
-
+        // If only 1 item and it's video, we rely on onEnded/loop. If image, no timer needed unless we want to refresh?
+        // Actually, if 1 item is video, we want to loop it.
+        
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
         if (activeItem.type === 'image') {
-            timeoutRef.current = window.setTimeout(() => {
-                setCurrentIndex(prev => (prev + 1) % items!.length);
-            }, 6000);
+            // Only cycle if we have multiple items
+            if (items && items.length > 1) {
+                timeoutRef.current = window.setTimeout(advanceSlide, 6000);
+            }
         } else {
+            // Video Fallback Timer: If video hangs or metadata fails, skip after 3 mins
             if(videoRef.current) {
                 videoRef.current.muted = true;
-                videoRef.current.play().catch(() => {});
+                videoRef.current.play().catch(() => {
+                    // Autoplay failed? Force next.
+                    advanceSlide();
+                });
             }
-            timeoutRef.current = window.setTimeout(() => {
-                setCurrentIndex(prev => (prev + 1) % items!.length);
-            }, 180000);
+            timeoutRef.current = window.setTimeout(advanceSlide, 180000); // 3m watchdog
         }
 
         return () => {
@@ -64,10 +77,18 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
 
     const handleVideoEnded = () => {
         if (items.length > 1) {
-            setCurrentIndex(prev => (prev + 1) % items.length);
+            advanceSlide();
         } else if (videoRef.current) {
             videoRef.current.currentTime = 0;
-            videoRef.current.play().catch(e => {});
+            videoRef.current.play().catch(() => {});
+        }
+    };
+
+    const handleError = () => {
+        console.warn("AdUnit: Media failed to load, skipping...", activeItem?.url);
+        // Force skip to next item immediately to prevent freeze
+        if (items.length > 1) {
+            advanceSlide();
         }
     };
 
@@ -87,6 +108,7 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                         loop={items.length === 1}
                         className="w-full h-full object-cover"
                         onEnded={handleVideoEnded}
+                        onError={handleError} 
                         onLoadedMetadata={() => {
                             if (videoRef.current) {
                                 videoRef.current.muted = true;
@@ -100,6 +122,7 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                         alt="Advertisement" 
                         loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                        onError={handleError}
                     />
                 )}
             </div>

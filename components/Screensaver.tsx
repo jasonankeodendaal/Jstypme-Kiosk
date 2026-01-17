@@ -120,6 +120,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   }), [settings]);
 
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
+  const playlistRef = useRef<PlaylistItem[]>([]); // Ref to access latest playlist in stale closures
   
   // --- DOUBLE BUFFER STATE ---
   // Slot 0 and Slot 1. One is Active (visible bottom), one is Buffer (loading top).
@@ -200,12 +201,13 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     }
 
     setPlaylist(list);
-  }, [products.length, ads.length, pamphlets.length, config.showProductImages, config.showProductVideos]);
+    playlistRef.current = list;
+  }, [products, ads, pamphlets, config]); // Deep dependencies to ensure updates trigger regeneration
 
   // 3. Initialize Buffers
   useEffect(() => {
-      if (playlist.length > 0 && !buffers[0] && !buffers[1]) {
-          // Initial load: Put first item in Slot 0, set it active.
+      // If screensaver hasn't started or playlist is empty/fresh, start it
+      if (playlist.length > 0 && (!buffers[0] && !buffers[1])) {
           setBuffers([playlist[0], null]);
           setActiveSlot(0);
           setCurrentPlaylistIndex(0);
@@ -216,7 +218,8 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   // 4. Scheduling Logic
   const scheduleNextSlide = useCallback((currentItem: PlaylistItem | null) => {
       if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
-      if (!currentItem || playlist.length <= 1 || isSleepMode) return;
+      // Use ref to check length to be safe against stale closure, though deps handle it usually
+      if (!currentItem || playlistRef.current.length <= 1 || isSleepMode) return;
 
       const duration = (config.imageDuration || 8) * 1000;
 
@@ -231,18 +234,25 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
               prepareNextBuffer();
           }, 180000); 
       }
-  }, [config.imageDuration, playlist.length, isSleepMode]);
+  }, [config.imageDuration, isSleepMode]); // Removed playlist.length dep as we use ref internally
 
   const prepareNextBuffer = () => {
       if (isTransitioning) return; // Already moving
       
-      const nextIdx = (currentPlaylistIndex + 1) % playlist.length;
+      const currentList = playlistRef.current; // ALWAYS USE REF
+      if (currentList.length === 0) return;
+
+      // Calculate next index safely using the ref length
+      // We rely on currentPlaylistIndex state, but if list shrank, wrap it
+      let nextIdx = (currentPlaylistIndex + 1);
+      if (nextIdx >= currentList.length) nextIdx = 0;
+
       const targetSlot = activeSlot === 0 ? 1 : 0; // The hidden slot
 
       // Load next item into the target buffer slot
       setBuffers(prev => {
           const newB = [...prev] as [PlaylistItem | null, PlaylistItem | null];
-          newB[targetSlot] = playlist[nextIdx];
+          newB[targetSlot] = currentList[nextIdx];
           return newB;
       });
       setCurrentPlaylistIndex(nextIdx);
