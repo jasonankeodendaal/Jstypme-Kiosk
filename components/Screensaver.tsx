@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef, memo, useCallback, useMemo } from 'react';
 import { FlatProduct, AdItem, Catalogue, ScreensaverSettings } from '../types';
-import { Moon, VolumeX, Loader2 } from 'lucide-react';
+import { Moon, VolumeX, Loader2, AlertCircle } from 'lucide-react';
 
 interface ScreensaverProps {
   products: FlatProduct[];
@@ -43,6 +43,7 @@ const Slide = memo(({
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [animEffect, setAnimEffect] = useState('');
+    const [hasReadyFired, setHasReadyFired] = useState(false);
 
     useEffect(() => {
         const imageEffects = ['effect-smooth-zoom', 'effect-subtle-drift', 'effect-soft-scale', 'effect-gentle-pan'];
@@ -51,26 +52,41 @@ const Slide = memo(({
         } else {
             setAnimEffect('effect-fade-in');
         }
+        setHasReadyFired(false);
     }, [item.id]);
+
+    const handleReady = useCallback(() => {
+        if (!hasReadyFired) {
+            setHasReadyFired(true);
+            onReady();
+        }
+    }, [hasReadyFired, onReady]);
 
     useEffect(() => {
         if (item.type === 'video' && videoRef.current) {
-            // Always attempt to play to ensure buffer is filling
-            // We control audio via the prop
+            // Firefox Fix: Explicitly load to reset decoder state
+            videoRef.current.load();
             videoRef.current.muted = isMuted;
-            const p = videoRef.current.play();
-            if (p) {
-                p.catch(e => {
-                    console.warn("Autoplay blocked/failed", e);
-                    // Fallback to muted if failed (though we likely already muted)
-                    if (videoRef.current) {
-                        videoRef.current.muted = true;
-                        videoRef.current.play().catch(() => {});
-                    }
-                });
-            }
+            
+            const attemptPlay = () => {
+                if(!videoRef.current) return;
+                const p = videoRef.current.play();
+                if (p) {
+                    p.catch(e => {
+                        console.warn("Autoplay blocked/failed", e);
+                        // Fallback to muted if failed (though we likely already muted)
+                        if (videoRef.current) {
+                            videoRef.current.muted = true;
+                            videoRef.current.play().catch(() => {});
+                        }
+                    });
+                }
+            };
+            
+            // Slight delay to ensure DOM is ready
+            setTimeout(attemptPlay, 50);
         }
-    }, [item.type, isMuted, item.id]); // Re-run on item change
+    }, [item.type, isMuted, item.id]); 
 
     if (item.type === 'video') {
         return (
@@ -81,10 +97,16 @@ const Slide = memo(({
                 muted={isMuted}
                 playsInline
                 preload="auto"
-                onCanPlay={() => onReady()} // Critical: Only ready when playable
+                onCanPlay={handleReady} 
+                onLoadedData={handleReady} // Backup trigger
                 onEnded={onVideoEnd}
-                onError={onError}
-                loop={false} // We handle looping manually via onVideoEnd to trigger slide change
+                onError={(e) => { console.warn("Video Error", e); onError(); }}
+                onStalled={() => { 
+                    // If stalled for too long and active, force next. 
+                    // If loading, the parent watchdog will catch it.
+                    console.warn("Video Stalled");
+                }}
+                loop={false} 
             />
         );
     }
@@ -95,7 +117,7 @@ const Slide = memo(({
             alt="Screensaver"
             className={`w-full h-full ${objectFit} ${isActive ? animEffect : ''}`}
             loading="eager"
-            onLoad={() => onReady()} // Critical: Only ready when loaded
+            onLoad={handleReady} 
             onError={onError}
         />
     );
@@ -120,10 +142,9 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   }), [settings]);
 
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
-  const playlistRef = useRef<PlaylistItem[]>([]); // Ref to access latest playlist in stale closures
+  const playlistRef = useRef<PlaylistItem[]>([]); 
   
   // --- DOUBLE BUFFER STATE ---
-  // Slot 0 and Slot 1. One is Active (visible bottom), one is Buffer (loading top).
   const [buffers, setBuffers] = useState<[PlaylistItem | null, PlaylistItem | null]>([null, null]);
   const [activeSlot, setActiveSlot] = useState<0 | 1>(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -133,12 +154,14 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   // Timers
   const slideTimerRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
+  const loadingWatchdogRef = useRef<number | null>(null);
 
   // 0. Cleanup Timers on Unmount
   useEffect(() => {
       return () => {
           if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
           if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+          if (loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current);
       };
   }, []);
 
@@ -179,7 +202,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     if (config.showCustomAds) {
         ads.forEach((ad, i) => {
           if (shouldIncludeItem(ad.dateAdded)) {
-            // Add multiple entries to increase frequency
             for(let c=0; c<3; c++) list.push({ id: `ad-${ad.id}-${i}-${c}`, type: ad.type, url: ad.url, title: "Sponsored", subtitle: "", dateAdded: ad.dateAdded });
           }
         });
@@ -202,7 +224,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         }
     });
 
-    // Shuffle
     for (let i = list.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [list[i], list[j]] = [list[j], list[i]];
@@ -210,53 +231,33 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
     setPlaylist(list);
     playlistRef.current = list;
-  }, [products, ads, pamphlets, config]); // Deep dependencies to ensure updates trigger regeneration
+  }, [products, ads, pamphlets, config]);
 
   // 3. Initialize Buffers
   useEffect(() => {
-      // If screensaver hasn't started or playlist is empty/fresh, start it
       if (playlist.length > 0 && (!buffers[0] && !buffers[1])) {
           setBuffers([playlist[0], null]);
           setActiveSlot(0);
           setCurrentPlaylistIndex(0);
-          // Manually schedule first slide move (which will just trigger the timer for the *next* slide)
-          // Actually, we just need to wait for the first slide to render, it will play/show.
-          // Then we need to schedule the PREPARATION of the next slide.
-          
-          // But since buffers[0] is active, we need to manually trigger "scheduleNextSlide" 
-          // effectively starting the timer.
           if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
           const duration = (config.imageDuration || 8) * 1000;
-          
           if (playlist[0].type === 'image') {
-              slideTimerRef.current = window.setTimeout(() => {
-                  // We can't call prepareNextBuffer directly here because we need it to be fresh.
-                  // We trigger a state update cycle? No, just call the logic.
-                  // Since this effect runs once on playlist change, we can trust a self-contained helper 
-                  // or just let the flow work if we call scheduleNextSlide.
-                  // However, scheduleNextSlide requires `currentItem`.
-                  // Let's defer to a small timeout to let the component render and `prepareNextBuffer` to be defined.
-              }, duration);
+              slideTimerRef.current = window.setTimeout(() => {}, duration);
           }
-          // Note: The main loop is driven by `scheduleNextSlide` called after a transition.
-          // For the VERY FIRST item, we need to kickstart the "Prepare Next" logic manually
-          // after the first duration.
-          // Since `scheduleNextSlide` depends on state, let's call it via a ref-safe way or just rely on the effect below.
       }
   }, [playlist]);
 
-  // 4. Scheduling Logic - FIXED DEPENDENCIES TO PREVENT STALE CLOSURES
+  // 4. Scheduling Logic
   const prepareNextBuffer = useCallback(() => {
-      if (isTransitioning) return; // Already moving
+      if (isTransitioning) return; 
       
-      const currentList = playlistRef.current; // ALWAYS USE REF
+      const currentList = playlistRef.current;
       if (currentList.length === 0) return;
 
-      // Calculate next index safely using the ref length
       let nextIdx = (currentPlaylistIndex + 1);
       if (nextIdx >= currentList.length) nextIdx = 0;
 
-      const targetSlot = activeSlot === 0 ? 1 : 0; // The hidden slot
+      const targetSlot = activeSlot === 0 ? 1 : 0; 
 
       // Load next item into the target buffer slot
       setBuffers(prev => {
@@ -265,8 +266,27 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
           return newB;
       });
       setCurrentPlaylistIndex(nextIdx);
-      // Now we wait for 'onReady' from the Slide component in targetSlot
   }, [activeSlot, currentPlaylistIndex, isTransitioning]);
+
+  // WATCHDOG: Detect frozen loading
+  useEffect(() => {
+      // Find if we have a "pending" buffer (not null, but not active)
+      const pendingSlot = buffers.findIndex((b, i) => b !== null && i !== activeSlot);
+      
+      if (pendingSlot !== -1) {
+          // We are waiting for this slot to trigger onReady. Start watchdog.
+          if (loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current);
+          loadingWatchdogRef.current = window.setTimeout(() => {
+              console.warn(`Screensaver: Buffer ${pendingSlot} load timed out (Firefox freeze?). Skipping.`);
+              // Try next item
+              prepareNextBuffer();
+          }, 12000); // 12s max load time
+      } else {
+          // Nothing loading, clean up watchdog
+          if (loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current);
+      }
+      return () => { if(loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current); };
+  }, [buffers, activeSlot, prepareNextBuffer]);
 
   const scheduleNextSlide = useCallback((currentItem: PlaylistItem | null) => {
       if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
@@ -279,7 +299,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
               prepareNextBuffer();
           }, duration);
       } else {
-          // Video: Wait for 'onEnded', but set a watchdog just in case
+          // Video: Wait for 'onEnded', but set a watchdog just in case video decoder hangs
           slideTimerRef.current = window.setTimeout(() => {
               console.warn("Video watchdog: forcing next slide");
               prepareNextBuffer();
@@ -288,8 +308,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
   }, [config.imageDuration, isSleepMode, prepareNextBuffer]);
 
   // 5. Kickstart Loop Effect
-  // If we have a playlist, and active slot is set, but no timer is running AND no transition is happening,
-  // we might need to kickstart the first timer if it wasn't done.
   useEffect(() => {
       if (playlist.length > 0 && !slideTimerRef.current && !isTransitioning && buffers[activeSlot]) {
           scheduleNextSlide(buffers[activeSlot]);
@@ -298,39 +316,34 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
 
   const handleBufferReady = (slotIndex: number) => {
-      // Only care if the ready signal comes from the INACTIVE slot (the one we just loaded)
-      // AND we are not already transitioning.
+      // Only care if the ready signal comes from the INACTIVE slot
       if (slotIndex !== activeSlot && !isTransitioning && buffers[slotIndex]) {
           
-          // START TRANSITION: Fade In the new slot (Z-20) over the old slot (Z-10)
+          // Clear watchdog as we are successfully ready
+          if (loadingWatchdogRef.current) clearTimeout(loadingWatchdogRef.current);
+
           setIsTransitioning(true);
 
           if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
           
           transitionTimeoutRef.current = window.setTimeout(() => {
-              // TRANSITION COMPLETE
               setIsTransitioning(false);
-              setActiveSlot(slotIndex as 0 | 1); // New slot becomes Active
+              setActiveSlot(slotIndex as 0 | 1); 
               
-              // Clean up the OLD slot (now inactive)
               setBuffers(prev => {
                   const newB = [...prev] as [PlaylistItem | null, PlaylistItem | null];
                   const oldSlot = slotIndex === 0 ? 1 : 0;
-                  newB[oldSlot] = null; // Clear content to stop video/save memory
+                  newB[oldSlot] = null; // Clear old content
                   return newB;
               });
 
-              // Schedule next cycle
-              // IMPORTANT: This uses the 'buffers' from the closure, which contains the NEW item at slotIndex.
-              // This is safe because 'buffers[slotIndex]' was just verified to exist.
               scheduleNextSlide(buffers[slotIndex]);
 
-          }, 1000); // 1s Crossfade duration matches CSS
+          }, 1000); 
       }
   };
 
   const handleVideoEnded = () => {
-      // Only trigger if it's the active video ending
       prepareNextBuffer();
   };
 
@@ -370,21 +383,13 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             const item = buffers[slotIdx];
             const isActive = activeSlot === slotIdx;
             
-            // CSS Logic for Cross-Fade-Over:
-            // 1. If Active: Z-10, Opacity 1. (Bottom layer, fully visible).
-            // 2. If Inactive:
-            //    - If Transitioning: Z-20, Opacity 1. (Top layer, fading in).
-            //    - If Idle/Loading: Z-20, Opacity 0. (Top layer, hidden).
-            
             let layerClass = "";
             if (isActive) {
-                // Active Layer: Always visible at bottom
                 layerClass = "z-10 opacity-100 transition-none"; 
             } else {
                 if (isTransitioning) {
                     layerClass = "z-20 opacity-100 transition-opacity duration-1000 ease-in-out";
                 } else {
-                    // Hidden / Loading state
                     layerClass = "z-20 opacity-0 transition-none";
                 }
             }
@@ -393,27 +398,24 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
             return (
                 <div key={`slot-${slotIdx}`} className={`slide-layer ${layerClass}`}>
-                    {/* Background Blur Aura */}
                     <div 
                         className="absolute inset-0 z-0 opacity-40 blur-[60px] scale-110 transition-all duration-1000"
                         style={{ backgroundImage: `url(${item.url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 z-10" />
                     
-                    {/* Content */}
                     <div className="absolute inset-0 z-20 flex items-center justify-center p-4 md:p-12">
                         <Slide 
                             item={item}
                             isActive={isActive}
                             isMuted={config.muteVideos || !isAudioUnlocked}
                             onReady={() => handleBufferReady(slotIdx)}
-                            onError={() => prepareNextBuffer()} // Skip broken items
+                            onError={() => prepareNextBuffer()} 
                             onVideoEnd={() => { if(isActive) handleVideoEnded(); }}
                             objectFit={objectFitClass}
                         />
                     </div>
 
-                    {/* Overlay Info (Attached to slide so it fades with it) */}
                     {config.showInfoOverlay && (item.title || item.subtitle) && (
                         <div className="absolute bottom-12 left-10 md:bottom-20 md:left-20 max-w-[80%] md:max-w-[70%] z-30 pointer-events-none">
                             {item.title && (
@@ -437,7 +439,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             );
         })}
 
-        {/* Global Mute Indicator (Only if active item is video and muted) */}
         {currentItem && !config.muteVideos && !isAudioUnlocked && currentItem.type === 'video' && (
              <div className="absolute top-8 right-8 z-[50] bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse pointer-events-none">
                  <VolumeX size={16} />
