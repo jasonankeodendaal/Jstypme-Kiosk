@@ -79,6 +79,19 @@ const Slide = memo(({
     const imgRef = useRef<HTMLImageElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const [animClass, setAnimClass] = useState('');
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    // Reset loaded state when content changes to prevent showing old content or black frame
+    useEffect(() => {
+        setIsLoaded(false);
+    }, [item.url]);
+
+    const handleContentReady = () => {
+        if (!isLoaded) {
+            setIsLoaded(true);
+            onReady();
+        }
+    };
 
     // Animation Logic
     useEffect(() => {
@@ -112,12 +125,12 @@ const Slide = memo(({
         };
     }, [item.url]);
 
-    // Image Handling - CRITICAL CACHE FIX
+    // Image Handling
     useEffect(() => {
         if (item.type === 'image' && imgRef.current) {
             const img = imgRef.current;
             
-            const handleLoad = () => onReady();
+            const handleLoad = () => handleContentReady();
             const handleError = () => {
                 console.warn(`[Screensaver] Image Failed: ${item.url}`);
                 onError();
@@ -128,7 +141,7 @@ const Slide = memo(({
 
             // Immediate check for cached images
             if (img.complete && img.naturalWidth > 0) {
-                onReady();
+                handleContentReady();
             }
         }
     }, [item, onReady, onError]);
@@ -139,7 +152,7 @@ const Slide = memo(({
             const vid = videoRef.current;
             vid.muted = isMuted; // Enforce mute prop on element
             
-            const handleReady = () => onReady();
+            const handleReady = () => handleContentReady();
             const handleError = (e: any) => {
                 console.warn(`[Screensaver] Video Failed: ${item.url}`, e);
                 onError();
@@ -178,7 +191,7 @@ const Slide = memo(({
             <video
                 ref={videoRef}
                 src={item.url}
-                className={`w-full h-full ${objectFit} ${isActive ? animClass : ''}`}
+                className={`w-full h-full ${objectFit} ${isActive ? animClass : ''} transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 muted={isMuted}
                 playsInline
                 preload="auto"
@@ -192,7 +205,7 @@ const Slide = memo(({
             ref={imgRef}
             src={item.url}
             alt=""
-            className={`w-full h-full ${objectFit} ${isActive ? animClass : ''}`}
+            className={`w-full h-full ${objectFit} ${isActive ? animClass : ''} transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading="eager"
             decoding="async"
             style={{ willChange: 'transform, opacity' }}
@@ -221,6 +234,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     // 2. State: Playlist
     const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
     const [currentIdx, setCurrentIdx] = useState(0);
+    const isInitializedRef = useRef(false);
 
     // 3. State: Double Buffer
     const [slots, setSlots] = useState<[PlaylistItem | null, PlaylistItem | null]>([null, null]);
@@ -265,8 +279,10 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
         setPlaylist(list);
         
-        // Initialize First Slot immediately if list exists
-        if (list.length > 0) {
+        // CRITICAL FIX: Only initialize slots if not already running. 
+        // This prevents black screen reset when background sync updates store data.
+        if (!isInitializedRef.current && list.length > 0) {
+            isInitializedRef.current = true;
             setSlots([list[0], null]);
             setSlotStatus(['loading', 'empty']); // Will switch to 'ready' via Slide callback
             setCurrentIdx(0);
@@ -274,6 +290,13 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             lastTransitionTime.current = Date.now();
         }
     }, [products, ads, pamphlets, settings]);
+
+    // Safety check if playlist shrank
+    useEffect(() => {
+        if (playlist.length > 0 && currentIdx >= playlist.length) {
+            setCurrentIdx(0);
+        }
+    }, [playlist, currentIdx]);
 
     // 6. Sleep Mode Check (Every Minute)
     useInterval(() => {
@@ -358,9 +381,13 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             // Force jump to next
             const nextIdx = (currentIdx + 1) % playlist.length;
             setCurrentIdx(nextIdx);
-            setSlots([playlist[nextIdx], null]);
+            
+            // Soft reset - don't clear slots to null if possible, just try next item
+            const nextItem = playlist[nextIdx];
+            setSlots([nextItem, null]);
             setSlotStatus(['loading', 'empty']); // Slide will fix this to ready
             setActiveSlot(0);
+            
             lastTransitionTime.current = Date.now();
             videoEndedRef.current = false;
             return;
