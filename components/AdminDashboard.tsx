@@ -43,12 +43,12 @@ const SystemDocumentation = () => {
     const [activeSection, setActiveSection] = useState('architecture');
     
     const sections = [
-        { id: 'architecture', label: '1. How it Works', icon: <Network size={16} />, desc: 'The "Brain" of the Kiosk' },
-        { id: 'inventory', label: '2. Product Sorting', icon: <Box size={16}/>, desc: 'Hierarchy & Data JSONB' },
-        { id: 'pricelists', label: '3. Price Logic', icon: <Table size={16}/>, desc: 'Auto-Rounding & PDF' },
-        { id: 'screensaver', label: '4. Visual Loop', icon: <Zap size={16}/>, desc: 'Double-Buffer Engine' },
-        { id: 'fleet', label: '5. Fleet Watch', icon: <Activity size={16}/>, desc: 'Telemetry & Heartbeat' },
-        { id: 'tv', label: '6. TV Protocol', icon: <Tv size={16}/>, desc: 'Playlist Management' },
+        { id: 'architecture', label: '1. Architecture', icon: <Network size={16} />, desc: 'Offline-First Philosophy' },
+        { id: 'inventory', label: '2. Data Tree', icon: <Box size={16}/>, desc: 'Relational Structure' },
+        { id: 'pricelists', label: '3. Price Logic', icon: <Table size={16}/>, desc: 'Rounding Psychology' },
+        { id: 'screensaver', label: '4. Visual Engine', icon: <Zap size={16}/>, desc: 'Double-Buffer Loop' },
+        { id: 'fleet', label: '5. Fleet Pulse', icon: <Activity size={16}/>, desc: 'Telemetry Heartbeat' },
+        { id: 'tv', label: '6. TV Protocol', icon: <Tv size={16}/>, desc: 'Display Queue' },
     ];
 
     return (
@@ -72,7 +72,7 @@ const SystemDocumentation = () => {
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Learning Center</span>
                     </div>
                     <h2 className="text-white font-black text-2xl tracking-tighter leading-none">System <span className="text-blue-500">Guides</span></h2>
-                    <p className="text-slate-500 text-xs mt-2 font-medium">Step-by-step logic overview for new administrators.</p>
+                    <p className="text-slate-500 text-xs mt-2 font-medium">Deep-dive engineering concepts explained simply.</p>
                 </div>
 
                 <div className="space-y-2 flex-1">
@@ -100,17 +100,30 @@ const SystemDocumentation = () => {
             
             <div className="flex-1 overflow-y-auto bg-white relative p-6 md:p-12 lg:p-20 scroll-smooth">
                 {activeSection === 'architecture' && (
-                    <div className="space-y-20 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-blue-500/20">Module 01: Core Brain</div>
-                            <h2 className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Atomic Synchronization</h2>
-                            <p className="text-xl text-slate-500 font-medium max-w-2xl leading-relaxed">The Kiosk works <strong>offline</strong> first. It only needs internet to "sync up" with your changes.</p>
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-blue-500/20">Module 01: Core Philosophy</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The "Submarine" Concept</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    Most modern apps are "Cloud-First," meaning they need a constant internet connection to work (like Instagram or YouTube). If the internet cuts out, the app spins and freezes.
+                                    In a retail environment, <strong>this is unacceptable.</strong> Store Wi-Fi is notoriously unstable, and a frozen screen kills the customer experience.
+                                </p>
+                                <p>
+                                    To solve this, we built Kiosk Pro like a <strong>nuclear submarine</strong>. It is designed to operate completely autonomously for weeks at a time.
+                                    When the Kiosk wakes up (or "surfaces"), it connects to the cloud, downloads the entire store database (the "Snapshot") into its own internal hard drive, and then disconnects.
+                                </p>
+                                <p>
+                                    Every time you tap a product, the Kiosk is reading from its own memory, not the internet. This guarantees <strong>Zero Latency</strong> and instant response times, regardless of the store's signal strength.
+                                </p>
+                            </div>
                         </div>
+                        
                         <div className="relative p-12 bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden min-h-[450px] flex flex-col items-center justify-center">
                             <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
                             <div className="relative w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-12">
-                                <div className="flex flex-col items-center gap-4 group"><div className="w-24 h-24 bg-white/5 border-2 border-blue-500/30 rounded-[2rem] flex items-center justify-center relative transition-all duration-500 group-hover:border-blue-500 group-hover:scale-110"><Monitor className="text-blue-400" size={40} /></div><div className="text-center"><div className="text-white font-black text-xs uppercase tracking-widest">Admin Hub</div><div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Updates Sent</div></div></div>
-                                <div className="flex-1 w-full h-24 relative flex items-center justify-center"><div className="w-full h-1 bg-white/5 rounded-full relative"><div className="absolute inset-0 bg-blue-500/20 blur-md"></div><div className="data-flow absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,1)]"></div></div><div className="absolute -bottom-8 bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-xl text-[9px] font-black text-blue-400 uppercase tracking-widest">Encrypted Cloud Tunnel</div></div>
+                                <div className="flex flex-col items-center gap-4 group"><div className="w-24 h-24 bg-white/5 border-2 border-blue-500/30 rounded-[2rem] flex items-center justify-center relative transition-all duration-500 group-hover:border-blue-500 group-hover:scale-110"><Monitor className="text-blue-400" size={40} /></div><div className="text-center"><div className="text-white font-black text-xs uppercase tracking-widest">Admin Hub</div><div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Orders & Updates</div></div></div>
+                                <div className="flex-1 w-full h-24 relative flex items-center justify-center"><div className="w-full h-1 bg-white/5 rounded-full relative"><div className="absolute inset-0 bg-blue-500/20 blur-md"></div><div className="data-flow absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,1)]"></div></div><div className="absolute -bottom-8 bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-xl text-[9px] font-black text-blue-400 uppercase tracking-widest">Encrypted Cloud Sync</div></div>
                                 <div className="flex flex-col items-center gap-4 group"><div className="w-32 h-20 bg-slate-800 rounded-2xl border-2 border-green-500/30 flex items-center justify-center relative shadow-2xl transition-all duration-500 group-hover:border-green-500 group-hover:rotate-1"><Tablet className="text-green-400" size={32} /></div><div className="text-center"><div className="text-white font-black text-xs uppercase tracking-widest">Kiosk Device</div><div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Local Storage Active</div></div></div>
                             </div>
                         </div>
@@ -119,10 +132,25 @@ const SystemDocumentation = () => {
 
                 {activeSection === 'inventory' && (
                     <div className="space-y-16 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20">Module 02: Data Structure</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter">The "Tree" Concept</h2>
-                            <p className="text-lg text-slate-500 max-w-2xl">Products don't float freely. They hang on branches (Categories) which belong to a trunk (Brand).</p>
+                        <div className="space-y-6">
+                            <div className="bg-purple-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20">Module 02: Data Normalization</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Tree of Data</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    A common mistake in simple apps is to treat products like a flat list in a spreadsheet. This leads to chaos. If you have 50 products by "Samsung", and you decide to rename the brand to "Samsung Electronics", you would have to manually edit 50 rows.
+                                </p>
+                                <p>
+                                    To prevent this, our system uses a <strong>Relational Tree Structure</strong> (Normalization). Think of it like a filing cabinet:
+                                </p>
+                                <ul className="list-disc pl-6 space-y-2 text-sm font-bold text-slate-700">
+                                    <li><strong>The Cabinet (Brand):</strong> The master container. It holds the logo and theme color.</li>
+                                    <li><strong>The Drawers (Categories):</strong> "TVs", "Phones", "Audio". These belong to the Cabinet.</li>
+                                    <li><strong>The Files (Products):</strong> The individual items inside the Drawers.</li>
+                                </ul>
+                                <p>
+                                    Products don't "contain" the brand name. They simply "point" to the Brand ID. This means if you update the Brand's logo in one place, it instantly updates for thousands of products across the entire fleet.
+                                </p>
+                            </div>
                         </div>
                         
                         <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
@@ -130,9 +158,9 @@ const SystemDocumentation = () => {
                             
                             <div className="flex flex-col items-center gap-8 relative z-10 w-full max-w-3xl">
                                 <div className="flex flex-col items-center gap-2">
-                                    <div className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center gap-3">
+                                    <div className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 transform hover:scale-105 transition-transform">
                                         <Box size={20} className="text-blue-400" />
-                                        Brand Entity
+                                        Master Brand Entity
                                     </div>
                                     <div className="h-8 w-0.5 bg-slate-300"></div>
                                 </div>
@@ -142,24 +170,24 @@ const SystemDocumentation = () => {
                                     <div className="flex flex-col items-center gap-2">
                                         <div className="h-4 w-0.5 bg-slate-300 absolute -top-4"></div>
                                         <div className="bg-white border-2 border-slate-200 px-6 py-3 rounded-xl font-bold text-slate-600 text-xs uppercase flex items-center gap-2 shadow-sm">
-                                            <Grid size={14} /> Category A
+                                            <Grid size={14} /> Category Branch
                                         </div>
                                         <div className="h-6 w-0.5 bg-slate-200"></div>
                                         <div className="flex gap-2">
-                                            <div className="w-10 h-12 bg-slate-100 rounded border border-slate-200"></div>
-                                            <div className="w-10 h-12 bg-slate-100 rounded border border-slate-200"></div>
+                                            <div className="w-10 h-12 bg-slate-100 rounded border border-slate-200 shadow-sm"></div>
+                                            <div className="w-10 h-12 bg-slate-100 rounded border border-slate-200 shadow-sm"></div>
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-center gap-2">
                                         <div className="h-4 w-0.5 bg-slate-300 absolute -top-4"></div>
                                         <div className="bg-white border-2 border-slate-200 px-6 py-3 rounded-xl font-bold text-slate-600 text-xs uppercase flex items-center gap-2 shadow-sm">
-                                            <Grid size={14} /> Category B
+                                            <Grid size={14} /> Category Branch
                                         </div>
                                         <div className="h-6 w-0.5 bg-slate-200"></div>
                                         <div className="flex gap-2">
-                                            <div className="w-10 h-12 bg-purple-50 rounded border border-purple-100"></div>
-                                            <div className="w-10 h-12 bg-purple-50 rounded border border-purple-100"></div>
-                                            <div className="w-10 h-12 bg-purple-50 rounded border border-purple-100"></div>
+                                            <div className="w-10 h-12 bg-purple-50 rounded border border-purple-100 shadow-sm"></div>
+                                            <div className="w-10 h-12 bg-purple-50 rounded border border-purple-100 shadow-sm"></div>
+                                            <div className="w-10 h-12 bg-purple-50 rounded border border-purple-100 shadow-sm"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -170,28 +198,41 @@ const SystemDocumentation = () => {
 
                 {activeSection === 'pricelists' && (
                     <div className="space-y-16 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-red-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-red-500/20">Module 03: Dynamic Pricing</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter">Psychological Math</h2>
-                            <p className="text-lg text-slate-500 max-w-2xl">Raw Excel data is ugly. The kiosk automatically cleans, rounds, and formats prices to look "Premium" before they hit the screen.</p>
+                        <div className="space-y-6">
+                            <div className="bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-red-500/20">Module 03: The Rounding Engine</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Psychological Pricing</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    Spreadsheets are good for math, but bad for marketing. A raw calculation might output a price like <strong>R 1,243.66</strong>. Displaying this to a customer looks messy, calculating, and "cheap."
+                                </p>
+                                <p>
+                                    Luxury retail requires <strong>clean, confident numbers</strong>. That's why we built the Rounding Engine. It sits between your Excel file and the Kiosk screen.
+                                </p>
+                                <p>
+                                    It applies two rules:
+                                    <br/>1. <strong>Ceiling Rule:</strong> Never show cents on high-value items. 129.99 becomes 130.
+                                    <br/>2. <strong>Confidence Rule:</strong> Awkward endings like "499" or "99" are often pushed to the nearest round "00" or "50" to reduce cognitive load. The goal is to make the price feel curated, not calculated.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-slate-50 border border-slate-200 p-8 rounded-3xl">
-                                <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Input (Spreadsheet)</div>
-                                <div className="space-y-3 font-mono text-sm text-slate-600">
-                                    <div className="flex justify-between border-b border-slate-200 pb-2"><span>R 129.99</span><X size={16} className="text-red-400"/></div>
-                                    <div className="flex justify-between border-b border-slate-200 pb-2"><span>R 499.00</span><X size={16} className="text-red-400"/></div>
-                                    <div className="flex justify-between border-b border-slate-200 pb-2"><span>R 845.50</span><X size={16} className="text-red-400"/></div>
+                            <div className="bg-slate-50 border border-slate-200 p-8 rounded-3xl relative overflow-hidden">
+                                <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Raw Input (Excel)</div>
+                                <div className="space-y-4 font-mono text-sm text-slate-600">
+                                    <div className="flex justify-between items-center border-b border-slate-200 pb-2"><span>R 129.99</span><X size={16} className="text-red-400"/></div>
+                                    <div className="flex justify-between items-center border-b border-slate-200 pb-2"><span>R 499.00</span><X size={16} className="text-red-400"/></div>
+                                    <div className="flex justify-between items-center border-b border-slate-200 pb-2"><span>R 845.50</span><X size={16} className="text-red-400"/></div>
                                 </div>
+                                <div className="absolute -right-4 -bottom-4 text-slate-200"><FileText size={100} /></div>
                             </div>
-                            <div className="bg-slate-900 text-white p-8 rounded-3xl relative overflow-hidden">
+                            <div className="bg-slate-900 text-white p-8 rounded-3xl relative overflow-hidden shadow-2xl">
                                 <div className="absolute top-0 right-0 p-6 opacity-10"><Sparkles size={80} /></div>
-                                <div className="text-xs font-black text-blue-400 uppercase tracking-widest mb-6">Output (Kiosk Display)</div>
-                                <div className="space-y-3 font-mono text-xl font-bold">
-                                    <div className="flex justify-between border-b border-slate-800 pb-2"><span className="text-green-400">R 130</span><Check size={20} className="text-green-500"/></div>
-                                    <div className="flex justify-between border-b border-slate-800 pb-2"><span className="text-green-400">R 500</span><Check size={20} className="text-green-500"/></div>
-                                    <div className="flex justify-between border-b border-slate-800 pb-2"><span className="text-green-400">R 846</span><Check size={20} className="text-green-500"/></div>
+                                <div className="text-xs font-black text-blue-400 uppercase tracking-widest mb-6">Engine Output (Kiosk)</div>
+                                <div className="space-y-4 font-mono text-xl font-bold">
+                                    <div className="flex justify-between items-center border-b border-slate-800 pb-2"><span className="text-green-400">R 130</span><Check size={20} className="text-green-500"/></div>
+                                    <div className="flex justify-between items-center border-b border-slate-800 pb-2"><span className="text-green-400">R 500</span><Check size={20} className="text-green-500"/></div>
+                                    <div className="flex justify-between items-center border-b border-slate-800 pb-2"><span className="text-green-400">R 846</span><Check size={20} className="text-green-500"/></div>
                                 </div>
                             </div>
                         </div>
@@ -200,10 +241,21 @@ const SystemDocumentation = () => {
 
                 {activeSection === 'screensaver' && (
                     <div className="space-y-16 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-yellow-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-yellow-500/20">Module 04: Visual Engine</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter">Double-Buffer Logic</h2>
-                            <p className="text-lg text-slate-500 max-w-2xl">To prevent "black flashes" between images/videos, we run two invisible players. Player B loads while Player A is showing. Then they fade-swap instantly.</p>
+                        <div className="space-y-6">
+                            <div className="bg-yellow-500 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-yellow-500/20">Module 04: Visual Engine</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Invisible Stagehand</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    Playing a playlist of high-resolution 4K videos and images seamlessly is harder than it looks. It takes a tablet computer about 500-1000ms to open, decode, and render a large media file.
+                                </p>
+                                <p>
+                                    If we simply played Video A, waited for it to finish, and then told the system "Play Video B", there would be a <strong>black flash</strong> or a stutter between every clip.
+                                </p>
+                                <p>
+                                    To fix this, we use a <strong>Double-Buffer Strategy</strong>. Think of a theater stage with two curtains.
+                                    While "Buffer A" is on stage playing a video for the audience, "Buffer B" is backstage, silently loading and decoding the next video. When A finishes, we instantly fade A out and B in. The audience never sees the "loading" gap.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="relative h-64 bg-slate-100 rounded-3xl border border-slate-200 flex items-center justify-center gap-12 overflow-hidden">
@@ -217,12 +269,14 @@ const SystemDocumentation = () => {
                                 <span className="text-[9px] text-green-400 mt-1 font-mono">VISIBLE</span>
                             </div>
 
-                            <RefreshCw size={32} className="text-slate-400 animate-spin-slow" />
+                            <div className="flex flex-col items-center gap-2 z-20 bg-white p-2 rounded-full shadow-lg">
+                                <RefreshCw size={24} className="text-slate-400 animate-spin-slow" />
+                            </div>
 
                             <div className="w-40 h-56 bg-white rounded-xl shadow-lg flex flex-col items-center justify-center text-slate-400 relative z-0 buffer-b border-4 border-slate-100 scale-90 opacity-50">
                                 <Loader2 size={32} className="animate-spin mb-2" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">Buffer B</span>
-                                <span className="text-[9px] text-orange-400 mt-1 font-mono">LOADING...</span>
+                                <span className="text-[9px] text-orange-400 mt-1 font-mono">PRE-LOADING...</span>
                             </div>
                         </div>
                     </div>
@@ -230,20 +284,36 @@ const SystemDocumentation = () => {
 
                 {activeSection === 'fleet' && (
                     <div className="space-y-16 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-cyan-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-cyan-500/20">Module 05: Telemetry</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter">The Heartbeat</h2>
-                            <p className="text-lg text-slate-500 max-w-2xl">Every 30 seconds, each kiosk "pings" the cloud. If a ping is missed for &gt; 5 minutes, the dashboard marks it as OFFLINE.</p>
+                        <div className="space-y-6">
+                            <div className="bg-cyan-500 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-cyan-500/20">Module 05: Telemetry</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Heartbeat Protocol</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    Managing 50 kiosks across different stores is a logistical nightmare if you don't know which ones are turned on. But the server can't simply "call" the kiosks because store firewalls usually block incoming connections.
+                                </p>
+                                <p>
+                                    So we reversed the flow. We use a <strong>Heartbeat Protocol</strong>.
+                                </p>
+                                <p>
+                                    Every 30 seconds, every active Kiosk sends a tiny, encrypted signal to the cloud: <em>"I'm Kiosk #42, I'm playing the Screensaver, and my Wi-Fi strength is 80%."</em>
+                                </p>
+                                <p>
+                                    The Dashboard simply listens. If a Kiosk stops sending a heartbeat for more than 5 minutes, the system automatically flags it as <strong>OFFLINE</strong>. This lets you know exactly which units need attention without having to drive to the store.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="bg-slate-950 rounded-3xl p-12 border border-slate-800 flex items-center justify-between relative overflow-hidden">
                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/graphy.png')] opacity-10"></div>
                             
                             <div className="flex flex-col items-center gap-4 relative z-10">
-                                <div className="w-20 h-28 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center">
+                                <div className="w-20 h-28 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center shadow-lg">
                                     <Tablet size={40} className="text-slate-500" />
                                 </div>
-                                <span className="text-xs font-black text-slate-500 uppercase">Kiosk 01</span>
+                                <div className="text-center">
+                                    <span className="text-xs font-black text-slate-500 uppercase block">Kiosk Unit</span>
+                                    <span className="text-[9px] font-mono text-green-500">"I'm Alive"</span>
+                                </div>
                             </div>
 
                             <div className="flex-1 h-0.5 bg-slate-800 relative mx-8">
@@ -254,7 +324,7 @@ const SystemDocumentation = () => {
                                 <div className="w-24 h-24 bg-slate-900 rounded-full border-2 border-cyan-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(6,182,212,0.2)]">
                                     <Activity size={32} className="text-cyan-400 animate-pulse" />
                                 </div>
-                                <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">Cloud Listener</span>
+                                <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">Dashboard Listener</span>
                             </div>
                         </div>
                     </div>
@@ -262,22 +332,38 @@ const SystemDocumentation = () => {
 
                 {activeSection === 'tv' && (
                     <div className="space-y-16 animate-fade-in max-w-5xl">
-                        <div className="space-y-4">
-                            <div className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20">Module 06: TV Protocol</div>
-                            <h2 className="text-5xl font-black text-slate-900 tracking-tighter">Playlist Queue</h2>
-                            <p className="text-lg text-slate-500 max-w-2xl">TV Mode strips away the UI and focuses on content loops. It can play a specific Brand's loop or a "Global Mix" of everything.</p>
+                        <div className="space-y-6">
+                            <div className="bg-indigo-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20">Module 06: TV Reliability</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Bare-Metal Queue</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    "Why do we need a separate TV Mode? Can't we just use the Kiosk?"
+                                </p>
+                                <p>
+                                    Kiosks are designed for <strong>interaction</strong>. They have buttons, scroll bars, PDF viewers, and complex layouts. All of these things consume memory (RAM).
+                                </p>
+                                <p>
+                                    TVs, however, often run for 14+ hours a day without anyone touching them. If a complex web page runs for that long, it often crashes due to "memory leaks" in the browser.
+                                </p>
+                                <p>
+                                    Our <strong>TV Protocol</strong> strips away 90% of the app's code. It removes the search bar, the brand grid, the menus, and the touch listeners. It leaves behind a simple, robust "Queue Engine" whose only job is to play Video A, then Video B, then loop. This simplicity guarantees 24/7 stability on low-power TV hardware.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {[1, 2, 3].map(i => (
-                                <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg flex flex-col gap-4 transform transition-transform hover:-translate-y-2">
-                                    <div className="aspect-video bg-slate-900 rounded-lg flex items-center justify-center relative overflow-hidden group">
+                                <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg flex flex-col gap-4 transform transition-transform hover:-translate-y-2 group">
+                                    <div className="aspect-video bg-slate-900 rounded-lg flex items-center justify-center relative overflow-hidden">
                                         <PlayCircle size={32} className="text-white opacity-50 group-hover:opacity-100 transition-opacity" />
                                         <div className="absolute bottom-2 right-2 text-[8px] font-mono text-white bg-black/50 px-1 rounded">00:{15 * i}</div>
                                     </div>
                                     <div>
                                         <div className="text-[10px] font-black text-indigo-600 uppercase mb-1">Queue Item 0{i}</div>
-                                        <div className="text-sm font-bold text-slate-800">Promo Video {i}.mp4</div>
+                                        <div className="text-sm font-bold text-slate-800">Promo_Clip_{i}.mp4</div>
+                                        <div className="w-full bg-slate-100 h-1 mt-2 rounded-full overflow-hidden">
+                                            <div className={`h-full bg-indigo-500 ${i === 1 ? 'w-2/3' : 'w-0'}`}></div>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
