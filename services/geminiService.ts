@@ -1,3 +1,4 @@
+
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand, Category, Pricelist, PricelistBrand } from "../types";
 import { supabase, getEnv, initSupabase, checkCloudConnection } from "./kioskService";
 
@@ -187,7 +188,6 @@ class OfflineQueue {
 
         for (const action of this.queue) {
             try {
-                let error = null;
                 if (action.subtype === 'delete') {
                     const tableMap: any = {
                         'BRAND': 'brands', 'CATEGORY': 'categories', 'PRODUCT': 'products',
@@ -195,21 +195,16 @@ class OfflineQueue {
                     };
                     const table = tableMap[action.type];
                     if (table) {
-                        const res = await supabase.from(table).delete().eq('id', action.id);
-                        error = res.error;
+                        await supabase.from(table).delete().eq('id', action.id);
                     }
                 } else {
                     // Upsert logic
-                    let res: any = {};
-                    if (action.type === 'BRAND') res = await supabase.from('brands').upsert(action.data);
-                    else if (action.type === 'CATEGORY') res = await supabase.from('categories').upsert(action.data);
-                    else if (action.type === 'PRODUCT') res = await supabase.from('products').upsert(action.data);
-                    else if (action.type === 'PRICELIST') res = await supabase.from('pricelists').upsert(action.data);
-                    else if (action.type === 'PRICELIST_BRAND') res = await supabase.from('pricelist_brands').upsert(action.data);
-                    error = res.error;
+                    if (action.type === 'BRAND') await supabase.from('brands').upsert(action.data);
+                    else if (action.type === 'CATEGORY') await supabase.from('categories').upsert(action.data);
+                    else if (action.type === 'PRODUCT') await supabase.from('products').upsert(action.data);
+                    else if (action.type === 'PRICELIST') await supabase.from('pricelists').upsert(action.data);
+                    else if (action.type === 'PRICELIST_BRAND') await supabase.from('pricelist_brands').upsert(action.data);
                 }
-                
-                if (error) throw error;
                 successCount++;
             } catch (e) {
                 console.error("Sync action failed", action, e);
@@ -259,10 +254,8 @@ const flattenPricelist = (pl: Pricelist) => ({
 export const upsertBrand = async (brand: Brand) => {
     if (!supabase) initSupabase();
     try {
-        const { error } = await supabase.from('brands').upsert(flattenBrand(brand));
-        if (error) throw error;
+        await supabase.from('brands').upsert(flattenBrand(brand));
     } catch (e) {
-        console.error("Brand Sync Error:", e);
         offlineQueue.add({ type: 'BRAND', data: flattenBrand(brand), id: brand.id, timestamp: Date.now() });
     }
 };
@@ -270,10 +263,8 @@ export const upsertBrand = async (brand: Brand) => {
 export const upsertCategory = async (category: Category, brandId: string) => {
     if (!supabase) initSupabase();
     try {
-        const { error } = await supabase.from('categories').upsert(flattenCategory(category, brandId));
-        if (error) throw error;
+        await supabase.from('categories').upsert(flattenCategory(category, brandId));
     } catch (e) {
-        console.error("Category Sync Error:", e);
         offlineQueue.add({ type: 'CATEGORY', data: flattenCategory(category, brandId), id: category.id, timestamp: Date.now() });
     }
 };
@@ -281,10 +272,8 @@ export const upsertCategory = async (category: Category, brandId: string) => {
 export const upsertProduct = async (product: Product, categoryId: string) => {
     if (!supabase) initSupabase();
     try {
-        const { error } = await supabase.from('products').upsert(flattenProduct(product, categoryId));
-        if (error) throw error;
+        await supabase.from('products').upsert(flattenProduct(product, categoryId));
     } catch (e) {
-        console.error("Product Sync Error:", e);
         offlineQueue.add({ type: 'PRODUCT', data: flattenProduct(product, categoryId), id: product.id, timestamp: Date.now() });
     }
 };
@@ -292,16 +281,8 @@ export const upsertProduct = async (product: Product, categoryId: string) => {
 export const upsertPricelist = async (pricelist: Pricelist) => {
     if (!supabase) initSupabase();
     try {
-        const { error } = await supabase.from('pricelists').upsert(flattenPricelist(pricelist));
-        if (error) {
-            console.error("Supabase Error details:", error);
-            if (error.code === '42703' || error.message.includes('400')) {
-                alert("Sync Error: The database table is missing columns. Please go to Settings > System Guide > Migration and run the 'Fix Pricelists Table' script.");
-            }
-            throw error;
-        }
+        await supabase.from('pricelists').upsert(flattenPricelist(pricelist));
     } catch (e) {
-        console.error("Pricelist Sync Error:", e);
         offlineQueue.add({ type: 'PRICELIST', data: flattenPricelist(pricelist), id: pricelist.id, timestamp: Date.now() });
     }
 };
@@ -310,10 +291,8 @@ export const upsertPricelistBrand = async (pb: PricelistBrand) => {
     if (!supabase) initSupabase();
     const data = { id: pb.id, name: pb.name, logo_url: pb.logoUrl, updated_at: new Date().toISOString() };
     try {
-        const { error } = await supabase.from('pricelist_brands').upsert(data);
-        if (error) throw error;
+        await supabase.from('pricelist_brands').upsert(data);
     } catch (e) {
-        console.error("Pricelist Brand Sync Error:", e);
         offlineQueue.add({ type: 'PRICELIST_BRAND', data, id: pb.id, timestamp: Date.now() });
     }
 };
@@ -325,12 +304,8 @@ export const deleteItem = async (type: 'BRAND' | 'CATEGORY' | 'PRODUCT' | 'PRICE
         'PRICELIST': 'pricelists', 'PRICELIST_BRAND': 'pricelist_brands'
     };
     try {
-        if (tableMap[type]) {
-            const { error } = await supabase.from(tableMap[type]).delete().eq('id', id);
-            if (error) throw error;
-        }
+        if (tableMap[type]) await supabase.from(tableMap[type]).delete().eq('id', id);
     } catch (e) {
-        console.error("Delete Error:", e);
         offlineQueue.add({ type, subtype: 'delete', data: null, id, timestamp: Date.now() });
     }
 };
@@ -529,9 +504,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             };
             settingsPayload.archive = archivePruned;
 
-            const { error: configError } = await supabase.from('store_config').upsert({ id: 1, data: settingsPayload }, { onConflict: 'id' });
-            if (configError) throw configError;
-            
+            await supabase.from('store_config').upsert({ id: 1, data: settingsPayload }, { onConflict: 'id' });
             broadcastSync(30, 'syncing');
 
             // --- B. RELATIONAL SAVE (Only if tables exist) ---
@@ -559,20 +532,11 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
                 const flatPricelists = (cleanData.pricelists || []).map((pl: Pricelist) => flattenPricelist(pl));
 
                 // EXECUTE BATCH UPSERTS
-                if (flatBrands.length > 0) {
-                    const { error } = await supabase.from('brands').upsert(flatBrands);
-                    if (error) throw error;
-                }
-                if (flatPLBrands.length > 0) {
-                    const { error } = await supabase.from('pricelist_brands').upsert(flatPLBrands);
-                    if (error) throw error;
-                }
+                if (flatBrands.length > 0) await supabase.from('brands').upsert(flatBrands);
+                if (flatPLBrands.length > 0) await supabase.from('pricelist_brands').upsert(flatPLBrands);
                 broadcastSync(50, 'syncing');
 
-                if (flatCategories.length > 0) {
-                    const { error } = await supabase.from('categories').upsert(flatCategories);
-                    if (error) throw error;
-                }
+                if (flatCategories.length > 0) await supabase.from('categories').upsert(flatCategories);
                 
                 const chunkArray = (arr: any[], size: number) => {
                     const chunks = [];
@@ -582,21 +546,13 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
 
                 const productChunks = chunkArray(flatProducts, 50);
                 for (const chunk of productChunks) {
-                    const { error } = await supabase.from('products').upsert(chunk);
-                    if (error) throw error;
+                    await supabase.from('products').upsert(chunk);
                 }
                 broadcastSync(80, 'syncing');
 
                 const plChunks = chunkArray(flatPricelists, 20); 
                 for (const chunk of plChunks) {
-                    const { error } = await supabase.from('pricelists').upsert(chunk);
-                    if (error) {
-                        if (error.code === '42703' || error.message.includes('400')) {
-                            console.error("Schema mismatch on batch upload. Some columns missing.");
-                            alert("Warning: Pricelists failed to save due to missing database columns. Please use Setup Guide > Migration > Fix Pricelists Table.");
-                        }
-                        throw error;
-                    }
+                    await supabase.from('pricelists').upsert(chunk);
                 }
             }
 
@@ -606,7 +562,6 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         } catch (e: any) {
             console.error("Save Sync Error:", e);
             broadcastSync(0, 'error');
-            // Re-throw to allow UI to catch it if needed, or rely on broadcastSync 'error' status
         }
     }
 };

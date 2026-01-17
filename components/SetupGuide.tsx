@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   X, Database, Settings, Smartphone, Tablet, Tv, Terminal, 
@@ -522,46 +523,12 @@ NOTIFY pgrst, 'reload schema';`}
                               <div className="bg-red-900/30 border-l-4 border-red-500 p-6 rounded-r-xl">
                                   <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><Wrench size={16}/> Emergency Repair</h3>
                                   <p className="text-slate-300 text-xs mt-2 leading-relaxed">
-                                      If you see <strong>404 Not Found</strong> errors for <code>brands</code> or <strong>400 Bad Request</strong> for <code>kiosks</code> or <code>pricelists</code>, run these scripts immediately. They force creation of all missing columns and refresh the API cache.
+                                      If you see <strong>404 Not Found</strong> errors for <code>brands</code> or <strong>400 Bad Request</strong> for <code>kiosks</code>, run this script immediately. It forces creation of all missing tables and refreshes the API cache.
                                   </p>
                               </div>
 
                               <CodeSnippet 
-                                label="Fix Pricelists Table (Fixes 400 Bad Request)"
-                                id="fix-pricelists"
-                                code={`-- FIX PRICELISTS TABLE SCHEMA
-CREATE TABLE IF NOT EXISTS public.pricelists (
-    id text PRIMARY KEY,
-    brand_id text,
-    title text,
-    month text,
-    year text,
-    url text,
-    thumbnail_url text,
-    type text,
-    kind text,
-    start_date text,
-    end_date text,
-    promo_text text,
-    items jsonb DEFAULT '[]'::jsonb,
-    headers jsonb DEFAULT '{}'::jsonb,
-    date_added timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-);
-
--- Ensure all columns exist
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS kind text;
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS start_date text;
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS end_date text;
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS promo_text text;
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS items jsonb DEFAULT '[]'::jsonb;
-ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS headers jsonb DEFAULT '{}'::jsonb;
-
-NOTIFY pgrst, 'reload schema';`}
-                              />
-
-                              <CodeSnippet 
-                                label="Master Repair Script (All Tables)"
+                                label="Master Repair Script"
                                 id="mig-master"
                                 code={`-- 1. FIX KIOSKS TABLE
 CREATE TABLE IF NOT EXISTS public.kiosks (
@@ -621,6 +588,25 @@ CREATE TABLE IF NOT EXISTS public.pricelist_brands (
     id text PRIMARY KEY,
     name text,
     logo_url text,
+    updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.pricelists (
+    id text PRIMARY KEY,
+    brand_id text,
+    title text,
+    month text,
+    year text,
+    url text,
+    thumbnail_url text,
+    type text,
+    kind text,
+    start_date text,
+    end_date text,
+    promo_text text,
+    items jsonb DEFAULT '[]'::jsonb,
+    headers jsonb DEFAULT '{}'::jsonb,
+    date_added timestamptz DEFAULT now(),
     updated_at timestamptz DEFAULT now()
 );
 
