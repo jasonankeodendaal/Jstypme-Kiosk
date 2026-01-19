@@ -5,6 +5,56 @@ import { supabase, getEnv, initSupabase, checkCloudConnection } from "./kioskSer
 const STORAGE_KEY_DATA = 'kiosk_pro_store_data';
 const STORAGE_KEY_OFFLINE_QUEUE = 'kiosk_pro_offline_queue';
 
+// --- IDB WRAPPER (Async Storage) ---
+const DB_NAME = 'KioskProDB';
+const STORE_NAME = 'store_config';
+const DB_VERSION = 1;
+
+function getDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+}
+
+async function dbGet(key: string) {
+  try {
+    const db = await getDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.get(key);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (e) {
+    console.warn("IDB Read Error", e);
+    return null;
+  }
+}
+
+async function dbPut(key: string, value: any) {
+  try {
+    const db = await getDB();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.put(value, key);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch (e) {
+    console.warn("IDB Write Error", e);
+  }
+}
+
 // --- PERFORMANCE UTILITIES ---
 
 // Yield to main thread to prevent "Application Freeze" watchdog triggers
@@ -346,9 +396,14 @@ export const deleteItem = async (type: 'BRAND' | 'CATEGORY' | 'PRODUCT' | 'PRICE
 setTimeout(() => offlineQueue.process(), 5000);
 setInterval(() => offlineQueue.process(), 60000);
 
+// Modified: Priority Cloud Fetch, fallback to IDB
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
-  if (supabase) {
+  
+  const isOnline = await checkCloudConnection();
+
+  // 1. Try Cloud First (if online)
+  if (isOnline && supabase) {
       try {
           const { data: configRow } = await supabase.from('store_config').select('data').eq('id', 1).single();
           let baseData = migrateData(configRow?.data || {});
@@ -468,25 +523,34 @@ export const generateStoreData = async (): Promise<StoreData> => {
               console.warn("Relational tables not found or empty. Using legacy monolith data.", relationalError);
           }
 
-          // Async Cache Save (Fire and forget, handled by browser's async storage if we used IDB, but here localstorage is sync. We do it at end.)
+          // ASYNC SAVE TO INDEXEDDB (Non-blocking)
           try { 
-              // Don't block return
-              setTimeout(() => {
-                  try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(baseData)); } catch(e){}
-              }, 100);
-          } catch (e) {}
+              await dbPut(STORAGE_KEY_DATA, baseData);
+          } catch (e) {
+              console.warn("Failed to update local cache", e);
+          }
           
           return baseData;
 
       } catch (e) { 
-          console.warn("Cloud fetch failed, using local cache.", e); 
+          console.warn("Cloud fetch failed, attempting local cache fallback.", e); 
       }
   }
   
+  // 2. Fallback to Local IDB Cache
+  try {
+    const stored = await dbGet(STORAGE_KEY_DATA);
+    if (stored) return migrateData(stored);
+  } catch (e) {
+      console.warn("IDB fetch failed", e);
+  }
+
+  // 3. Fallback to LocalStorage (Legacy/Emergency)
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DATA);
     if (stored) return migrateData(JSON.parse(stored));
   } catch (e) {}
+
   return migrateData(DEFAULT_DATA);
 };
 
@@ -494,13 +558,16 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
     // 1. Sanitize Async
     const cleanData = await sanitizeDataAsync(data);
     
-    // 2. Yield before Blocking LocalStorage Write
+    // 2. Yield before Blocking
     await yieldToMain();
     
+    // 3. Save to IDB (Async)
     try {
-        localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(cleanData));
+        await dbPut(STORAGE_KEY_DATA, cleanData);
     } catch (e) {
-        console.error("Local Storage Quota Exceeded");
+        console.error("IDB Save Failed", e);
+        // Fallback to localStorage only if IDB fails
+        try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(cleanData)); } catch(e){}
     }
 
     if (!supabase) initSupabase();
