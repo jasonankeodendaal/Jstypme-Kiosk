@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
@@ -1261,7 +1260,6 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                       title="Kiosk Web Portal" 
                       sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                       loading="lazy"
-                      importance="high"
                    />
                </div>
            </div>

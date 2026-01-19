@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KioskApp } from './components/KioskApp';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -35,15 +34,20 @@ const SyncStatusPopup = () => {
                     {status === 'syncing' && (
                         <div className="absolute inset-0 border-2 border-slate-700 rounded-full"></div>
                     )}
-                    <div 
-                        className={`absolute inset-0 border-2 ${status === 'error' ? 'border-red-500' : 'border-blue-500'} rounded-full transition-all duration-300`}
-                        style={{ 
-                            clipPath: `inset(0 0 0 0)`,
-                            borderDasharray: '63', // ~2 * PI * r
-                            borderDashoffset: `${63 - (63 * progress / 100)}`,
-                            transform: 'rotate(-90deg)'
-                        }}
-                    ></div>
+                    <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 40 40">
+                        <circle
+                            className={`transition-all duration-300 ${status === 'error' ? 'text-red-500' : 'text-blue-500'}`}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            fill="transparent"
+                            r="18"
+                            cx="20"
+                            cy="20"
+                            strokeDasharray="113"
+                            strokeDashoffset={113 - (113 * progress / 100)}
+                            strokeLinecap="round"
+                        />
+                    </svg>
                     
                     {status === 'syncing' ? (
                         <Cloud className="text-blue-400 animate-pulse" size={16} />
