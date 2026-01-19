@@ -1,14 +1,23 @@
+
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand, Category, Pricelist, PricelistBrand } from "../types";
 import { supabase, getEnv, initSupabase, checkCloudConnection } from "./kioskService";
 
 const STORAGE_KEY_DATA = 'kiosk_pro_store_data';
 const STORAGE_KEY_OFFLINE_QUEUE = 'kiosk_pro_offline_queue';
 
+// --- PERFORMANCE UTILITIES ---
+
+// Yield to main thread to prevent "Application Freeze" watchdog triggers
+const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
+
 // Progress broadcasting utility
 const broadcastSync = (progress: number, status: 'idle' | 'syncing' | 'complete' | 'error') => {
-    window.dispatchEvent(new CustomEvent('kiosk-sync-event', { 
-        detail: { progress, status } 
-    }));
+    // Dispatch in a timeout to avoid synchronous layout thrashing
+    setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('kiosk-sync-event', { 
+            detail: { progress, status } 
+        }));
+    }, 0);
 };
 
 const DEFAULT_ADMIN: AdminUser = {
@@ -43,9 +52,9 @@ const MOCK_BRANDS: Brand[] = [
             id: 'p-iphone15pm',
             sku: 'APL-I15PM',
             name: 'iPhone 15 Pro Max',
-            description: 'Forged in titanium and featuring the groundbreaking A17 Pro chip, a customizable Action button, and a more versatile Pro camera system.',
-            specs: { 'Chip': 'A17 Pro', 'Display': '6.7-inch Super Retina XDR', 'Camera': '48MP Main | Ultra Wide | Telephoto' },
-            features: ['Titanium design', 'Action button', 'USB-C with USB 3 speeds', 'All-day battery life'],
+            description: 'Forged in titanium and featuring the groundbreaking A17 Pro chip.',
+            specs: { 'Chip': 'A17 Pro', 'Display': '6.7-inch Super Retina XDR' },
+            features: ['Titanium design', 'Action button'],
             dimensions: [{ label: 'Device', width: '76.7 mm', height: '159.9 mm', depth: '8.25 mm', weight: '221 g' }],
             imageUrl: 'https://images.unsplash.com/photo-1696446701796-da61225697cc?w=800&auto=format&fit=crop'
           }
@@ -106,22 +115,36 @@ const migrateData = (data: any): StoreData => {
     return data as StoreData;
 };
 
-// Storage Safety: Remove large Base64 strings to prevent Quota Exceeded Errors
-const sanitizeData = (data: any): any => {
+// Async Storage Safety: Process items in chunks to prevent UI freeze
+const sanitizeDataAsync = async (data: any): Promise<any> => {
     if (typeof data === 'string') {
         if (data.startsWith('data:') && data.length > 2048) { 
-             console.warn("Storage Guard: Large Base64 string sanitized to prevent quota crash.");
-             return ''; 
+             return ''; // Strip heavy base64
         }
         if (data.length > 500000) {
             return data.substring(0, 500000) + '...[TRUNCATED]';
         }
         return data;
     }
-    if (Array.isArray(data)) return data.map(item => sanitizeData(item));
+    
+    if (Array.isArray(data)) {
+        const result = [];
+        for (let i = 0; i < data.length; i++) {
+            result.push(await sanitizeDataAsync(data[i]));
+            // Yield every 50 items to keep UI responsive
+            if (i % 50 === 0) await yieldToMain();
+        }
+        return result;
+    }
+    
     if (data !== null && typeof data === 'object') {
         const newData: any = {};
-        Object.keys(data).forEach(key => { newData[key] = sanitizeData(data[key]); });
+        const keys = Object.keys(data);
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            newData[key] = await sanitizeDataAsync(data[key]);
+            if (i % 50 === 0) await yieldToMain();
+        }
         return newData;
     }
     return data;
@@ -164,7 +187,6 @@ class OfflineQueue {
     }
 
     add(action: SyncAction) {
-        // Optimize: Remove previous pending actions for the same ID to prevent redundant writes
         this.queue = this.queue.filter(a => !(a.type === action.type && a.id === action.id));
         this.queue.push(action);
         this.save();
@@ -175,17 +197,21 @@ class OfflineQueue {
         if (!supabase) initSupabase();
         if (!supabase) return;
 
-        // Check connection specifically before processing queue
         const online = await checkCloudConnection();
         if (!online) return;
 
-        console.log(`Processing ${this.queue.length} offline actions...`);
+        // Throttled UI update
         broadcastSync(10, 'syncing');
 
         const remaining: SyncAction[] = [];
         let successCount = 0;
 
-        for (const action of this.queue) {
+        for (let i = 0; i < this.queue.length; i++) {
+            const action = this.queue[i];
+            
+            // Yield periodically
+            if (i % 5 === 0) await yieldToMain();
+
             try {
                 let error = null;
                 if (action.subtype === 'delete') {
@@ -199,7 +225,6 @@ class OfflineQueue {
                         error = res.error;
                     }
                 } else {
-                    // Upsert logic
                     let res: any = {};
                     if (action.type === 'BRAND') res = await supabase.from('brands').upsert(action.data);
                     else if (action.type === 'CATEGORY') res = await supabase.from('categories').upsert(action.data);
@@ -213,7 +238,7 @@ class OfflineQueue {
                 successCount++;
             } catch (e) {
                 console.error("Sync action failed", action, e);
-                remaining.push(action); // Keep in queue
+                remaining.push(action); 
             }
         }
 
@@ -231,7 +256,6 @@ const offlineQueue = new OfflineQueue();
 
 // --- GRANULAR SYNC FUNCTIONS ---
 
-// Helpers to flatten data for SQL
 const flattenBrand = (b: Brand) => ({
     id: b.id, name: b.name, logo_url: b.logoUrl, theme_color: b.themeColor, updated_at: new Date().toISOString()
 });
@@ -252,17 +276,12 @@ const flattenPricelist = (pl: Pricelist) => ({
     items: pl.items || [], headers: pl.headers || {}, date_added: pl.dateAdded, updated_at: new Date().toISOString()
 });
 
-/**
- * Updates a single brand in the cloud or queues it.
- * NOTE: This assumes you handle local state update in UI separately or via reload.
- */
 export const upsertBrand = async (brand: Brand) => {
     if (!supabase) initSupabase();
     try {
         const { error } = await supabase.from('brands').upsert(flattenBrand(brand));
         if (error) throw error;
     } catch (e) {
-        console.error("Brand Sync Error:", e);
         offlineQueue.add({ type: 'BRAND', data: flattenBrand(brand), id: brand.id, timestamp: Date.now() });
     }
 };
@@ -273,7 +292,6 @@ export const upsertCategory = async (category: Category, brandId: string) => {
         const { error } = await supabase.from('categories').upsert(flattenCategory(category, brandId));
         if (error) throw error;
     } catch (e) {
-        console.error("Category Sync Error:", e);
         offlineQueue.add({ type: 'CATEGORY', data: flattenCategory(category, brandId), id: category.id, timestamp: Date.now() });
     }
 };
@@ -284,7 +302,6 @@ export const upsertProduct = async (product: Product, categoryId: string) => {
         const { error } = await supabase.from('products').upsert(flattenProduct(product, categoryId));
         if (error) throw error;
     } catch (e) {
-        console.error("Product Sync Error:", e);
         offlineQueue.add({ type: 'PRODUCT', data: flattenProduct(product, categoryId), id: product.id, timestamp: Date.now() });
     }
 };
@@ -293,15 +310,8 @@ export const upsertPricelist = async (pricelist: Pricelist) => {
     if (!supabase) initSupabase();
     try {
         const { error } = await supabase.from('pricelists').upsert(flattenPricelist(pricelist));
-        if (error) {
-            console.error("Supabase Error details:", error);
-            if (error.code === '42703' || error.message.includes('400')) {
-                alert("Sync Error: The database table is missing columns. Please go to Settings > System Guide > Migration and run the 'Fix Pricelists Table' script.");
-            }
-            throw error;
-        }
+        if (error) throw error;
     } catch (e) {
-        console.error("Pricelist Sync Error:", e);
         offlineQueue.add({ type: 'PRICELIST', data: flattenPricelist(pricelist), id: pricelist.id, timestamp: Date.now() });
     }
 };
@@ -313,7 +323,6 @@ export const upsertPricelistBrand = async (pb: PricelistBrand) => {
         const { error } = await supabase.from('pricelist_brands').upsert(data);
         if (error) throw error;
     } catch (e) {
-        console.error("Pricelist Brand Sync Error:", e);
         offlineQueue.add({ type: 'PRICELIST_BRAND', data, id: pb.id, timestamp: Date.now() });
     }
 };
@@ -330,28 +339,23 @@ export const deleteItem = async (type: 'BRAND' | 'CATEGORY' | 'PRODUCT' | 'PRICE
             if (error) throw error;
         }
     } catch (e) {
-        console.error("Delete Error:", e);
         offlineQueue.add({ type, subtype: 'delete', data: null, id, timestamp: Date.now() });
     }
 };
 
-// Process offline queue on init
 setTimeout(() => offlineQueue.process(), 5000);
 setInterval(() => offlineQueue.process(), 60000);
 
-/**
- * RELATIONAL FETCH STRATEGY
- * Fetches flattened tables (brands, categories, products) and reconstructs the StoreData tree.
- */
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
   if (supabase) {
       try {
-          // 1. Fetch Core Config (Settings & Backup)
           const { data: configRow } = await supabase.from('store_config').select('data').eq('id', 1).single();
           let baseData = migrateData(configRow?.data || {});
 
-          // 2. Fetch Fleet
+          // Yield to prevent blocking during initial parsing
+          await yieldToMain();
+
           try {
               const { data: fleetRows } = await supabase.from('kiosks').select('*');
               if (fleetRows) {
@@ -367,9 +371,7 @@ export const generateStoreData = async (): Promise<StoreData> => {
               console.warn("Fleet fetch error", e);
           }
 
-          // 3. ATTEMPT RELATIONAL FETCH
           try {
-              // We do a probe first to avoid Promise.all failure if tables don't exist
               const probe = await supabase.from('brands').select('id').limit(1);
               if (probe.error) throw new Error("Relational tables not ready");
 
@@ -381,55 +383,59 @@ export const generateStoreData = async (): Promise<StoreData> => {
                   supabase.from('pricelists').select('*')
               ]);
 
-              // Check if we actually got relational data (if tables exist)
+              await yieldToMain();
+
               if (brandsRes.data && catsRes.data && prodsRes.data) {
-                  // Reconstruct Tree: Brand -> Categories -> Products
-                  const relationalBrands: Brand[] = brandsRes.data.map((b: any) => ({
-                      id: b.id,
-                      name: b.name,
-                      logoUrl: b.logo_url,
-                      themeColor: b.theme_color,
-                      categories: catsRes.data
-                          .filter((c: any) => c.brand_id === b.id)
-                          .map((c: any) => ({
+                  // Heavy relational reconstruction - CHUNKED
+                  const relationalBrands: Brand[] = [];
+                  
+                  for (let i = 0; i < brandsRes.data.length; i++) {
+                      const b = brandsRes.data[i];
+                      const brandCats = catsRes.data.filter((c: any) => c.brand_id === b.id);
+                      const categories: Category[] = [];
+
+                      for (const c of brandCats) {
+                          const catProds = prodsRes.data.filter((p: any) => p.category_id === c.id);
+                          categories.push({
                               id: c.id,
                               name: c.name,
                               icon: c.icon,
-                              products: prodsRes.data
-                                  .filter((p: any) => p.category_id === c.id)
-                                  .map((p: any) => ({
-                                      id: p.id,
-                                      name: p.name,
-                                      sku: p.sku,
-                                      description: p.description,
-                                      imageUrl: p.image_url,
-                                      galleryUrls: p.gallery_urls,
-                                      videoUrls: p.video_urls,
-                                      specs: p.specs,
-                                      features: p.features,
-                                      dimensions: p.dimensions,
-                                      boxContents: p.box_contents,
-                                      manuals: p.manuals,
-                                      terms: p.terms,
-                                      dateAdded: p.date_added
-                                  }))
-                          }))
-                  }));
+                              products: catProds.map((p: any) => ({
+                                  id: p.id,
+                                  name: p.name,
+                                  sku: p.sku,
+                                  description: p.description,
+                                  imageUrl: p.image_url,
+                                  galleryUrls: p.gallery_urls,
+                                  videoUrls: p.video_urls,
+                                  specs: p.specs,
+                                  features: p.features,
+                                  dimensions: p.dimensions,
+                                  boxContents: p.box_contents,
+                                  manuals: p.manuals,
+                                  terms: p.terms,
+                                  dateAdded: p.date_added
+                              }))
+                          });
+                      }
 
-                  // DUAL-MODE FALLBACK:
-                  // If relational tables are returned but empty (e.g., due to RLS blocking read), 
-                  // and we have a backup in baseData (store_config), rely on baseData.
-                  // Only overwrite if relational data is actually present or explicitly empty (user deleted all).
+                      relationalBrands.push({
+                          id: b.id,
+                          name: b.name,
+                          logoUrl: b.logo_url,
+                          themeColor: b.theme_color,
+                          categories
+                      });
+
+                      // Yield every 5 brands to keep UI smooth
+                      if (i % 5 === 0) await yieldToMain();
+                  }
+
                   if (relationalBrands.length > 0) {
-                      baseData.brands = relationalBrands;
-                  } else if (baseData.brands && baseData.brands.length > 0) {
-                      console.warn("Relational tables empty (RLS?), falling back to store_config backup.");
-                  } else {
-                      // Both are empty, or it's a fresh start.
                       baseData.brands = relationalBrands;
                   }
 
-                  // Reconstruct Pricelists
+                  // Process Pricelists
                   if (plBrandsRes.data && plRes.data) {
                       const relPricelistBrands = plBrandsRes.data.map((pb: any) => ({
                           id: pb.id, name: pb.name, logoUrl: pb.logo_url
@@ -452,24 +458,24 @@ export const generateStoreData = async (): Promise<StoreData> => {
                           dateAdded: pl.date_added
                       }));
 
-                      // Same fallback logic for Pricelists
                       if (relPricelistBrands.length > 0) {
-                          baseData.pricelistBrands = relPricelistBrands;
-                          baseData.pricelists = relPricelists;
-                      } else if (baseData.pricelistBrands && baseData.pricelistBrands.length > 0) {
-                          console.warn("Relational pricelists empty, using backup.");
-                      } else {
                           baseData.pricelistBrands = relPricelistBrands;
                           baseData.pricelists = relPricelists;
                       }
                   }
               }
           } catch (relationalError) {
-              console.warn("Relational tables not found or empty. Using legacy monolith data from store_config.", relationalError);
+              console.warn("Relational tables not found or empty. Using legacy monolith data.", relationalError);
           }
 
-          // Cache & Return
-          try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(baseData)); } catch (e) {}
+          // Async Cache Save (Fire and forget, handled by browser's async storage if we used IDB, but here localstorage is sync. We do it at end.)
+          try { 
+              // Don't block return
+              setTimeout(() => {
+                  try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(baseData)); } catch(e){}
+              }, 100);
+          } catch (e) {}
+          
           return baseData;
 
       } catch (e) { 
@@ -477,7 +483,6 @@ export const generateStoreData = async (): Promise<StoreData> => {
       }
   }
   
-  // Fallback to local cache
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DATA);
     if (stored) return migrateData(JSON.parse(stored));
@@ -485,14 +490,13 @@ export const generateStoreData = async (): Promise<StoreData> => {
   return migrateData(DEFAULT_DATA);
 };
 
-/**
- * RELATIONAL SAVE STRATEGY (Batch Upsert)
- * Now smarter: It can optionally skip heavy inventory syncs if granular updates are used.
- * But we keep it robust for "Save Settings" or bulk migrations.
- */
 export const saveStoreData = async (data: StoreData): Promise<void> => {
-    // 1. Sanitize & Local Save
-    const cleanData = sanitizeData(data);
+    // 1. Sanitize Async
+    const cleanData = await sanitizeDataAsync(data);
+    
+    // 2. Yield before Blocking LocalStorage Write
+    await yieldToMain();
+    
     try {
         localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(cleanData));
     } catch (e) {
@@ -504,27 +508,20 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         broadcastSync(10, 'syncing');
         
         try {
-            // --- CHECK FOR RELATIONAL TABLE EXISTENCE ---
             let relationalTablesExist = false;
             try {
                 const check = await supabase.from('brands').select('id').limit(1);
-                if (!check.error) {
-                    relationalTablesExist = true;
-                }
+                if (!check.error) relationalTablesExist = true;
             } catch(e) {
                 relationalTablesExist = false;
             }
 
-            // --- A. SAVE GLOBAL SETTINGS ---
-            // DUAL-WRITE STRATEGY: 
-            // We ALWAYS save the full dataset to `store_config` (Monolith) as a safety backup.
-            // This ensures that even if relational tables fail (RLS, schema mismatch), data is safe.
             let settingsPayload = { ...cleanData };
             
-            // Prune archive for settings payload regardless
+            // Increased Archive Limit (200 items) to fix History Tab functionality
             const archivePruned = {
                 ...(settingsPayload.archive || {}),
-                deletedItems: (settingsPayload.archive?.deletedItems || []).slice(0, 30),
+                deletedItems: (settingsPayload.archive?.deletedItems || []).slice(0, 200),
                 brands: [], products: [], catalogues: [] 
             };
             settingsPayload.archive = archivePruned;
@@ -534,45 +531,43 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             
             broadcastSync(30, 'syncing');
 
-            // --- B. RELATIONAL SAVE (Only if tables exist) ---
             if (relationalTablesExist) {
-                // 1. Flatten Brands
+                await yieldToMain();
+
                 const flatBrands = cleanData.brands.map((b: Brand) => flattenBrand(b));
+                
+                // Chunk Flattening for Categories and Products
+                const flatCategories: any[] = [];
+                for (const b of cleanData.brands) {
+                    for (const c of b.categories) {
+                        flatCategories.push(flattenCategory(c, b.id));
+                    }
+                }
+                
+                const flatProducts: any[] = [];
+                for (const b of cleanData.brands) {
+                    for (const c of b.categories) {
+                        for (const p of c.products) {
+                            flatProducts.push(flattenProduct(p, c.id));
+                        }
+                    }
+                }
 
-                // 2. Flatten Categories
-                const flatCategories = cleanData.brands.flatMap((b: Brand) => 
-                    b.categories.map((c: Category) => flattenCategory(c, b.id))
-                );
+                await yieldToMain();
 
-                // 3. Flatten Products
-                const flatProducts = cleanData.brands.flatMap((b: Brand) => 
-                    b.categories.flatMap((c: Category) => 
-                        c.products.map((p: Product) => flattenProduct(p, c.id))
-                    )
-                );
-
-                // 4. Flatten Pricelists
                 const flatPLBrands = (cleanData.pricelistBrands || []).map((pb: PricelistBrand) => ({
                     id: pb.id, name: pb.name, logo_url: pb.logoUrl, updated_at: new Date().toISOString()
                 }));
 
                 const flatPricelists = (cleanData.pricelists || []).map((pl: Pricelist) => flattenPricelist(pl));
 
-                // EXECUTE BATCH UPSERTS
-                if (flatBrands.length > 0) {
-                    const { error } = await supabase.from('brands').upsert(flatBrands);
-                    if (error) throw error;
-                }
-                if (flatPLBrands.length > 0) {
-                    const { error } = await supabase.from('pricelist_brands').upsert(flatPLBrands);
-                    if (error) throw error;
-                }
+                // BATCH UPSERTS
+                if (flatBrands.length > 0) await supabase.from('brands').upsert(flatBrands);
+                if (flatPLBrands.length > 0) await supabase.from('pricelist_brands').upsert(flatPLBrands);
+                
                 broadcastSync(50, 'syncing');
 
-                if (flatCategories.length > 0) {
-                    const { error } = await supabase.from('categories').upsert(flatCategories);
-                    if (error) throw error;
-                }
+                if (flatCategories.length > 0) await supabase.from('categories').upsert(flatCategories);
                 
                 const chunkArray = (arr: any[], size: number) => {
                     const chunks = [];
@@ -581,21 +576,20 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
                 };
 
                 const productChunks = chunkArray(flatProducts, 50);
-                for (const chunk of productChunks) {
-                    const { error } = await supabase.from('products').upsert(chunk);
-                    if (error) throw error;
+                for (let i = 0; i < productChunks.length; i++) {
+                    const chunk = productChunks[i];
+                    await supabase.from('products').upsert(chunk);
+                    // Yield during massive batch uploads
+                    if (i % 2 === 0) await yieldToMain();
                 }
+                
                 broadcastSync(80, 'syncing');
 
                 const plChunks = chunkArray(flatPricelists, 20); 
                 for (const chunk of plChunks) {
                     const { error } = await supabase.from('pricelists').upsert(chunk);
-                    if (error) {
-                        if (error.code === '42703' || error.message.includes('400')) {
-                            console.error("Schema mismatch on batch upload. Some columns missing.");
-                            alert("Warning: Pricelists failed to save due to missing database columns. Please use Setup Guide > Migration > Fix Pricelists Table.");
-                        }
-                        throw error;
+                    if (error && (error.code === '42703' || error.message.includes('400'))) {
+                        alert("Warning: Pricelists failed due to missing DB columns. Check Setup Guide.");
                     }
                 }
             }
@@ -606,13 +600,11 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         } catch (e: any) {
             console.error("Save Sync Error:", e);
             broadcastSync(0, 'error');
-            // Re-throw to allow UI to catch it if needed, or rely on broadcastSync 'error' status
         }
     }
 };
 
 export const resetStoreData = async (): Promise<StoreData> => {
-    // If resetting, we try to clear all tables
     if (!supabase) initSupabase();
     if (supabase) {
         try {

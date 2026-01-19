@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef, memo, useCallback, useMemo } from 'react';
 import { FlatProduct, AdItem, Catalogue, ScreensaverSettings } from '../types';
-import { Moon, VolumeX, Clock as ClockIcon, AlertCircle } from 'lucide-react';
+import { Moon, VolumeX, Clock as ClockIcon } from 'lucide-react';
 
 interface ScreensaverProps {
   products: FlatProduct[];
@@ -19,14 +19,13 @@ interface PlaylistItem {
   title?: string;
   subtitle?: string;
   dateAdded?: string;
-  themeColor?: string; // Brand theme color for ambient background
+  themeColor?: string;
 }
 
 type SlotStatus = 'empty' | 'loading' | 'ready' | 'error';
 
 // --- UTILITIES ---
 
-// Robust Interval Hook
 function useInterval(callback: () => void, delay: number | null) {
   const savedCallback = useRef(callback);
   useEffect(() => { savedCallback.current = callback; }, [callback]);
@@ -55,7 +54,6 @@ const ClockWidget = memo(() => {
 });
 
 // --- SLIDE COMPONENT ---
-// Simplified to be purely reactive to props and load events
 const Slide = memo(({ 
     item, 
     isActive, 
@@ -82,7 +80,6 @@ const Slide = memo(({
     const [animClass, setAnimClass] = useState('');
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Reset loaded state when content changes to prevent showing old content or black frame
     useEffect(() => {
         setIsLoaded(false);
     }, [item.url]);
@@ -94,11 +91,9 @@ const Slide = memo(({
         }
     };
 
-    // Animation Logic
     useEffect(() => {
         const cinematic = ['effect-smooth-zoom', 'effect-subtle-drift', 'effect-gentle-pan', 'effect-slide-pan', 'effect-hard-zoom'];
         const pulse = ['effect-heartbeat', 'effect-glow', 'effect-soft-scale'];
-        
         let selected = '';
         if (item.type === 'image') {
             if (forceKenBurns) {
@@ -115,7 +110,6 @@ const Slide = memo(({
         setAnimClass(selected);
     }, [item.id, animationStyle, forceKenBurns]);
 
-    // Cleanup Logic
     useEffect(() => {
         return () => {
             if (videoRef.current) {
@@ -126,43 +120,26 @@ const Slide = memo(({
         };
     }, [item.url]);
 
-    // Image Handling
     useEffect(() => {
         if (item.type === 'image' && imgRef.current) {
             const img = imgRef.current;
-            
             const handleLoad = () => handleContentReady();
-            const handleError = () => {
-                console.warn(`[Screensaver] Image Failed: ${item.url}`);
-                onError();
-            };
-
+            const handleError = () => { onError(); };
             img.onload = handleLoad;
             img.onerror = handleError;
-
-            // Immediate check for cached images
-            if (img.complete && img.naturalWidth > 0) {
-                handleContentReady();
-            }
+            if (img.complete && img.naturalWidth > 0) handleContentReady();
         }
     }, [item, onReady, onError]);
 
-    // Video Handling
     useEffect(() => {
         if (item.type === 'video' && videoRef.current) {
             const vid = videoRef.current;
-            vid.muted = isMuted; // Enforce mute prop on element
-            
+            vid.muted = isMuted;
             const handleReady = () => handleContentReady();
-            const handleError = (e: any) => {
-                console.warn(`[Screensaver] Video Failed: ${item.url}`, e);
-                onError();
-            };
-
+            const handleError = (e: any) => { onError(); };
             vid.addEventListener('loadeddata', handleReady);
             vid.addEventListener('error', handleError);
             vid.addEventListener('ended', onVideoEnd);
-
             return () => {
                 vid.removeEventListener('loadeddata', handleReady);
                 vid.removeEventListener('error', handleError);
@@ -171,12 +148,10 @@ const Slide = memo(({
         }
     }, [item, isMuted, onReady, onError, onVideoEnd]);
 
-    // Playback Control
     useEffect(() => {
         if (item.type === 'video' && videoRef.current) {
             if (isActive) {
                 videoRef.current.play().catch(e => {
-                    console.warn("Autoplay blocked, attempting muted fallback", e);
                     videoRef.current!.muted = true;
                     videoRef.current!.play().catch(() => onError());
                 });
@@ -236,6 +211,9 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
     const [currentIdx, setCurrentIdx] = useState(0);
     const isInitializedRef = useRef(false);
+    
+    // Hash to track playlist content changes
+    const lastPlaylistHash = useRef('');
 
     // 3. State: Double Buffer
     const [slots, setSlots] = useState<[PlaylistItem | null, PlaylistItem | null]>([null, null]);
@@ -248,17 +226,17 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     const videoEndedRef = useRef(false);
     const [isSleepMode, setIsSleepMode] = useState(false);
 
-    // 5. Generate Playlist (On Mount or Data Change)
+    // 5. Generate Playlist - Optimized to prevent unnecessary regeneration
     useEffect(() => {
         const list: PlaylistItem[] = [];
         const shouldInclude = (dateStr?: string) => {
             if (!dateStr) return true;
             const diff = new Date().getTime() - new Date(dateStr).getTime();
-            return diff < (1000 * 60 * 60 * 24 * 180) || Math.random() < 0.25; // 6 months or random chance
+            return diff < (1000 * 60 * 60 * 24 * 180) || Math.random() < 0.25; 
         };
 
         if (settings?.showCustomAds) {
-            ads.forEach((ad, i) => { if (shouldInclude(ad.dateAdded)) for(let c=0;c<3;c++) list.push({ id: `ad-${ad.id}-${c}`, type: ad.type, url: ad.url, title: 'Sponsored', dateAdded: ad.dateAdded }); });
+            ads.forEach((ad) => { if (shouldInclude(ad.dateAdded)) for(let c=0;c<3;c++) list.push({ id: `ad-${ad.id}-${c}`, type: ad.type, url: ad.url, title: 'Sponsored', dateAdded: ad.dateAdded }); });
         }
         if (settings?.showPamphlets) {
             pamphlets.forEach(p => { if (p.pages?.[0] && shouldInclude(p.startDate)) list.push({ id: `cat-${p.id}`, type: 'image', url: p.pages[0], title: p.title }); });
@@ -274,26 +252,21 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 themeColor: p.brandThemeColor 
             });
             if (settings?.showProductVideos) {
-                if (p.videoUrl) list.push({ 
-                    id: `p-vid-${p.id}`, 
-                    type: 'video', 
-                    url: p.videoUrl, 
-                    title: p.brandName, 
-                    subtitle: p.name,
-                    themeColor: p.brandThemeColor 
-                });
+                if (p.videoUrl) list.push({ id: `p-vid-${p.id}`, type: 'video', url: p.videoUrl, title: p.brandName, subtitle: p.name, themeColor: p.brandThemeColor });
                 p.videoUrls?.forEach((v, i) => { 
-                    if(v !== p.videoUrl) list.push({ 
-                        id: `p-vid-${p.id}-${i}`, 
-                        type: 'video', 
-                        url: v, 
-                        title: p.brandName, 
-                        subtitle: p.name,
-                        themeColor: p.brandThemeColor 
-                    }); 
+                    if(v !== p.videoUrl) list.push({ id: `p-vid-${p.id}-${i}`, type: 'video', url: v, title: p.brandName, subtitle: p.name, themeColor: p.brandThemeColor }); 
                 });
             }
         });
+
+        // Content Hash Check
+        const newHash = list.map(i => i.id).sort().join('|');
+        if (newHash === lastPlaylistHash.current && list.length > 0) {
+            // Content hasn't changed, skip update to prevent reset
+            return;
+        }
+        
+        lastPlaylistHash.current = newHash;
 
         // Shuffle
         for (let i = list.length - 1; i > 0; i--) {
@@ -303,12 +276,11 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
 
         setPlaylist(list);
         
-        // CRITICAL FIX: Only initialize slots if not already running. 
-        // This prevents black screen reset when background sync updates store data.
-        if (!isInitializedRef.current && list.length > 0) {
+        // Only initialize slots if it's the very first load or playlist was empty
+        if ((!isInitializedRef.current || playlist.length === 0) && list.length > 0) {
             isInitializedRef.current = true;
             setSlots([list[0], null]);
-            setSlotStatus(['loading', 'empty']); // Will switch to 'ready' via Slide callback
+            setSlotStatus(['loading', 'empty']);
             setCurrentIdx(0);
             setActiveSlot(0);
             lastTransitionTime.current = Date.now();
@@ -322,7 +294,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         }
     }, [playlist, currentIdx]);
 
-    // 6. Sleep Mode Check (Every Minute)
     useInterval(() => {
         if (!config.enableSleepMode || !config.activeHoursStart || !config.activeHoursEnd) {
             setIsSleepMode(false); return;
@@ -337,8 +308,7 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         setIsSleepMode(!isActive);
     }, 60000);
 
-    // 7. PRELOADER PIPELINE (Pending Slot Manager)
-    // Whenever activeSlot settles, we ensure the OTHER slot is loading the NEXT item.
+    // PRELOADER PIPELINE
     useEffect(() => {
         if (playlist.length === 0) return;
 
@@ -346,35 +316,25 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         const nextIdx = (currentIdx + 1) % playlist.length;
         const nextItem = playlist[nextIdx];
 
-        // Only update if the pending slot is not already holding the correct item
         if (slots[pendingSlot]?.id !== nextItem.id) {
-            // RESOURCE CONTENTION FIX:
-            // Delay the preloading of the NEXT slide by 2.5 seconds.
-            // This allows the CURRENT slide (especially video) to fill its buffer
-            // and start playing smoothly before we hog the bandwidth with the next download.
-            // This effectively serializes the heavy network usage.
             const contentionDelay = 2500;
-
             const timer = setTimeout(() => {
                 setSlots(prev => {
                     const newSlots = [...prev] as [PlaylistItem | null, PlaylistItem | null];
                     newSlots[pendingSlot] = nextItem;
                     return newSlots;
                 });
-                // Mark as loading immediately. Slide component will flip this to ready/error.
                 setSlotStatus(prev => {
                     const newStatus = [...prev] as [SlotStatus, SlotStatus];
                     newStatus[pendingSlot] = 'loading';
                     return newStatus;
                 });
             }, contentionDelay);
-
             return () => clearTimeout(timer);
         }
     }, [activeSlot, currentIdx, playlist]);
 
-    // 8. MASTER CLOCK & STATE MACHINE (The "Game Loop")
-    // Runs frequently to check timing and trigger transitions.
+    // MASTER CLOCK
     useInterval(() => {
         if (playlist.length === 0 || isSleepMode) return;
 
@@ -382,9 +342,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
         const elapsed = now - lastTransitionTime.current;
         const activeItem = slots[activeSlot];
         
-        // Determine Duration
-        // Videos wait for 'ended' event (via ref) OR a max timeout of 3 mins
-        // Images use config duration
         let isTimeUp = false;
         
         if (activeItem?.type === 'video') {
@@ -397,67 +354,46 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             }
         }
 
-        // FAIL-SAFE WATCHDOG
-        // If stuck on same slide for 3x duration, force reset
         const watchdogLimit = (activeItem?.type === 'video' ? 180000 : config.imageDuration * 1000) * 3;
         if (elapsed > watchdogLimit) {
-            console.warn("[Screensaver] Watchdog triggered! Force resetting buffers.");
-            // Force jump to next
             const nextIdx = (currentIdx + 1) % playlist.length;
             setCurrentIdx(nextIdx);
-            
-            // Soft reset - don't clear slots to null if possible, just try next item
             const nextItem = playlist[nextIdx];
             setSlots([nextItem, null]);
-            setSlotStatus(['loading', 'empty']); // Slide will fix this to ready
+            setSlotStatus(['loading', 'empty']); 
             setActiveSlot(0);
-            
             lastTransitionTime.current = Date.now();
             videoEndedRef.current = false;
             return;
         }
 
-        // TRANSITION LOGIC
         if (isTimeUp && !isTransitioning) {
             const pendingSlot = activeSlot === 0 ? 1 : 0;
             const status = slotStatus[pendingSlot];
 
             if (status === 'ready') {
-                // PERFORM SWAP
                 setIsTransitioning(true);
-                // Wait for CSS transition (1s), then finalize state
                 setTimeout(() => {
                     setActiveSlot(pendingSlot);
                     setCurrentIdx((prev) => (prev + 1) % playlist.length);
                     lastTransitionTime.current = Date.now();
                     videoEndedRef.current = false;
                     setIsTransitioning(false);
-                    
-                    // Clear old slot to save memory
                     setSlots(prev => {
                         const newSlots = [...prev];
-                        newSlots[activeSlot] = null; // The slot that WAS active is now cleared
+                        newSlots[activeSlot] = null; 
                         return newSlots as [PlaylistItem | null, PlaylistItem | null];
                     });
-                }, 1000); // 1s matches CSS transition duration
+                }, 1000); 
             } else if (status === 'error') {
-                // Pending item failed. Skip it logically without showing it.
-                console.warn("[Screensaver] Pending item error. Skipping index.");
                 setCurrentIdx((prev) => (prev + 1) % playlist.length);
-                // This state change will trigger the Preloader useEffect to load the *next* next item into the pending slot
-                // We keep 'isTimeUp' true effectively by not resetting lastTransitionTime, so loop checks again immediately next tick
-            } else {
-                // Status is 'loading' or 'empty'. 
-                // Do nothing. Wait for next tick. The current slide stays visible.
-                // The watchdog protects us if it never loads.
             }
         }
-    }, 250); // 4Hz heartbeat
+    }, 250); 
 
-    // Slide Callbacks
     const handleReady = useCallback((slotIdx: number) => {
         setSlotStatus(prev => {
-            if (prev[slotIdx] === 'ready') return prev; // No op
+            if (prev[slotIdx] === 'ready') return prev; 
             const newStatus = [...prev] as [SlotStatus, SlotStatus];
             newStatus[slotIdx] = 'ready';
             return newStatus;
@@ -473,11 +409,8 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     }, []);
 
     const handleVideoEnd = useCallback(() => {
-        // Only relevant if coming from active slot
         videoEndedRef.current = true;
     }, []);
-
-    // --- RENDER ---
 
     if (isSleepMode) {
         return (
@@ -533,20 +466,19 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 
                 let opacityClass = 'opacity-0 z-0';
                 if (isActiveSlot && !isTransitioning) {
-                    opacityClass = 'opacity-100 z-10'; // Stable state
+                    opacityClass = 'opacity-100 z-10'; 
                 } else if (isActiveSlot && isTransitioning) {
-                    opacityClass = 'opacity-0 z-10'; // Fading out (old active)
+                    opacityClass = 'opacity-0 z-10'; 
                 } else if (!isActiveSlot && isTransitioning) {
-                    opacityClass = 'opacity-100 z-20'; // Fading in (new active)
+                    opacityClass = 'opacity-100 z-20'; 
                 } else {
-                    opacityClass = 'opacity-0 z-0'; // Hidden pending
+                    opacityClass = 'opacity-0 z-0'; 
                 }
 
                 if (!item) return null;
 
                 return (
                     <div key={`slot-${idx}`} className={`slide-layer ${opacityClass}`}>
-                        {/* Background Gradient - Performance Optimized: Static color prevents dual video decode */}
                         <div 
                             className="absolute inset-0 z-0"
                             style={{ 
@@ -555,11 +487,10 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 z-10" />
                         
-                        {/* Content */}
                         <div className="absolute inset-0 z-20 flex items-center justify-center p-4 md:p-12">
                             <Slide 
                                 item={item}
-                                isActive={isActiveSlot || isTransitioning} // Keep playing during cross-fade
+                                isActive={isActiveSlot || isTransitioning} 
                                 isMuted={config.muteVideos || !isAudioUnlocked}
                                 onReady={() => handleReady(idx)}
                                 onError={() => handleError(idx)}
@@ -570,7 +501,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                             />
                         </div>
 
-                        {/* Info Overlay */}
                         {config.showInfoOverlay && (item.title || item.subtitle) && (
                             <div className={`absolute bottom-12 md:bottom-20 z-30 pointer-events-none flex flex-col ${alignClass} ${fontClass}`}>
                                 {item.title && (
@@ -594,7 +524,6 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
                 );
             })}
 
-            {/* Mute Indicator */}
             {slots[activeSlot] && !config.muteVideos && !isAudioUnlocked && slots[activeSlot]?.type === 'video' && (
                  <div className="absolute top-8 left-8 z-[50] bg-black/60 border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 text-white/50 animate-pulse pointer-events-none">
                      <VolumeX size={16} />
@@ -605,4 +534,22 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
     );
 };
 
-export default memo(Screensaver);
+// Custom comparison function for Memo
+const arePropsEqual = (prev: ScreensaverProps, next: ScreensaverProps) => {
+    // 1. If settings changed, re-render
+    if (JSON.stringify(prev.settings) !== JSON.stringify(next.settings)) return false;
+    
+    // 2. If length differs, re-render
+    if (prev.products.length !== next.products.length || prev.ads.length !== next.ads.length) return false;
+
+    // 3. Create a content hash to detect changes
+    // Only care about ID and updated/added dates
+    const getHash = (p: any[]) => p.map(i => i.id + (i.dateAdded || '')).sort().join('|');
+    
+    const prevHash = getHash(prev.products) + '||' + getHash(prev.ads);
+    const nextHash = getHash(next.products) + '||' + getHash(next.ads);
+
+    return prevHash === nextHash;
+};
+
+export default memo(Screensaver, arePropsEqual);
