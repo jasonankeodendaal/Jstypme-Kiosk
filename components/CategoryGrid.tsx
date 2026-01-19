@@ -86,8 +86,8 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
                 {IconMap[category.name] || <Box className="w-4 h-4 md:w-10 md:h-10" strokeWidth={1.5} />}
               </div>
               
-              <div className="w-full">
-                <h3 className="text-[8px] md:text-lg font-black text-slate-900 group-hover:text-blue-900 transition-colors truncate w-full uppercase tracking-tight leading-tight">
+              <div className="w-full px-1">
+                <h3 className="text-[8px] md:text-lg font-black text-slate-900 group-hover:text-blue-900 transition-colors w-full uppercase tracking-tight leading-tight line-clamp-2 whitespace-normal break-words">
                     {category.name}
                 </h3>
                 <p className="text-slate-400 mt-0.5 text-[7px] md:text-xs font-bold uppercase tracking-widest hidden sm:block">{category.products.length} Models</p>

@@ -51,18 +51,47 @@ const SystemDocumentation = () => {
         { id: 'tv', label: '6. TV Protocol', icon: <Tv size={16}/>, desc: 'Display Queue' },
     ];
 
+    const SectionHeader = ({ icon: Icon, title, subtitle }: any) => (
+        <div className="mb-8">
+            <div className="flex items-center gap-4 mb-2">
+                <div className="p-3 bg-slate-100 rounded-2xl border border-slate-200 text-blue-600">
+                    <Icon size={24} />
+                </div>
+                <div>
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{title}</h2>
+                    <div className="flex items-center gap-2 mt-1">
+                        <div className="h-0.5 w-8 bg-blue-500"></div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{subtitle}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const DiagramPricing = () => (
+        <div className="bg-slate-900 rounded-3xl p-8 border border-indigo-500/20 mb-8 flex flex-col md:flex-row items-center justify-center gap-12 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5 text-indigo-500 rotate-12 pointer-events-none"><Table size={120} /></div>
+            <div className="flex flex-col items-center gap-2 relative z-10">
+                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Input</div>
+                <div className="text-4xl font-mono text-slate-400 line-through decoration-red-500/50 decoration-4">129.99</div>
+            </div>
+            <div className="flex flex-col items-center gap-2 z-10">
+                <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.5)]">
+                    <RefreshCw className="text-white" size={24} />
+                </div>
+            </div>
+            <div className="flex flex-col items-center gap-2 relative z-10">
+                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Output</div>
+                <div className="text-6xl font-black font-mono text-green-400 tracking-tighter drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">130.00</div>
+            </div>
+        </div>
+    );
+
     return (
         <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden shadow-2xl animate-fade-in">
             <style>{`
                 @keyframes flow-horizontal { 0% { transform: translateX(-100%); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateX(400%); opacity: 0; } }
                 .data-flow { animation: flow-horizontal 3s linear infinite; }
-                @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2.4); opacity: 0; } }
-                .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
-                @keyframes orbit { 0% { transform: rotate(0deg) translateX(50px) rotate(0deg); } 100% { transform: rotate(360deg) translateX(50px) rotate(-360deg); } }
-                .orbit-item { animation: orbit 8s linear infinite; }
-                @keyframes swap-buffer { 0%, 45% { opacity: 1; z-index: 10; transform: scale(1); } 50%, 95% { opacity: 0.5; z-index: 0; transform: scale(0.9); } 100% { opacity: 1; z-index: 10; transform: scale(1); } }
-                .buffer-a { animation: swap-buffer 6s infinite; }
-                .buffer-b { animation: swap-buffer 6s infinite reverse; }
             `}</style>
 
             <div className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
@@ -130,7 +159,109 @@ const SystemDocumentation = () => {
                     </div>
                 )}
 
-                {/* Other sections removed for brevity in this output, but logic is preserved */}
+                {activeSection === 'inventory' && (
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <SectionHeader icon={Database} title="Data Structure" subtitle="Relational Inventory Model" />
+                        <div className="prose prose-slate prose-sm md:prose-base max-w-none">
+                            <p>The system uses a strict hierarchical data model to ensure consistency across all displays. This structure prevents "orphaned" products and ensures navigation remains intuitive.</p>
+                            <ul className="list-none space-y-4 pl-0 mt-6">
+                                <li className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-start gap-4">
+                                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg shrink-0"><Database size={20}/></div>
+                                    <div><strong className="block text-slate-900 uppercase text-xs tracking-wider mb-1">Brand (Root)</strong>Contains global assets like Logo, Theme Color, and associated Categories. e.g., "Apple", "Samsung".</div>
+                                </li>
+                                <li className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-start gap-4 ml-8 relative before:absolute before:left-[-20px] before:top-8 before:w-6 before:h-[2px] before:bg-slate-300">
+                                    <div className="bg-purple-100 text-purple-600 p-2 rounded-lg shrink-0"><Box size={20}/></div>
+                                    <div><strong className="block text-slate-900 uppercase text-xs tracking-wider mb-1">Category (Classifier)</strong>Groups products logically (e.g., 'Smartphones', 'Laptops'). Configured with an icon.</div>
+                                </li>
+                                <li className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-start gap-4 ml-16 relative before:absolute before:left-[-20px] before:top-8 before:w-6 before:h-[2px] before:bg-slate-300">
+                                    <div className="bg-green-100 text-green-600 p-2 rounded-lg shrink-0"><Layers size={20}/></div>
+                                    <div><strong className="block text-slate-900 uppercase text-xs tracking-wider mb-1">Product (Leaf)</strong>The actual item containing Specs, Gallery, Videos, and Manuals.</div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'pricelists' && (
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <SectionHeader icon={Table} title="Price Engine" subtitle="Display & Calculation Logic" />
+                        <DiagramPricing />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                <h4 className="font-bold text-slate-900 uppercase text-xs mb-4">Manual Tables</h4>
+                                <p className="text-sm text-slate-600 mb-4">Built directly in the Admin Hub. Allows for dynamic sorting, search, and image previews. Data is stored as structured JSON.</p>
+                                <div className="text-[10px] bg-slate-100 p-2 rounded font-mono text-slate-500">Supports: Images, SKU, Desc, Normal/Promo Pricing</div>
+                            </div>
+                            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                <h4 className="font-bold text-slate-900 uppercase text-xs mb-4">PDF Documents</h4>
+                                <p className="text-sm text-slate-600 mb-4">Upload pre-designed PDF price sheets. These are rendered using a high-performance canvas engine (PDF.js) for pixel-perfect reproduction.</p>
+                                <div className="text-[10px] bg-slate-100 p-2 rounded font-mono text-slate-500">Supports: Pinch Zoom, Multi-page, Print</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'screensaver' && (
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <SectionHeader icon={Monitor} title="Visual Engine" subtitle="Screensaver Mechanics" />
+                        <div className="bg-slate-900 text-white p-8 rounded-3xl relative overflow-hidden">
+                            <div className="relative z-10">
+                                <h3 className="text-xl font-black uppercase mb-4">Double-Buffer Playback</h3>
+                                <p className="text-slate-400 text-sm leading-relaxed mb-6 max-w-2xl">
+                                    The screensaver uses two invisible DOM layers (Slot A and Slot B) to preload the next slide while the current one is displaying. This eliminates black flashes between images or videos.
+                                </p>
+                                <div className="flex gap-4">
+                                    <div className="flex-1 bg-white/10 p-4 rounded-xl border border-white/5">
+                                        <div className="text-[10px] font-black text-blue-400 uppercase mb-1">Slot A</div>
+                                        <div className="text-xs font-bold">Displaying</div>
+                                    </div>
+                                    <div className="flex-1 bg-white/10 p-4 rounded-xl border border-white/5 opacity-50">
+                                        <div className="text-[10px] font-black text-purple-400 uppercase mb-1">Slot B</div>
+                                        <div className="text-xs font-bold">Preloading...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fleet' && (
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <SectionHeader icon={Activity} title="Fleet Telemetry" subtitle="Device Monitoring" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <h4 className="font-black text-slate-900 uppercase text-sm mb-2">Heartbeat Protocol</h4>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    Every 30 seconds, each kiosk sends a "pulse" to the cloud containing its local IP, WiFi strength, and active version. If a pulse is missed for {'>'} 5 minutes, the device is marked Offline.
+                                </p>
+                            </div>
+                            <div>
+                                <h4 className="font-black text-slate-900 uppercase text-sm mb-2">Remote Commands</h4>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    Admins can queue commands (like "Restart" or "Update Config") which the device picks up on its next heartbeat cycle. This allows for headless management.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'tv' && (
+                    <div className="space-y-12 animate-fade-in max-w-4xl">
+                        <SectionHeader icon={Tv} title="TV Protocol" subtitle="Digital Signage Mode" />
+                        <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
+                            <ul className="space-y-4">
+                                <li className="flex gap-4">
+                                    <span className="w-6 h-6 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
+                                    <p className="text-sm text-slate-700"><strong>Loop Logic:</strong> TV Mode creates a playlist of all selected videos. It shuffles them using the Fisher-Yates algorithm to prevent repetition patterns.</p>
+                                </li>
+                                <li className="flex gap-4">
+                                    <span className="w-6 h-6 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
+                                    <p className="text-sm text-slate-700"><strong>Watchdog:</strong> A background timer monitors playback progress. If the video time doesn't advance for 5 seconds (stalled buffer), it forces a skip to the next track.</p>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -170,9 +301,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
 const downloadZip = async (data: StoreData | null) => { if (!data) return; const zip = new JSZip(); const dataJson = JSON.stringify(data, null, 2); zip.file("store_config.json", dataJson); const backupFolder = zip.folder("_System_Backup"); if (backupFolder) { backupFolder.file("export_info.txt", `Kiosk Pro Backup\nGenerated: ${new Date().toISOString()}`); } const content = await zip.generateAsync({ type: "blob" }); const url = URL.createObjectURL(content); const link = document.createElement("a"); link.href = url; link.download = `kiosk_backup_${new Date().toISOString().split('T')[0]}.zip`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); };
 
 export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => void, onRefresh: () => void }) => {
-  // ... (State and useEffects from previous implementation remain unchanged)
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
-  
   const [activeTab, setActiveTab] = useState<string>('inventory');
   const [activeSubTab, setActiveSubTab] = useState<string>('hero'); 
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
@@ -244,7 +373,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
         <main className="flex-1 overflow-y-auto p-2 md:p-8 relative pb-40 md:pb-8">
             {activeTab === 'guide' && <SystemDocumentation />}
             
-            {/* ... Inventory Tab (Unchanged) ... */}
             {activeTab === 'inventory' && (
                 !selectedBrand ? (
                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 animate-fade-in">
@@ -286,8 +414,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                )
             )}
 
-            {/* ... Pricelists, TV, Marketing, Fleet Tabs (Unchanged except Screensaver update below) ... */}
-            
             {activeTab === 'pricelists' && (
                 <PricelistManager 
                     pricelists={localData.pricelists || []} 
@@ -299,7 +425,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             )}
             
             {activeTab === 'tv' && (
-                // TV Tab Implementation (Standard Full Save for Config)
                 !selectedTVBrand ? (
                     <div className="animate-fade-in max-w-6xl mx-auto"><div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-black text-slate-900 uppercase">TV Video Management</h2></div><div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"><button onClick={() => { const name = prompt("Brand Name:"); if(name) { const newBrand = { id: generateId('tvb'), name, models: [] }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: [...(localData.tv?.brands || []), newBrand] } as TVConfig, archive: addToArchive('brand', name, null, 'create') }, true); }}} className="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center p-4 min-h-[160px] text-indigo-400 hover:border-indigo-500 hover:text-indigo-600 transition-all group"><Plus size={32} className="mb-2" /><span className="font-bold uppercase text-xs tracking-wider text-center">Add TV Brand</span></button>{tvBrands.map(brand => (<div key={brand.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-lg transition-all relative"><div className="flex-1 bg-slate-50 flex items-center justify-center p-4 aspect-square">{brand.logoUrl ? <img src={brand.logoUrl} className="max-full max-h-full object-contain" /> : <Tv size={32} className="text-slate-300" />}</div><div className="p-4 bg-white border-t border-slate-100"><h3 className="font-black text-slate-900 text-sm uppercase truncate mb-1">{brand.name}</h3><p className="text-xs text-slate-500 font-bold">{brand.models?.length || 0} Models</p></div><button onClick={(e) => { e.stopPropagation(); if(confirm("Delete TV Brand?")) { handleLocalUpdate({...localData, tv: { ...localData.tv, brands: tvBrands.filter(b => b.id !== brand.id) } as TVConfig, archive: addToArchive('brand', brand.name, brand, 'delete') }, true); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity z-20"><Trash2 size={14}/></button><button onClick={() => setSelectedTVBrand(brand)} className="absolute inset-0 w-full h-full opacity-0 z-10" /></div>))}</div></div>
                 ) : (
@@ -454,7 +579,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 </div>
             )}
             
-            {/* ... Rest of tabs (History, Settings, Guide) unchanged ... */}
             {activeTab === 'history' && (
                <div className="max-w-7xl mx-auto space-y-6"><div className="flex flex-col md:flex-row md:items-center justify-between gap-4"><div><h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">System Audit Log</h2><p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">Detailed track of administrative actions</p></div><div className="flex gap-2"><button onClick={() => { if(confirm("Permanently clear ALL archived history?")) handleLocalUpdate({...localData, archive: { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }}, true) }} className="text-red-500 font-bold uppercase text-xs flex items-center gap-2 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2 rounded-lg transition-colors"><Trash2 size={14}/> Wipe History</button></div></div><div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-2xl min-h-[600px] flex flex-col"><div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between gap-6"><div className="flex items-center gap-2 bg-slate-200/50 p-1.5 rounded-2xl self-start overflow-x-auto max-w-full">{[{id: 'all', label: 'All Activity', icon: <History size={14}/>},{id: 'create', label: 'Created', icon: <Plus size={14}/>},{id: 'update', label: 'Updated', icon: <Edit2 size={14}/>},{id: 'delete', label: 'Deleted', icon: <Trash2 size={14}/>},{id: 'restore', label: 'Restored', icon: <RotateCcw size={14}/>}].map(tab => (<button key={tab.id} onClick={() => setHistoryTab(tab.id as any)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all whitespace-nowrap flex items-center gap-2 ${historyTab === tab.id ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700'}`}>{tab.icon} {tab.label}</button>))}</div><div className="relative group"><Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" /><input type="text" placeholder="Search actions, users or items..." className="pl-12 pr-6 py-3 bg-white border-2 border-slate-200 rounded-2xl text-xs font-bold w-full md:w-80 focus:border-blue-500 outline-none transition-all shadow-sm" value={historySearch} onChange={(e) => setHistorySearch(e.target.value)}/></div></div><div className="flex-1 overflow-y-auto">{archivedGenericItems.length === 0 ? (<div className="flex flex-col items-center justify-center h-96 text-slate-400"><div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-4 border border-slate-100"><History size={40} className="opacity-20" /></div><span className="text-xs font-black uppercase tracking-widest">No matching activities found</span></div>) : (<table className="w-full text-left border-collapse"><thead className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-md"><tr><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Action & Type</th><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Subject</th><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Executor</th><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Timestamp</th><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Reference</th></tr></thead><tbody className="divide-y divide-slate-50">{archivedGenericItems.map(item => (<tr key={item.id} className="hover:bg-blue-50/30 transition-colors group"><td className="px-8 py-5"><div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${item.action === 'delete' ? 'bg-red-50 border-red-100 text-red-500' : item.action === 'restore' ? 'bg-green-50 border-green-100 text-green-500' : item.action === 'create' ? 'bg-blue-50 border-blue-100 text-blue-500' : 'bg-orange-50 border-orange-100 text-orange-500'}`}>{item.action === 'delete' ? <Trash2 size={16}/> : item.action === 'restore' ? <RotateCcw size={16}/> : item.action === 'create' ? <Plus size={16}/> : <Edit2 size={16}/>}</div><div><div className="text-[10px] font-black uppercase tracking-tight text-slate-900">{item.action}</div><div className="text-[9px] font-bold text-slate-400 uppercase">{item.type}</div></div></div></td><td className="px-8 py-5"><div className="font-black text-slate-900 uppercase text-xs tracking-tight">{item.name}</div><div className="text-[9px] text-slate-400 font-mono mt-1 opacity-60">ID: {item.id}</div></td><td className="px-8 py-5"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center"><User size={12} /></div><span className="text-xs font-black text-slate-700 uppercase tracking-tight">{item.userName || 'System'}</span></div><div className="text-[9px] font-bold text-slate-400 uppercase mt-1">via {item.method || 'admin_panel'}</div></td><td className="px-8 py-5"><div className="text-xs font-black text-slate-900">{formatRelativeTime(item.deletedAt)}</div><div className="text-[9px] font-bold text-slate-400 mt-1 uppercase">{new Date(item.deletedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></td><td className="px-8 py-5 text-right"><div className="flex items-center justify-end gap-2">{(item.type === 'brand' || item.type === 'catalogue') && item.action === 'delete' && (<button onClick={() => item.type === 'brand' ? restoreBrand(item.data) : restoreCatalogue(item.data)} className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase rounded-lg shadow-lg hover:bg-blue-700 transition-all active:scale-95">Restore</button>)}<button onClick={() => { const json = JSON.stringify(item.data || item, null, 2); const blob = new Blob([json], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${item.name}-audit.json`; a.click(); }} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Download Audit Payload"><Download size={16} /></button></div></td></tr>))}{archivedGenericItems.length === 0 && (<tr><td colSpan={5} className="py-20 text-center text-slate-400 text-sm font-bold uppercase italic">No history items found.</td></tr>)}</tbody></table>)}</div></div></div>
             )}
