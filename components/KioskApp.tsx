@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { StoreData, Brand, Category, Product, FlatProduct, Catalogue, Pricelist, PricelistBrand, PricelistItem } from '../types';
 import { 
@@ -1131,6 +1132,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                 screensaverEnabled={screensaverEnabled} 
                 onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} 
                 deviceType={deviceType} 
+                isIdle={isIdle} // Passing isIdle state down
             /> : 
           !activeCategory ? 
             <CategoryGrid 

@@ -15,10 +15,11 @@ interface BrandGridProps {
   screensaverEnabled: boolean;
   onToggleScreensaver: () => void;
   deviceType?: string;
+  isIdle?: boolean; // New prop to track screensaver state
 }
 
 // Improved AdUnit with robust playback logic for Firefox & Error Recovery
-const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) => {
+const AdUnit = ({ items, className, isActive = true }: { items?: AdItem[], className?: string, isActive?: boolean }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const timeoutRef = useRef<number | null>(null);
@@ -42,10 +43,25 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
         }
     };
 
+    // Wake up logic: When becoming active, ensure video plays
     useEffect(() => {
-        if (!activeItem) return;
-        // If only 1 item and it's video, we rely on onEnded/loop. If image, no timer needed unless we want to refresh?
-        // Actually, if 1 item is video, we want to loop it.
+        if (isActive && activeItem?.type === 'video' && videoRef.current) {
+            // Force reload to recover lost video surface on Android WebViews
+            videoRef.current.load();
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    // If play fails (e.g. strict autoplay policy), skip to next
+                    advanceSlide();
+                });
+            }
+        } else if (!isActive && videoRef.current) {
+            videoRef.current.pause();
+        }
+    }, [isActive, activeItem]);
+
+    useEffect(() => {
+        if (!activeItem || !isActive) return;
         
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
@@ -56,20 +72,14 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
             }
         } else {
             // Video Fallback Timer: If video hangs or metadata fails, skip after 3 mins
-            if(videoRef.current) {
-                videoRef.current.muted = true;
-                videoRef.current.play().catch(() => {
-                    // Autoplay failed? Force next.
-                    advanceSlide();
-                });
-            }
+            // Note: Normal advance happens via onEnded
             timeoutRef.current = window.setTimeout(advanceSlide, 180000); // 3m watchdog
         }
 
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [currentIndex, activeItem, items]);
+    }, [currentIndex, activeItem, items, isActive]);
 
     if (!items || items.length === 0) return (
        <div className={`relative overflow-hidden rounded-xl border border-slate-200/50 bg-slate-50/50 ${className}`}></div>
@@ -80,7 +90,7 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
             advanceSlide();
         } else if (videoRef.current) {
             videoRef.current.currentTime = 0;
-            videoRef.current.play().catch(() => {});
+            if(isActive) videoRef.current.play().catch(() => {});
         }
     };
 
@@ -103,18 +113,12 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
                         key={`ad-vid-${activeItem!.url}`}
                         src={activeItem!.url} 
                         muted={true} 
-                        autoPlay={true} 
+                        autoPlay={isActive} 
                         playsInline={true}
                         loop={items.length === 1}
                         className="w-full h-full object-cover"
                         onEnded={handleVideoEnded}
                         onError={handleError} 
-                        onLoadedMetadata={() => {
-                            if (videoRef.current) {
-                                videoRef.current.muted = true;
-                                videoRef.current.play().catch(() => {});
-                            }
-                        }}
                     />
                 ) : (
                     <img 
@@ -140,7 +144,7 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
 
             {/* Hidden Preloader to prevent buffering/flash when cycling ads */}
             <div className="absolute w-0 h-0 opacity-0 overflow-hidden pointer-events-none">
-                {nextItem && (
+                {nextItem && isActive && (
                     nextItem.type === 'video' ? (
                         <video src={nextItem.url} preload="auto" muted playsInline />
                     ) : (
@@ -152,7 +156,7 @@ const AdUnit = ({ items, className }: { items?: AdItem[], className?: string }) 
     );
 };
 
-const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewGlobalCatalog, onViewWebsite, onExport, screensaverEnabled, onToggleScreensaver, deviceType }) => {
+const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewGlobalCatalog, onViewWebsite, onExport, screensaverEnabled, onToggleScreensaver, deviceType, isIdle }) => {
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(19);
   
@@ -366,8 +370,9 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
 
             {deviceType !== 'mobile' && ads && (
                 <div className="grid grid-cols-2 gap-6 mt-12 w-full">
-                    <AdUnit items={ads.homeBottomLeft} className="aspect-[2.2/1] w-full" />
-                    <AdUnit items={ads.homeBottomRight} className="aspect-[2.2/1] w-full" />
+                    {/* Pass isActive={!isIdle} to control playback when screensaver is active */}
+                    <AdUnit items={ads.homeBottomLeft} className="aspect-[2.2/1] w-full" isActive={!isIdle} />
+                    <AdUnit items={ads.homeBottomRight} className="aspect-[2.2/1] w-full" isActive={!isIdle} />
                 </div>
             )}
         </div>
