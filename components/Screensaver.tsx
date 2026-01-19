@@ -239,7 +239,13 @@ const Screensaver: React.FC<ScreensaverProps> = ({ products, ads, pamphlets = []
             ads.forEach((ad) => { if (shouldInclude(ad.dateAdded)) for(let c=0;c<3;c++) list.push({ id: `ad-${ad.id}-${c}`, type: ad.type, url: ad.url, title: 'Sponsored', dateAdded: ad.dateAdded }); });
         }
         if (settings?.showPamphlets) {
-            pamphlets.forEach(p => { if (p.pages?.[0] && shouldInclude(p.startDate)) list.push({ id: `cat-${p.id}`, type: 'image', url: p.pages[0], title: p.title }); });
+            pamphlets.forEach(p => { 
+                // Fix: Prefer thumbnail, fallback to first page if available
+                const coverUrl = p.thumbnailUrl || (p.pages && p.pages.length > 0 ? p.pages[0] : null);
+                if (coverUrl && shouldInclude(p.startDate)) {
+                    list.push({ id: `cat-${p.id}`, type: 'image', url: coverUrl, title: p.title }); 
+                }
+            });
         }
         products.forEach(p => {
             if (!shouldInclude(p.dateAdded)) return;
@@ -540,14 +546,15 @@ const arePropsEqual = (prev: ScreensaverProps, next: ScreensaverProps) => {
     if (JSON.stringify(prev.settings) !== JSON.stringify(next.settings)) return false;
     
     // 2. If length differs, re-render
-    if (prev.products.length !== next.products.length || prev.ads.length !== next.ads.length) return false;
+    if (prev.products.length !== next.products.length || prev.ads.length !== next.ads.length || (prev.pamphlets?.length !== next.pamphlets?.length)) return false;
 
     // 3. Create a content hash to detect changes
     // Only care about ID and updated/added dates
     const getHash = (p: any[]) => p.map(i => i.id + (i.dateAdded || '')).sort().join('|');
+    const getPamphletHash = (p: Catalogue[]) => p.map(i => i.id + (i.thumbnailUrl || '') + (i.pages?.[0] || '')).sort().join('|');
     
-    const prevHash = getHash(prev.products) + '||' + getHash(prev.ads);
-    const nextHash = getHash(next.products) + '||' + getHash(next.ads);
+    const prevHash = getHash(prev.products) + '||' + getHash(prev.ads) + '||' + getPamphletHash(prev.pamphlets || []);
+    const nextHash = getHash(next.products) + '||' + getHash(next.ads) + '||' + getPamphletHash(next.pamphlets || []);
 
     return prevHash === nextHash;
 };
