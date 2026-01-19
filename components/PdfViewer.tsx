@@ -24,6 +24,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
   const [pageNum, setPageNum] = useState(1);
   const [scale, setScale] = useState(0); 
   const [loading, setLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0); // Progress tracking
   const [error, setError] = useState<string | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   
@@ -62,24 +63,32 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
       }
 
       try {
-        setLoading(true); setError(null); setPageNum(1);
+        setLoading(true); setError(null); setPageNum(1); setLoadProgress(0);
+        
         if (loadingTaskRef.current) {
             console.log('[PdfViewer] Destroying previous loading task');
             loadingTaskRef.current.destroy().catch((e: any) => console.warn('[PdfViewer] Destroy warning:', e));
         }
         
         console.log('[PdfViewer] Calling pdfjs.getDocument...');
+        
+        // OPTIMIZED CONFIGURATION FOR FAST OPENING
         const loadingTask = pdfjs.getDocument({
             url,
             cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
             cMapPacked: true,
-            disableRange: false,
-            disableStream: false,
+            disableRange: false, // Critical: Allow range requests (server must support it)
+            disableStream: true, // Use chunked XHR instead of streaming (more stable on legacy)
+            disableAutoFetch: true, // Critical: Do NOT download the whole file automatically
+            rangeChunkSize: 65536, // Fetch in 64KB chunks
         });
         
         loadingTask.onProgress = (progressData: any) => {
-            const percent = progressData.total ? Math.round((progressData.loaded / progressData.total) * 100) : 0;
-            console.debug(`[PdfViewer] Progress: ${percent}% (${progressData.loaded} bytes)`);
+            if (progressData.total) {
+                const percent = Math.round((progressData.loaded / progressData.total) * 100);
+                setLoadProgress(percent);
+                console.debug(`[PdfViewer] Progress: ${percent}% (${progressData.loaded} bytes)`);
+            }
         };
 
         loadingTaskRef.current = loadingTask;
@@ -256,7 +265,14 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
           {loading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
                   <Loader2 size={48} className="animate-spin mb-4 text-blue-500" />
-                  <span className="font-bold uppercase tracking-widest text-xs">Opening Document...</span>
+                  <span className="font-bold uppercase tracking-widest text-xs">
+                      {loadProgress > 0 && loadProgress < 100 ? `Loading ${loadProgress}%...` : 'Opening Document...'}
+                  </span>
+                  {loadProgress > 0 && loadProgress < 100 && (
+                      <div className="w-48 h-1 bg-slate-700 rounded-full mt-2 overflow-hidden">
+                          <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${loadProgress}%` }}></div>
+                      </div>
+                  )}
               </div>
           )}
           {error && (
