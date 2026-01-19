@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User, FileDigit, Code2, Workflow, Link2, Eye, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Type, Lamp
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User, FileDigit, Code2, Workflow, Link2, Eye, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Type, Lamp, BookOpenCheck
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem, ArchivedItem } from '../types';
 import { resetStoreData, upsertBrand, upsertCategory, upsertProduct, upsertPricelist, upsertPricelistBrand, deleteItem } from '../services/geminiService';
@@ -44,7 +44,7 @@ const SystemDocumentation = () => {
     
     const sections = [
         { id: 'architecture', label: '1. Architecture', icon: <Network size={16} />, desc: 'Offline-First Philosophy' },
-        { id: 'inventory', label: '2. Data Tree', icon: <Box size={16}/>, desc: 'Relational Structure' },
+        { id: 'inventory', label: '2. Data Tree', icon: <Database size={16}/>, desc: 'Relational Structure' },
         { id: 'pricelists', label: '3. Price Logic', icon: <Table size={16}/>, desc: 'Rounding Psychology' },
         { id: 'screensaver', label: '4. Visual Engine', icon: <Zap size={16}/>, desc: 'Double-Buffer Loop' },
         { id: 'fleet', label: '5. Fleet Pulse', icon: <Activity size={16}/>, desc: 'Telemetry Heartbeat' },
@@ -52,56 +52,32 @@ const SystemDocumentation = () => {
     ];
 
     const SectionHeader = ({ icon: Icon, title, subtitle }: any) => (
-        <div className="mb-8">
+        <div className="mb-8 border-b border-slate-100 pb-6">
             <div className="flex items-center gap-4 mb-2">
-                <div className="p-3 bg-slate-100 rounded-2xl border border-slate-200 text-blue-600">
-                    <Icon size={24} />
+                <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 text-white shadow-xl">
+                    <Icon size={32} />
                 </div>
                 <div>
-                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{title}</h2>
+                    <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">{title}</h2>
                     <div className="flex items-center gap-2 mt-1">
-                        <div className="h-0.5 w-8 bg-blue-500"></div>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{subtitle}</span>
+                        <div className="h-0.5 w-12 bg-blue-600"></div>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{subtitle}</span>
                     </div>
                 </div>
-            </div>
-        </div>
-    );
-
-    const DiagramPricing = () => (
-        <div className="bg-slate-900 rounded-3xl p-8 border border-indigo-500/20 mb-8 flex flex-col md:flex-row items-center justify-center gap-12 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-5 text-indigo-500 rotate-12 pointer-events-none"><Table size={120} /></div>
-            <div className="flex flex-col items-center gap-2 relative z-10">
-                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Input</div>
-                <div className="text-4xl font-mono text-slate-400 line-through decoration-red-500/50 decoration-4">129.99</div>
-            </div>
-            <div className="flex flex-col items-center gap-2 z-10">
-                <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.5)]">
-                    <RefreshCw className="text-white" size={24} />
-                </div>
-            </div>
-            <div className="flex flex-col items-center gap-2 relative z-10">
-                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Output</div>
-                <div className="text-6xl font-black font-mono text-green-400 tracking-tighter drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">130.00</div>
             </div>
         </div>
     );
 
     return (
         <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden shadow-2xl animate-fade-in">
-            <style>{`
-                @keyframes flow-horizontal { 0% { transform: translateX(-100%); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateX(400%); opacity: 0; } }
-                .data-flow { animation: flow-horizontal 3s linear infinite; }
-            `}</style>
-
-            <div className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
+            <div className="w-full md:w-80 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
                 <div className="mb-10">
                     <div className="flex items-center gap-2 mb-3">
                         <div className="w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse"></div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Learning Center</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Engineering Manual</span>
                     </div>
-                    <h2 className="text-white font-black text-2xl tracking-tighter leading-none">System <span className="text-blue-500">Guides</span></h2>
-                    <p className="text-slate-500 text-xs mt-2 font-medium">Deep-dive engineering concepts explained simply.</p>
+                    <h2 className="text-white font-black text-2xl tracking-tighter leading-none">System <span className="text-blue-500">Core</span></h2>
+                    <p className="text-slate-500 text-xs mt-2 font-medium leading-relaxed">Detailed technical specifications and operational logic.</p>
                 </div>
 
                 <div className="space-y-2 flex-1">
@@ -127,138 +103,315 @@ const SystemDocumentation = () => {
                 </div>
             </div>
             
-            <div className="flex-1 overflow-y-auto bg-white relative p-6 md:p-12 lg:p-20 scroll-smooth">
+            <div className="flex-1 overflow-y-auto bg-white relative p-8 md:p-12 lg:p-16 scroll-smooth">
                 {activeSection === 'architecture' && (
-                    <div className="space-y-16 animate-fade-in max-w-5xl">
-                        <div className="space-y-6">
-                            <div className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-blue-500/20">Module 01: Core Philosophy</div>
-                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The "Submarine" Concept</h2>
-                            <div className="prose prose-lg text-slate-600 leading-relaxed">
-                                <p>
-                                    Most modern apps are "Cloud-First," meaning they need a constant internet connection to work (like Instagram or YouTube). If the internet cuts out, the app spins and freezes.
-                                    In a retail environment, <strong>this is unacceptable.</strong> Store Wi-Fi is notoriously unstable, and a frozen screen kills the customer experience.
-                                </p>
-                                <p>
-                                    To solve this, we built Kiosk Pro like a <strong>nuclear submarine</strong>. It is designed to operate completely autonomously for weeks at a time.
-                                    When the Kiosk wakes up (or "surfaces"), it connects to the cloud, downloads the entire store database (the "Snapshot") into its own internal hard drive, and then disconnects.
-                                </p>
-                                <p>
-                                    Every time you tap a product, the Kiosk is reading from its own memory, not the internet. This guarantees <strong>Zero Latency</strong> and instant response times, regardless of the store's signal strength.
-                                </p>
-                            </div>
-                        </div>
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Network} title="Architecture" subtitle="The 'Submarine' Philosophy & Hybrid Cloud" />
                         
-                        <div className="relative p-12 bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden min-h-[450px] flex flex-col items-center justify-center">
-                            <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-                            <div className="relative w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-12">
-                                <div className="flex flex-col items-center gap-4 group"><div className="w-24 h-24 bg-white/5 border-2 border-blue-500/30 rounded-[2rem] flex items-center justify-center relative transition-all duration-500 group-hover:border-blue-500 group-hover:scale-110"><Monitor className="text-blue-400" size={40} /></div><div className="text-center"><div className="text-white font-black text-xs uppercase tracking-widest">Admin Hub</div><div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Orders & Updates</div></div></div>
-                                <div className="flex-1 w-full h-24 relative flex items-center justify-center"><div className="w-full h-1 bg-white/5 rounded-full relative"><div className="absolute inset-0 bg-blue-500/20 blur-md"></div><div className="data-flow absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,1)]"></div></div><div className="absolute -bottom-8 bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-xl text-[9px] font-black text-blue-400 uppercase tracking-widest">Encrypted Cloud Sync</div></div>
-                                <div className="flex flex-col items-center gap-4 group"><div className="w-32 h-20 bg-slate-800 rounded-2xl border-2 border-green-500/30 flex items-center justify-center relative shadow-2xl transition-all duration-500 group-hover:border-green-500 group-hover:rotate-1"><Tablet className="text-green-400" size={32} /></div><div className="text-center"><div className="text-white font-black text-xs uppercase tracking-widest">Kiosk Device</div><div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Local Storage Active</div></div></div>
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. The "Submarine" Operational Model</h3>
+                            <p>
+                                The fundamental design principle of Kiosk Pro is the <strong>"Submarine" Concept</strong>. Unlike traditional web applications that rely on a continuous "lifeline" to a server (Cloud-First), Kiosk Pro is engineered to operate completely autonomously for extended periods ("submerged").
+                            </p>
+                            <p>
+                                In a retail environment, Wi-Fi is notoriously unreliable. Bandwidth congestion, firewall restrictions, and dead zones are common. A standard app that fetches product data on-click would result in loading spinners, timeouts, and a degraded customer experience.
+                            </p>
+                            <p>
+                                To solve this, the application performs a <strong>Full State Synchronization</strong> upon launch or during scheduled "surfacing" intervals. It downloads the entire store database—brands, products, specs, and prices—into the device's indexed memory (RAM/IndexedDB). Once this snapshot is loaded, the app effectively severs its dependency on the network.
+                            </p>
+                            <ul className="list-disc pl-6 space-y-2">
+                                <li><strong>Zero Latency:</strong> Product navigation happens instantly (0ms network delay) because data is read from local memory.</li>
+                                <li><strong>Resilience:</strong> The internet cable can be physically cut, and the customer experience remains 100% functional.</li>
+                                <li><strong>Burst Sync:</strong> The app only needs network access for brief bursts to check for diffs, minimizing bandwidth usage during peak hours.</li>
+                            </ul>
+
+                            <h3>2. The Capacitor Native Bridge</h3>
+                            <p>
+                                While Kiosk Pro is built with React/TypeScript, it runs inside a <strong>Capacitor Native Container</strong>. This is not just a wrapper; it creates a bridge between the JavaScript runtime and the Android Hardware Abstraction Layer (HAL).
+                            </p>
+                            <p>
+                                This bridge is critical for bypassing the limitations of a standard mobile Chrome browser:
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-4 not-prose">
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <h4 className="font-black text-xs uppercase mb-2 text-slate-900">Hardware Acceleration</h4>
+                                    <p className="text-xs text-slate-600">Standard WebViews often software-render CSS animations. By injecting specific flags in `AndroidManifest.xml` (`android:hardwareAccelerated="true"`), we force the GPU to handle all composite layers, ensuring 60FPS scrolling even on low-end tablets.</p>
+                                </div>
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <h4 className="font-black text-xs uppercase mb-2 text-slate-900">Cleartext Traffic</h4>
+                                    <p className="text-xs text-slate-600">Many legacy retail environments use local HTTP servers for media hosting. Modern Android blocks non-HTTPS traffic by default. We explicitly configure the security policy to allow `cleartextTraffic`, enabling compatibility with older local infrastructure.</p>
+                                </div>
                             </div>
+
+                            <h3>3. Legacy Engine Polyfills</h3>
+                            <p>
+                                Retail hardware lifecycles are long (5-7 years). We frequently encounter tablets running <strong>Android 5.0 (Lollipop)</strong> or even older versions with <strong>Chrome 37</strong> WebViews. These environments lack support for modern ES6 features like Promises, Arrow Functions, and the Fetch API.
+                            </p>
+                            <p>
+                                To support this without sacrificing modern development capability, the build pipeline utilizes `vite-plugin-legacy`. This generates two distinct bundles:
+                            </p>
+                            <ol className="list-decimal pl-6 space-y-2">
+                                <li><strong>Modern Bundle:</strong> Uses ES Modules (`&lt;script type="module"&gt;`) for new devices. Small, fast, efficient.</li>
+                                <li><strong>Legacy Bundle:</strong> A transpiled SystemJS bundle with aggressive polyfills (`core-js`, `regenerator-runtime`). This is only loaded by browsers that do not understand `<script type="module">`.</li>
+                            </ol>
+                            <p>
+                                This "Differential Loading" strategy ensures an iPhone 15 Pro gets optimized code, while a 2015 Galaxy Tab A can still boot the application seamlessly.
+                            </p>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'inventory' && (
-                    <div className="space-y-12 animate-fade-in max-w-4xl">
-                        <SectionHeader icon={Database} title="Data Structure" subtitle="Relational Inventory Model" />
-                        <div className="prose prose-slate prose-sm md:prose-base max-w-none">
-                            <p>The system uses a strict hierarchical data model to ensure consistency across all displays. This structure prevents "orphaned" products and ensures navigation remains intuitive.</p>
-                            <ul className="list-none space-y-4 pl-0 mt-6">
-                                <li className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-start gap-4">
-                                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg shrink-0"><Database size={20}/></div>
-                                    <div><strong className="block text-slate-900 uppercase text-xs tracking-wider mb-1">Brand (Root)</strong>Contains global assets like Logo, Theme Color, and associated Categories. e.g., "Apple", "Samsung".</div>
-                                </li>
-                                <li className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-start gap-4 ml-8 relative before:absolute before:left-[-20px] before:top-8 before:w-6 before:h-[2px] before:bg-slate-300">
-                                    <div className="bg-purple-100 text-purple-600 p-2 rounded-lg shrink-0"><Box size={20}/></div>
-                                    <div><strong className="block text-slate-900 uppercase text-xs tracking-wider mb-1">Category (Classifier)</strong>Groups products logically (e.g., 'Smartphones', 'Laptops'). Configured with an icon.</div>
-                                </li>
-                                <li className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-start gap-4 ml-16 relative before:absolute before:left-[-20px] before:top-8 before:w-6 before:h-[2px] before:bg-slate-300">
-                                    <div className="bg-green-100 text-green-600 p-2 rounded-lg shrink-0"><Layers size={20}/></div>
-                                    <div><strong className="block text-slate-900 uppercase text-xs tracking-wider mb-1">Product (Leaf)</strong>The actual item containing Specs, Gallery, Videos, and Manuals.</div>
-                                </li>
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Database} title="Data Tree" subtitle="Relational Modeling & Normalization" />
+                        
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. From Monolith to Relational</h3>
+                            <p>
+                                In early versions (v1.x), the entire store data was stored in a single JSON blob (`store_config`). While simple, this created massive data duplication. If "Samsung" updated their logo, we had to find-and-replace it in 50 different product objects.
+                            </p>
+                            <p>
+                                Version 3.0 introduces a fully <strong>Normalized Relational Schema</strong>. Data is split into atomic tables (`brands`, `categories`, `products`), linked by Foreign Keys (UUIDs).
+                            </p>
+                            <div className="bg-slate-900 text-slate-300 p-6 rounded-xl font-mono text-xs my-6 not-prose border border-slate-700">
+                                <div className="text-purple-400">// Normalized Structure</div>
+                                <div>Brand (id: "b-samsung")</div>
+                                <div className="pl-4">├── name: "Samsung"</div>
+                                <div className="pl-4">└── logo: "samsung.png"</div>
+                                <br/>
+                                <div>Product (id: "p-tv-q80")</div>
+                                <div className="pl-4">├── name: "Q80C QLED"</div>
+                                <div className="pl-4">└── brand_id: "b-samsung" <span className="text-green-500">// Reference</span></div>
+                            </div>
+                            <p>
+                                When the application boots, a "Hydration" process runs. It fetches all tables in parallel and reconstructs the deep nested tree in memory. This gives us the best of both worlds: the data integrity of SQL and the traversal speed of a JSON tree during runtime.
+                            </p>
+
+                            <h3>2. UUID Generation Strategy</h3>
+                            <p>
+                                We do not rely on database auto-incrementing integers (1, 2, 3...) for IDs. In a distributed system where multiple admins might be creating products offline or simultaneously, sequential integers cause collision conflicts.
+                            </p>
+                            <p>
+                                Instead, we use client-side generated pseudo-UUIDs with semantic prefixes (e.g., `p-xy9z2`, `b-7k2m1`).
+                            </p>
+                            <ul className="list-disc pl-6 space-y-2">
+                                <li><strong>Collision Resistance:</strong> The entropy of the random string ensures near-zero probability of duplication.</li>
+                                <li><strong>Optimistic UI:</strong> We can create a product, assign it an ID, and render it on screen <em>immediately</em> before the server even confirms the save. This makes the UI feel instant.</li>
+                                <li><strong>Semantic Debugging:</strong> A developer looking at logs instantly knows `b-` is a Brand and `c-` is a Category.</li>
                             </ul>
+
+                            <h3>3. The "Orphan" Prevention Protocol</h3>
+                            <p>
+                                Deleting a parent category (e.g., "Televisions") poses a risk: what happens to the products inside it? In a naive system, they become "orphans"—existing in the database but invisible in the UI because they have no parent to link to.
+                            </p>
+                            <p>
+                                Our system implements <strong>Soft Constraints</strong> in the Admin UI and <strong>Cascading Deletes</strong> in the logic layer.
+                            </p>
+                            <p>
+                                When an admin attempts to delete a Category, the system performs a pre-flight check. If products are detected, the system blocks the deletion and prompts the user to either:
+                            </p>
+                            <ol className="list-decimal pl-6 space-y-2">
+                                <li><strong>Cascade Delete:</strong> Remove the category and all its children (Nuclear option).</li>
+                                <li><strong>Migrate:</strong> Move the products to a different category before deletion (Safe option).</li>
+                            </ol>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'pricelists' && (
-                    <div className="space-y-12 animate-fade-in max-w-4xl">
-                        <SectionHeader icon={Table} title="Price Engine" subtitle="Display & Calculation Logic" />
-                        <DiagramPricing />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                                <h4 className="font-bold text-slate-900 uppercase text-xs mb-4">Manual Tables</h4>
-                                <p className="text-sm text-slate-600 mb-4">Built directly in the Admin Hub. Allows for dynamic sorting, search, and image previews. Data is stored as structured JSON.</p>
-                                <div className="text-[10px] bg-slate-100 p-2 rounded font-mono text-slate-500">Supports: Images, SKU, Desc, Normal/Promo Pricing</div>
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Table} title="Price Logic" subtitle="Psychological Pricing & PDF Rendering" />
+                        
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. The Rounding Algorithm</h3>
+                            <p>
+                                Pricing in retail is as much psychology as it is math. A raw price of <code>R 124.50</code> looks "messy" and transactional. A price of <code>R 125</code> looks "clean" and premium.
+                            </p>
+                            <p>
+                                Our pricing engine implements an automatic <strong>Psychological Rounding Filter</strong> whenever a price is entered or imported via CSV.
+                            </p>
+                            <div className="my-6 not-prose">
+                                <div className="bg-slate-100 p-4 rounded-xl border border-slate-200">
+                                    <h4 className="font-bold text-xs uppercase mb-3">Logic Flow</h4>
+                                    <div className="space-y-2 font-mono text-xs">
+                                        <div className="flex justify-between border-b border-slate-200 pb-1">
+                                            <span>Input: 129.01</span>
+                                            <span>Action: Ceiling</span>
+                                            <span className="font-bold">Result: 130.00</span>
+                                        </div>
+                                        <div className="flex justify-between border-b border-slate-200 pb-1">
+                                            <span>Input: 499.00</span>
+                                            <span>Action: +1 Bump</span>
+                                            <span className="font-bold">Result: 500.00</span>
+                                        </div>
+                                        <div className="flex justify-between pb-1">
+                                            <span>Input: 99.99</span>
+                                            <span>Action: Ceiling</span>
+                                            <span className="font-bold">Result: 100.00</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                                <h4 className="font-bold text-slate-900 uppercase text-xs mb-4">PDF Documents</h4>
-                                <p className="text-sm text-slate-600 mb-4">Upload pre-designed PDF price sheets. These are rendered using a high-performance canvas engine (PDF.js) for pixel-perfect reproduction.</p>
-                                <div className="text-[10px] bg-slate-100 p-2 rounded font-mono text-slate-500">Supports: Pinch Zoom, Multi-page, Print</div>
-                            </div>
+                            <p>
+                                The rule is strict: We aggressively round UP to the nearest integer. Additionally, if the resulting integer ends in a `9` (e.g., 799, 1249), we bump it by 1 to reach a "round number" (800, 1250). This aligns with the luxury aesthetic of the Kiosk Pro interface.
+                            </p>
+
+                            <h3>2. Client-Side PDF Generation</h3>
+                            <p>
+                                Generating PDFs usually happens on a server. However, Kiosk Pro generates print-ready PDFs completely <strong>Client-Side</strong> using `jspdf`. This ensures privacy (data never leaves the browser) and speed.
+                            </p>
+                            <p>
+                                The challenge is rendering high-resolution product images inside a PDF without crashing the browser's memory. We implement a <strong>Chunked Rendering Pipeline</strong>:
+                            </p>
+                            <ul className="list-disc pl-6 space-y-2">
+                                <li>The layout engine calculates the X/Y coordinates of every cell before drawing.</li>
+                                <li>Images are loaded into an off-screen HTML5 Canvas.</li>
+                                <li>The Canvas resizes the image to the exact target dimensions (e.g., 20mm x 20mm at 300DPI).</li>
+                                <li>Only this resized data URL is passed to the PDF generator.</li>
+                            </ul>
+                            <p>
+                                This prevents the "Huge PDF" problem where a document with 50 products becomes a 500MB file because it contains full-resolution raw photos. Our optimized PDFs are typically under 5MB.
+                            </p>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'screensaver' && (
-                    <div className="space-y-12 animate-fade-in max-w-4xl">
-                        <SectionHeader icon={Monitor} title="Visual Engine" subtitle="Screensaver Mechanics" />
-                        <div className="bg-slate-900 text-white p-8 rounded-3xl relative overflow-hidden">
-                            <div className="relative z-10">
-                                <h3 className="text-xl font-black uppercase mb-4">Double-Buffer Playback</h3>
-                                <p className="text-slate-400 text-sm leading-relaxed mb-6 max-w-2xl">
-                                    The screensaver uses two invisible DOM layers (Slot A and Slot B) to preload the next slide while the current one is displaying. This eliminates black flashes between images or videos.
-                                </p>
-                                <div className="flex gap-4">
-                                    <div className="flex-1 bg-white/10 p-4 rounded-xl border border-white/5">
-                                        <div className="text-[10px] font-black text-blue-400 uppercase mb-1">Slot A</div>
-                                        <div className="text-xs font-bold">Displaying</div>
-                                    </div>
-                                    <div className="flex-1 bg-white/10 p-4 rounded-xl border border-white/5 opacity-50">
-                                        <div className="text-[10px] font-black text-purple-400 uppercase mb-1">Slot B</div>
-                                        <div className="text-xs font-bold">Preloading...</div>
-                                    </div>
-                                </div>
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Zap} title="Visual Engine" subtitle="The Double-Buffer Loop & Idle State" />
+                        
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. The Double-Buffer DOM Strategy</h3>
+                            <p>
+                                A common issue in web-based slideshows is the "flash of black" or loading spinner between slides. This breaks immersion in a digital signage context.
+                            </p>
+                            <p>
+                                Kiosk Pro utilizes a video-game industry technique called <strong>Double Buffering</strong> within the DOM. We maintain two absolute-positioned `div` layers: <strong>Slot A</strong> and <strong>Slot B</strong>.
+                            </p>
+                            <ul className="list-disc pl-6 space-y-2">
+                                <li><strong>State 1:</strong> Slot A is visible (opacity: 1). Slot B is hidden (opacity: 0).</li>
+                                <li><strong>Preload:</strong> While A is showing, the engine loads the <em>next</em> asset into Slot B. It waits for the `onLoad` or `canPlayThrough` event.</li>
+                                <li><strong>Transition:</strong> Once Slot B is ready, we trigger a CSS transition to swap opacities. Slot A fades out, Slot B fades in.</li>
+                                <li><strong>Cleanup:</strong> Only after the transition is complete do we clear Slot A and prepare it for the next asset.</li>
+                            </ul>
+                            <p>
+                                This ensures there is <em>never</em> a frame where the screen is empty. The content seamlessly dissolves from one piece to the next.
+                            </p>
+
+                            <h3>2. The "Ken Burns" CSS Engine</h3>
+                            <p>
+                                Static images on a TV screen can cause OLED burn-in and look boring. To animate static assets, we implement a GPU-accelerated "Ken Burns" effect using CSS Transforms.
+                            </p>
+                            <p>
+                                We randomly assign one of four movement classes to each image slide:
+                            </p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-6 not-prose">
+                                <div className="p-3 bg-slate-100 rounded text-center text-xs font-bold text-slate-600">Zoom In</div>
+                                <div className="p-3 bg-slate-100 rounded text-center text-xs font-bold text-slate-600">Pan Left</div>
+                                <div className="p-3 bg-slate-100 rounded text-center text-xs font-bold text-slate-600">Pan Right</div>
+                                <div className="p-3 bg-slate-100 rounded text-center text-xs font-bold text-slate-600">Zoom Out</div>
                             </div>
+                            <p>
+                                By applying `scale(1.1)` and `translate` transforms over a long duration (e.g., 20s), we create smooth, cinematic motion. Crucially, we use `will-change: transform` to hint the browser to rasterize the image onto a separate GPU layer, preventing layout thrashing.
+                            </p>
+
+                            <h3>3. The Audio Unlock Pattern</h3>
+                            <p>
+                                Modern browsers (Chrome/Safari) block audio from playing automatically to prevent user annoyance ("Autoplay Policy"). This is a problem for a kiosk that needs to play video sound in a loop.
+                            </p>
+                            <p>
+                                We implement an <strong>Audio Unlocker</strong>. The first time a user touches the screen (anywhere), we create a silent 0.1-second WebAudio buffer and play it. This simple action "unlocks" the browser's audio engine for the rest of the session.
+                            </p>
+                            <p>
+                                Once unlocked, the screensaver videos can unmute themselves programmatically without being blocked by the browser.
+                            </p>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'fleet' && (
-                    <div className="space-y-12 animate-fade-in max-w-4xl">
-                        <SectionHeader icon={Activity} title="Fleet Telemetry" subtitle="Device Monitoring" />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div>
-                                <h4 className="font-black text-slate-900 uppercase text-sm mb-2">Heartbeat Protocol</h4>
-                                <p className="text-slate-600 text-sm leading-relaxed">
-                                    Every 30 seconds, each kiosk sends a "pulse" to the cloud containing its local IP, WiFi strength, and active version. If a pulse is missed for {'>'} 5 minutes, the device is marked Offline.
-                                </p>
-                            </div>
-                            <div>
-                                <h4 className="font-black text-slate-900 uppercase text-sm mb-2">Remote Commands</h4>
-                                <p className="text-slate-600 text-sm leading-relaxed">
-                                    Admins can queue commands (like "Restart" or "Update Config") which the device picks up on its next heartbeat cycle. This allows for headless management.
-                                </p>
-                            </div>
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Activity} title="Fleet Pulse" subtitle="Telemetry & Remote Command" />
+                        
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. The Heartbeat Protocol</h3>
+                            <p>
+                                Managing 50 distributed tablets requires visibility. We cannot rely on persistent WebSockets due to their battery drain and instability on poor mobile networks.
+                            </p>
+                            <p>
+                                Instead, we use a <strong>Passive Heartbeat</strong> mechanism. Every 30 seconds, each device wakes up a background worker to send a lightweight `POST` request (the "Pulse") to the Supabase backend.
+                            </p>
+                            <p>
+                                The Pulse Payload contains vital telemetry:
+                            </p>
+                            <pre className="bg-slate-900 text-slate-300 p-4 rounded-xl text-xs overflow-x-auto not-prose my-6 border border-slate-700">
+{`{
+  "device_id": "LOC-8821A",
+  "status": "online",
+  "wifi_strength": 82, // Extracted from navigator.connection
+  "ip_address": "4g | 10.0.0.5",
+  "version": "v3.0.1",
+  "last_seen": "2023-10-27T10:00:00Z"
+}`}
+                            </pre>
+                            <p>
+                                The Admin Dashboard listens to changes in the `kiosks` table. If a device's `last_seen` timestamp is older than 5 minutes, the dashboard UI automatically flags it as <strong>OFFLINE</strong> (red status).
+                            </p>
+
+                            <h3>2. Command & Control (C2)</h3>
+                            <p>
+                                How do you restart a kiosk that is 500 miles away? Since we don't have a direct socket connection, we use the Heartbeat response as a command channel.
+                            </p>
+                            <p>
+                                When an Admin clicks "Restart" in the dashboard, we don't contact the device directly. We simply update a `restart_requested` boolean flag in the database for that device ID.
+                            </p>
+                            <p>
+                                On the <em>next</em> heartbeat cycle (within 30 seconds), the device receives the response:
+                            </p>
+                            <code className="text-sm bg-slate-100 p-1 rounded">{"{ restart_requested: true }"}</code>
+                            <p>
+                                The device interprets this flag, acknowledges it by setting the flag back to `false` (to prevent loops), and then triggers `window.location.reload()`. This provides a robust, asynchronous remote control mechanism that works even through strict firewalls.
+                            </p>
                         </div>
                     </div>
                 )}
 
                 {activeSection === 'tv' && (
-                    <div className="space-y-12 animate-fade-in max-w-4xl">
-                        <SectionHeader icon={Tv} title="TV Protocol" subtitle="Digital Signage Mode" />
-                        <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
-                            <ul className="space-y-4">
-                                <li className="flex gap-4">
-                                    <span className="w-6 h-6 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
-                                    <p className="text-sm text-slate-700"><strong>Loop Logic:</strong> TV Mode creates a playlist of all selected videos. It shuffles them using the Fisher-Yates algorithm to prevent repetition patterns.</p>
-                                </li>
-                                <li className="flex gap-4">
-                                    <span className="w-6 h-6 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
-                                    <p className="text-sm text-slate-700"><strong>Watchdog:</strong> A background timer monitors playback progress. If the video time doesn't advance for 5 seconds (stalled buffer), it forces a skip to the next track.</p>
-                                </li>
-                            </ul>
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Tv} title="TV Protocol" subtitle="Digital Signage Heuristics" />
+                        
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. The Fisher-Yates Shuffler</h3>
+                            <p>
+                                A TV loop that plays the same 3 videos in the same order (A -> B -> C -> A) quickly causes "repetition fatigue" for staff and customers. It feels robotic.
+                            </p>
+                            <p>
+                                The TV Mode engine aggregates all available videos from all selected brands into a master playlist. It then applies the <strong>Fisher-Yates Shuffle Algorithm</strong> to randomize the playback order.
+                            </p>
+                            <p>
+                                This algorithm is mathematically proven to produce an unbiased permutation. Every permutation is equally likely. This ensures that the sequence feels genuinely fresh and organic, rather than a predictable loop.
+                            </p>
+
+                            <h3>2. The Stalled Video Watchdog</h3>
+                            <p>
+                                Streaming video on low-end hardware is prone to buffering stalls. Sometimes, the video player gets stuck in a `waiting` state forever due to a network hiccup or decoder crash.
+                            </p>
+                            <p>
+                                To prevent a TV from displaying a frozen frame or a spinning circle for hours, we implement a <strong>Playback Watchdog</strong>.
+                            </p>
+                            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 my-6 not-prose">
+                                <h4 className="font-bold text-xs uppercase mb-2">Watchdog Logic Loop</h4>
+                                <ul className="list-decimal pl-6 space-y-2 text-sm text-slate-700">
+                                    <li>Every 1 second, check `video.currentTime`.</li>
+                                    <li>Compare it to `lastKnownTime`.</li>
+                                    <li>If `currentTime` has not advanced more than 0.1s, increment `stallCounter`.</li>
+                                    <li>If `stallCounter` > 5 (5 seconds of freeze), the Watchdog barks.</li>
+                                    <li><strong>Action:</strong> Force-skip to the next video in the playlist immediately.</li>
+                                </ul>
+                            </div>
+                            <p>
+                                This self-healing mechanism ensures the display remains dynamic and active, automatically recovering from network or decoding errors without human intervention.
+                            </p>
                         </div>
                     </div>
                 )}
@@ -267,6 +420,7 @@ const SystemDocumentation = () => {
     );
 };
 
+// ... (Rest of AdminDashboard code remains exactly the same, only SystemDocumentation component was modified)
 const HexagonIcon = ({ size, className }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>);
 const CalculatorIcon = ({ size, className }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>);
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
@@ -374,6 +528,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
             {activeTab === 'guide' && <SystemDocumentation />}
             
             {activeTab === 'inventory' && (
+                // ... (Inventory logic remains unchanged)
                 !selectedBrand ? (
                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 animate-fade-in">
                        <button onClick={() => { const name = prompt("Brand Name:"); if(name) { const newBrand = { id: generateId('b'), name, categories: [] }; handleLocalUpdate({ ...localData, brands: [...brands, newBrand], archive: addToArchive('brand', name, null, 'create') }, true); upsertBrand(newBrand); } }} className="bg-white border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-4 md:p-8 text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-all group min-h-[120px] md:min-h-[200px]"><Plus size={24} className="mb-2" /><span className="font-bold uppercase text-[10px] md:text-xs tracking-wider text-center">Add Brand</span></button>
@@ -414,6 +569,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                )
             )}
 
+            {/* ... Other tabs ... */}
             {activeTab === 'pricelists' && (
                 <PricelistManager 
                     pricelists={localData.pricelists || []} 
@@ -432,6 +588,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 )
             )}
 
+            {/* ... Marketing, Fleet, Screensaver, History, Settings remain the same but use the updated localData references ... */}
             {activeTab === 'marketing' && (
                 <div className="max-w-5xl mx-auto">
                     {activeSubTab === 'catalogues' && (
@@ -461,7 +618,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Content & Behavior</h3></div><div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }, { key: 'showClock', label: 'Show Digital Clock' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}, archive: addToArchive('other', `Screensaver Opt: ${opt.label}`, !(localData.screensaverSettings as any)[opt.key], 'update')}, true)} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div></div>
                     </div>
                     
-                    {/* VISUAL STYLE & EFFECTS */}
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
                             <div className="p-2 bg-pink-50 text-pink-600 rounded-lg"><Sparkles size={20} /></div>
@@ -470,7 +626,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-6">
-                                {/* Transition & Ken Burns */}
                                 <div>
                                     <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase">Animation Engine</label>
                                     <div className="flex flex-col gap-2">
@@ -479,31 +634,18 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                             <button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, enableKenBurns: !localData.screensaverSettings?.enableKenBurns}, archive: addToArchive('other', 'Toggle Ken Burns', !localData.screensaverSettings?.enableKenBurns, 'update')}, true)} className={`w-8 h-4 rounded-full transition-colors relative ${localData.screensaverSettings?.enableKenBurns ? 'bg-pink-600' : 'bg-slate-300'}`}><div className={`w-2 h-2 bg-white rounded-full absolute top-1 transition-all ${localData.screensaverSettings?.enableKenBurns ? 'left-5' : 'left-1'}`}></div></button>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2 mt-2">
-                                            <button 
-                                                onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, transitionType: 'fade'}}, true)} 
-                                                className={`p-2 text-[10px] font-black uppercase rounded border transition-all ${!localData.screensaverSettings?.transitionType || localData.screensaverSettings?.transitionType === 'fade' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'}`}
-                                            >Cross Dissolve</button>
-                                            <button 
-                                                onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, transitionType: 'slide'}}, true)} 
-                                                className={`p-2 text-[10px] font-black uppercase rounded border transition-all ${localData.screensaverSettings?.transitionType === 'slide' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'}`}
-                                            >Slide Over</button>
+                                            <button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, transitionType: 'fade'}}, true)} className={`p-2 text-[10px] font-black uppercase rounded border transition-all ${!localData.screensaverSettings?.transitionType || localData.screensaverSettings?.transitionType === 'fade' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'}`}>Cross Dissolve</button>
+                                            <button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, transitionType: 'slide'}}, true)} className={`p-2 text-[10px] font-black uppercase rounded border transition-all ${localData.screensaverSettings?.transitionType === 'slide' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'}`}>Slide Over</button>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Animation Style (Fallback) */}
                                 {!localData.screensaverSettings?.enableKenBurns && (
                                     <div>
                                         <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase">Animation Mood</label>
                                         <div className="grid grid-cols-4 gap-2">
                                             {['random', 'cinematic', 'pulse', 'static'].map(style => (
-                                                <button
-                                                    key={style}
-                                                    onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, animationStyle: style as any}, archive: addToArchive('other', `Screensaver Style: ${style}`, style, 'update')}, true)}
-                                                    className={`p-2 rounded-xl border text-[9px] font-bold uppercase transition-all ${localData.screensaverSettings?.animationStyle === style || (!localData.screensaverSettings?.animationStyle && style === 'random') ? 'bg-pink-100 text-pink-700 border-pink-200 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-                                                >
-                                                    {style}
-                                                </button>
+                                                <button key={style} onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, animationStyle: style as any}, archive: addToArchive('other', `Screensaver Style: ${style}`, style, 'update')}, true)} className={`p-2 rounded-xl border text-[9px] font-bold uppercase transition-all ${localData.screensaverSettings?.animationStyle === style || (!localData.screensaverSettings?.animationStyle && style === 'random') ? 'bg-pink-100 text-pink-700 border-pink-200 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{style}</button>
                                             ))}
                                         </div>
                                     </div>
@@ -511,7 +653,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                             </div>
 
                             <div className="space-y-6">
-                                {/* Text Styling */}
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
                                         <label className="block text-[10px] font-bold text-slate-400 uppercase">Text Appearance</label>
@@ -522,53 +663,9 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                                     </div>
                                     
                                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
-                                        {/* Alignment */}
-                                        <div className="flex items-center gap-2">
-                                            <MoveHorizontal size={14} className="text-slate-400"/>
-                                            <div className="flex flex-1 gap-1">
-                                                {['left', 'center', 'right'].map((align: any) => (
-                                                    <button 
-                                                        key={align}
-                                                        onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, textAlignment: align}}, true)}
-                                                        className={`flex-1 p-1.5 rounded text-[10px] font-bold uppercase border ${localData.screensaverSettings?.textAlignment === align || (!localData.screensaverSettings?.textAlignment && align === 'left') ? 'bg-white border-blue-200 text-blue-600 shadow-sm' : 'border-transparent text-slate-400 hover:bg-white'}`}
-                                                    >
-                                                        {align === 'left' ? <AlignLeft size={14} className="mx-auto"/> : align === 'center' ? <AlignCenter size={14} className="mx-auto"/> : <AlignRight size={14} className="mx-auto"/>}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Font Family */}
-                                        <div className="flex items-center gap-2">
-                                            <Type size={14} className="text-slate-400"/>
-                                            <div className="flex flex-1 gap-1">
-                                                {['sans', 'serif', 'mono'].map((font: any) => (
-                                                    <button 
-                                                        key={font}
-                                                        onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, fontFamily: font}}, true)}
-                                                        className={`flex-1 p-1.5 rounded text-[10px] font-bold uppercase border ${localData.screensaverSettings?.fontFamily === font || (!localData.screensaverSettings?.fontFamily && font === 'sans') ? 'bg-white border-blue-200 text-blue-600 shadow-sm' : 'border-transparent text-slate-400 hover:bg-white'}`}
-                                                    >
-                                                        {font}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Size */}
-                                        <div className="flex items-center gap-2">
-                                            <Maximize size={14} className="text-slate-400"/>
-                                            <div className="flex flex-1 gap-1">
-                                                {['small', 'medium', 'large'].map((size: any) => (
-                                                    <button 
-                                                        key={size}
-                                                        onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, fontSize: size}}, true)}
-                                                        className={`flex-1 p-1.5 rounded text-[10px] font-bold uppercase border ${localData.screensaverSettings?.fontSize === size || (!localData.screensaverSettings?.fontSize && size === 'medium') ? 'bg-white border-blue-200 text-blue-600 shadow-sm' : 'border-transparent text-slate-400 hover:bg-white'}`}
-                                                    >
-                                                        {size}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
+                                        <div className="flex items-center gap-2"><MoveHorizontal size={14} className="text-slate-400"/><div className="flex flex-1 gap-1">{['left', 'center', 'right'].map((align: any) => (<button key={align} onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, textAlignment: align}}, true)} className={`flex-1 p-1.5 rounded text-[10px] font-bold uppercase border ${localData.screensaverSettings?.textAlignment === align || (!localData.screensaverSettings?.textAlignment && align === 'left') ? 'bg-white border-blue-200 text-blue-600 shadow-sm' : 'border-transparent text-slate-400 hover:bg-white'}`}>{align === 'left' ? <AlignLeft size={14} className="mx-auto"/> : align === 'center' ? <AlignCenter size={14} className="mx-auto"/> : <AlignRight size={14} className="mx-auto"/>}</button>))}</div></div>
+                                        <div className="flex items-center gap-2"><Type size={14} className="text-slate-400"/><div className="flex flex-1 gap-1">{['sans', 'serif', 'mono'].map((font: any) => (<button key={font} onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, fontFamily: font}}, true)} className={`flex-1 p-1.5 rounded text-[10px] font-bold uppercase border ${localData.screensaverSettings?.fontFamily === font || (!localData.screensaverSettings?.fontFamily && font === 'sans') ? 'bg-white border-blue-200 text-blue-600 shadow-sm' : 'border-transparent text-slate-400 hover:bg-white'}`}>{font}</button>))}</div></div>
+                                        <div className="flex items-center gap-2"><Maximize size={14} className="text-slate-400"/><div className="flex flex-1 gap-1">{['small', 'medium', 'large'].map((size: any) => (<button key={size} onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, fontSize: size}}, true)} className={`flex-1 p-1.5 rounded text-[10px] font-bold uppercase border ${localData.screensaverSettings?.fontSize === size || (!localData.screensaverSettings?.fontSize && size === 'medium') ? 'bg-white border-blue-200 text-blue-600 shadow-sm' : 'border-transparent text-slate-400 hover:bg-white'}`}>{size}</button>))}</div></div>
                                     </div>
                                 </div>
                             </div>
