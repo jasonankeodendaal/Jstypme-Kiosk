@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -152,7 +151,7 @@ const SystemDocumentation = () => {
                             </p>
                             <ol className="list-decimal pl-6 space-y-2">
                                 <li><strong>Modern Bundle:</strong> Uses ES Modules (`&lt;script type="module"&gt;`) for new devices. Small, fast, efficient.</li>
-                                <li><strong>Legacy Bundle:</strong> A transpiled SystemJS bundle with aggressive polyfills (`core-js`, `regenerator-runtime`). This is only loaded by browsers that do not understand `<script type="module">`.</li>
+                                <li><strong>Legacy Bundle:</strong> A transpiled SystemJS bundle with aggressive polyfills (`core-js`, `regenerator-runtime`). This is only loaded by browsers that do not understand `&lt;script type="module"&gt;`.</li>
                             </ol>
                             <p>
                                 This "Differential Loading" strategy ensures an iPhone 15 Pro gets optimized code, while a 2015 Galaxy Tab A can still boot the application seamlessly.
@@ -161,13 +160,265 @@ const SystemDocumentation = () => {
                     </div>
                 )}
 
-                {/* ... other sections omitted for brevity but preserved in component structure ... */}
+                {activeSection === 'inventory' && (
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Database} title="Data Tree" subtitle="Relational Modeling & Normalization" />
+                        
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. From Monolith to Relational</h3>
+                            <p>
+                                In early versions (v1.x), the entire store data was stored in a single JSON blob (`store_config`). While simple, this created massive data duplication. If "Samsung" updated their logo, we had to find-and-replace it in 50 different product objects.
+                            </p>
+                            <p>
+                                Version 3.0 introduces a fully <strong>Normalized Relational Schema</strong>. Data is split into atomic tables (`brands`, `categories`, `products`), linked by Foreign Keys (UUIDs).
+                            </p>
+                            <div className="bg-slate-900 text-slate-300 p-6 rounded-xl font-mono text-xs my-6 not-prose border border-slate-700">
+                                <div className="text-purple-400">// Normalized Structure</div>
+                                <div>Brand (id: "b-samsung")</div>
+                                <div className="pl-4">├── name: "Samsung"</div>
+                                <div className="pl-4">└── logo: "samsung.png"</div>
+                                <br/>
+                                <div>Product (id: "p-tv-q80")</div>
+                                <div className="pl-4">├── name: "Q80C QLED"</div>
+                                <div className="pl-4">└── brand_id: "b-samsung" <span className="text-green-500">// Reference</span></div>
+                            </div>
+                            <p>
+                                When the application boots, a "Hydration" process runs. It fetches all tables in parallel and reconstructs the deep nested tree in memory. This gives us the best of both worlds: the data integrity of SQL and the traversal speed of a JSON tree during runtime.
+                            </p>
+
+                            <h3>2. UUID Generation Strategy</h3>
+                            <p>
+                                We do not rely on database auto-incrementing integers (1, 2, 3...) for IDs. In a distributed system where multiple admins might be creating products offline or simultaneously, sequential integers cause collision conflicts.
+                            </p>
+                            <p>
+                                Instead, we use client-side generated pseudo-UUIDs with semantic prefixes (e.g., `p-xy9z2`, `b-7k2m1`).
+                            </p>
+                            <ul className="list-disc pl-6 space-y-2">
+                                <li><strong>Collision Resistance:</strong> The entropy of the random string ensures near-zero probability of duplication.</li>
+                                <li><strong>Optimistic UI:</strong> We can create a product, assign it an ID, and render it on screen <em>immediately</em> before the server even confirms the save. This makes the UI feel instant.</li>
+                                <li><strong>Semantic Debugging:</strong> A developer looking at logs instantly knows `b-` is a Brand and `c-` is a Category.</li>
+                            </ul>
+
+                            <h3>3. The "Orphan" Prevention Protocol</h3>
+                            <p>
+                                Deleting a parent category (e.g., "Televisions") poses a risk: what happens to the products inside it? In a naive system, they become "orphans"—existing in the database but invisible in the UI because they have no parent to link to.
+                            </p>
+                            <p>
+                                Our system implements <strong>Soft Constraints</strong> in the Admin UI and <strong>Cascading Deletes</strong> in the logic layer.
+                            </p>
+                            <p>
+                                When an Admin attempts to delete a Category, the system performs a pre-flight check. If products are detected, the system blocks the deletion and prompts the user to either:
+                            </p>
+                            <ol className="list-decimal pl-6 space-y-2">
+                                <li><strong>Cascade Delete:</strong> Remove the category and all its children (Nuclear option).</li>
+                                <li><strong>Migrate:</strong> Move the products to a different category before deletion (Safe option).</li>
+                            </ol>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'pricelists' && (
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Table} title="Price Logic" subtitle="Psychological Pricing & PDF Rendering" />
+                        
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. The Rounding Algorithm</h3>
+                            <p>
+                                Pricing in retail is as much psychology as it is math. A raw price of <code>R 124.50</code> looks "messy" and transactional. A price of <code>R 125</code> looks "clean" and premium.
+                            </p>
+                            <p>
+                                Our pricing engine implements an automatic <strong>Psychological Rounding Filter</strong> whenever a price is entered or imported via CSV.
+                            </p>
+                            <div className="my-6 not-prose">
+                                <div className="bg-slate-100 p-4 rounded-xl border border-slate-200">
+                                    <h4 className="font-bold text-xs uppercase mb-3">Logic Flow</h4>
+                                    <div className="space-y-2 font-mono text-xs">
+                                        <div className="flex justify-between border-b border-slate-200 pb-1">
+                                            <span>Input: 129.01</span>
+                                            <span>Action: Ceiling</span>
+                                            <span className="font-bold">Result: 130.00</span>
+                                        </div>
+                                        <div className="flex justify-between border-b border-slate-200 pb-1">
+                                            <span>Input: 499.00</span>
+                                            <span>Action: +1 Bump</span>
+                                            <span className="font-bold">Result: 500.00</span>
+                                        </div>
+                                        <div className="flex justify-between pb-1">
+                                            <span>Input: 99.99</span>
+                                            <span>Action: Ceiling</span>
+                                            <span className="font-bold">Result: 100.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p>
+                                The rule is strict: We aggressively round UP to the nearest integer. Additionally, if the resulting integer ends in a `9` (e.g., 799, 1249), we bump it by 1 to reach a "round number" (800, 1250). This aligns with the luxury aesthetic of the Kiosk Pro interface.
+                            </p>
+
+                            <h3>2. Client-Side PDF Generation</h3>
+                            <p>
+                                Generating PDFs usually happens on a server. However, Kiosk Pro generates print-ready PDFs completely <strong>Client-Side</strong> using `jspdf`. This ensures privacy (data never leaves the browser) and speed.
+                            </p>
+                            <p>
+                                The challenge is rendering high-resolution product images inside a PDF without crashing the browser's memory. We implement a <strong>Chunked Rendering Pipeline</strong>:
+                            </p>
+                            <ul className="list-disc pl-6 space-y-2">
+                                <li>The layout engine calculates the X/Y coordinates of every cell before drawing.</li>
+                                <li>Images are loaded into an off-screen HTML5 Canvas.</li>
+                                <li>The Canvas resizes the image to the exact target dimensions (e.g., 20mm x 20mm at 300DPI).</li>
+                                <li>Only this resized data URL is passed to the PDF generator.</li>
+                            </ul>
+                            <p>
+                                This prevents the "Huge PDF" problem where a document with 50 products becomes a 500MB file because it contains full-resolution raw photos. Our optimized PDFs are typically under 5MB.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'screensaver' && (
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Zap} title="Visual Engine" subtitle="The Double-Buffer Loop & Idle State" />
+                        
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. The Double-Buffer DOM Strategy</h3>
+                            <p>
+                                A common issue in web-based slideshows is the "flash of black" or loading spinner between slides. This breaks immersion in a digital signage context.
+                            </p>
+                            <p>
+                                Kiosk Pro utilizes a video-game industry technique called <strong>Double Buffering</strong> within the DOM. We maintain two absolute-positioned `div` layers: <strong>Slot A</strong> and <strong>Slot B</strong>.
+                            </p>
+                            <ul className="list-disc pl-6 space-y-2">
+                                <li><strong>State 1:</strong> Slot A is visible (opacity: 1). Slot B is hidden (opacity: 0).</li>
+                                <li><strong>Preload:</strong> While A is showing, the engine loads the <em>next</em> asset into Slot B. It waits for the `onLoad` or `canPlayThrough` event.</li>
+                                <li><strong>Transition:</strong> Once Slot B is ready, we trigger a CSS transition to swap opacities. Slot A fades out, Slot B fades in.</li>
+                                <li><strong>Cleanup:</strong> Only after the transition is complete do we clear Slot A and prepare it for the next asset.</li>
+                            </ul>
+                            <p>
+                                This ensures there is <em>never</em> a frame where the screen is empty. The content seamlessly dissolves from one piece to the next.
+                            </p>
+
+                            <h3>2. The "Ken Burns" CSS Engine</h3>
+                            <p>
+                                Static images on a TV screen can cause OLED burn-in and look boring. To animate static assets, we implement a GPU-accelerated "Ken Burns" effect using CSS Transforms.
+                            </p>
+                            <p>
+                                We randomly assign one of four movement classes to each image slide:
+                            </p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-6 not-prose">
+                                <div className="p-3 bg-slate-100 rounded text-center text-xs font-bold text-slate-600">Zoom In</div>
+                                <div className="p-3 bg-slate-100 rounded text-center text-xs font-bold text-slate-600">Pan Left</div>
+                                <div className="p-3 bg-slate-100 rounded text-center text-xs font-bold text-slate-600">Pan Right</div>
+                                <div className="p-3 bg-slate-100 rounded text-center text-xs font-bold text-slate-600">Zoom Out</div>
+                            </div>
+                            <p>
+                                By applying `scale(1.1)` and `translate` transforms over a long duration (e.g., 20s), we create smooth, cinematic motion. Crucially, we use `will-change: transform` to hint the browser to rasterize the image onto a separate GPU layer, preventing layout thrashing.
+                            </p>
+
+                            <h3>3. The Audio Unlock Pattern</h3>
+                            <p>
+                                Modern browsers (Chrome/Safari) block audio from playing automatically to prevent user annoyance ("Autoplay Policy"). This is a problem for a kiosk that needs to play video sound in a loop.
+                            </p>
+                            <p>
+                                We implement an <strong>Audio Unlocker</strong>. The first time a user touches the screen (anywhere), we create a silent 0.1-second WebAudio buffer and play it. This simple action "unlocks" the browser's audio engine for the rest of the session.
+                            </p>
+                            <p>
+                                Once unlocked, the screensaver videos can unmute themselves programmatically without being blocked by the browser.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fleet' && (
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Activity} title="Fleet Pulse" subtitle="Telemetry & Remote Command" />
+                        
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. The Heartbeat Protocol</h3>
+                            <p>
+                                Managing 50 distributed tablets requires visibility. We cannot rely on persistent WebSockets due to their battery drain and instability on poor mobile networks.
+                            </p>
+                            <p>
+                                Instead, we use a <strong>Passive Heartbeat</strong> mechanism. Every 30 seconds, each device wakes up a background worker to send a lightweight `POST` request (the "Pulse") to the Supabase backend.
+                            </p>
+                            <p>
+                                The Pulse Payload contains vital telemetry:
+                            </p>
+                            <pre className="bg-slate-900 text-slate-300 p-4 rounded-xl text-xs overflow-x-auto not-prose my-6 border border-slate-700">
+{`{
+  "device_id": "LOC-8821A",
+  "status": "online",
+  "wifi_strength": 82, // Extracted from navigator.connection
+  "ip_address": "4g | 10.0.0.5",
+  "version": "v3.0.1",
+  "last_seen": "2023-10-27T10:00:00Z"
+}`}
+                            </pre>
+                            <p>
+                                The Admin Dashboard listens to changes in the `kiosks` table. If a device's `last_seen` timestamp is older than 5 minutes, the dashboard UI automatically flags it as <strong>OFFLINE</strong> (red status).
+                            </p>
+
+                            <h3>2. Command & Control (C2)</h3>
+                            <p>
+                                How do you restart a kiosk that is 500 miles away? Since we don't have a direct socket connection, we use the Heartbeat response as a command channel.
+                            </p>
+                            <p>
+                                When an Admin clicks "Restart" in the dashboard, we don't contact the device directly. We simply update a `restart_requested` boolean flag in the database for that device ID.
+                            </p>
+                            <p>
+                                On the <em>next</em> heartbeat cycle (within 30 seconds), the device receives the response:
+                            </p>
+                            <code className="text-sm bg-slate-100 p-1 rounded">{"{ restart_requested: true }"}</code>
+                            <p>
+                                The device interprets this flag, acknowledges it by setting the flag back to `false` (to prevent loops), and then triggers `window.location.reload()`. This provides a robust, asynchronous remote control mechanism that works even through strict firewalls.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'tv' && (
+                    <div className="space-y-12 animate-fade-in max-w-5xl">
+                        <SectionHeader icon={Tv} title="TV Protocol" subtitle="Digital Signage Heuristics" />
+                        
+                        <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight">
+                            <h3>1. The Fisher-Yates Shuffler</h3>
+                            <p>
+                                A TV loop that plays the same 3 videos in the same order (A -> B -> C -> A) quickly causes "repetition fatigue" for staff and customers. It feels robotic.
+                            </p>
+                            <p>
+                                The TV Mode engine aggregates all available videos from all selected brands into a master playlist. It then applies the <strong>Fisher-Yates Shuffle Algorithm</strong> to randomize the playback order.
+                            </p>
+                            <p>
+                                This algorithm is mathematically proven to produce an unbiased permutation. Every permutation is equally likely. This ensures that the sequence feels genuinely fresh and organic, rather than a predictable loop.
+                            </p>
+
+                            <h3>2. The Stalled Video Watchdog</h3>
+                            <p>
+                                Streaming video on low-end hardware is prone to buffering stalls. Sometimes, the video player gets stuck in a `waiting` state forever due to a network hiccup or decoder crash.
+                            </p>
+                            <p>
+                                To prevent a TV from displaying a frozen frame or a spinning circle for hours, we implement a <strong>Playback Watchdog</strong>.
+                            </p>
+                            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 my-6 not-prose">
+                                <h4 className="font-bold text-xs uppercase mb-2">Watchdog Logic Loop</h4>
+                                <ul className="list-decimal pl-6 space-y-2 text-sm text-slate-700">
+                                    <li>Every 1 second, check `video.currentTime`.</li>
+                                    <li>Compare it to `lastKnownTime`.</li>
+                                    <li>If `currentTime` has not advanced more than 0.1s, increment `stallCounter`.</li>
+                                    <li>If `stallCounter` > 5 (5 seconds of freeze), the Watchdog barks.</li>
+                                    <li><strong>Action:</strong> Force-skip to the next video in the playlist immediately.</li>
+                                </ul>
+                            </div>
+                            <p>
+                                This self-healing mechanism ensures the display remains dynamic and active, automatically recovering from network or decoding errors without human intervention.
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
-// ... Utility components preserved ... 
 const HexagonIcon = ({ size, className }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>);
 const CalculatorIcon = ({ size, className }: any) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>);
 const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminUser) => void }) => {
@@ -184,9 +435,11 @@ const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminU
     <div className="flex items-center justify-center min-h-screen bg-slate-800 p-4 animate-fade-in"><div className="bg-slate-100 p-8 rounded-3xl shadow-2xl max-w-md w-full relative overflow-hidden border border-slate-300"><h1 className="text-4xl font-black mb-2 text-center text-slate-900 mt-4 tracking-tight">Admin Hub</h1><p className="text-center text-slate-500 text-sm mb-6 font-bold uppercase tracking-wide">Enter Name & PIN</p><form onSubmit={handleAuth} className="space-y-4"><div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 ml-1">Admin Name</label><input className="w-full p-4 border border-slate-300 rounded-xl bg-white font-bold text-slate-900 outline-none focus:border-blue-500" type="text" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} autoFocus /></div><div><label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 ml-1">PIN Code</label><input className="w-full p-4 border border-slate-300 rounded-xl bg-white font-bold text-slate-900 outline-none focus:border-blue-500" type="password" placeholder="####" value={pin} onChange={(e) => setPin(e.target.value)} /></div>{error && <div className="text-red-500 text-xs font-bold text-center bg-red-100 p-2 rounded-lg">{error}</div>}<button type="submit" className="w-full p-4 font-black rounded-xl bg-slate-900 text-white uppercase hover:bg-slate-800 transition-colors shadow-lg">Login</button></form></div></div>
   );
 };
-// ... FileUpload, InputField, CatalogueManager, ManualPricelistEditor, PricelistManager, ProductEditor, KioskEditorModal, MoveProductModal, TVModelEditor, AdminManager, importZip, downloadZip ...
-// (Keeping existing definitions, just compressing to fit, assuming context is preserved)
-const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <ImageIcon />, allowMultiple = false }: any) => { const [uploadProgress, setUploadProgress] = useState(0); const [isProcessing, setIsProcessing] = useState(false); const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files.length > 0) { setIsProcessing(true); setUploadProgress(10); const files = Array.from(e.target.files) as File[]; let fileType = files[0].type.startsWith('video') ? 'video' : files[0].type === 'application/pdf' ? 'pdf' : files[0].type.startsWith('audio') ? 'audio' : 'image'; const uploadSingle = async (file: File) => { try { const url = await smartUpload(file); return url; } catch (e: any) { const msg = e.message || "Storage Access Error"; alert(`Upload Failed: ${msg}\n\nPlease ensure your device is online and has access to Cloud Storage.`); throw e; } }; try { if (allowMultiple) { const results: string[] = []; for(let i=0; i<files.length; i++) { try { const url = await uploadSingle(files[i]); results.push(url); } catch (e) {} setUploadProgress(((i+1)/files.length)*100); } if (results.length > 0) { onUpload(results, fileType); } } else { try { const url = await uploadSingle(files[0]); setUploadProgress(100); onUpload(url, fileType); } catch (e) {} } } catch (err) { console.error(err); } finally { setTimeout(() => { setIsProcessing(false); setUploadProgress(0); }, 500); e.target.value = ''; } } }; return (<div className="mb-4"><label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">{label}</label><div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">{isProcessing && <div className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all" style={{ width: `${uploadProgress}%` }}></div>}<div className="w-10 h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center overflow-hidden shrink-0 text-slate-400">{isProcessing ? (<Loader2 className="animate-spin text-blue-500" />) : currentUrl && !allowMultiple ? (accept.includes('video') ? <Video className="text-blue-500" size={16} /> : accept.includes('pdf') ? <FileText className="text-red-500" size={16} /> : accept.includes('audio') ? (<div className="flex flex-col items-center justify-center bg-green-50 w-full h-full text-green-600"><Music size={16} /></div>) : <img src={currentUrl} className="w-full h-full object-contain" />) : React.cloneElement(icon, { size: 16 })}</div><label className={`flex-1 text-center cursor-pointer bg-slate-900 text-white px-2 py-2 rounded-lg font-bold text-[9px] uppercase whitespace-nowrap overflow-hidden text-ellipsis ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}><Upload size={10} className="inline mr-1" /> {isProcessing ? 'Uploading...' : 'Select File'}<input type="file" className="hidden" accept={accept} onChange={handleFileChange} disabled={isProcessing} multiple={allowMultiple}/></label></div></div>); };
+const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <ImageIcon />, allowMultiple = false }: any) => {
+  const [uploadProgress, setUploadProgress] = useState(0); const [isProcessing, setIsProcessing] = useState(false);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files.length > 0) { setIsProcessing(true); setUploadProgress(10); const files = Array.from(e.target.files) as File[]; let fileType = files[0].type.startsWith('video') ? 'video' : files[0].type === 'application/pdf' ? 'pdf' : files[0].type.startsWith('audio') ? 'audio' : 'image'; const uploadSingle = async (file: File) => { try { const url = await smartUpload(file); return url; } catch (e: any) { const msg = e.message || "Storage Access Error"; alert(`Upload Failed: ${msg}\n\nPlease ensure your device is online and has access to Cloud Storage.`); throw e; } }; try { if (allowMultiple) { const results: string[] = []; for(let i=0; i<files.length; i++) { try { const url = await uploadSingle(files[i]); results.push(url); } catch (e) {} setUploadProgress(((i+1)/files.length)*100); } if (results.length > 0) { onUpload(results, fileType); } } else { try { const url = await uploadSingle(files[0]); setUploadProgress(100); onUpload(url, fileType); } catch (e) {} } } catch (err) { console.error(err); } finally { setTimeout(() => { setIsProcessing(false); setUploadProgress(0); }, 500); e.target.value = ''; } } };
+  return (<div className="mb-4"><label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">{label}</label><div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">{isProcessing && <div className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all" style={{ width: `${uploadProgress}%` }}></div>}<div className="w-10 h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center overflow-hidden shrink-0 text-slate-400">{isProcessing ? (<Loader2 className="animate-spin text-blue-500" />) : currentUrl && !allowMultiple ? (accept.includes('video') ? <Video className="text-blue-500" size={16} /> : accept.includes('pdf') ? <FileText className="text-red-500" size={16} /> : accept.includes('audio') ? (<div className="flex flex-col items-center justify-center bg-green-50 w-full h-full text-green-600"><Music size={16} /></div>) : <img src={currentUrl} className="w-full h-full object-contain" />) : React.cloneElement(icon, { size: 16 })}</div><label className={`flex-1 text-center cursor-pointer bg-slate-900 text-white px-2 py-2 rounded-lg font-bold text-[9px] uppercase whitespace-nowrap overflow-hidden text-ellipsis ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}><Upload size={10} className="inline mr-1" /> {isProcessing ? 'Uploading...' : 'Select File'}<input type="file" className="hidden" accept={accept} onChange={handleFileChange} disabled={isProcessing} multiple={allowMultiple}/></label></div></div>);
+};
 const InputField = ({ label, val, onChange, placeholder, isArea = false, half = false, type = 'text' }: any) => (<div className={`mb-4 ${half ? 'w-full' : ''}`}><label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 ml-1">{label}</label>{isArea ? <textarea value={val} onChange={onChange} className="w-full p-3 bg-white text-black border border-slate-300 rounded-xl h-24 focus:ring-2 focus:ring-blue-500 outline-none resize-none text-sm" placeholder={placeholder} /> : <input type={type} value={val} onChange={onChange} className="w-full p-3 bg-white text-black border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm" placeholder={placeholder} />}</div>);
 const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalogue[], onSave: (c: Catalogue[], immediate: boolean) => void, brandId?: string }) => { const [localList, setLocalList] = useState(catalogues || []); useEffect(() => setLocalList(catalogues || []), [catalogues]); const handleUpdate = (newList: Catalogue[], immediate = false) => { setLocalList(newList); onSave(newList, immediate); }; const addCatalogue = () => { handleUpdate([...localList, { id: generateId('cat'), title: brandId ? 'New Brand Catalogue' : 'New Pamphlet', brandId: brandId, type: brandId ? 'catalogue' : 'pamphlet', pages: [], year: new Date().getFullYear(), startDate: '', endDate: '' }], true); }; const updateCatalogue = (id: string, updates: Partial<Catalogue>, immediate = false) => { handleUpdate(localList.map(c => c.id === id ? { ...c, ...updates } : c), immediate); }; return (<div className="space-y-6"><div className="flex justify-between items-center mb-4"><h3 className="font-bold uppercase text-slate-500 text-xs tracking-wider">{brandId ? 'Brand Catalogues' : 'Global Pamphlets'}</h3><button onClick={addCatalogue} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold textxs uppercase flex items-center gap-2"><Plus size={14} /> Add New</button></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{localList.map((cat) => (<div key={cat.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col"><div className="h-40 bg-slate-100 relative group flex items-center justify-center overflow-hidden">{cat.thumbnailUrl || (cat.pages && cat.pages[0]) ? (<img src={cat.thumbnailUrl || cat.pages[0]} className="w-full h-full object-contain" />) : (<BookOpen size={32} className="text-slate-300" />)}{cat.pdfUrl && (<div className="absolute top-2 right-2 bg-red-500 text-white text-[8px] font-bold px-2 py-1 rounded shadow-sm">PDF</div>)}</div><div className="p-4 space-y-3 flex-1 flex flex-col"><input value={cat.title} onChange={(e) => updateCatalogue(cat.id, { title: e.target.value })} className="w-full font-black text-slate-900 border-b border-transparent focus:border-blue-500 outline-none text-sm" placeholder="Title" />{cat.type === 'catalogue' || brandId ? (<div><label className="text-[8px] font-bold text-slate-400 uppercase">Catalogue Year</label><input type="number" value={cat.year || new Date().getFullYear()} onChange={(e) => updateCatalogue(cat.id, { year: parseInt(e.target.value) })} className="w-full text-xs border border-slate-200 rounded p-1" /></div>) : (<><div className="grid grid-cols-2 gap-2"><div><label className="text-[8px] font-bold text-slate-400 uppercase">Start Date</label><input type="date" value={cat.startDate || ''} onChange={(e) => updateCatalogue(cat.id, { startDate: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1" /></div><div><label className="text-[8px] font-bold text-slate-400 uppercase">End Date</label><input type="date" value={cat.endDate || ''} onChange={(e) => updateCatalogue(cat.id, { endDate: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1" /></div></div><div><label className="text-[8px] font-bold text-slate-400 uppercase">Promotional Sub-Header</label><textarea value={cat.promoText || ''} onChange={(e) => updateCatalogue(cat.id, { promoText: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1 resize-none h-12" placeholder="Enter promo text..." /></div></>)}<div className="grid grid-cols-2 gap-2 mt-auto pt-2"><FileUpload label="Thumbnail (Image)" accept="image/*" currentUrl={cat.thumbnailUrl || (cat.pages?.[0])} onUpload={(url: any) => updateCatalogue(cat.id, { thumbnailUrl: url }, true)} /><FileUpload label="Document (PDF)" accept="application/pdf" currentUrl={cat.pdfUrl} icon={<FileText />} onUpload={(url: any) => updateCatalogue(cat.id, { pdfUrl: url }, true)} /></div><div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-2"><button onClick={() => handleUpdate(localList.filter(c => c.id !== cat.id), true)} className="text-red-400 hover:text-red-600 flex items-center gap-1 text-[10px] font-bold uppercase"><Trash2 size={12} /> Delete Catalogue</button></div></div></div>))}</div></div>); };
 const ManualPricelistEditor = ({ pricelist, onSave, onClose }: { pricelist: Pricelist, onSave: (pl: Pricelist) => void, onClose: () => void }) => { const [items, setItems] = useState<PricelistItem[]>(pricelist.items || []); const [title, setTitle] = useState(pricelist.title || ''); const [isImporting, setIsImporting] = useState(false); const [headers, setHeaders] = useState(pricelist.headers || { sku: 'SKU', description: 'Description', normalPrice: 'Normal Price', promoPrice: 'Promo Price' }); const [showHeaderConfig, setShowHeaderConfig] = useState(false); const addItem = () => { setItems([...items, { id: generateId('item'), sku: '', description: '', normalPrice: '', promoPrice: '', imageUrl: '' }]); }; const updateItem = (id: string, field: keyof PricelistItem, val: string) => { const finalVal = field === 'description' ? val.toUpperCase() : val; setItems(items.map(item => item.id === id ? { ...item, [field]: finalVal } : item)); }; const handlePriceBlur = (id: string, field: 'normalPrice' | 'promoPrice', value: string) => { if (!value) return; const numericPart = value.replace(/[^0-9.]/g, ''); if (!numericPart) { if (value && !value.startsWith('R ')) updateItem(id, field, `R ${value}`); return; } let num = parseFloat(numericPart); if (num % 1 !== 0) num = Math.ceil(num); if (Math.floor(num) % 10 === 9) num += 1; const formatted = `R ${num.toLocaleString()}`; updateItem(id, field, formatted); }; const removeItem = (id: string) => { setItems(items.filter(item => item.id !== id)); }; const handleSpreadsheetImport = async (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (!file) return; setIsImporting(true); try { const data = await file.arrayBuffer(); const workbook = XLSX.read(data, { type: 'array' }); const firstSheetName = workbook.SheetNames[0]; const worksheet = workbook.Sheets[firstSheetName]; const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]; if (jsonData.length === 0) { alert("The selected file appears to be empty."); return; } const validRows = jsonData.filter(row => row && row.length > 0 && row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '')); if (validRows.length === 0) { alert("No data rows found in the file."); return; } const firstRow = validRows[0].map(c => String(c || '').toLowerCase().trim()); const findIdx = (keywords: string[]) => firstRow.findIndex(h => keywords.some(k => h.includes(k))); const skuIdx = findIdx(['sku', 'code', 'part', 'model']); const descIdx = findIdx(['desc', 'name', 'product', 'item', 'title']); const normalIdx = findIdx(['normal', 'retail', 'price', 'standard', 'cost']); const promoIdx = findIdx(['promo', 'special', 'sale', 'discount', 'deal']); const hasHeader = skuIdx !== -1 || descIdx !== -1 || normalIdx !== -1; const dataRows = hasHeader ? validRows.slice(1) : validRows; const sIdx = skuIdx !== -1 ? skuIdx : 0; const dIdx = descIdx !== -1 ? descIdx : 1; const nIdx = normalIdx !== -1 ? normalIdx : 2; const pIdx = promoIdx !== -1 ? promoIdx : 3; const newImportedItems: PricelistItem[] = dataRows.map(row => { const formatImported = (val: string) => { if (!val) return ''; const numeric = String(val).replace(/[^0-9.]/g, ''); if (!numeric) return String(val); let n = parseFloat(numeric); if (n % 1 !== 0) n = Math.ceil(n); if (Math.floor(n) % 10 === 9) n += 1; return `R ${n.toLocaleString()}`; }; return { id: generateId('imp'), sku: String(row[sIdx] || '').trim().toUpperCase(), description: String(row[dIdx] || '').trim().toUpperCase(), normalPrice: formatImported(row[nIdx]), promoPrice: row[pIdx] ? formatImported(row[pIdx]) : '', imageUrl: '' }; }); if (newImportedItems.length > 0) { const userChoice = confirm(`Parsed ${newImportedItems.length} items.\n\nOK -> UPDATE existing SKUs and ADD new ones (Merge).\nCANCEL -> REPLACE entire current list.`); if (userChoice) { const merged = [...items]; const onlyNew: PricelistItem[] = []; newImportedItems.forEach(newItem => { const existingIdx = merged.findIndex(curr => curr.sku && newItem.sku && curr.sku.trim().toUpperCase() === newItem.sku.trim().toUpperCase()); if (existingIdx > -1) { merged[existingIdx] = { ...merged[existingIdx], description: newItem.description || merged[existingIdx].description, normalPrice: newItem.normalPrice || merged[existingIdx].normalPrice, promoPrice: newItem.promoPrice || merged[existingIdx].promoPrice }; } else { onlyNew.push(newItem); } }); setItems([...merged, ...onlyNew]); alert(`Merge Complete: Updated existing SKUs and added ${onlyNew.length} new items.`); } else { setItems(newImportedItems); alert("Pricelist replaced with imported data."); } } else { alert("Could not extract any valid items. Ensure the sheet follows the format: SKU, Description, Normal Price, Promo Price."); } } catch (err) { console.error("Spreadsheet Import Error:", err); alert("Error parsing file. Ensure it is a valid .xlsx or .csv file."); } finally { setIsImporting(false); e.target.value = ''; } }; return (<div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white rounded-3xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"><div className="p-6 border-b border-slate-100 bg-slate-50 flex flex-col md:flex-row justify-between gap-4 shrink-0"><div className="flex-1"><div className="flex items-center gap-2 mb-1"><Table className="text-blue-600" size={24} /><input value={title} onChange={(e) => setTitle(e.target.value)} className="font-black text-slate-900 uppercase text-lg bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-blue-500 outline-none w-full transition-colors placeholder:text-slate-300" placeholder="ENTER LIST TITLE..." /></div><div className="flex items-center gap-4"><p className="text-xs text-slate-500 font-bold uppercase ml-8">{pricelist.month} {pricelist.year}</p><button onClick={() => setShowHeaderConfig(!showHeaderConfig)} className="text-[10px] font-bold uppercase text-blue-600 flex items-center gap-1 hover:bg-blue-50 px-2 py-1 rounded"><Settings size={12}/> Table Settings</button></div></div><div className="flex flex-wrap gap-2 items-center"><label className="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg cursor-pointer">{isImporting ? <Loader2 size={16} className="animate-spin" /> : <FileInput size={16} />} Import Excel/CSV<input type="file" className="hidden" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={handleSpreadsheetImport} disabled={isImporting} /></label><button onClick={addItem} className="bg-green-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase flex items-center gap-2 hover:bg-green-700 transition-colors shadow-lg shadow-green-900/10"><Plus size={16} /> Add Row</button><button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 ml-2"><X size={24}/></button></div></div>{showHeaderConfig && (<div className="bg-slate-100 p-4 border-b border-slate-200 grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in"><div><label className="block text-[8px] font-bold text-slate-500 uppercase mb-1">SKU Header</label><input value={headers.sku} onChange={(e) => setHeaders({...headers, sku: e.target.value})} className="w-full text-xs font-bold p-2 rounded border border-slate-300 uppercase" /></div><div><label className="block text-[8px] font-bold text-slate-500 uppercase mb-1">Description Header</label><input value={headers.description} onChange={(e) => setHeaders({...headers, description: e.target.value})} className="w-full text-xs font-bold p-2 rounded border border-slate-300 uppercase" /></div><div><label className="block text-[8px] font-bold text-slate-500 uppercase mb-1">Normal Price Header</label><input value={headers.normalPrice} onChange={(e) => setHeaders({...headers, normalPrice: e.target.value})} className="w-full text-xs font-bold p-2 rounded border border-slate-300 uppercase" /></div><div><label className="block text-[8px] font-bold text-slate-500 uppercase mb-1">Promo Price Header</label><input value={headers.promoPrice} onChange={(e) => setHeaders({...headers, promoPrice: e.target.value})} className="w-full text-xs font-bold p-2 rounded border border-slate-300 uppercase" /></div></div>)}<div className="flex-1 overflow-auto p-6"><div className="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center gap-3"><Info size={18} className="text-blue-500 shrink-0" /><p className="text-[10px] text-blue-800 font-bold uppercase leading-tight">Price Strategy: Decimals are rounded UP (129.99 → 130). Values ending in 9 are pushed to the next round number (799 → 800). Whole numbers like 122 are kept.</p></div><table className="w-full text-left border-collapse"><thead className="bg-slate-50 sticky top-0 z-10"><tr><th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 w-16">Visual</th><th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">{headers.sku || 'SKU'}</th><th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">{headers.description || 'Description'}</th><th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">{headers.normalPrice || 'Normal Price'}</th><th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">{headers.promoPrice || 'Promo Price'}</th><th className="p-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 w-10 text-center">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{items.map((item) => (<tr key={item.id} className="hover:bg-slate-50/50 transition-colors"><td className="p-2"><div className="w-12 h-12 relative group/item-img">{item.imageUrl ? (<><img src={item.imageUrl} className="w-full h-full object-contain rounded bg-white border border-slate-100" /><button onClick={(e) => { e.stopPropagation(); if(confirm("Remove this image?")) updateItem(item.id, 'imageUrl', ''); }} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover/item-img:opacity-100 transition-opacity z-10 hover:bg-red-600"><X size={10} strokeWidth={3} /></button></>) : (<div className="w-full h-full bg-slate-50 border border-dashed border-slate-200 rounded flex items-center justify-center text-slate-300"><ImageIcon size={14} /></div>)}{!item.imageUrl && (<label className="absolute inset-0 bg-black/40 opacity-0 group-hover/item-img:opacity-100 flex items-center justify-center cursor-pointer rounded transition-opacity"><Upload size={12} className="text-white" /><input type="file" className="hidden" accept="image/*" onChange={async (e) => { if (e.target.files?.[0]) { try { const url = await smartUpload(e.target.files[0]); updateItem(item.id, 'imageUrl', url); } catch (err) { alert("Upload failed"); } } }} /></label>)}</div></td><td className="p-2"><input value={item.sku} onChange={(e) => updateItem(item.id, 'sku', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm" placeholder="SKU-123" /></td><td className="p-2"><input value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-bold text-sm uppercase" placeholder="PRODUCT DETAILS..." /></td><td className="p-2"><input value={item.normalPrice} onBlur={(e) => handlePriceBlur(item.id, 'normalPrice', e.target.value)} onChange={(e) => updateItem(item.id, 'normalPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-blue-500 outline-none font-black text-sm" placeholder="R 999" /></td><td className="p-2"><input value={item.promoPrice} onBlur={(e) => handlePriceBlur(item.id, 'promoPrice', e.target.value)} onChange={(e) => updateItem(item.id, 'promoPrice', e.target.value)} className="w-full p-2 bg-transparent border-b border-transparent focus:border-red-500 outline-none font-black text-sm text-red-600" placeholder="R 799" /></td><td className="p-2 text-center"><button onClick={() => removeItem(item.id)} className="p-2 text-red-400 hover:text-red-600 transition-colors"><Trash2 size={16}/></button></td></tr>))}{items.length === 0 && (<tr><td colSpan={6} className="py-20 text-center text-slate-400 text-sm font-bold uppercase italic">No items yet. Click "Add Row" or "Import" to start.</td></tr>)}</tbody></table></div><div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0"><button onClick={onClose} className="px-6 py-2 text-slate-500 font-bold uppercase text-xs">Cancel</button><button onClick={() => { onSave({ ...pricelist, title, items, headers, type: 'manual', dateAdded: new Date().toISOString() }); onClose(); }} className="px-8 py-3 bg-blue-600 text-white font-black uppercase text-xs rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2"><Save size={16} /> Save Pricelist Table</button></div></div></div>); };
@@ -245,23 +498,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
       if (selectedBrand) { const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id); if (updatedBrand) setSelectedBrand(updatedBrand); }
       if (selectedCategory && selectedBrand) { const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id); const updatedCat = updatedBrand?.categories.find(c => c.id === selectedCategory.id); if (updatedCat) setSelectedCategory(updatedCat); }
       if (selectedTVBrand && newData.tv) { const updatedTVBrand = newData.tv.brands.find(b => b.id === selectedTVBrand.id); if (updatedTVBrand) setSelectedTVBrand(updatedTVBrand); }
-  };
-
-  const toggleScreensaverSetting = (key: keyof ScreensaverSettings, label: string) => {
-      if (!localData || !localData.screensaverSettings) return;
-      const currentVal = localData.screensaverSettings[key];
-      // Default undefined to false for proper toggling logic
-      const safeCurrentVal = currentVal === undefined ? false : currentVal;
-      const newVal = !safeCurrentVal;
-      
-      const newSettings = { ...localData.screensaverSettings, [key]: newVal };
-      const newArchive = addToArchive('other', `Screensaver: ${label}`, newVal, 'update');
-      
-      handleLocalUpdate({
-          ...localData,
-          screensaverSettings: newSettings,
-          archive: newArchive
-      }, true);
   };
 
   const checkSkuDuplicate = (sku: string, currentId: string) => { if (!sku || !localData) return false; for (const b of localData.brands) { for (const c of b.categories) { for (const p of c.products) { if (p.sku && p.sku.toLowerCase() === sku.toLowerCase() && p.id !== currentId) return true; } } } return false; };
@@ -377,39 +613,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Clock size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Timing & Schedule</h3></div><div className="grid grid-cols-2 gap-4 mb-6"><InputField label="Idle Wait (sec)" val={localData.screensaverSettings?.idleTimeout||60} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, idleTimeout: parseInt(e.target.value)}, archive: addToArchive('other', 'Screensaver Idle Timeout', e.target.value, 'update')})} /><InputField label="Slide Duration (sec)" val={localData.screensaverSettings?.imageDuration||8} onChange={(e:any)=>handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, imageDuration: parseInt(e.target.value)}, archive: addToArchive('other', 'Screensaver Slide Duration', e.target.value, 'update')})} /></div><div className="bg-slate-50 p-4 rounded-xl border border-slate-200"><div className="flex justify-between items-center mb-4"><label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Active Hours (Sleep Mode)</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, enableSleepMode: !localData.screensaverSettings?.enableSleepMode}, archive: addToArchive('other', 'Screensaver Sleep Mode Toggle', !localData.screensaverSettings?.enableSleepMode, 'update')}, true)} className={`w-8 h-4 rounded-full transition-colors relative ${localData.screensaverSettings?.enableSleepMode ? 'bg-green-500' : 'bg-slate-300'}`}><div className={`w-2 h-2 bg-white rounded-full absolute top-1 transition-all ${localData.screensaverSettings?.enableSleepMode ? 'left-5' : 'left-1'}`}></div></button></div><div className={`grid grid-cols-2 gap-4 transition-opacity ${localData.screensaverSettings?.enableSleepMode ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}><div><label className="block text-[10px] font-bold text-slate-400 mb-1">Start Time</label><input type="time" value={localData.screensaverSettings?.activeHoursStart || '08:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursStart: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div><div><label className="block text-[10px] font-bold text-slate-400 mb-1">End Time</label><input type="time" value={localData.screensaverSettings?.activeHoursEnd || '20:00'} onChange={(e) => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, activeHoursEnd: e.target.value}})} className="w-full p-2 border border-slate-300 rounded text-sm font-bold"/></div></div></div></div>
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                                <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div>
-                                <h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Content & Behavior</h3>
-                            </div>
-                            <div className="space-y-4">
-                                {[
-                                    { key: 'showProductImages', label: 'Show Products (Images)' },
-                                    { key: 'showProductVideos', label: 'Show Products (Videos)' },
-                                    { key: 'showPamphlets', label: 'Show Pamphlet Covers' },
-                                    { key: 'showCustomAds', label: 'Show Custom Ads' },
-                                    { key: 'muteVideos', label: 'Mute Videos' },
-                                    { key: 'showInfoOverlay', label: 'Show Title Overlay' },
-                                    { key: 'showClock', label: 'Show Digital Clock' }
-                                ].map(opt => {
-                                    const isEnabled = localData.screensaverSettings ? (localData.screensaverSettings as any)[opt.key] : false;
-                                    return (
-                                        <div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
-                                            <label className="text-xs font-bold text-slate-700 uppercase cursor-pointer flex-1" onClick={() => toggleScreensaverSetting(opt.key as keyof ScreensaverSettings, opt.label)}>
-                                                {opt.label}
-                                            </label>
-                                            <button 
-                                                type="button"
-                                                onClick={() => toggleScreensaverSetting(opt.key as keyof ScreensaverSettings, opt.label)}
-                                                className={`w-10 h-5 rounded-full transition-colors relative shrink-0 ${isEnabled ? 'bg-blue-600' : 'bg-slate-300'}`}
-                                            >
-                                                <div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${isEnabled ? 'left-6' : 'left-1'}`}></div>
-                                            </button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100"><div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Monitor size={20} /></div><h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Content & Behavior</h3></div><div className="space-y-4">{[{ key: 'showProductImages', label: 'Show Products (Images)' }, { key: 'showProductVideos', label: 'Show Products (Videos)' }, { key: 'showPamphlets', label: 'Show Pamphlet Covers' }, { key: 'showCustomAds', label: 'Show Custom Ads' }, { key: 'muteVideos', label: 'Mute Videos' }, { key: 'showInfoOverlay', label: 'Show Title Overlay' }, { key: 'showClock', label: 'Show Digital Clock' }].map(opt => (<div key={opt.key} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"><label className="text-xs font-bold text-slate-700 uppercase">{opt.label}</label><button onClick={() => handleLocalUpdate({...localData, screensaverSettings: {...localData.screensaverSettings!, [opt.key]: !(localData.screensaverSettings as any)[opt.key]}, archive: addToArchive('other', `Screensaver Opt: ${opt.label}`, !(localData.screensaverSettings as any)[opt.key], 'update')}, true)} className={`w-10 h-5 rounded-full transition-colors relative ${(localData.screensaverSettings as any)[opt.key] ? 'bg-blue-600' : 'bg-slate-300'}`}><div className={`w-3 h-3 bg-white rounded-full absolute top-1 transition-all ${(localData.screensaverSettings as any)[opt.key] ? 'left-6' : 'left-1'}`}></div></button></div>))}</div></div>
                     </div>
                     
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
