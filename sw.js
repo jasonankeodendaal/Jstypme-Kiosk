@@ -1,6 +1,6 @@
 
-// Service Worker for Kiosk Pro v5.4 (Media & PDF Stream Optimized)
-const CACHE_NAME = 'kiosk-pro-v5';
+// Service Worker for Kiosk Pro v6.0 (SWR Images & Range Requests)
+const CACHE_NAME = 'kiosk-pro-v6';
 
 const PRECACHE_URLS = [
   '/',
@@ -60,6 +60,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Navigation: Network First, Fallback to Index
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => caches.match('/index.html'))
@@ -67,7 +68,32 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Standard Assets
+  // Images: Stale-While-Revalidate
+  // Ensures offline availability while updating in background
+  const isImage = event.request.destination === 'image' || 
+                  url.pathname.match(/\.(jpg|jpeg|png|webp|gif|svg|ico)$/i);
+
+  if (isImage) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(async (cache) => {
+        const cachedResponse = await cache.match(event.request);
+        const fetchPromise = fetch(event.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            cache.put(event.request, networkResponse.clone());
+          }
+          return networkResponse;
+        }).catch((e) => {
+           // If offline and no cache, throw error
+           if (!cachedResponse) throw e;
+        });
+
+        return cachedResponse || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Standard Assets: Cache First
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then(res => {
