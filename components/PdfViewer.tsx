@@ -77,7 +77,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
             url,
             cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
             cMapPacked: true,
-            disableRange: false, // Critical: Allow range requests (server must support it)
+            disableRange: false, // Range requests are now handled by browser (SW excluded)
             disableStream: true, // Use chunked XHR instead of streaming (more stable on legacy)
             disableAutoFetch: true, // Critical: Do NOT download the whole file automatically
             rangeChunkSize: 65536, // Fetch in 64KB chunks
@@ -102,6 +102,14 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
       } catch (err: any) {
         console.error('[PdfViewer] Load Error:', err);
         
+        // CRITICAL FIX: Suppress "Message channel closed" errors common in Android WebViews
+        const msg = err?.message || '';
+        if (msg.includes('Message channel closed') || msg.includes('message channel')) {
+            console.warn('[PdfViewer] Suppressing worker communication error');
+            // Do not show error UI, try to remain in loading state or fail silently
+            return;
+        }
+
         if (err.name === 'MissingPDFException') {
             console.error('[PdfViewer] File not found or 404');
         } else if (err.name === 'InvalidPDFException') {
@@ -167,6 +175,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
         }
       } catch (err: any) { 
           if (err?.name !== 'RenderingCancelledException') {
+              // Suppress message channel errors during render as well
+              const msg = err?.message || '';
+              if (msg.includes('Message channel closed') || msg.includes('message channel')) {
+                  console.warn('[PdfViewer] Suppressing render worker error');
+                  return;
+              }
               console.error("[PdfViewer] Render Error:", err); 
               setLoading(false);
           }
@@ -232,7 +246,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
                   </div>
               )}
           </div>
-          <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={24} /></button>
+          <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={24}/></button>
        </div>
 
        {pricelist?.kind === 'promotion' && (

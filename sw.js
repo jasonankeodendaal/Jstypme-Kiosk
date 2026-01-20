@@ -1,5 +1,5 @@
 
-// Service Worker for Kiosk Pro v6.0 (SWR Images & Range Requests)
+// Service Worker for Kiosk Pro v6.1 (PDF Exclusion Update)
 const CACHE_NAME = 'kiosk-pro-v6';
 
 const PRECACHE_URLS = [
@@ -35,25 +35,29 @@ self.addEventListener('activate', (event) => {
 
 /**
  * Enhanced Range Request Handler.
- * CRITICAL FIX: Bypasses Service Worker Cache for media files AND PDFs.
- * Caching large files in SW causes disk I/O contention on tablets,
- * leading to playback freezes or long wait times. We rely on the browser's native cache.
+ * Note: PDFs are now excluded entirely from this logic to prevent
+ * contention on legacy Android WebViews.
  */
 const handleRangeRequest = async (request) => {
-  // Pass through directly to network.
-  // The browser's native network stack handles Range headers (206 Partial Content) efficiently.
   return fetch(request);
 };
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Treat PDFs as "heavy media" to allow Range Requests (Chunked Loading)
+  // CRITICAL: Completely exclude PDF files from Service Worker.
+  // This forces the browser to handle the request natively, avoiding
+  // Service Worker overhead and potential message channel closure issues
+  // on legacy Android WebViews (Chrome 37-50).
+  if (url.pathname.toLowerCase().endsWith('.pdf')) {
+    return;
+  }
+
+  // Treat heavy media (Video/Audio) to allow Range Requests
   const isMedia = event.request.destination === 'video' || 
                   event.request.destination === 'audio' || 
                   url.pathname.toLowerCase().endsWith('.mp4') || 
-                  url.pathname.toLowerCase().endsWith('.webm') ||
-                  url.pathname.toLowerCase().endsWith('.pdf');
+                  url.pathname.toLowerCase().endsWith('.webm');
 
   if (isMedia) {
     event.respondWith(handleRangeRequest(event.request));

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -74,6 +75,15 @@
         window.process = { env: { NODE_ENV: 'production' } };
         
         window.onerror = function(msg, url, lineNo, columnNo, error) {
+            // IGNORE MESSAGE CHANNEL ERRORS
+            // These are internal worker communication failures on legacy WebViews (Chrome 37-55)
+            // when handling PDFs or large blobs. They do not necessarily crash the React UI.
+            var strMsg = String(msg).toLowerCase();
+            if (strMsg.indexOf('message channel') !== -1 || strMsg.indexOf('channel closed') !== -1) {
+                console.warn("Suppressing Worker Error: " + msg);
+                return true; // Prevents default handler
+            }
+
             var loaderText = document.getElementById('loader-text');
             if (loaderText) {
                 loaderText.style.color = '#ef4444';
