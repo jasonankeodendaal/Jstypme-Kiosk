@@ -1,6 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { KioskRegistry } from '../types';
+import * as pdfjsLib from 'pdfjs-dist';
 
 export const getEnv = (key: string, fallback: string) => {
   try {
@@ -354,4 +355,53 @@ export const smartUpload = (file: File): Promise<string> => {
  */
 export const uploadFileToStorage = async (file: File): Promise<string> => {
     return smartUpload(file);
+};
+
+/**
+ * PDF Rasterization Service
+ * Converts PDF pages to high-quality JPEG images for flipbook display.
+ */
+export const convertPdfToImages = async (file: File, onProgress?: (current: number, total: number) => void): Promise<File[]> => {
+    const pdfjs: any = pdfjsLib;
+    
+    // Ensure worker is set (safe to set multiple times)
+    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+        pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    // Load document
+    const loadingTask = pdfjs.getDocument({
+        data: arrayBuffer,
+        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+        cMapPacked: true,
+    });
+    
+    const pdf = await loadingTask.promise;
+    const totalPages = pdf.numPages;
+    const images: File[] = [];
+
+    // Render each page
+    for (let i = 1; i <= totalPages; i++) {
+        if (onProgress) onProgress(i, totalPages);
+        
+        const page = await pdf.getPage(i);
+        // Scale 2.0 provides good quality for tablet retina displays without being excessive
+        const viewport = page.getViewport({ scale: 2.0 }); 
+        
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: context!, viewport }).promise;
+
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+        
+        if (blob) {
+            images.push(new File([blob], `page_${i}_${Date.now()}.jpg`, { type: 'image/jpeg' }));
+        }
+    }
+    
+    return images;
 };
