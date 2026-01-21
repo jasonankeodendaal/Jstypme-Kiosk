@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
   Monitor, Grid, Image as ImageIcon, ChevronRight, ChevronLeft, Wifi, WifiOff, 
-  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User, FileDigit, Code2, Workflow, Link2, Eye, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Type, Lamp
+  Signal, Video, FileText, BarChart3, Search, RotateCcw, FolderInput, FileArchive, FolderArchive, Check, BookOpen, LayoutTemplate, Globe, Megaphone, Play, Download, MapPin, Tablet, X, Info, Menu, Map as MapIcon, HelpCircle, File as FileIcon, PlayCircle, ToggleLeft, ToggleRight, Clock, Volume2, VolumeX, Settings, Loader2, ChevronDown, Layout, Book, Camera, RefreshCw, Database, Power, CloudLightning, Folder, Smartphone, Cloud, HardDrive, Package, History, Archive, AlertCircle, FolderOpen, Layers, ShieldCheck, Ruler, SaveAll, Pencil, Moon, Sun, MonitorSmartphone, LayoutGrid, Music, Share2, Rewind, Tv, UserCog, Key, Move, FileInput, Lock, Unlock, Calendar, Filter, Zap, Activity, Network, Cpu, List, Table, Tag, Sparkles, FileSpreadsheet, ArrowRight, MousePointer2, GitBranch, Globe2, Wind, Binary, Columns, FileType, FileOutput, Maximize, Terminal, MousePointer, Shield, Radio, Activity as Pulse, Volume, User, FileDigit, Code2, Workflow, Link2, Eye, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Type, Lamp, Film
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem, ArchivedItem } from '../types';
 import { resetStoreData, upsertBrand, upsertCategory, upsertProduct, upsertPricelist, upsertPricelistBrand, deleteItem } from '../services/geminiService';
@@ -53,47 +53,13 @@ const SystemDocumentation = () => {
         { id: 'tv', label: '6. TV Protocol', icon: <Tv size={16}/>, desc: 'Display Queue' },
     ];
 
-    const SectionHeader = ({ icon: Icon, title, subtitle }: any) => (
-        <div className="mb-8">
-            <div className="flex items-center gap-4 mb-2">
-                <div className="p-3 bg-slate-100 rounded-2xl border border-slate-200 text-blue-600">
-                    <Icon size={24} />
-                </div>
-                <div>
-                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">{title}</h2>
-                    <div className="flex items-center gap-2 mt-1">
-                        <div className="h-0.5 w-8 bg-blue-500"></div>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{subtitle}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-    const DiagramPricing = () => (
-        <div className="bg-slate-900 rounded-3xl p-8 border border-indigo-500/20 mb-8 flex flex-col md:flex-row items-center justify-center gap-12 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-5 text-indigo-500 rotate-12 pointer-events-none"><Table size={120} /></div>
-            <div className="flex flex-col items-center gap-2 relative z-10">
-                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Input</div>
-                <div className="text-4xl font-mono text-slate-400 line-through decoration-red-500/50 decoration-4">129.99</div>
-            </div>
-            <div className="flex flex-col items-center gap-2 z-10">
-                <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.5)]">
-                    <RefreshCw className="text-white" size={24} />
-                </div>
-            </div>
-            <div className="flex flex-col items-center gap-2 relative z-10">
-                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Output</div>
-                <div className="text-6xl font-black font-mono text-green-400 tracking-tighter drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">130.00</div>
-            </div>
-        </div>
-    );
-
     return (
         <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden shadow-2xl animate-fade-in">
             <style>{`
                 @keyframes flow-horizontal { 0% { transform: translateX(-100%); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateX(400%); opacity: 0; } }
                 .data-flow { animation: flow-horizontal 3s linear infinite; }
+                @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2); opacity: 0; } }
+                .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
             `}</style>
 
             <div className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
@@ -161,7 +127,206 @@ const SystemDocumentation = () => {
                     </div>
                 )}
 
-                {/* Other sections removed for brevity, they remain unchanged */}
+                {activeSection === 'inventory' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-purple-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20">Module 02: Relational Integrity</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Nested Tree</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    Retail data is naturally hierarchical. A <strong>Product</strong> belongs to a <strong>Category</strong>, which belongs to a <strong>Brand</strong>.
+                                    In many older systems, this relationship is "flat" (like a spreadsheet row), which causes duplication errors.
+                                </p>
+                                <p>
+                                    Kiosk Pro enforces a strict <strong>Parent-Child Architecture</strong>. You cannot create a product without a category, and you cannot create a category without a brand.
+                                    This ensures that if you delete a Brand (e.g., "Samsung"), the system smartly cascades this action to archive all associated TVs and Soundbars automatically, preventing "orphan data" that crashes apps.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 border border-slate-200 rounded-[3rem] p-12 relative overflow-hidden">
+                            <div className="flex flex-col items-center gap-8 relative z-10">
+                                {/* Brand Node */}
+                                <div className="flex flex-col items-center">
+                                    <div className="w-32 h-16 bg-slate-900 rounded-2xl border-2 border-purple-500 shadow-xl flex items-center justify-center relative z-20">
+                                        <span className="text-white font-black uppercase text-sm tracking-widest">Brand</span>
+                                        <div className="absolute -top-3 -right-3 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white">1</div>
+                                    </div>
+                                    <div className="h-8 w-0.5 bg-slate-300"></div>
+                                </div>
+
+                                {/* Category Nodes */}
+                                <div className="flex gap-12 relative">
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-0.5 bg-slate-300 -translate-y-full"></div>
+                                    {[1, 2].map((i) => (
+                                        <div key={i} className="flex flex-col items-center">
+                                            <div className="h-4 w-0.5 bg-slate-300"></div>
+                                            <div className="w-28 h-12 bg-white rounded-xl border-2 border-slate-200 shadow-sm flex items-center justify-center relative z-20">
+                                                <span className="text-slate-600 font-bold uppercase text-xs tracking-wider">Category</span>
+                                            </div>
+                                            <div className="h-6 w-0.5 bg-slate-300"></div>
+                                            {/* Product Nodes */}
+                                            <div className="flex gap-2">
+                                                <div className="w-8 h-8 bg-blue-100 rounded-lg border border-blue-200"></div>
+                                                <div className="w-8 h-8 bg-blue-100 rounded-lg border border-blue-200"></div>
+                                                <div className="w-8 h-8 bg-blue-100 rounded-lg border border-blue-200"></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="absolute bottom-4 left-0 right-0 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Strict Hierarchy Visualization</div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'pricelists' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-indigo-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20">Module 03: The Pricing Engine</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Rounding & Logic</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    Prices in retail marketing are rarely mathematical; they are psychological. A raw database price might be <code className="bg-red-50 text-red-600 px-1 rounded">R 499.99</code>, but on a premium display, this looks cluttered.
+                                </p>
+                                <p>
+                                    Our Pricing Engine applies a <strong>"Charm Filter"</strong> before rendering any number. It automatically rounds decimals up (Ceiling) and pushes awkward endings like <code className="bg-slate-100 px-1 rounded">.99</code> to the next clean integer.
+                                    This happens client-side, meaning the raw data remains accurate for accounting, but the display is optimized for human readability.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-900 rounded-3xl p-8 border border-indigo-500/20 flex flex-col md:flex-row items-center justify-center gap-12 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-5 text-indigo-500 rotate-12 pointer-events-none"><Table size={120} /></div>
+                            <div className="flex flex-col items-center gap-2 relative z-10">
+                                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Raw Input</div>
+                                <div className="text-4xl font-mono text-slate-400 line-through decoration-red-500/50 decoration-4">R 129.99</div>
+                            </div>
+                            <div className="flex flex-col items-center gap-2 z-10">
+                                <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.5)] animate-spin-slow">
+                                    <RefreshCw className="text-white" size={24} />
+                                </div>
+                                <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-slate-950 px-2 py-1 rounded">Algorithm</div>
+                            </div>
+                            <div className="flex flex-col items-center gap-2 relative z-10">
+                                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Display Output</div>
+                                <div className="text-6xl font-black font-mono text-green-400 tracking-tighter drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">R 130.00</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'screensaver' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-pink-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-pink-500/20">Module 04: Visual Engine</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Double Buffer</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    A common flaw in web-based signage is the "Black Flash" that occurs when one video ends and the next one loads. This breaks the illusion of a seamless broadcast.
+                                </p>
+                                <p>
+                                    To fix this, we use a <strong>Double Buffer</strong> technique (Slot A & Slot B). While Slot A is playing, Slot B is secretly pre-loading the next video in the background.
+                                    When the transition time arrives, we cross-fade the opacity instantly. The viewer never sees a loading spinner or a blank screen.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-black rounded-[3rem] p-12 border border-slate-800 relative overflow-hidden">
+                            <div className="flex justify-center gap-4 md:gap-12 relative z-10">
+                                <div className="w-48 aspect-[9/16] bg-slate-900 border-2 border-green-500 rounded-2xl flex items-center justify-center relative shadow-[0_0_30px_rgba(34,197,94,0.3)]">
+                                    <span className="text-green-500 font-black text-2xl uppercase">Slot A</span>
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-black bg-green-900 text-green-300 px-2 py-1 rounded">PLAYING</div>
+                                </div>
+                                <div className="flex flex-col justify-center items-center gap-2">
+                                    <div className="w-16 h-1 bg-slate-800 rounded-full overflow-hidden">
+                                        <div className="h-full bg-slate-500 w-1/2 animate-[shimmer_2s_infinite]"></div>
+                                    </div>
+                                    <RefreshCw className="text-slate-600 animate-spin" size={24} />
+                                </div>
+                                <div className="w-48 aspect-[9/16] bg-slate-900 border-2 border-slate-700 rounded-2xl flex items-center justify-center relative opacity-50">
+                                    <span className="text-slate-500 font-black text-2xl uppercase">Slot B</span>
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-black bg-slate-800 text-slate-400 px-2 py-1 rounded">BUFFERING</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fleet' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-emerald-500/20">Module 05: Telemetry</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Heartbeat Protocol</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    Managing 50+ tablets remotely is impossible without automated diagnostics. The Kiosk Fleet system uses a <strong>"Dead Man's Switch"</strong> heartbeat.
+                                </p>
+                                <p>
+                                    Every 30 seconds, each active tablet sends a tiny packet of JSON data to the cloud containing its battery level, Wi-Fi signal strength, and firmware version.
+                                    If the cloud stops receiving this pulse for more than 5 minutes, it flags the device as <strong>OFFLINE</strong> in the Admin Dashboard, alerting staff to a potential power failure or theft.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-900 rounded-[3rem] p-12 border border-slate-800 relative overflow-hidden flex items-center justify-center min-h-[300px]">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.1)_0%,_transparent_70%)]"></div>
+                            
+                            {/* Device */}
+                            <div className="relative z-10 mr-32">
+                                <div className="w-24 h-32 bg-slate-800 rounded-2xl border-2 border-emerald-500 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.3)]">
+                                    <Tablet className="text-emerald-400" size={32} />
+                                </div>
+                                <div className="absolute -top-4 -right-4 w-full h-full rounded-full border-4 border-emerald-500/20 pulse-ring"></div>
+                            </div>
+
+                            {/* Cloud */}
+                            <div className="relative z-10 ml-32">
+                                <div className="w-32 h-20 bg-slate-800 rounded-[2rem] border-2 border-blue-500 flex items-center justify-center shadow-[0_0_40px_rgba(59,130,246,0.3)]">
+                                    <Cloud className="text-blue-400" size={40} />
+                                </div>
+                            </div>
+
+                            {/* Signal Particles */}
+                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-1 bg-slate-800 rounded-full overflow-hidden">
+                                <div className="absolute top-0 left-0 w-8 h-full bg-emerald-400 blur-sm animate-[travel_1.5s_infinite_linear]"></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'tv' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-orange-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-orange-500/20">Module 06: Broadcasting</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Queue System</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    TV Mode transforms the application from an interactive tool into a passive broadcast receiver. Unlike Kiosk mode, it has no idle timeout and never sleeps.
+                                </p>
+                                <p>
+                                    It operates on a <strong>First-In-First-Out (FIFO)</strong> playlist buffer. Admins can queue up specific "Brand Loops" (e.g., only LG videos) or a "Global Loop" (all content shuffled).
+                                    A built-in <strong>Watchdog</strong> monitors video playback progress; if a video file is corrupt and stalls for more than 5 seconds, the watchdog forcibly skips to the next track to prevent a frozen screen.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 border border-slate-200 rounded-[3rem] p-12 overflow-hidden">
+                            <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-4">
+                                {[1, 2, 3, 4].map((i) => (
+                                    <div key={i} className={`flex-shrink-0 w-40 aspect-video rounded-xl border-2 flex flex-col items-center justify-center relative ${i === 1 ? 'bg-orange-50 border-orange-500 shadow-lg scale-105' : 'bg-slate-100 border-slate-200 opacity-60'}`}>
+                                        <Film className={i === 1 ? 'text-orange-500' : 'text-slate-400'} size={24} />
+                                        <span className={`text-[9px] font-black uppercase mt-2 ${i === 1 ? 'text-orange-600' : 'text-slate-400'}`}>Clip 0{i}</span>
+                                        {i === 1 && <div className="absolute -top-3 bg-orange-600 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Live</div>}
+                                    </div>
+                                ))}
+                                <div className="flex-shrink-0 w-40 aspect-video rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase">Queue End</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
