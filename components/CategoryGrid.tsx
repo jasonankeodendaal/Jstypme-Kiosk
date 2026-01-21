@@ -78,24 +78,32 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
             <button
               key={category.id}
               onClick={() => onSelectCategory(category)}
-              className="group bg-white rounded-xl shadow-sm hover:shadow-xl border border-slate-200 hover:border-blue-500 transition-all duration-300 p-2 md:p-4 flex flex-col items-center justify-center text-center gap-1 md:gap-4 relative overflow-hidden aspect-square"
+              className="group bg-white rounded-xl shadow-sm hover:shadow-xl border border-slate-200 hover:border-blue-500 transition-all duration-300 p-2 md:p-3 flex flex-col items-center text-center gap-2 relative overflow-hidden aspect-square h-full w-full"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               
-              <div className={`rounded-2xl shrink-0 overflow-hidden flex items-center justify-center transition-all duration-300 ${category.imageUrl ? 'w-full aspect-[4/3] mb-1 bg-transparent' : 'w-10 h-10 md:w-24 md:h-24 bg-slate-50 text-slate-400 p-2 md:p-5 rounded-full border border-slate-100 group-hover:border-blue-100 group-hover:bg-blue-50 group-hover:text-blue-600'}`}>
+              {/* Flexible Image Container - Shrinks to fit text */}
+              <div className="flex-1 w-full min-h-0 flex items-center justify-center overflow-hidden transition-all duration-300">
                 {category.imageUrl ? (
-                    <img src={category.imageUrl} alt={category.name} className="w-full h-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-500" />
+                    <img 
+                        src={category.imageUrl} 
+                        alt={category.name} 
+                        className="w-full h-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-500" 
+                    />
                 ) : (
-                    IconMap[category.name] || <Box className="w-4 h-4 md:w-10 md:h-10" strokeWidth={1.5} />
+                    <div className="w-auto h-full aspect-square max-h-full bg-slate-50 text-slate-400 p-3 md:p-5 rounded-full border border-slate-100 group-hover:border-blue-100 group-hover:bg-blue-50 group-hover:text-blue-600 flex items-center justify-center">
+                        {IconMap[category.name] || <Box className="w-full h-full" strokeWidth={1.5} />}
+                    </div>
                 )}
               </div>
               
-              <div className="w-full px-1 mt-auto">
-                <h3 className="text-[8px] md:text-lg font-black text-slate-900 uppercase tracking-tight truncate w-full group-hover:text-blue-600 transition-colors">
+              {/* Fixed/Shrinkable Text Container */}
+              <div className="w-full px-1 shrink-0 flex flex-col justify-end">
+                <h3 className="text-[9px] md:text-sm lg:text-base font-black text-slate-900 uppercase tracking-tight w-full group-hover:text-blue-600 transition-colors leading-tight break-words whitespace-normal">
                   {category.name}
                 </h3>
+                <div className="text-[8px] md:text-xs font-bold text-slate-400 mt-1">{category.products.length} Products</div>
               </div>
-              <div className="text-[7px] md:text-xs font-bold text-slate-400 mt-0.5">{category.products.length} Products</div>
             </button>
           ))}
         </div>
