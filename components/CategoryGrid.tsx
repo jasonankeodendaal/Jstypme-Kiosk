@@ -99,10 +99,10 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
               
               {/* Fixed/Shrinkable Text Container */}
               <div className="w-full px-1 shrink-0 flex flex-col justify-end">
-                <h3 className="text-[9px] md:text-sm lg:text-base font-black text-slate-900 uppercase tracking-tight w-full group-hover:text-blue-600 transition-colors leading-tight break-words whitespace-normal">
+                <h3 className="text-[8px] md:text-xs lg:text-sm font-black text-slate-900 uppercase tracking-tight w-full group-hover:text-blue-600 transition-colors leading-tight break-words whitespace-normal line-clamp-2">
                   {category.name}
                 </h3>
-                <div className="text-[8px] md:text-xs font-bold text-slate-400 mt-1">{category.products.length} Products</div>
+                <div className="text-[7px] md:text-[10px] font-bold text-slate-400 mt-0.5">{category.products.length} Products</div>
               </div>
             </button>
           ))}
