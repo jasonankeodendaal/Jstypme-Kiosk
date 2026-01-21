@@ -72,13 +72,13 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
       {/* Grid Content */}
       <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col pb-40 md:pb-8">
         
-        {/* Categories Grid - Smaller on Mobile (4 columns) */}
-        <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-6 mb-12">
+        {/* Categories Grid - Portrait Mode (3:5 aspect ratio) to fit all text */}
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 md:gap-6 mb-12">
           {sortedCategories.map((category) => (
             <button
               key={category.id}
               onClick={() => onSelectCategory(category)}
-              className="group bg-white rounded-xl shadow-sm hover:shadow-xl border border-slate-200 hover:border-blue-500 transition-all duration-300 p-2 md:p-3 flex flex-col items-center text-center gap-2 relative overflow-hidden aspect-square h-full w-full"
+              className="group bg-white rounded-xl shadow-sm hover:shadow-xl border border-slate-200 hover:border-blue-500 transition-all duration-300 p-2 md:p-3 flex flex-col items-center text-center gap-2 relative overflow-hidden aspect-[3/5] h-full w-full"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-400 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
               
@@ -98,11 +98,11 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
               </div>
               
               {/* Fixed/Shrinkable Text Container */}
-              <div className="w-full px-1 shrink-0 flex flex-col justify-end">
-                <h3 className="text-[8px] md:text-xs lg:text-sm font-black text-slate-900 uppercase tracking-tight w-full group-hover:text-blue-600 transition-colors leading-tight break-words whitespace-normal line-clamp-2">
+              <div className="w-full px-1 shrink-0 flex flex-col justify-end pb-1">
+                <h3 className="text-[9px] md:text-xs font-black text-slate-900 uppercase tracking-tight w-full group-hover:text-blue-600 transition-colors leading-tight break-words whitespace-normal line-clamp-3">
                   {category.name}
                 </h3>
-                <div className="text-[7px] md:text-[10px] font-bold text-slate-400 mt-0.5">{category.products.length} Products</div>
+                <div className="text-[8px] md:text-[10px] font-bold text-slate-400 mt-1">{category.products.length} Products</div>
               </div>
             </button>
           ))}
