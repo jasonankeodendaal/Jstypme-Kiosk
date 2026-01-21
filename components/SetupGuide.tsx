@@ -373,50 +373,43 @@ const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
                               <div>
                                   <h3 className="text-xl font-black text-white uppercase tracking-tight mb-4">Master Setup Protocol</h3>
-                                  <div className="p-4 bg-red-900/30 border-l-4 border-red-500 mb-6 rounded-r-xl">
-                                      <h4 className="text-red-400 font-bold uppercase text-xs mb-1 flex items-center gap-2"><AlertTriangle size={14}/> Nuclear Option</h4>
-                                      <p className="text-[11px] text-slate-300">This script is a <strong>HARD RESET</strong>. It drops all tables and rebuilds the entire schema from scratch to guarantee compatibility. All existing data will be wiped.</p>
+                                  <div className="p-4 bg-blue-900/30 border-l-4 border-blue-500 mb-6 rounded-r-xl">
+                                      <h4 className="text-blue-400 font-bold uppercase text-xs mb-1 flex items-center gap-2"><ShieldCheck size={14}/> Safe Initialization</h4>
+                                      <p className="text-[11px] text-slate-300">This script creates tables and columns only if they do not exist. It is <strong>non-destructive</strong> and will not wipe existing data.</p>
                                   </div>
                                   <CodeSnippet 
-                                    label="SQL Nuclear Reset (Run This)"
+                                    label="SQL Schema Init (Safe)"
                                     id="sql-boot"
-                                    code={`-- NUCLEAR RESET SCRIPT
--- WARNING: THIS DELETES ALL DATA AND REBUILDS SCHEMA FROM SCRATCH
+                                    code={`-- SAFE SCHEMA INITIALIZATION
+-- This script creates tables if they don't exist and adds missing columns.
+-- It preserves existing data.
 
--- 1. Clean Slate (Drop all known tables)
-DROP TABLE IF EXISTS public.products CASCADE;
-DROP TABLE IF EXISTS public.categories CASCADE;
-DROP TABLE IF EXISTS public.brands CASCADE;
-DROP TABLE IF EXISTS public.pricelists CASCADE;
-DROP TABLE IF EXISTS public.pricelist_brands CASCADE;
-DROP TABLE IF EXISTS public.kiosks CASCADE;
-DROP TABLE IF EXISTS public.store_config CASCADE;
-
--- 2. Store Config (Monolith Backup)
-CREATE TABLE public.store_config (
+-- 1. Store Config
+CREATE TABLE IF NOT EXISTS public.store_config (
   id bigint PRIMARY KEY DEFAULT 1,
   data jsonb NOT NULL DEFAULT '{}'::jsonb
 );
 
--- 3. Fleet Management
-CREATE TABLE public.kiosks (
+-- 2. Fleet Management
+CREATE TABLE IF NOT EXISTS public.kiosks (
   id text PRIMARY KEY,
   name text NOT NULL,
   status text DEFAULT 'online',
-  last_seen timestamptz DEFAULT now(),
-  device_type text,
-  assigned_zone text,
-  wifi_strength int,
-  ip_address text,
-  version text,
-  location_description text,
-  notes text,
-  restart_requested boolean DEFAULT false,
-  show_pricelists boolean DEFAULT true
+  last_seen timestamptz DEFAULT now()
 );
+-- Add columns safely
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS device_type text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS assigned_zone text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS wifi_strength int;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS ip_address text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS version text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS location_description text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS restart_requested boolean DEFAULT false;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;
 
--- 4. Inventory System
-CREATE TABLE public.brands (
+-- 3. Inventory System
+CREATE TABLE IF NOT EXISTS public.brands (
     id text PRIMARY KEY,
     name text,
     logo_url text,
@@ -424,15 +417,16 @@ CREATE TABLE public.brands (
     updated_at timestamptz DEFAULT now()
 );
 
-CREATE TABLE public.categories (
+CREATE TABLE IF NOT EXISTS public.categories (
     id text PRIMARY KEY,
     brand_id text REFERENCES public.brands(id) ON DELETE CASCADE,
     name text,
     icon text,
     updated_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS image_url text;
 
-CREATE TABLE public.products (
+CREATE TABLE IF NOT EXISTS public.products (
     id text PRIMARY KEY,
     category_id text REFERENCES public.categories(id) ON DELETE CASCADE,
     name text,
@@ -451,17 +445,17 @@ CREATE TABLE public.products (
     updated_at timestamptz DEFAULT now()
 );
 
--- 5. Pricing Engine
-CREATE TABLE public.pricelist_brands (
+-- 4. Pricing Engine
+CREATE TABLE IF NOT EXISTS public.pricelist_brands (
     id text PRIMARY KEY,
     name text,
     logo_url text,
     updated_at timestamptz DEFAULT now()
 );
 
-CREATE TABLE public.pricelists (
+CREATE TABLE IF NOT EXISTS public.pricelists (
     id text PRIMARY KEY,
-    brand_id text, -- Loose coupling or FK, let's keep it loose for flexibility or FK if needed. Frontend uses loose ID match usually. Let's make it text.
+    brand_id text,
     title text,
     month text,
     year text,
@@ -478,7 +472,7 @@ CREATE TABLE public.pricelists (
     updated_at timestamptz DEFAULT now()
 );
 
--- 6. Security (RLS - Open Access for Kiosk)
+-- 5. Security (RLS)
 ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
@@ -487,25 +481,29 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelist_brands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies if any (though tables were dropped)
--- Create permissive policies
+-- Create policies (drop first to update definition if needed)
 DROP POLICY IF EXISTS "Public Access" ON public.store_config;
-DROP POLICY IF EXISTS "Public Access" ON public.kiosks;
-DROP POLICY IF EXISTS "Public Access" ON public.brands;
-DROP POLICY IF EXISTS "Public Access" ON public.categories;
-DROP POLICY IF EXISTS "Public Access" ON public.products;
-DROP POLICY IF EXISTS "Public Access" ON public.pricelist_brands;
-DROP POLICY IF EXISTS "Public Access" ON public.pricelists;
-
 CREATE POLICY "Public Access" ON public.store_config FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Access" ON public.kiosks;
 CREATE POLICY "Public Access" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Access" ON public.brands;
 CREATE POLICY "Public Access" ON public.brands FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Access" ON public.categories;
 CREATE POLICY "Public Access" ON public.categories FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Access" ON public.products;
 CREATE POLICY "Public Access" ON public.products FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Access" ON public.pricelist_brands;
 CREATE POLICY "Public Access" ON public.pricelist_brands FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Access" ON public.pricelists;
 CREATE POLICY "Public Access" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
 
--- 7. Storage
+-- 6. Storage
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('kiosk-media', 'kiosk-media', true) 
 ON CONFLICT (id) DO UPDATE SET public = true;
@@ -545,9 +543,9 @@ NOTIFY pgrst, 'reload schema';`}
                               </div>
 
                               <CodeSnippet 
-                                label="Fix Pricelists Table (Fixes 400 Bad Request)"
+                                label="Fix Pricelists Table (Safe)"
                                 id="fix-pricelists"
-                                code={`-- FIX PRICELISTS TABLE SCHEMA
+                                code={`-- FIX PRICELISTS TABLE SCHEMA (SAFE)
 CREATE TABLE IF NOT EXISTS public.pricelists (
     id text PRIMARY KEY,
     brand_id text,
@@ -579,17 +577,16 @@ NOTIFY pgrst, 'reload schema';`}
                               />
 
                               <div className="bg-orange-900/30 border-l-4 border-orange-500 p-6 rounded-r-xl mt-8">
-                                  <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><RefreshCw size={16}/> Fix "API Cannot See Column" (Force Refresh)</h3>
+                                  <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><RefreshCw size={16}/> Fix "API Cannot See Column" (Safe Refresh)</h3>
                                   <p className="text-slate-300 text-xs mt-2 leading-relaxed">
-                                      If the "Force API Refresh" above didn't work and you still see errors about <strong>show_pricelists</strong>, run this <strong>Nuclear Option</strong>. It will delete and recreate the specific column to force a schema update.
+                                      If the "Force API Refresh" above didn't work and you still see errors about <strong>show_pricelists</strong>, run this script. It ensures the column exists and forces a schema reload without deleting data.
                                   </p>
                                   <div className="mt-4">
                                       <CodeSnippet 
-                                          label="Nuclear Column Reset"
+                                          label="Ensure Column Exists & Refresh"
                                           id="nuclear-reset"
-                                          code={`-- NUCLEAR OPTION: DROP AND RECREATE COLUMN
-ALTER TABLE public.kiosks DROP COLUMN IF EXISTS show_pricelists;
-ALTER TABLE public.kiosks ADD COLUMN show_pricelists boolean DEFAULT true;
+                                          code={`-- SAFE COLUMN SYNC
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;
 NOTIFY pgrst, 'reload schema';`}
                                       />
                                   </div>
