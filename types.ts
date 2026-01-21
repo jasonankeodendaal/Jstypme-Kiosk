@@ -41,7 +41,8 @@ export interface Product {
 export interface Category {
   id: string;
   name: string;
-  icon: string; 
+  icon: string;
+  imageUrl?: string; // Added for custom category images
   products: Product[];
 }
 

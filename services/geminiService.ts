@@ -310,7 +310,7 @@ const flattenBrand = (b: Brand) => ({
     id: b.id, name: b.name, logo_url: b.logoUrl, theme_color: b.themeColor, updated_at: new Date().toISOString()
 });
 const flattenCategory = (c: Category, brandId: string) => ({
-    id: c.id, brand_id: brandId, name: c.name, icon: c.icon, updated_at: new Date().toISOString()
+    id: c.id, brand_id: brandId, name: c.name, icon: c.icon, image_url: c.imageUrl, updated_at: new Date().toISOString()
 });
 const flattenProduct = (p: Product, categoryId: string) => ({
     id: p.id, category_id: categoryId, name: p.name, sku: p.sku, description: p.description,
@@ -455,6 +455,7 @@ export const generateStoreData = async (): Promise<StoreData> => {
                               id: c.id,
                               name: c.name,
                               icon: c.icon,
+                              imageUrl: c.image_url,
                               products: catProds.map((p: any) => ({
                                   id: p.id,
                                   name: p.name,
