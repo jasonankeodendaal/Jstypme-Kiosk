@@ -9,7 +9,7 @@ interface CategoryGridProps {
   storeCatalogs?: Catalogue[]; 
   pricelists?: Pricelist[];
   onSelectCategory: (category: Category) => void;
-  onViewCatalog?: (catalogue: Catalogue) => void; 
+  onViewDocument?: (document: Catalogue | Pricelist) => void; 
   onBack: () => void;
   screensaverEnabled: boolean;
   onToggleScreensaver: () => void;
@@ -25,7 +25,7 @@ const IconMap: Record<string, React.ReactNode> = {
   'Tablet': <Tablet className="w-5 h-5 md:w-12 md:h-12" strokeWidth={1.5} />,
 };
 
-const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSelectCategory, onViewCatalog, onBack, screensaverEnabled, onToggleScreensaver, showScreensaverButton = true }) => {
+const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSelectCategory, onViewDocument, onBack, screensaverEnabled, onToggleScreensaver, showScreensaverButton = true }) => {
   // Filter catalogs for this brand ONLY
   const brandCatalogs = storeCatalogs?.filter(c => c.brandId === brand.id).sort((a, b) => {
       if (a.year && b.year && a.year !== b.year) return b.year - a.year; // Recent first
@@ -118,7 +118,7 @@ const CategoryGrid: React.FC<CategoryGridProps> = ({ brand, storeCatalogs, onSel
                     {brandCatalogs.map(cat => (
                         <button 
                             key={cat.id}
-                            onClick={() => onViewCatalog && onViewCatalog(cat)}
+                            onClick={() => onViewDocument && onViewDocument(cat)}
                             className="bg-white rounded-xl shadow-sm hover:shadow-xl border border-slate-200 hover:border-blue-500 transition-all group overflow-hidden text-left flex flex-col h-full"
                         >
                             <div className="aspect-[3/4] bg-slate-100 relative overflow-hidden flex items-center justify-center">

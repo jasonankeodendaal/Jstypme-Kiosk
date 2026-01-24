@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useRef, useMemo, memo } from 'react';
-import { Brand, Catalogue, HeroConfig, AdConfig, AdItem } from '../types';
+import { Brand, Catalogue, HeroConfig, AdConfig, AdItem, Pricelist } from '../types';
 import { BookOpen, Globe, ChevronRight, X, Grid, Library } from 'lucide-react';
 
 interface BrandGridProps {
@@ -9,7 +9,7 @@ interface BrandGridProps {
   allCatalogs?: Catalogue[]; 
   ads?: AdConfig;
   onSelectBrand: (brand: Brand) => void;
-  onViewGlobalCatalog: (catalogue: Catalogue) => void; 
+  onViewDocument: (document: Catalogue | Pricelist) => void; 
   onViewWebsite?: (url: string) => void;
   onExport: () => void; 
   screensaverEnabled: boolean;
@@ -156,7 +156,7 @@ const AdUnit = ({ items, className, isActive = true }: { items?: AdItem[], class
     );
 };
 
-const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewGlobalCatalog, onViewWebsite, onExport, screensaverEnabled, onToggleScreensaver, deviceType, isIdle }) => {
+const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, ads, onSelectBrand, onViewDocument, onViewWebsite, onExport, screensaverEnabled, onToggleScreensaver, deviceType, isIdle }) => {
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(19);
   
@@ -232,7 +232,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                 <div className="flex flex-wrap gap-2 md:gap-4 justify-start pt-2 md:pt-6">
                      {mainPamphlet && (
                         <button 
-                            onClick={() => onViewGlobalCatalog(mainPamphlet)}
+                            onClick={() => onViewDocument(mainPamphlet)}
                             className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 md:px-8 md:py-3.5 rounded-lg md:rounded-2xl font-bold uppercase tracking-widest text-[9px] md:text-base shadow-xl hover:-translate-y-1 transition-all flex items-center gap-1.5 md:gap-3"
                         >
                             <BookOpen size={14} className="md:size-auto" /> 
@@ -257,7 +257,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                 <div className="perspective-1000 shrink-0 w-[35%] md:w-[320px] max-w-[160px] md:max-w-none flex items-center justify-center">
                     <div 
                         className="relative w-full aspect-[2/3] cursor-pointer animate-float"
-                        onClick={() => onViewGlobalCatalog(mainPamphlet)}
+                        onClick={() => onViewDocument(mainPamphlet)}
                         role="button"
                     >
                         <div className="book-container absolute inset-0 bg-white rounded-r-sm md:rounded-r-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
@@ -293,7 +293,7 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                   {sortedPamphlets.map((pamphlet) => (
                       <button 
                           key={pamphlet.id}
-                          onClick={() => onViewGlobalCatalog(pamphlet)}
+                          onClick={() => onViewDocument(pamphlet)}
                           className="group relative flex flex-col items-center shrink-0 w-16 md:w-20 transition-all duration-300 hover:-translate-y-1"
                           title={pamphlet.title}
                       >

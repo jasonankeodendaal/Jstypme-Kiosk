@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip, Download } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { Pricelist } from '../types';
 
@@ -72,13 +71,13 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
         
         console.log('[PdfViewer] Calling pdfjs.getDocument...');
         
-        // OPTIMIZED CONFIGURATION FOR FAST OPENING
+        // OPTIMIZED CONFIGURATION FOR FAST OPENING & LEGACY STABILITY
         const loadingTask = pdfjs.getDocument({
             url,
             cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
             cMapPacked: true,
-            disableRange: false, // Range requests are now handled by browser (SW excluded)
-            disableStream: true, // Use chunked XHR instead of streaming (more stable on legacy)
+            disableRange: false, // Range requests allowed (browser handles fallback)
+            disableStream: true, // Use chunked XHR instead of streaming (critical for legacy)
             disableAutoFetch: true, // Critical: Do NOT download the whole file automatically
             rangeChunkSize: 65536, // Fetch in 64KB chunks
         });
@@ -102,10 +101,15 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
       } catch (err: any) {
         console.error('[PdfViewer] Load Error:', err);
         
-        // CRITICAL FIX: Suppress "Message channel closed" errors common in Android WebViews
-        const msg = err?.message || '';
-        if (msg.includes('Message channel closed') || msg.includes('message channel')) {
-            console.warn('[PdfViewer] Suppressing worker communication error');
+        // CRITICAL FIX: Suppress "Message channel closed", "ResizeObserver", "extension" errors
+        const msg = (err?.message || '').toLowerCase();
+        if (
+            msg.includes('message channel') || 
+            msg.includes('channel closed') ||
+            msg.includes('resizeobserver') ||
+            msg.includes('extension')
+        ) {
+            console.warn('[PdfViewer] Suppressing worker/engine error');
             // Do not show error UI, try to remain in loading state or fail silently
             return;
         }
@@ -176,8 +180,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
       } catch (err: any) { 
           if (err?.name !== 'RenderingCancelledException') {
               // Suppress message channel errors during render as well
-              const msg = err?.message || '';
-              if (msg.includes('Message channel closed') || msg.includes('message channel')) {
+              const msg = (err?.message || '').toLowerCase();
+              if (
+                  msg.includes('message channel') || 
+                  msg.includes('channel closed') || 
+                  msg.includes('resizeobserver')
+              ) {
                   console.warn('[PdfViewer] Suppressing render worker error');
                   return;
               }
@@ -231,6 +239,27 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
     }
   };
 
+  const handleDownload = async () => {
+      try {
+          // Robust binary handling for offline/legacy
+          // We explicitly fetch as blob to ensure binary integrity during save
+          const response = await fetch(url);
+          if (!response.ok) throw new Error("Network error");
+          const blob = await response.blob();
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = (title || 'document').replace(/[^a-z0-9_\-]/gi, '_') + '.pdf';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(blobUrl);
+      } catch (e) {
+          console.error("Export failed", e);
+          alert("Unable to download document. Please check your connection.");
+      }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex flex-col animate-fade-in" onClick={onClose}>
        <div className="flex items-center justify-between p-4 bg-slate-900 text-white border-b border-slate-800 shrink-0 z-20" onClick={e => e.stopPropagation()}>
@@ -245,8 +274,18 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
                       <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><ZoomIn size={16}/></button>
                   </div>
               )}
+              {/* Manual Download Button for explicit saving */}
+              <button onClick={handleDownload} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-300 hover:text-white ml-2 hidden md:flex" title="Save PDF">
+                  <Download size={16} />
+              </button>
           </div>
-          <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={24}/></button>
+          <div className="flex items-center gap-2">
+              {/* Mobile Download Button */}
+              <button onClick={handleDownload} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5 md:hidden" title="Save">
+                  <Download size={20} />
+              </button>
+              <button onClick={onClose} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5"><X size={24}/></button>
+          </div>
        </div>
 
        {pricelist?.kind === 'promotion' && (

@@ -1051,6 +1051,44 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       window.history.pushState({ depth: Date.now() }, '', '');
   };
 
+  // UNIFIED DOCUMENT HANDLER
+  const handleViewDocument = useCallback((doc: Catalogue | Pricelist) => {
+      navigateDeeper();
+
+      // Case 1: Manual Pricelist
+      // Check if it's a Pricelist and type is manual
+      if ('type' in doc && doc.type === 'manual') {
+          setViewingManualList(doc as Pricelist);
+          return;
+      }
+
+      // Case 2: PDF Document (Catalogue or Pricelist)
+      // Catalogues use 'pdfUrl', Pricelists use 'url'
+      const pdfUrl = (doc as any).url || (doc as any).pdfUrl;
+      
+      if (pdfUrl) {
+          const docAsAny = doc as any;
+          // Construct the object for PdfViewer state
+          // If it's a Pricelist, it usually has 'kind'
+          // If it's a Catalogue, we default kind to 'promotion' so viewer shows promo headers
+          const viewerObj = {
+              ...docAsAny,
+              url: pdfUrl,
+              kind: docAsAny.kind || 'promotion' 
+          };
+          setViewingPdf(viewerObj);
+          return;
+      }
+
+      // Case 3: Flipbook (Catalogue with pages)
+      // Only Catalogues have 'pages' array
+      if ('pages' in doc && (doc as any).pages && (doc as any).pages.length > 0) {
+          setActiveFlipbook(doc as Catalogue);
+          setShowFlipbook(true);
+          return;
+      }
+  }, []);
+
   const allProductsFlat = useMemo(() => {
       if (!storeData?.brands) return [];
       return storeData.brands.flatMap(b => (b.categories || []).flatMap(c => (c.products || []).map(p => ({
@@ -1113,46 +1151,20 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                 allCatalogs={storeData.catalogues || []} 
                 ads={storeData.ads} 
                 onSelectBrand={(b) => { setActiveBrand(b); navigateDeeper(); }} 
-                onViewGlobalCatalog={(c:any) => { 
-                    navigateDeeper(); 
-                    if(c.pdfUrl) {
-                        setViewingPdf({
-                            ...c,
-                            url: c.pdfUrl,
-                            kind: 'promotion'
-                        });
-                    }
-                    else if(c.pages?.length) { 
-                        setActiveFlipbook(c); 
-                        setShowFlipbook(true); 
-                    }
-                }} 
+                onViewDocument={handleViewDocument} 
                 onViewWebsite={(url) => { navigateDeeper(); setViewingWebsite(url); }} 
                 onExport={() => {}} 
                 screensaverEnabled={screensaverEnabled} 
                 onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} 
                 deviceType={deviceType} 
-                isIdle={isIdle} // Passing isIdle state down
+                isIdle={isIdle} 
             /> : 
           !activeCategory ? 
             <CategoryGrid 
                 brand={activeBrand} 
                 storeCatalogs={storeData.catalogues || []} 
                 onSelectCategory={(c) => { setActiveCategory(c); navigateDeeper(); }} 
-                onViewCatalog={(c:any) => { 
-                    navigateDeeper(); 
-                    if(c.pdfUrl) {
-                        setViewingPdf({
-                            ...c,
-                            url: c.pdfUrl,
-                            kind: 'promotion'
-                        });
-                    }
-                    else if(c.pages?.length) { 
-                        setActiveFlipbook(c); 
-                        setShowFlipbook(true); 
-                    }
-                }} 
+                onViewDocument={handleViewDocument} 
                 onBack={() => window.history.back()} 
                 screensaverEnabled={screensaverEnabled} 
                 onToggleScreensaver={() => setScreensaverEnabled(prev => !prev)} 
@@ -1213,7 +1225,7 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
                            if (now > end) return false;
                        }
                        return true;
-                   }).map(pl => (<button key={pl.id} onClick={() => { navigateDeeper(); if(pl.type === 'manual') setViewingManualList(pl); else setViewingPdf(pl); }} className={`group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border-2 flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-white hover:border-green-400'}`}><div className="aspect-[3/4] bg-slate-50 relative p-2 md:p-3 overflow-hidden">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded shadow-sm" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-200">{pl.type === 'manual' ? <List size={32}/> : <FileText size={32} />}</div>}<div className={`absolute top-2 right-2 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm z-10 ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-50'}`}>{pl.type === 'manual' ? 'TABLE' : 'PDF'}</div></div><div className="p-3 flex-1 flex flex-col justify-between bg-white"><h3 className="font-black text-slate-900 text-[10px] md:text-sm uppercase leading-tight line-clamp-2">{pl.title}</h3><div className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-2">{pl.month} {pl.year}</div></div></button>))}</div></div>) : <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4"><RIcon size={64} className="opacity-10" /></div>}</div></div></div></div>
+                   }).map(pl => (<button key={pl.id} onClick={() => handleViewDocument(pl)} className={`group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg border-2 flex flex-col h-full relative transition-all active:scale-95 ${isRecent(pl.dateAdded) ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-white hover:border-green-400'}`}><div className="aspect-[3/4] bg-slate-50 relative p-2 md:p-3 overflow-hidden">{pl.thumbnailUrl ? <img src={pl.thumbnailUrl} className="w-full h-full object-contain rounded shadow-sm" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-200">{pl.type === 'manual' ? <List size={32}/> : <FileText size={32} />}</div>}<div className={`absolute top-2 right-2 text-white text-[7px] md:text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm z-10 ${pl.type === 'manual' ? 'bg-blue-600' : 'bg-red-50'}`}>{pl.type === 'manual' ? 'TABLE' : 'PDF'}</div></div><div className="p-3 flex-1 flex flex-col justify-between bg-white"><h3 className="font-black text-slate-900 text-[10px] md:text-sm uppercase leading-tight line-clamp-2">{pl.title}</h3><div className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-2">{pl.month} {pl.year}</div></div></button>))}</div></div>) : <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4"><RIcon size={64} className="opacity-10" /></div>}</div></div></div></div>
        )}
        {showFlipbook && activeFlipbook && (
            <Flipbook 
