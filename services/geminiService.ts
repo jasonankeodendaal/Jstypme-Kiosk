@@ -396,6 +396,26 @@ export const deleteItem = async (type: 'BRAND' | 'CATEGORY' | 'PRODUCT' | 'PRICE
 setTimeout(() => offlineQueue.process(), 5000);
 setInterval(() => offlineQueue.process(), 60000);
 
+export const fetchFleetRegistry = async (): Promise<KioskRegistry[]> => {
+    if (!supabase) initSupabase();
+    if (!supabase) return [];
+    try {
+        const { data: fleetRows } = await supabase.from('kiosks').select('*');
+        if (fleetRows) {
+            return fleetRows.map((k: any) => ({
+                id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
+                last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
+                version: k.version, locationDescription: k.location_description,
+                assignedZone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested,
+                showPricelists: k.show_pricelists
+            }));
+        }
+    } catch(e) {
+        console.warn("Fleet fetch error", e);
+    }
+    return [];
+};
+
 // Modified: Priority Cloud Fetch, fallback to IDB
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
@@ -411,20 +431,9 @@ export const generateStoreData = async (): Promise<StoreData> => {
           // Yield to prevent blocking during initial parsing
           await yieldToMain();
 
-          try {
-              const { data: fleetRows } = await supabase.from('kiosks').select('*');
-              if (fleetRows) {
-                  baseData.fleet = fleetRows.map((k: any) => ({
-                      id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
-                      last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
-                      version: k.version, locationDescription: k.location_description,
-                      assignedZone: k.assigned_zone, notes: k.notes, restartRequested: k.restart_requested,
-                      showPricelists: k.show_pricelists
-                  }));
-              }
-          } catch(e) {
-              console.warn("Fleet fetch error", e);
-          }
+          // Fetch Fleet Data
+          const fleet = await fetchFleetRegistry();
+          if (fleet.length > 0) baseData.fleet = fleet;
 
           try {
               const probe = await supabase.from('brands').select('id').limit(1);

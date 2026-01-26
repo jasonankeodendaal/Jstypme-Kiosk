@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KioskApp } from './components/KioskApp';
 import { AdminDashboard } from './components/AdminDashboard';
 import AboutPage from './components/AboutPage';
-import { generateStoreData, saveStoreData } from './services/geminiService';
+import { generateStoreData, saveStoreData, fetchFleetRegistry } from './services/geminiService';
 import { initSupabase, supabase, getKioskId } from './services/kioskService';
 import { StoreData } from './types';
 import { Loader2, Cloud, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
@@ -118,15 +119,27 @@ export default function App() {
       if (!isBackground && isFirstLoad) setIsSyncing(true);
       
       try {
-        const data = await generateStoreData();
-        if (data) {
-           setStoreData(prev => {
-               if (!prev) return data;
-               // Always return new data so Admin Dashboard receives live Fleet updates.
-               // Note: AdminDashboard handles its own "unsaved changes" logic to prevent form overwrites.
-               return { ...data };
-           });
-           setLastSyncTime(new Date().toLocaleTimeString());
+        // ADMIN WRITER MODE OPTIMIZATION:
+        // If we are Admin and this is a background pulse, ONLY fetch fleet data.
+        // Do NOT overwrite content data (brands/ads/products) as Admin is the Source of Truth.
+        // This prevents the UI from reverting deleting/editing actions during background sync.
+        if (isAdmin && isBackground) {
+            const fleet = await fetchFleetRegistry();
+            setStoreData(prev => {
+                if (!prev) return null; // Should have loaded content initially
+                // Merge new fleet data into existing state, preserving local content state
+                return { ...prev, fleet };
+            });
+        } else {
+            // Full Sync (Kiosk Mode OR First Load OR Explicit Refresh)
+            const data = await generateStoreData();
+            if (data) {
+                setStoreData(prev => {
+                    // Always return new data so Admin Dashboard receives live updates on load/refresh.
+                    return { ...data };
+                });
+                setLastSyncTime(new Date().toLocaleTimeString());
+            }
         }
       } catch (e) {
         console.error("Fetch failed", e);
@@ -134,7 +147,7 @@ export default function App() {
         setIsFirstLoad(false);
         setIsSyncing(false);
       }
-  }, [isFirstLoad]);
+  }, [isFirstLoad, isAdmin]);
 
   useEffect(() => {
     initSupabase();
@@ -152,6 +165,8 @@ export default function App() {
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
+              // If content changes remotely, Admins might want to know, but to avoid overwriting work
+              // we treat this as a background sync. Kiosks will fully update.
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
               syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
             }
