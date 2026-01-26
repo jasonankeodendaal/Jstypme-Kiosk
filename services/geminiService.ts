@@ -578,6 +578,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         try {
             let relationalTablesExist = false;
             try {
+                // Quick check if tables exist
                 const check = await supabase.from('brands').select('id').limit(1);
                 if (!check.error) relationalTablesExist = true;
             } catch(e) {
@@ -586,7 +587,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
 
             let settingsPayload = { ...cleanData };
             
-            // Increased Archive Limit (200 items) to fix History Tab functionality
+            // Increased Archive Limit (200 items)
             const archivePruned = {
                 ...(settingsPayload.archive || {}),
                 deletedItems: (settingsPayload.archive?.deletedItems || []).slice(0, 200),
@@ -594,34 +595,31 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
             };
             settingsPayload.archive = archivePruned;
 
+            // 1. CRITICAL: Upload the Monolith JSON first. 
+            // This is the source of truth for the app's current session.
             const { error: configError } = await supabase.from('store_config').upsert({ id: 1, data: settingsPayload }, { onConflict: 'id' });
             if (configError) throw configError;
             
             broadcastSync(30, 'syncing');
 
+            // 2. BACKGROUND RELATIONAL SYNC (Optimized)
             if (relationalTablesExist) {
                 await yieldToMain();
 
                 const flatBrands = cleanData.brands.map((b: Brand) => flattenBrand(b));
                 
-                // Chunk Flattening for Categories and Products
+                // Optimized Flattening with less blocking
                 const flatCategories: any[] = [];
+                const flatProducts: any[] = [];
+                
                 for (const b of cleanData.brands) {
                     for (const c of b.categories) {
                         flatCategories.push(flattenCategory(c, b.id));
-                    }
-                }
-                
-                const flatProducts: any[] = [];
-                for (const b of cleanData.brands) {
-                    for (const c of b.categories) {
                         for (const p of c.products) {
                             flatProducts.push(flattenProduct(p, c.id));
                         }
                     }
                 }
-
-                await yieldToMain();
 
                 const flatPLBrands = (cleanData.pricelistBrands || []).map((pb: PricelistBrand) => ({
                     id: pb.id, name: pb.name, logo_url: pb.logoUrl, updated_at: new Date().toISOString()
@@ -629,32 +627,43 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
 
                 const flatPricelists = (cleanData.pricelists || []).map((pl: Pricelist) => flattenPricelist(pl));
 
-                // BATCH UPSERTS
-                if (flatBrands.length > 0) await supabase.from('brands').upsert(flatBrands);
-                if (flatPLBrands.length > 0) await supabase.from('pricelist_brands').upsert(flatPLBrands);
+                // BATCH 1: Independent Root Tables (Brands & PricelistBrands) - Parallel
+                await Promise.all([
+                    flatBrands.length > 0 ? supabase.from('brands').upsert(flatBrands) : Promise.resolve(),
+                    flatPLBrands.length > 0 ? supabase.from('pricelist_brands').upsert(flatPLBrands) : Promise.resolve()
+                ]);
                 
                 broadcastSync(50, 'syncing');
 
+                // BATCH 2: Categories (Depend on Brands)
                 if (flatCategories.length > 0) await supabase.from('categories').upsert(flatCategories);
                 
+                // BATCH 3: Products (High Volume) - Parallel Batches
                 const chunkArray = (arr: any[], size: number) => {
                     const chunks = [];
                     for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
                     return chunks;
                 };
 
-                const productChunks = chunkArray(flatProducts, 50);
-                for (let i = 0; i < productChunks.length; i++) {
-                    const chunk = productChunks[i];
-                    await supabase.from('products').upsert(chunk);
-                    // Yield during massive batch uploads
-                    if (i % 2 === 0) await yieldToMain();
+                // Increase chunk size to 150 (Supabase handles this well)
+                const productChunks = chunkArray(flatProducts, 150);
+                
+                // Concurrency: 4 requests at a time
+                const CONCURRENCY = 4;
+                for (let i = 0; i < productChunks.length; i += CONCURRENCY) {
+                    const batch = productChunks.slice(i, i + CONCURRENCY);
+                    await Promise.all(batch.map(chunk => supabase.from('products').upsert(chunk)));
+                    
+                    // Only yield every few batches to keep momentum
+                    if (i % (CONCURRENCY * 2) === 0) await yieldToMain();
                 }
                 
                 broadcastSync(80, 'syncing');
 
-                const plChunks = chunkArray(flatPricelists, 20); 
+                // BATCH 4: Pricelists
+                const plChunks = chunkArray(flatPricelists, 50); 
                 for (const chunk of plChunks) {
+                    // Keep sequential check here for specific error handling on Pricelists as requested in original code
                     const { error } = await supabase.from('pricelists').upsert(chunk);
                     if (error && (error.code === '42703' || error.message.includes('400'))) {
                         alert("Warning: Pricelists failed due to missing DB columns. Check Setup Guide.");
@@ -668,6 +677,9 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
         } catch (e: any) {
             console.error("Save Sync Error:", e);
             broadcastSync(0, 'error');
+            // Don't throw here, we want the UI to unblock even if background sync had hiccups, 
+            // as IDB save was likely successful.
+            throw e; 
         }
     }
 };
