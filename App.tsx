@@ -108,17 +108,41 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
   
+  // LOCKS & GUARDS
+  const isSavingRef = useRef(false);
+  const lastLocalSaveRef = useRef(0);
+  
   const syncTimeoutRef = useRef<number | null>(null);
   const kioskId = getKioskId();
   const isAdmin = currentRoute.startsWith('/admin');
 
   // Modified to allow background updates for admins (enabling Live Fleet Monitor)
+  // Implements "Last Write Wins" Guard to discard stale cloud data during/after local edits
   const fetchData = useCallback(async (isBackground = false) => {
+      // 1. Check Lock: If currently saving, strictly ignore any fetch requests
+      if (isSavingRef.current) {
+          if (!isBackground) console.log("Fetch aborted: Save in progress.");
+          return;
+      }
+
+      // 2. Check Timestamp Guard: If local save happened recently (< 5s), ignore cloud to prevent rollback
+      if (Date.now() - lastLocalSaveRef.current < 5000) {
+          if (!isBackground) console.log("Fetch aborted: Recent local modification.");
+          return;
+      }
+
       // Removed isAdmin restriction to ensure background fleet updates occur
       if (!isBackground && isFirstLoad) setIsSyncing(true);
       
       try {
         const data = await generateStoreData();
+        
+        // 3. Double Check Lock (Post-Fetch): State might have changed while awaiting
+        if (isSavingRef.current || (Date.now() - lastLocalSaveRef.current < 5000)) {
+            console.log("Fetch result discarded: Stale due to local update.");
+            return;
+        }
+
         if (data) {
            setStoreData(prev => {
                if (!prev) return data;
@@ -153,13 +177,17 @@ export default function App() {
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-              syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
+              if (!isSavingRef.current) {
+                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
+              }
             }
           )
           .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
             () => {
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
-              syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
+              if (!isSavingRef.current) {
+                  syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
+              }
             }
           )
           .subscribe();
@@ -171,12 +199,24 @@ export default function App() {
   }, [fetchData, kioskId]); // Removed isAdmin from deps so it runs for admin too
 
   const handleUpdateData = async (newData: StoreData) => {
+    // 1. Acquire Lock
+    isSavingRef.current = true;
+    lastLocalSaveRef.current = Date.now();
+
+    // 2. Optimistic Update
     setStoreData({ ...newData }); 
+    
     try {
         await saveStoreData(newData);
         setLastSyncTime(new Date().toLocaleTimeString());
     } catch (e: any) {
         console.error("Manual save failed", e);
+    } finally {
+        // 3. Release Lock with Buffer
+        // Keep lock for 2 seconds after completion to allow cloud propagation
+        setTimeout(() => {
+            isSavingRef.current = false;
+        }, 2000);
     }
   };
 
