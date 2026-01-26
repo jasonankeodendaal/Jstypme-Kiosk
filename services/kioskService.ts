@@ -1,5 +1,5 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { KioskRegistry } from '../types';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -48,6 +48,51 @@ export const initSupabase = () => {
     }
   }
   return false;
+};
+
+/**
+ * Subscribes to real-time updates for key store tables.
+ * Returns the RealtimeChannel object which can be used to unsubscribe() later.
+ */
+export const subscribeToStoreUpdates = (onUpdate: (payload: any) => void): RealtimeChannel | null => {
+    if (!supabase) initSupabase();
+    if (!supabase) return null;
+
+    // Listen to changes on all granular inventory tables
+    const channel = supabase.channel('store-db-changes')
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'brands' },
+            (payload: any) => onUpdate(payload)
+        )
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'categories' },
+            (payload: any) => onUpdate(payload)
+        )
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'products' },
+            (payload: any) => onUpdate(payload)
+        )
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'pricelists' },
+            (payload: any) => onUpdate(payload)
+        )
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'pricelist_brands' },
+            (payload: any) => onUpdate(payload)
+        )
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'kiosks' },
+            (payload: any) => onUpdate(payload)
+        )
+        .subscribe();
+
+    return channel;
 };
 
 export const getCloudProjectName = (): string => {
