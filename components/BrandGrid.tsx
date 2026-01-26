@@ -106,7 +106,7 @@ const AdUnit = ({ items, className, isActive = true }: { items?: AdItem[], class
         <div className={`relative overflow-hidden rounded-xl shadow-sm border border-slate-200 bg-white group ${className}`}>
             <div className="absolute top-2 right-2 z-10 bg-black/30 text-white px-1 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest">Ad</div>
             
-            <div key={`${activeItem!.id}-${currentIndex}`} className="w-full h-full animate-fade-in bg-slate-50">
+            <div key={`${activeItem!.id}-${currentIndex}`} className="w-full h-full animate-fade-in bg-black">
                 {activeItem!.type === 'video' ? (
                     <video 
                         ref={videoRef}
@@ -116,7 +116,7 @@ const AdUnit = ({ items, className, isActive = true }: { items?: AdItem[], class
                         autoPlay={isActive} 
                         playsInline={true}
                         loop={items.length === 1}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                         onEnded={handleVideoEnded}
                         onError={handleError} 
                     />
