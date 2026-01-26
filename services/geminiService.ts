@@ -240,8 +240,6 @@ class OfflineQueue {
         this.queue = this.queue.filter(a => !(a.type === action.type && a.id === action.id));
         this.queue.push(action);
         this.save();
-        // Trigger generic status update for UI visibility
-        broadcastSync(5, 'syncing');
     }
 
     async process() {
@@ -300,8 +298,6 @@ class OfflineQueue {
         if (successCount > 0) {
             broadcastSync(100, 'complete');
             setTimeout(() => broadcastSync(0, 'idle'), 2000);
-        } else if (remaining.length > 0) {
-            broadcastSync(0, 'error');
         }
     }
 }
@@ -318,12 +314,9 @@ const flattenCategory = (c: Category, brandId: string) => ({
 });
 const flattenProduct = (p: Product, categoryId: string) => ({
     id: p.id, category_id: categoryId, name: p.name, sku: p.sku, description: p.description,
-    image_url: p.imageUrl, 
-    gallery_urls: p.galleryUrls || [], 
-    video_urls: p.videoUrls || (p.videoUrl ? [p.videoUrl] : []), 
+    image_url: p.imageUrl, gallery_urls: p.galleryUrls || [], video_urls: p.videoUrls || [],
     specs: p.specs || {}, features: p.features || [], box_contents: p.boxContents || [],
-    manuals: p.manuals || (p.manualUrl ? [{ id: 'legacy', title: 'User Manual', pdfUrl: p.manualUrl, images: p.manualImages||[] }] : []), 
-    terms: p.terms, dimensions: p.dimensions || [],
+    manuals: p.manuals || [], terms: p.terms, dimensions: p.dimensions || [],
     date_added: p.dateAdded, updated_at: new Date().toISOString()
 });
 const flattenPricelist = (pl: Pricelist) => ({
@@ -400,9 +393,8 @@ export const deleteItem = async (type: 'BRAND' | 'CATEGORY' | 'PRODUCT' | 'PRICE
     }
 };
 
-// Process offline queue on startup and periodically
 setTimeout(() => offlineQueue.process(), 5000);
-setInterval(() => offlineQueue.process(), 30000);
+setInterval(() => offlineQueue.process(), 60000);
 
 // Modified: Priority Cloud Fetch, fallback to IDB
 export const generateStoreData = async (): Promise<StoreData> => {
