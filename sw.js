@@ -1,5 +1,5 @@
 
-// Service Worker for Kiosk Pro v6.1 (PDF Exclusion Update)
+// Service Worker for Kiosk Pro v6.2 (API Bypass Update)
 const CACHE_NAME = 'kiosk-pro-v6';
 
 const PRECACHE_URLS = [
@@ -35,8 +35,6 @@ self.addEventListener('activate', (event) => {
 
 /**
  * Enhanced Range Request Handler.
- * Note: PDFs are now excluded entirely from this logic to prevent
- * contention on legacy Android WebViews.
  */
 const handleRangeRequest = async (request) => {
   return fetch(request);
@@ -45,12 +43,22 @@ const handleRangeRequest = async (request) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // CRITICAL: Completely exclude PDF files from Service Worker.
-  // This forces the browser to handle the request natively, avoiding
-  // Service Worker overhead and potential message channel closure issues
-  // on legacy Android WebViews (Chrome 37-50).
+  // 1. CRITICAL: Exclude non-GET requests (POST/PUT/DELETE)
+  // This ensures API mutations go directly to the network, bypassing the SW.
+  // This fixes "message channel closed" errors during large uploads or database saves.
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // 2. CRITICAL: Completely exclude PDF files from Service Worker.
   if (url.pathname.toLowerCase().endsWith('.pdf')) {
     return;
+  }
+
+  // 3. Exclude Supabase API calls (REST/Realtime) even if they are GET
+  // This ensures we always get fresh data and don't cache API responses incorrectly.
+  if (url.hostname.includes('supabase') || url.pathname.includes('/rest/v1/') || url.pathname.includes('/realtime/v1/')) {
+      return;
   }
 
   // Treat heavy media (Video/Audio) to allow Range Requests
@@ -73,7 +81,6 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Images: Stale-While-Revalidate
-  // Ensures offline availability while updating in background
   const isImage = event.request.destination === 'image' || 
                   url.pathname.match(/\.(jpg|jpeg|png|webp|gif|svg|ico)$/i);
 
@@ -87,7 +94,6 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         }).catch((e) => {
-           // If offline and no cache, throw error
            if (!cachedResponse) throw e;
         });
 
@@ -97,12 +103,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Standard Assets: Cache First
+  // Standard Static Assets: Cache First
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then(res => {
-        // Only cache valid 200 responses
-        if (res.status === 200 && event.request.method === 'GET') {
+        if (res.status === 200) {
           const copy = res.clone();
           caches.open(CACHE_NAME).then(c => c.put(event.request, copy));
         }

@@ -8,9 +8,6 @@
   };
 
   // Separate monitoring interval (simulating a worker thread logic)
-  // If main thread freezes for more than 60s, force refresh.
-  // GATED: Admin mode ignores this to prevent unintended reloads during editing.
-  // UPDATE: Increased to 60s to allow slower tablets to hydrate the React bundle.
   var watchdogTimer = setInterval(function() {
       var now = Date.now();
       var isAdmin = window.location.pathname.indexOf('/admin') !== -1;
@@ -21,8 +18,7 @@
       }
   }, 5000);
 
-  // Daily Maintenance: Hard refresh at 3AM to clear browser heap
-  // Only for Kiosks, not for Admins.
+  // Daily Maintenance: Hard refresh at 3AM
   setInterval(function() {
       var now = new Date();
       var isAdmin = window.location.pathname.indexOf('/admin') !== -1;
@@ -60,15 +56,14 @@
   // --- GLOBAL ERROR SUPPRESSION (SYNC) ---
   window.onerror = function(msg, url, lineNo, columnNo, error) {
       // IGNORE MESSAGE CHANNEL & LEGACY ENGINE ERRORS
-      // These are internal worker communication failures on legacy WebViews (Chrome 37-55)
-      // when handling PDFs or large blobs. They do not necessarily crash the React UI.
       var strMsg = String(msg).toLowerCase();
       if (
           strMsg.indexOf('message channel') !== -1 || 
           strMsg.indexOf('channel closed') !== -1 ||
           strMsg.indexOf('resizeobserver') !== -1 ||
           strMsg.indexOf('extension') !== -1 ||
-          strMsg.indexOf('script error') !== -1
+          strMsg.indexOf('script error') !== -1 ||
+          strMsg.indexOf('asynchronous response') !== -1
       ) {
           console.warn("Suppressing Engine Error: " + msg);
           return true; // Prevents default handler
@@ -83,16 +78,17 @@
   };
 
   // --- GLOBAL PROMISE REJECTION SUPPRESSION (ASYNC) ---
-  // Handles "Uncaught (in promise) Error: A listener indicated an asynchronous response..."
   window.onunhandledrejection = function(event) {
       var msg = event.reason ? (event.reason.message || String(event.reason)) : 'Unknown Promise Error';
       var strMsg = String(msg).toLowerCase();
       
+      // Specifically target "message channel closed before a response was received"
       if (
           strMsg.indexOf('message channel') !== -1 || 
           strMsg.indexOf('channel closed') !== -1 ||
           strMsg.indexOf('resizeobserver') !== -1 ||
-          strMsg.indexOf('asynchronous response') !== -1
+          strMsg.indexOf('asynchronous response') !== -1 ||
+          strMsg.includes('closed before a response')
       ) {
           // Prevent the error from hitting the console as "Uncaught"
           event.preventDefault(); 
