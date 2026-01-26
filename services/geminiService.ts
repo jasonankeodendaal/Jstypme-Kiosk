@@ -57,9 +57,12 @@ async function dbPut(key: string, value: any) {
 
 // --- PERFORMANCE UTILITIES ---
 
+// Yield to main thread to prevent "Application Freeze" watchdog triggers
 const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
 
+// Progress broadcasting utility
 const broadcastSync = (progress: number, status: 'idle' | 'syncing' | 'complete' | 'error') => {
+    // Dispatch in a timeout to avoid synchronous layout thrashing
     setTimeout(() => {
         window.dispatchEvent(new CustomEvent('kiosk-sync-event', { 
             detail: { progress, status } 
@@ -67,17 +70,49 @@ const broadcastSync = (progress: number, status: 'idle' | 'syncing' | 'complete'
     }, 0);
 };
 
-// --- DATA HELPERS ---
-
 const DEFAULT_ADMIN: AdminUser = {
     id: 'super-admin',
     name: 'Admin',
     pin: '1723',
     isSuperAdmin: true,
     permissions: {
-        inventory: true, marketing: true, tv: true, screensaver: true, fleet: true, history: true, settings: true, pricelists: true
+        inventory: true,
+        marketing: true,
+        tv: true,
+        screensaver: true,
+        fleet: true,
+        history: true,
+        settings: true,
+        pricelists: true
     }
 };
+
+const MOCK_BRANDS: Brand[] = [
+  {
+    id: 'b-apple',
+    name: 'Apple',
+    logoUrl: 'https://www.apple.com/ac/structured-data/images/knowledge_graph_logo.png',
+    categories: [
+      {
+        id: 'c-iphone',
+        name: 'Smartphone',
+        icon: 'Smartphone',
+        products: [
+          {
+            id: 'p-iphone15pm',
+            sku: 'APL-I15PM',
+            name: 'iPhone 15 Pro Max',
+            description: 'Forged in titanium and featuring the groundbreaking A17 Pro chip.',
+            specs: { 'Chip': 'A17 Pro', 'Display': '6.7-inch Super Retina XDR' },
+            features: ['Titanium design', 'Action button'],
+            dimensions: [{ label: 'Device', width: '76.7 mm', height: '159.9 mm', depth: '8.25 mm', weight: '221 g' }],
+            imageUrl: 'https://images.unsplash.com/photo-1696446701796-da61225697cc?w=800&auto=format&fit=crop'
+          }
+        ]
+      }
+    ]
+  }
+];
 
 const DEFAULT_DATA: StoreData = {
   companyLogoUrl: "https://i.ibb.co/ZR8bZRSp/JSTYP-me-Logo.png",
@@ -89,11 +124,22 @@ const DEFAULT_DATA: StoreData = {
     websiteUrl: "https://jstyp.me"
   },
   screensaverSettings: {
-    idleTimeout: 60, imageDuration: 8, muteVideos: false, showProductImages: true, showProductVideos: true, showPamphlets: true, showCustomAds: true
+    idleTimeout: 60,
+    imageDuration: 8,
+    muteVideos: false,
+    showProductImages: true,
+    showProductVideos: true,
+    showPamphlets: true,
+    showCustomAds: true
   },
-  catalogues: [], pricelists: [], pricelistBrands: [], brands: [], tv: { brands: [] },
+  catalogues: [],
+  pricelists: [],
+  pricelistBrands: [],
+  brands: MOCK_BRANDS,
+  tv: { brands: [] },
   ads: { homeBottomLeft: [], homeBottomRight: [], screensaver: [] },
-  fleet: [], about: { title: "About Our Vision", text: "Welcome to the Kiosk Pro Showcase.", audioUrl: "" },
+  fleet: [],
+  about: { title: "About Our Vision", text: "Welcome to the Kiosk Pro Showcase.", audioUrl: "" },
   admins: [DEFAULT_ADMIN],
   appConfig: {
       kioskIconUrl: "https://i.ibb.co/S7Nxv1dD/android-launchericon-512-512.png",
@@ -103,228 +149,162 @@ const DEFAULT_DATA: StoreData = {
 };
 
 const migrateData = (data: any): StoreData => {
-    if (!data.brands || !Array.isArray(data.brands)) data.brands = [];
-    if (!data.catalogues) data.catalogues = [];
-    if (!data.pricelists) data.pricelists = [];
-    if (!data.pricelistBrands) data.pricelistBrands = [];
-    if (!data.fleet) data.fleet = [];
+    if (!data.brands || !Array.isArray(data.brands)) data.brands = [...MOCK_BRANDS];
+    if (!data.catalogues || !Array.isArray(data.catalogues)) data.catalogues = [];
+    if (!data.pricelists || !Array.isArray(data.pricelists)) data.pricelists = [];
+    if (!data.pricelistBrands || !Array.isArray(data.pricelistBrands)) data.pricelistBrands = [];
+    if (!data.fleet || !Array.isArray(data.fleet)) data.fleet = [];
     if (!data.hero) data.hero = { ...DEFAULT_DATA.hero };
     if (!data.ads) data.ads = { ...DEFAULT_DATA.ads };
     if (!data.screensaverSettings) data.screensaverSettings = { ...DEFAULT_DATA.screensaverSettings };
     if (!data.about) data.about = { ...DEFAULT_DATA.about };
-    if (!data.admins || data.admins.length === 0) data.admins = [DEFAULT_ADMIN];
+    if (!data.admins || !Array.isArray(data.admins) || data.admins.length === 0) data.admins = [DEFAULT_ADMIN];
     if (!data.appConfig) data.appConfig = { ...DEFAULT_DATA.appConfig };
     if (!data.tv) data.tv = { brands: [] };
     if (!data.systemSettings) data.systemSettings = { ...DEFAULT_DATA.systemSettings };
     return data as StoreData;
 };
 
-// --- REAL-TIME DELTA LOGIC ---
-
-/**
- * Merges a single table change into the complex StoreData tree.
- * This runs on the client to apply updates without full re-fetching.
- */
-export const mergeDelta = (currentData: StoreData, payload: any): StoreData => {
-    const { table, eventType, new: newRow, old: oldRow } = payload;
-    const newData = { ...currentData };
-
-    // 1. FLEET (Kiosks)
-    if (table === 'kiosks') {
-        const fleet = [...(newData.fleet || [])];
-        if (eventType === 'DELETE') {
-            newData.fleet = fleet.filter(k => k.id !== oldRow.id);
-        } else {
-            const index = fleet.findIndex(k => k.id === newRow.id);
-            // Map snake_case DB columns to camelCase types
-            const mappedKiosk: KioskRegistry = {
-                id: newRow.id,
-                name: newRow.name,
-                status: newRow.status,
-                last_seen: newRow.last_seen,
-                deviceType: newRow.device_type,
-                assignedZone: newRow.assigned_zone,
-                wifiStrength: newRow.wifi_strength,
-                ipAddress: newRow.ip_address,
-                version: newRow.version,
-                locationDescription: newRow.location_description,
-                notes: newRow.notes,
-                restartRequested: newRow.restart_requested,
-                showPricelists: newRow.show_pricelists
-            };
-            
-            if (index >= 0) fleet[index] = mappedKiosk;
-            else fleet.push(mappedKiosk);
-            
-            newData.fleet = fleet;
+// Async Storage Safety: Process items in chunks to prevent UI freeze
+const sanitizeDataAsync = async (data: any): Promise<any> => {
+    if (typeof data === 'string') {
+        if (data.startsWith('data:') && data.length > 2048) { 
+             return ''; // Strip heavy base64
         }
-    }
-
-    // 2. BRANDS
-    else if (table === 'brands') {
-        const brands = [...newData.brands];
-        if (eventType === 'DELETE') {
-            newData.brands = brands.filter(b => b.id !== oldRow.id);
-        } else {
-            const index = brands.findIndex(b => b.id === newRow.id);
-            const mappedBrand: Brand = {
-                id: newRow.id,
-                name: newRow.name,
-                logoUrl: newRow.logo_url,
-                themeColor: newRow.theme_color,
-                // Preserve existing categories if updating, or start empty
-                categories: index >= 0 ? brands[index].categories : []
-            };
-            if (index >= 0) brands[index] = mappedBrand;
-            else brands.push(mappedBrand);
-            newData.brands = brands;
+        if (data.length > 500000) {
+            return data.substring(0, 500000) + '...[TRUNCATED]';
         }
+        return data;
     }
-
-    // 3. CATEGORIES
-    else if (table === 'categories') {
-        // Need to find which brand this category belongs to
-        const brands = [...newData.brands];
-        // If updating/inserting, use newRow.brand_id. If deleting, we might need to search.
-        const brandId = newRow?.brand_id || oldRow?.brand_id;
-        
-        const brandIndex = brands.findIndex(b => b.id === brandId);
-        if (brandIndex >= 0) {
-            const brand = { ...brands[brandIndex] };
-            const cats = [...brand.categories];
-            
-            if (eventType === 'DELETE') {
-                brand.categories = cats.filter(c => c.id !== oldRow.id);
-            } else {
-                const catIndex = cats.findIndex(c => c.id === newRow.id);
-                const mappedCat: Category = {
-                    id: newRow.id,
-                    name: newRow.name,
-                    icon: newRow.icon,
-                    imageUrl: newRow.image_url,
-                    // Preserve products
-                    products: catIndex >= 0 ? cats[catIndex].products : []
-                };
-                if (catIndex >= 0) cats[catIndex] = mappedCat;
-                else cats.push(mappedCat);
-                brand.categories = cats;
-            }
-            brands[brandIndex] = brand;
-            newData.brands = brands;
-        }
-    }
-
-    // 4. PRODUCTS
-    else if (table === 'products') {
-        // This is complex because we need to find the product deeply nested.
-        // Or if it's a new product, find the right category.
-        
-        // Helper to map DB row to Product type
-        const mapProduct = (row: any): Product => ({
-            id: row.id,
-            name: row.name,
-            sku: row.sku,
-            description: row.description,
-            imageUrl: row.image_url,
-            galleryUrls: row.gallery_urls,
-            videoUrls: row.video_urls,
-            specs: row.specs,
-            features: row.features,
-            dimensions: row.dimensions,
-            boxContents: row.box_contents,
-            manuals: row.manuals,
-            terms: row.terms,
-            dateAdded: row.date_added
-        });
-
-        const brands = [...newData.brands];
-        let found = false;
-
-        // OPTIMIZATION: If we have category_id, go straight there
-        const targetCatId = newRow?.category_id || oldRow?.category_id;
-
-        for (let bIdx = 0; bIdx < brands.length; bIdx++) {
-            const brand = brands[bIdx];
-            const catIndex = brand.categories.findIndex(c => c.id === targetCatId);
-            
-            if (catIndex >= 0) {
-                const newBrand = { ...brand };
-                const newCats = [...newBrand.categories];
-                const newCat = { ...newCats[catIndex] };
-                const prods = [...newCat.products];
-
-                if (eventType === 'DELETE') {
-                    newCat.products = prods.filter(p => p.id !== oldRow.id);
-                } else {
-                    const pIdx = prods.findIndex(p => p.id === newRow.id);
-                    if (pIdx >= 0) prods[pIdx] = mapProduct(newRow);
-                    else prods.push(mapProduct(newRow));
-                    newCat.products = prods;
-                }
-
-                newCats[catIndex] = newCat;
-                newBrand.categories = newCats;
-                brands[bIdx] = newBrand;
-                found = true;
-                break;
-            }
-        }
-        if (found) newData.brands = brands;
-    }
-
-    // 5. PRICELISTS
-    else if (table === 'pricelists') {
-        const lists = [...(newData.pricelists || [])];
-        if (eventType === 'DELETE') {
-            newData.pricelists = lists.filter(p => p.id !== oldRow.id);
-        } else {
-            const index = lists.findIndex(p => p.id === newRow.id);
-            const mappedList: Pricelist = {
-                id: newRow.id,
-                brandId: newRow.brand_id,
-                title: newRow.title,
-                month: newRow.month,
-                year: newRow.year,
-                url: newRow.url,
-                thumbnailUrl: newRow.thumbnail_url,
-                type: newRow.type,
-                kind: newRow.kind,
-                startDate: newRow.start_date,
-                endDate: newRow.end_date,
-                promoText: newRow.promo_text,
-                items: newRow.items,
-                headers: newRow.headers,
-                dateAdded: newRow.date_added
-            };
-            if (index >= 0) lists[index] = mappedList;
-            else lists.push(mappedList);
-            newData.pricelists = lists;
-        }
-    }
-
-    // Update local cache asynchronously to persist the delta
-    dbPut(STORAGE_KEY_DATA, newData).catch(console.warn);
     
-    return newData;
+    if (Array.isArray(data)) {
+        const result = [];
+        for (let i = 0; i < data.length; i++) {
+            result.push(await sanitizeDataAsync(data[i]));
+            // Yield every 50 items to keep UI responsive
+            if (i % 50 === 0) await yieldToMain();
+        }
+        return result;
+    }
+    
+    if (data !== null && typeof data === 'object') {
+        const newData: any = {};
+        const keys = Object.keys(data);
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            newData[key] = await sanitizeDataAsync(data[key]);
+            if (i % 50 === 0) await yieldToMain();
+        }
+        return newData;
+    }
+    return data;
 };
 
-export const subscribeToDeltas = (callback: (payload: any) => void) => {
-    if (!supabase) initSupabase();
-    if (!supabase) return null;
+// --- OFFLINE QUEUE SYSTEM ---
 
-    const channel = supabase.channel('delta_sync_v1')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, callback)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'brands' }, callback)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, callback)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, callback)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'pricelists' }, callback)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'pricelist_brands' }, callback)
-        .subscribe();
+interface SyncAction {
+    type: 'BRAND' | 'CATEGORY' | 'PRODUCT' | 'PRICELIST' | 'PRICELIST_BRAND' | 'ARCHIVE' | 'DELETE_ITEM';
+    subtype?: 'upsert' | 'delete';
+    data: any;
+    id: string;
+    timestamp: number;
+}
 
-    return channel;
-};
+class OfflineQueue {
+    private queue: SyncAction[] = [];
 
-// --- CRUD OPS (Push Deltas) ---
+    constructor() {
+        this.load();
+    }
+
+    private load() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY_OFFLINE_QUEUE);
+            if (stored) {
+                this.queue = JSON.parse(stored);
+            }
+        } catch (e) {
+            console.error("Failed to load offline queue", e);
+        }
+    }
+
+    private save() {
+        try {
+            localStorage.setItem(STORAGE_KEY_OFFLINE_QUEUE, JSON.stringify(this.queue));
+        } catch (e) {
+            console.error("Failed to save offline queue", e);
+        }
+    }
+
+    add(action: SyncAction) {
+        this.queue = this.queue.filter(a => !(a.type === action.type && a.id === action.id));
+        this.queue.push(action);
+        this.save();
+    }
+
+    async process() {
+        if (this.queue.length === 0) return;
+        if (!supabase) initSupabase();
+        if (!supabase) return;
+
+        const online = await checkCloudConnection();
+        if (!online) return;
+
+        // Throttled UI update
+        broadcastSync(10, 'syncing');
+
+        const remaining: SyncAction[] = [];
+        let successCount = 0;
+
+        for (let i = 0; i < this.queue.length; i++) {
+            const action = this.queue[i];
+            
+            // Yield periodically
+            if (i % 5 === 0) await yieldToMain();
+
+            try {
+                let error = null;
+                if (action.subtype === 'delete') {
+                    const tableMap: any = {
+                        'BRAND': 'brands', 'CATEGORY': 'categories', 'PRODUCT': 'products',
+                        'PRICELIST': 'pricelists', 'PRICELIST_BRAND': 'pricelist_brands'
+                    };
+                    const table = tableMap[action.type];
+                    if (table) {
+                        const res = await supabase.from(table).delete().eq('id', action.id);
+                        error = res.error;
+                    }
+                } else {
+                    let res: any = {};
+                    if (action.type === 'BRAND') res = await supabase.from('brands').upsert(action.data);
+                    else if (action.type === 'CATEGORY') res = await supabase.from('categories').upsert(action.data);
+                    else if (action.type === 'PRODUCT') res = await supabase.from('products').upsert(action.data);
+                    else if (action.type === 'PRICELIST') res = await supabase.from('pricelists').upsert(action.data);
+                    else if (action.type === 'PRICELIST_BRAND') res = await supabase.from('pricelist_brands').upsert(action.data);
+                    error = res.error;
+                }
+                
+                if (error) throw error;
+                successCount++;
+            } catch (e) {
+                console.error("Sync action failed", action, e);
+                remaining.push(action); 
+            }
+        }
+
+        this.queue = remaining;
+        this.save();
+        
+        if (successCount > 0) {
+            broadcastSync(100, 'complete');
+            setTimeout(() => broadcastSync(0, 'idle'), 2000);
+        }
+    }
+}
+
+const offlineQueue = new OfflineQueue();
+
+// --- GRANULAR SYNC FUNCTIONS ---
 
 const flattenBrand = (b: Brand) => ({
     id: b.id, name: b.name, logo_url: b.logoUrl, theme_color: b.themeColor, updated_at: new Date().toISOString()
@@ -352,7 +332,7 @@ export const upsertBrand = async (brand: Brand) => {
         const { error } = await supabase.from('brands').upsert(flattenBrand(brand));
         if (error) throw error;
     } catch (e) {
-        console.error("Delta Sync Error", e);
+        offlineQueue.add({ type: 'BRAND', data: flattenBrand(brand), id: brand.id, timestamp: Date.now() });
     }
 };
 
@@ -362,7 +342,7 @@ export const upsertCategory = async (category: Category, brandId: string) => {
         const { error } = await supabase.from('categories').upsert(flattenCategory(category, brandId));
         if (error) throw error;
     } catch (e) {
-        console.error("Delta Sync Error", e);
+        offlineQueue.add({ type: 'CATEGORY', data: flattenCategory(category, brandId), id: category.id, timestamp: Date.now() });
     }
 };
 
@@ -372,7 +352,7 @@ export const upsertProduct = async (product: Product, categoryId: string) => {
         const { error } = await supabase.from('products').upsert(flattenProduct(product, categoryId));
         if (error) throw error;
     } catch (e) {
-        console.error("Delta Sync Error", e);
+        offlineQueue.add({ type: 'PRODUCT', data: flattenProduct(product, categoryId), id: product.id, timestamp: Date.now() });
     }
 };
 
@@ -381,7 +361,9 @@ export const upsertPricelist = async (pricelist: Pricelist) => {
     try {
         const { error } = await supabase.from('pricelists').upsert(flattenPricelist(pricelist));
         if (error) throw error;
-    } catch (e) { console.error("Delta Error", e); }
+    } catch (e) {
+        offlineQueue.add({ type: 'PRICELIST', data: flattenPricelist(pricelist), id: pricelist.id, timestamp: Date.now() });
+    }
 };
 
 export const upsertPricelistBrand = async (pb: PricelistBrand) => {
@@ -390,7 +372,9 @@ export const upsertPricelistBrand = async (pb: PricelistBrand) => {
     try {
         const { error } = await supabase.from('pricelist_brands').upsert(data);
         if (error) throw error;
-    } catch (e) { console.error("Delta Error", e); }
+    } catch (e) {
+        offlineQueue.add({ type: 'PRICELIST_BRAND', data, id: pb.id, timestamp: Date.now() });
+    }
 };
 
 export const deleteItem = async (type: 'BRAND' | 'CATEGORY' | 'PRODUCT' | 'PRICELIST' | 'PRICELIST_BRAND', id: string) => {
@@ -404,34 +388,33 @@ export const deleteItem = async (type: 'BRAND' | 'CATEGORY' | 'PRODUCT' | 'PRICE
             const { error } = await supabase.from(tableMap[type]).delete().eq('id', id);
             if (error) throw error;
         }
-    } catch (e) { console.error("Delete Error", e); }
+    } catch (e) {
+        offlineQueue.add({ type, subtype: 'delete', data: null, id, timestamp: Date.now() });
+    }
 };
 
-// --- INITIAL LOAD ---
+setTimeout(() => offlineQueue.process(), 5000);
+setInterval(() => offlineQueue.process(), 60000);
 
+// Modified: Priority Cloud Fetch, fallback to IDB
 export const generateStoreData = async (): Promise<StoreData> => {
   if (!supabase) initSupabase();
+  
   const isOnline = await checkCloudConnection();
 
+  // 1. Try Cloud First (if online)
   if (isOnline && supabase) {
       try {
           const { data: configRow } = await supabase.from('store_config').select('data').eq('id', 1).single();
           let baseData = migrateData(configRow?.data || {});
+
+          // Yield to prevent blocking during initial parsing
           await yieldToMain();
 
-          // Construct Relational Tree
           try {
-              const [brandsRes, catsRes, prodsRes, plBrandsRes, plRes, fleetRes] = await Promise.all([
-                  supabase.from('brands').select('*'),
-                  supabase.from('categories').select('*'),
-                  supabase.from('products').select('*'),
-                  supabase.from('pricelist_brands').select('*'),
-                  supabase.from('pricelists').select('*'),
-                  supabase.from('kiosks').select('*')
-              ]);
-
-              if (fleetRes.data) {
-                  baseData.fleet = fleetRes.data.map((k: any) => ({
+              const { data: fleetRows } = await supabase.from('kiosks').select('*');
+              if (fleetRows) {
+                  baseData.fleet = fleetRows.map((k: any) => ({
                       id: k.id, name: k.name, deviceType: k.device_type, status: k.status,
                       last_seen: k.last_seen, wifiStrength: k.wifi_strength, ipAddress: k.ip_address,
                       version: k.version, locationDescription: k.location_description,
@@ -439,82 +422,251 @@ export const generateStoreData = async (): Promise<StoreData> => {
                       showPricelists: k.show_pricelists
                   }));
               }
+          } catch(e) {
+              console.warn("Fleet fetch error", e);
+          }
+
+          try {
+              const probe = await supabase.from('brands').select('id').limit(1);
+              if (probe.error) throw new Error("Relational tables not ready");
+
+              const [brandsRes, catsRes, prodsRes, plBrandsRes, plRes] = await Promise.all([
+                  supabase.from('brands').select('*'),
+                  supabase.from('categories').select('*'),
+                  supabase.from('products').select('*'),
+                  supabase.from('pricelist_brands').select('*'),
+                  supabase.from('pricelists').select('*')
+              ]);
+
+              await yieldToMain();
 
               if (brandsRes.data && catsRes.data && prodsRes.data) {
+                  // Heavy relational reconstruction - CHUNKED
                   const relationalBrands: Brand[] = [];
+                  
                   for (let i = 0; i < brandsRes.data.length; i++) {
                       const b = brandsRes.data[i];
                       const brandCats = catsRes.data.filter((c: any) => c.brand_id === b.id);
                       const categories: Category[] = [];
+
                       for (const c of brandCats) {
                           const catProds = prodsRes.data.filter((p: any) => p.category_id === c.id);
                           categories.push({
-                              id: c.id, name: c.name, icon: c.icon, imageUrl: c.image_url,
+                              id: c.id,
+                              name: c.name,
+                              icon: c.icon,
+                              imageUrl: c.image_url,
                               products: catProds.map((p: any) => ({
-                                  id: p.id, name: p.name, sku: p.sku, description: p.description,
-                                  imageUrl: p.image_url, galleryUrls: p.gallery_urls, videoUrls: p.video_urls,
-                                  specs: p.specs, features: p.features, dimensions: p.dimensions,
-                                  boxContents: p.box_contents, manuals: p.manuals, terms: p.terms,
+                                  id: p.id,
+                                  name: p.name,
+                                  sku: p.sku,
+                                  description: p.description,
+                                  imageUrl: p.image_url,
+                                  galleryUrls: p.gallery_urls,
+                                  videoUrls: p.video_urls,
+                                  specs: p.specs,
+                                  features: p.features,
+                                  dimensions: p.dimensions,
+                                  boxContents: p.box_contents,
+                                  manuals: p.manuals,
+                                  terms: p.terms,
                                   dateAdded: p.date_added
                               }))
                           });
                       }
-                      relationalBrands.push({
-                          id: b.id, name: b.name, logoUrl: b.logo_url, themeColor: b.theme_color, categories
-                      });
-                  }
-                  baseData.brands = relationalBrands;
 
+                      relationalBrands.push({
+                          id: b.id,
+                          name: b.name,
+                          logoUrl: b.logo_url,
+                          themeColor: b.theme_color,
+                          categories
+                      });
+
+                      // Yield every 5 brands to keep UI smooth
+                      if (i % 5 === 0) await yieldToMain();
+                  }
+
+                  if (relationalBrands.length > 0) {
+                      baseData.brands = relationalBrands;
+                  }
+
+                  // Process Pricelists
                   if (plBrandsRes.data && plRes.data) {
-                      baseData.pricelistBrands = plBrandsRes.data.map((pb: any) => ({
+                      const relPricelistBrands = plBrandsRes.data.map((pb: any) => ({
                           id: pb.id, name: pb.name, logoUrl: pb.logo_url
                       }));
-                      baseData.pricelists = plRes.data.map((pl: any) => ({
-                          id: pl.id, brandId: pl.brand_id, title: pl.title, month: pl.month, year: pl.year,
-                          url: pl.url, thumbnailUrl: pl.thumbnail_url, type: pl.type, kind: pl.kind,
-                          startDate: pl.start_date, endDate: pl.end_date, promoText: pl.promo_text,
-                          items: pl.items, headers: pl.headers, dateAdded: pl.date_added
+                      const relPricelists = plRes.data.map((pl: any) => ({
+                          id: pl.id,
+                          brandId: pl.brand_id,
+                          title: pl.title,
+                          month: pl.month,
+                          year: pl.year,
+                          url: pl.url,
+                          thumbnailUrl: pl.thumbnail_url,
+                          type: pl.type,
+                          kind: pl.kind,
+                          startDate: pl.start_date,
+                          endDate: pl.end_date,
+                          promoText: pl.promo_text,
+                          items: pl.items,
+                          headers: pl.headers,
+                          dateAdded: pl.date_added
                       }));
+
+                      if (relPricelistBrands.length > 0) {
+                          baseData.pricelistBrands = relPricelistBrands;
+                          baseData.pricelists = relPricelists;
+                      }
                   }
               }
-          } catch (e) {
-              console.warn("Relational construction failed, using snapshot.", e);
+          } catch (relationalError) {
+              console.warn("Relational tables not found or empty. Using legacy monolith data.", relationalError);
           }
 
-          try { await dbPut(STORAGE_KEY_DATA, baseData); } catch (e) {}
+          // ASYNC SAVE TO INDEXEDDB (Non-blocking)
+          try { 
+              await dbPut(STORAGE_KEY_DATA, baseData);
+          } catch (e) {
+              console.warn("Failed to update local cache", e);
+          }
+          
           return baseData;
-      } catch (e) {}
+
+      } catch (e) { 
+          console.warn("Cloud fetch failed, attempting local cache fallback.", e); 
+      }
   }
   
+  // 2. Fallback to Local IDB Cache
   try {
     const stored = await dbGet(STORAGE_KEY_DATA);
     if (stored) return migrateData(stored);
+  } catch (e) {
+      console.warn("IDB fetch failed", e);
+  }
+
+  // 3. Fallback to LocalStorage (Legacy/Emergency)
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_DATA);
+    if (stored) return migrateData(JSON.parse(stored));
   } catch (e) {}
 
   return migrateData(DEFAULT_DATA);
 };
 
 export const saveStoreData = async (data: StoreData): Promise<void> => {
-    // This function now only handles global settings (store_config) 
-    // or batch saves. Granular updates should use upsertX functions.
-    await dbPut(STORAGE_KEY_DATA, data);
+    // 1. Sanitize Async
+    const cleanData = await sanitizeDataAsync(data);
     
+    // 2. Yield before Blocking
+    await yieldToMain();
+    
+    // 3. Save to IDB (Async)
+    try {
+        await dbPut(STORAGE_KEY_DATA, cleanData);
+    } catch (e) {
+        console.error("IDB Save Failed", e);
+        // Fallback to localStorage only if IDB fails
+        try { localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(cleanData)); } catch(e){}
+    }
+
     if (!supabase) initSupabase();
     if (supabase) {
-        broadcastSync(50, 'syncing');
+        broadcastSync(10, 'syncing');
+        
         try {
-            // Save JSON config (Settings, Hero, Ads, etc)
-            // We strip out the inventory arrays to keep the JSON blob light
-            const settingsPayload = { ...data };
-            settingsPayload.brands = []; // Inventory handled by tables
-            settingsPayload.pricelists = [];
-            settingsPayload.fleet = []; 
+            let relationalTablesExist = false;
+            try {
+                const check = await supabase.from('brands').select('id').limit(1);
+                if (!check.error) relationalTablesExist = true;
+            } catch(e) {
+                relationalTablesExist = false;
+            }
+
+            let settingsPayload = { ...cleanData };
             
-            await supabase.from('store_config').upsert({ id: 1, data: settingsPayload }, { onConflict: 'id' });
+            // Increased Archive Limit (200 items) to fix History Tab functionality
+            const archivePruned = {
+                ...(settingsPayload.archive || {}),
+                deletedItems: (settingsPayload.archive?.deletedItems || []).slice(0, 200),
+                brands: [], products: [], catalogues: [] 
+            };
+            settingsPayload.archive = archivePruned;
+
+            const { error: configError } = await supabase.from('store_config').upsert({ id: 1, data: settingsPayload }, { onConflict: 'id' });
+            if (configError) throw configError;
             
+            broadcastSync(30, 'syncing');
+
+            if (relationalTablesExist) {
+                await yieldToMain();
+
+                const flatBrands = cleanData.brands.map((b: Brand) => flattenBrand(b));
+                
+                // Chunk Flattening for Categories and Products
+                const flatCategories: any[] = [];
+                for (const b of cleanData.brands) {
+                    for (const c of b.categories) {
+                        flatCategories.push(flattenCategory(c, b.id));
+                    }
+                }
+                
+                const flatProducts: any[] = [];
+                for (const b of cleanData.brands) {
+                    for (const c of b.categories) {
+                        for (const p of c.products) {
+                            flatProducts.push(flattenProduct(p, c.id));
+                        }
+                    }
+                }
+
+                await yieldToMain();
+
+                const flatPLBrands = (cleanData.pricelistBrands || []).map((pb: PricelistBrand) => ({
+                    id: pb.id, name: pb.name, logo_url: pb.logoUrl, updated_at: new Date().toISOString()
+                }));
+
+                const flatPricelists = (cleanData.pricelists || []).map((pl: Pricelist) => flattenPricelist(pl));
+
+                // BATCH UPSERTS
+                if (flatBrands.length > 0) await supabase.from('brands').upsert(flatBrands);
+                if (flatPLBrands.length > 0) await supabase.from('pricelist_brands').upsert(flatPLBrands);
+                
+                broadcastSync(50, 'syncing');
+
+                if (flatCategories.length > 0) await supabase.from('categories').upsert(flatCategories);
+                
+                const chunkArray = (arr: any[], size: number) => {
+                    const chunks = [];
+                    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+                    return chunks;
+                };
+
+                const productChunks = chunkArray(flatProducts, 50);
+                for (let i = 0; i < productChunks.length; i++) {
+                    const chunk = productChunks[i];
+                    await supabase.from('products').upsert(chunk);
+                    // Yield during massive batch uploads
+                    if (i % 2 === 0) await yieldToMain();
+                }
+                
+                broadcastSync(80, 'syncing');
+
+                const plChunks = chunkArray(flatPricelists, 20); 
+                for (const chunk of plChunks) {
+                    const { error } = await supabase.from('pricelists').upsert(chunk);
+                    if (error && (error.code === '42703' || error.message.includes('400'))) {
+                        alert("Warning: Pricelists failed due to missing DB columns. Check Setup Guide.");
+                    }
+                }
+            }
+
             broadcastSync(100, 'complete');
             setTimeout(() => broadcastSync(0, 'idle'), 2500);
-        } catch (e) {
+
+        } catch (e: any) {
+            console.error("Save Sync Error:", e);
             broadcastSync(0, 'error');
         }
     }
