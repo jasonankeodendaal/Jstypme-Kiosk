@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { KioskApp } from './components/KioskApp';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -109,46 +108,20 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
   
-  // Prompt 1: State Lock for Saving
-  const [isSaving, setIsSaving] = useState(false);
-  const isSavingRef = useRef(false);
-
-  // Prompt 2: Timestamp Guard for "Last Write Wins"
-  const localLastModified = useRef<number>(0);
-  
   const syncTimeoutRef = useRef<number | null>(null);
   const kioskId = getKioskId();
   const isAdmin = currentRoute.startsWith('/admin');
 
   // Modified to allow background updates for admins (enabling Live Fleet Monitor)
   const fetchData = useCallback(async (isBackground = false) => {
-      // Prompt 1: Guard - Completely pause fetching if we are currently saving
-      if (isSavingRef.current) {
-          console.log("Sync Skipped: Save in progress (Lock Active)");
-          return;
-      }
-
-      // Prompt 2: Guard - Discard cloud data if we have modified local state recently (Last Write Wins)
-      // We use a 5-second buffer to allow local writes to propagate to cloud
-      if (Date.now() - localLastModified.current < 5000) {
-          console.log("Sync Skipped: Local data is fresher (Last Write Wins)");
-          return;
-      }
-
+      // Removed isAdmin restriction to ensure background fleet updates occur
       if (!isBackground && isFirstLoad) setIsSyncing(true);
       
       try {
         const data = await generateStoreData();
-        
-        // Check lock again after async operation
-        if (isSavingRef.current) return;
-
         if (data) {
            setStoreData(prev => {
                if (!prev) return data;
-               // Final check before state update
-               if (isSavingRef.current) return prev;
-               
                // Always return new data so Admin Dashboard receives live Fleet updates.
                // Note: AdminDashboard handles its own "unsaved changes" logic to prevent form overwrites.
                return { ...data };
@@ -169,10 +142,7 @@ export default function App() {
 
     // Polling is now active for EVERYONE (Admins need it for Fleet, Kiosks for Content)
     const interval = setInterval(() => {
-        // Only fetch if not saving
-        if (!isSavingRef.current) {
-            fetchData(true);
-        }
+        fetchData(true);
     }, 30000); // 30s heartbeat for quicker fleet updates
 
     let channel: any = null;
@@ -182,15 +152,12 @@ export default function App() {
           .channel('global_sync_channel')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, 
             () => {
-              // Pause subscription events while saving
-              if (isSavingRef.current) return;
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
               syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
             }
           )
           .on('postgres_changes', { event: '*', schema: 'public', table: 'kiosks' }, 
             () => {
-              if (isSavingRef.current) return;
               if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
               syncTimeoutRef.current = window.setTimeout(() => fetchData(true), 1000);
             }
@@ -201,31 +168,15 @@ export default function App() {
         if (channel) supabase.removeChannel(channel);
         if (interval) clearInterval(interval);
     };
-  }, [fetchData, kioskId]);
+  }, [fetchData, kioskId]); // Removed isAdmin from deps so it runs for admin too
 
   const handleUpdateData = async (newData: StoreData) => {
-    // 1. Activate Lock
-    isSavingRef.current = true;
-    setIsSaving(true);
-    
-    // 2. Set Local Timestamp Guard
-    localLastModified.current = Date.now();
-
-    // 3. Optimistic Local Update
     setStoreData({ ...newData }); 
-    
     try {
         await saveStoreData(newData);
         setLastSyncTime(new Date().toLocaleTimeString());
     } catch (e: any) {
         console.error("Manual save failed", e);
-    } finally {
-        // 4. Release Lock with Buffer
-        // Wait 1s to allow cloud propagation/subscriptions to settle
-        setTimeout(() => {
-            isSavingRef.current = false;
-            setIsSaving(false);
-        }, 1000);
     }
   };
 

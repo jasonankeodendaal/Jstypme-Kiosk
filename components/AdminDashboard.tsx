@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -96,7 +95,6 @@ const SystemDocumentation = () => {
             </div>
             
             <div className="flex-1 overflow-y-auto bg-white relative p-6 md:p-12 lg:p-20 scroll-smooth">
-                {/* Documentation Sections omitted for brevity but preserved in output */}
                 {activeSection === 'architecture' && (
                     <div className="space-y-16 animate-fade-in max-w-5xl">
                         <div className="space-y-6">
@@ -116,9 +114,218 @@ const SystemDocumentation = () => {
                                 </p>
                             </div>
                         </div>
+                        
+                        <div className="relative p-12 bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden min-h-[450px] flex flex-col items-center justify-center">
+                            <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+                            <div className="relative w-full max-w-4xl flex flex-col md:flex-row items-center justify-between gap-12">
+                                <div className="flex flex-col items-center gap-4 group"><div className="w-24 h-24 bg-white/5 border-2 border-blue-500/30 rounded-[2rem] flex items-center justify-center relative transition-all duration-500 group-hover:border-blue-500 group-hover:scale-110"><Monitor className="text-blue-400" size={40} /></div><div className="text-center"><div className="text-white font-black text-xs uppercase tracking-widest">Admin Hub</div><div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Orders & Updates</div></div></div>
+                                <div className="flex-1 w-full h-24 relative flex items-center justify-center"><div className="w-full h-1 bg-white/5 rounded-full relative"><div className="absolute inset-0 bg-blue-500/20 blur-md"></div><div className="data-flow absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,1)]"></div></div><div className="absolute -bottom-8 bg-slate-800 border border-slate-700 px-4 py-1.5 rounded-xl text-[9px] font-black text-blue-400 uppercase tracking-widest">Encrypted Cloud Sync</div></div>
+                                <div className="flex flex-col items-center gap-4 group"><div className="w-32 h-20 bg-slate-800 rounded-2xl border-2 border-green-500/30 flex items-center justify-center relative shadow-2xl transition-all duration-500 group-hover:border-green-500 group-hover:rotate-1"><Tablet className="text-green-400" size={32} /></div><div className="text-center"><div className="text-white font-black text-xs uppercase tracking-widest">Kiosk Device</div><div className="text-slate-500 text-[9px] font-bold uppercase mt-1">Local Storage Active</div></div></div>
+                            </div>
+                        </div>
                     </div>
                 )}
-                {/* ... other sections ... */}
+
+                {activeSection === 'inventory' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-purple-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-purple-500/20">Module 02: Relational Integrity</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Nested Tree</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    Retail data is naturally hierarchical. A <strong>Product</strong> belongs to a <strong>Category</strong>, which belongs to a <strong>Brand</strong>.
+                                    In many older systems, this relationship is "flat" (like a spreadsheet row), which causes duplication errors.
+                                </p>
+                                <p>
+                                    Kiosk Pro enforces a strict <strong>Parent-Child Architecture</strong>. You cannot create a product without a category, and you cannot create a category without a brand.
+                                    This ensures that if you delete a Brand (e.g., "Samsung"), the system smartly cascades this action to archive all associated TVs and Soundbars automatically, preventing "orphan data" that crashes apps.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 border border-slate-200 rounded-[3rem] p-12 relative overflow-hidden">
+                            <div className="flex flex-col items-center gap-8 relative z-10">
+                                {/* Brand Node */}
+                                <div className="flex flex-col items-center">
+                                    <div className="w-32 h-16 bg-slate-900 rounded-2xl border-2 border-purple-500 shadow-xl flex items-center justify-center relative z-20">
+                                        <span className="text-white font-black uppercase text-sm tracking-widest">Brand</span>
+                                        <div className="absolute -top-3 -right-3 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white border-2 border-white">1</div>
+                                    </div>
+                                    <div className="h-8 w-0.5 bg-slate-300"></div>
+                                </div>
+
+                                {/* Category Nodes */}
+                                <div className="flex gap-12 relative">
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-0.5 bg-slate-300 -translate-y-full"></div>
+                                    {[1, 2].map((i) => (
+                                        <div key={i} className="flex flex-col items-center">
+                                            <div className="h-4 w-0.5 bg-slate-300"></div>
+                                            <div className="w-28 h-12 bg-white rounded-xl border-2 border-slate-200 shadow-sm flex items-center justify-center relative z-20">
+                                                <span className="text-slate-600 font-bold uppercase text-xs tracking-wider">Category</span>
+                                            </div>
+                                            <div className="h-6 w-0.5 bg-slate-300"></div>
+                                            {/* Product Nodes */}
+                                            <div className="flex gap-2">
+                                                <div className="w-8 h-8 bg-blue-100 rounded-lg border border-blue-200"></div>
+                                                <div className="w-8 h-8 bg-blue-100 rounded-lg border border-blue-200"></div>
+                                                <div className="w-8 h-8 bg-blue-100 rounded-lg border border-blue-200"></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="absolute bottom-4 left-0 right-0 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Strict Hierarchy Visualization</div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'pricelists' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-indigo-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-indigo-500/20">Module 03: The Pricing Engine</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">Rounding & Logic</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    Prices in retail marketing are rarely mathematical; they are psychological. A raw database price might be <code className="bg-red-50 text-red-600 px-1 rounded">R 499.99</code>, but on a premium display, this looks cluttered.
+                                </p>
+                                <p>
+                                    Our Pricing Engine applies a <strong>"Charm Filter"</strong> before rendering any number. It automatically rounds decimals up (Ceiling) and pushes awkward endings like <code className="bg-slate-100 px-1 rounded">.99</code> to the next clean integer.
+                                    This happens client-side, meaning the raw data remains accurate for accounting, but the display is optimized for human readability.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-900 rounded-3xl p-8 border border-indigo-500/20 flex flex-col md:flex-row items-center justify-center gap-12 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-5 text-indigo-500 rotate-12 pointer-events-none"><Table size={120} /></div>
+                            <div className="flex flex-col items-center gap-2 relative z-10">
+                                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Raw Input</div>
+                                <div className="text-4xl font-mono text-slate-400 line-through decoration-red-500/50 decoration-4">R 129.99</div>
+                            </div>
+                            <div className="flex flex-col items-center gap-2 z-10">
+                                <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.5)] animate-spin-slow">
+                                    <RefreshCw className="text-white" size={24} />
+                                </div>
+                                <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-slate-950 px-2 py-1 rounded">Algorithm</div>
+                            </div>
+                            <div className="flex flex-col items-center gap-2 relative z-10">
+                                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Display Output</div>
+                                <div className="text-6xl font-black font-mono text-green-400 tracking-tighter drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">R 130.00</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'screensaver' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-pink-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-pink-500/20">Module 04: Visual Engine</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Double Buffer</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    A common flaw in web-based signage is the "Black Flash" that occurs when one video ends and the next one loads. This breaks the illusion of a seamless broadcast.
+                                </p>
+                                <p>
+                                    To fix this, we use a <strong>Double Buffer</strong> technique (Slot A & Slot B). While Slot A is playing, Slot B is secretly pre-loading the next video in the background.
+                                    When the transition time arrives, we cross-fade the opacity instantly. The viewer never sees a loading spinner or a blank screen.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-black rounded-[3rem] p-12 border border-slate-800 relative overflow-hidden">
+                            <div className="flex justify-center gap-4 md:gap-12 relative z-10">
+                                <div className="w-48 aspect-[9/16] bg-slate-900 border-2 border-green-500 rounded-2xl flex items-center justify-center relative shadow-[0_0_30px_rgba(34,197,94,0.3)]">
+                                    <span className="text-green-500 font-black text-2xl uppercase">Slot A</span>
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-black bg-green-900 text-green-300 px-2 py-1 rounded">PLAYING</div>
+                                </div>
+                                <div className="flex flex-col justify-center items-center gap-2">
+                                    <div className="w-16 h-1 bg-slate-800 rounded-full overflow-hidden">
+                                        <div className="h-full bg-slate-500 w-1/2 animate-[shimmer_2s_infinite]"></div>
+                                    </div>
+                                    <RefreshCw className="text-slate-600 animate-spin" size={24} />
+                                </div>
+                                <div className="w-48 aspect-[9/16] bg-slate-900 border-2 border-slate-700 rounded-2xl flex items-center justify-center relative opacity-50">
+                                    <span className="text-slate-500 font-black text-2xl uppercase">Slot B</span>
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-black bg-slate-800 text-slate-400 px-2 py-1 rounded">BUFFERING</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'fleet' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-emerald-500/20">Module 05: Telemetry</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Heartbeat Protocol</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    Managing 50+ tablets remotely is impossible without automated diagnostics. The Kiosk Fleet system uses a <strong>"Dead Man's Switch"</strong> heartbeat.
+                                </p>
+                                <p>
+                                    Every 30 seconds, each active tablet sends a tiny packet of JSON data to the cloud containing its battery level, Wi-Fi signal strength, and firmware version.
+                                    If the cloud stops receiving this pulse for more than 5 minutes, it flags the device as <strong>OFFLINE</strong> in the Admin Dashboard, alerting staff to a potential power failure or theft.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-900 rounded-[3rem] p-12 border border-slate-800 relative overflow-hidden flex items-center justify-center min-h-[300px]">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.1)_0%,_transparent_70%)]"></div>
+                            
+                            {/* Device */}
+                            <div className="relative z-10 mr-32">
+                                <div className="w-24 h-32 bg-slate-800 rounded-2xl border-2 border-emerald-500 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.3)]">
+                                    <Tablet className="text-emerald-400" size={32} />
+                                </div>
+                                <div className="absolute -top-4 -right-4 w-full h-full rounded-full border-4 border-emerald-500/20 pulse-ring"></div>
+                            </div>
+
+                            {/* Cloud */}
+                            <div className="relative z-10 ml-32">
+                                <div className="w-32 h-20 bg-slate-800 rounded-[2rem] border-2 border-blue-500 flex items-center justify-center shadow-[0_0_40px_rgba(59,130,246,0.3)]">
+                                    <Cloud className="text-blue-400" size={40} />
+                                </div>
+                            </div>
+
+                            {/* Signal Particles */}
+                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-1 bg-slate-800 rounded-full overflow-hidden">
+                                <div className="absolute top-0 left-0 w-8 h-full bg-emerald-400 blur-sm animate-[travel_1.5s_infinite_linear]"></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeSection === 'tv' && (
+                    <div className="space-y-16 animate-fade-in max-w-5xl">
+                        <div className="space-y-6">
+                            <div className="bg-orange-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest w-fit shadow-lg shadow-orange-500/20">Module 06: Broadcasting</div>
+                            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">The Queue System</h2>
+                            <div className="prose prose-lg text-slate-600 leading-relaxed">
+                                <p>
+                                    TV Mode transforms the application from an interactive tool into a passive broadcast receiver. Unlike Kiosk mode, it has no idle timeout and never sleeps.
+                                </p>
+                                <p>
+                                    It operates on a <strong>First-In-First-Out (FIFO)</strong> playlist buffer. Admins can queue up specific "Brand Loops" (e.g., only LG videos) or a "Global Loop" (all content shuffled).
+                                    A built-in <strong>Watchdog</strong> monitors video playback progress; if a video file is corrupt and stalls for more than 5 seconds, the watchdog forcibly skips to the next track to prevent a frozen screen.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 border border-slate-200 rounded-[3rem] p-12 overflow-hidden">
+                            <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-4">
+                                {[1, 2, 3, 4].map((i) => (
+                                    <div key={i} className={`flex-shrink-0 w-40 aspect-video rounded-xl border-2 flex flex-col items-center justify-center relative ${i === 1 ? 'bg-orange-50 border-orange-500 shadow-lg scale-105' : 'bg-slate-100 border-slate-200 opacity-60'}`}>
+                                        <Film className={i === 1 ? 'text-orange-500' : 'text-slate-400'} size={24} />
+                                        <span className={`text-[9px] font-black uppercase mt-2 ${i === 1 ? 'text-orange-600' : 'text-slate-400'}`}>Clip 0{i}</span>
+                                        {i === 1 && <div className="absolute -top-3 bg-orange-600 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Live</div>}
+                                    </div>
+                                ))}
+                                <div className="flex-shrink-0 w-40 aspect-video rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center bg-slate-50">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase">Queue End</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -142,7 +349,7 @@ const Auth = ({ admins, onLogin }: { admins: AdminUser[], onLogin: (user: AdminU
   );
 };
 
-// ... FileUpload, InputField ...
+// --- UPDATED FileUpload to Support PDF Rasterization ---
 const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <ImageIcon />, allowMultiple = false, onRasterize }: any) => {
   const [uploadProgress, setUploadProgress] = useState(0); 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -228,8 +435,7 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
 };
 
 const InputField = ({ label, val, onChange, placeholder, isArea = false, half = false, type = 'text' }: any) => (<div className={`mb-4 ${half ? 'w-full' : ''}`}><label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 ml-1">{label}</label>{isArea ? <textarea value={val} onChange={onChange} className="w-full p-3 bg-white text-black border border-slate-300 rounded-xl h-24 focus:ring-2 focus:ring-blue-500 outline-none resize-none text-sm" placeholder={placeholder} /> : <input type={type} value={val} onChange={onChange} className="w-full p-3 bg-white text-black border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm" placeholder={placeholder} />}</div>);
-
-// ... Editor Components (CatalogueManager, ManualPricelistEditor, etc. preserved implicitly or defined as needed) ...
+// ... existing CatalogueManager, ManualPricelistEditor, PricelistManager, ProductEditor ...
 const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalogue[], onSave: (c: Catalogue[], immediate: boolean) => void, brandId?: string }) => { 
     const [localList, setLocalList] = useState(catalogues || []); 
     
@@ -438,7 +644,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
 // ... existing downloadZip and AdminDashboard component ...
 const downloadZip = async (data: StoreData | null) => { if (!data) return; const zip = new JSZip(); const dataJson = JSON.stringify(data, null, 2); zip.file("store_config.json", dataJson); const backupFolder = zip.folder("_System_Backup"); if (backupFolder) { backupFolder.file("export_info.txt", `Kiosk Pro Backup\nGenerated: ${new Date().toISOString()}`); } const content = await zip.generateAsync({ type: "blob" }); const url = URL.createObjectURL(content); const link = document.createElement("a"); link.href = url; link.download = `kiosk_backup_${new Date().toISOString().split('T')[0]}.zip`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); };
 
-export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => Promise<void>, onRefresh: () => void }) => {
+export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => void, onRefresh: () => void }) => {
   // ... existing AdminDashboard logic ...
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [activeTab, setActiveTab] = useState<string>('inventory');
@@ -460,10 +666,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [importProcessing, setImportProcessing] = useState(false);
   const [importProgress, setImportProgress] = useState<string>('');
   const [exportProcessing, setExportProcessing] = useState(false);
-  
-  // Prompt 3: Blocking Overlay State
-  const [isGlobalSaving, setIsGlobalSaving] = useState(false);
-  const [saveProgress, setSaveProgress] = useState(0);
 
   const logout = useCallback(() => { setCurrentUser(null); }, []);
 
@@ -478,16 +680,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
     return () => { if (lockTimer) window.clearTimeout(lockTimer); userEvents.forEach(evt => window.removeEventListener(evt, resetLockTimer)); };
   }, [currentUser, logout]);
 
-  // Listen for sync progress updates
-  useEffect(() => {
-      const handleSync = (e: any) => {
-          const { progress } = e.detail;
-          setSaveProgress(progress);
-      };
-      window.addEventListener('kiosk-sync-event', handleSync);
-      return () => window.removeEventListener('kiosk-sync-event', handleSync);
-  }, []);
-
   const availableTabs = [ { id: 'inventory', label: 'Inventory', icon: Box }, { id: 'marketing', label: 'Marketing', icon: Megaphone }, { id: 'pricelists', label: 'Pricelists', icon: RIcon }, { id: 'tv', label: 'TV', icon: Tv }, { id: 'screensaver', label: 'Screensaver', icon: Monitor }, { id: 'fleet', label: 'Fleet', icon: Tablet }, { id: 'history', label: 'History', icon: History }, { id: 'settings', label: 'Settings', icon: Settings }, { id: 'guide', label: 'System Guide', icon: BookOpen } ].filter(tab => tab.id === 'guide' || currentUser?.permissions[tab.id as keyof AdminPermissions]);
 
   useEffect(() => { if (currentUser && availableTabs.length > 0 && !availableTabs.find(t => t.id === activeTab)) { setActiveTab(availableTabs[0].id); } }, [currentUser, availableTabs, activeTab]);
@@ -496,37 +688,14 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
   const handleLocalUpdate = (newData: StoreData, immediate = false) => {
       setLocalData(newData);
-      if (immediate) { 
-          // Async call, but we don't await here for granular updates to keep UI snappy
-          // Major saves use handleGlobalSave
-          onUpdateData(newData); 
-          setHasUnsavedChanges(false); 
-      } else { 
-          setHasUnsavedChanges(true); 
-      }
+      if (immediate) { onUpdateData(newData); setHasUnsavedChanges(false); } else { setHasUnsavedChanges(true); }
       if (selectedBrand) { const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id); if (updatedBrand) setSelectedBrand(updatedBrand); }
       if (selectedCategory && selectedBrand) { const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id); const updatedCat = updatedBrand?.categories.find(c => c.id === selectedCategory.id); if (updatedCat) setSelectedCategory(updatedCat); }
       if (selectedTVBrand && newData.tv) { const updatedTVBrand = newData.tv.brands.find(b => b.id === selectedTVBrand.id); if (updatedTVBrand) setSelectedTVBrand(updatedTVBrand); }
   };
 
   const checkSkuDuplicate = (sku: string, currentId: string) => { if (!sku || !localData) return false; for (const b of localData.brands) { for (const c of b.categories) { for (const p of c.products) { if (p.sku && p.sku.toLowerCase() === sku.toLowerCase() && p.id !== currentId) return true; } } } return false; };
-  
-  // Prompt 3: Async Global Save with Overlay
-  const handleGlobalSave = async () => { 
-      if (localData) { 
-          setSaveProgress(0);
-          setIsGlobalSaving(true);
-          try {
-              await onUpdateData(localData); 
-              setHasUnsavedChanges(false); 
-          } catch(e) {
-              alert("Save failed. Please check connection.");
-          } finally {
-              setIsGlobalSaving(false);
-          }
-      } 
-  };
-
+  const handleGlobalSave = () => { if (localData) { onUpdateData(localData); setHasUnsavedChanges(false); } };
   const updateFleetMember = async (kiosk: KioskRegistry): Promise<boolean> => { if(supabase) { const payload = { id: kiosk.id, name: kiosk.name, device_type: kiosk.deviceType, assigned_zone: kiosk.assignedZone, show_pricelists: kiosk.showPricelists ?? true }; try { const { error } = await supabase.from('kiosks').upsert(payload); if (error) throw error; onRefresh(); return true; } catch (e: any) { console.error("Fleet update failed", e); if (e.code === '42703' || e.message?.includes('show_pricelists')) { console.warn("Retrying fleet update without show_pricelists column..."); const { show_pricelists, ...legacyPayload } = payload; try { const { error: secondError } = await supabase.from('kiosks').upsert(legacyPayload); if (!secondError) { alert("Warning: Basic settings saved, but 'Show Pricelists' setting could not be applied.\n\nThe database column 'show_pricelists' is missing or not visible to the API yet. Please run the 'Nuclear Column Reset' script in the Setup Guide."); onRefresh(); return true; } } catch (retryError) { console.error("Retry failed", retryError); } } if (e.code === 'PGRST204') { alert("Update Failed: Database table is missing required columns. Please check Setup Guide > Migration."); } else { alert("Update Failed: " + (e.message || "Unknown error")); } return false; } } return false; };
   const removeFleetMember = async (id: string) => { const kiosk = localData?.fleet?.find(f => f.id === id); if(!kiosk) return; if(confirm(`Archive and remove device "${kiosk.name}" from live monitoring?`) && supabase) { const newArchive = addToArchive('device', kiosk.name, kiosk, 'delete'); const updatedData = { ...localData!, archive: newArchive }; await supabase.from('kiosks').delete().eq('id', id); handleLocalUpdate(updatedData, true); onRefresh(); } };
   const addToArchive = (type: ArchivedItem['type'], name: string, data: any, action: ArchivedItem['action'] = 'delete', method: ArchivedItem['method'] = 'admin_panel') => { if (!localData || !currentUser) return; const now = new Date().toISOString(); const newItem: ArchivedItem = { id: generateId('arch'), type, action, name, userName: currentUser.name, method, data, deletedAt: now }; const currentArchive = localData.archive || { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }; const newArchive = { ...currentArchive, deletedItems: [newItem, ...(currentArchive.deletedItems || [])].slice(0, 1000) }; return newArchive; };
@@ -595,48 +764,9 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
     return (<div className="space-y-6"><div className="flex justify-between items-center mb-4"><h3 className="font-bold uppercase text-slate-500 text-xs tracking-wider">{brandId ? 'Brand Catalogues' : 'Global Pamphlets'}</h3><button onClick={addCatalogue} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold textxs uppercase flex items-center gap-2"><Plus size={14} /> Add New</button></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{localList.map((cat) => (<div key={cat.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col"><div className="h-40 bg-slate-100 relative group flex items-center justify-center overflow-hidden">{cat.thumbnailUrl || (cat.pages && cat.pages[0]) ? (<img src={cat.thumbnailUrl || cat.pages[0]} className="w-full h-full object-contain" />) : (<BookOpen size={32} className="text-slate-300" />)}{cat.pdfUrl && (<div className="absolute top-2 right-2 bg-red-500 text-white text-[8px] font-bold px-2 py-1 rounded shadow-sm">PDF</div>)}</div><div className="p-4 space-y-3 flex-1 flex flex-col"><input value={cat.title} onChange={(e) => updateCatalogue(cat.id, { title: e.target.value })} className="w-full font-black text-slate-900 border-b border-transparent focus:border-blue-500 outline-none text-sm" placeholder="Title" />{cat.type === 'catalogue' || brandId ? (<div><label className="text-[8px] font-bold text-slate-400 uppercase">Catalogue Year</label><input type="number" value={cat.year || new Date().getFullYear()} onChange={(e) => updateCatalogue(cat.id, { year: parseInt(e.target.value) })} className="w-full text-xs border border-slate-200 rounded p-1" /></div>) : (<><div className="grid grid-cols-2 gap-2"><div><label className="text-[8px] font-bold text-slate-400 uppercase">Start Date</label><input type="date" value={cat.startDate || ''} onChange={(e) => updateCatalogue(cat.id, { startDate: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1" /></div><div><label className="text-[8px] font-bold text-slate-400 uppercase">End Date</label><input type="date" value={cat.endDate || ''} onChange={(e) => updateCatalogue(cat.id, { endDate: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1" /></div></div><div><label className="text-[8px] font-bold text-slate-400 uppercase">Promotional Sub-Header</label><textarea value={cat.promoText || ''} onChange={(e) => updateCatalogue(cat.id, { promoText: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1 resize-none h-12" placeholder="Enter promo text..." /></div></>)}<div className="grid grid-cols-2 gap-2 mt-auto pt-2"><FileUpload label="Thumbnail (Image)" accept="image/*" currentUrl={cat.thumbnailUrl || (cat.pages?.[0])} onUpload={(url: any) => updateCatalogue(cat.id, { thumbnailUrl: url }, true)} /><FileUpload label="Document (PDF)" accept="application/pdf" currentUrl={cat.pdfUrl} icon={<FileText />} onUpload={(url: any) => updateCatalogue(cat.id, { pdfUrl: url }, true)} onRasterize={(urls: string[]) => updateCatalogue(cat.id, { pages: urls }, true)} /></div><div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-2"><button onClick={() => handleUpdate(localList.filter(c => c.id !== cat.id), true)} className="text-red-400 hover:text-red-600 flex items-center gap-1 text-[10px] font-bold uppercase"><Trash2 size={12} /> Delete Catalogue</button></div></div></div>))}</div></div>); };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden relative">
-        {/* PROMPT 3: BLOCKING OVERLAY */}
-        {isGlobalSaving && (
-            <div className="fixed inset-0 z-[200] bg-black/90 flex flex-col items-center justify-center text-white backdrop-blur-md animate-fade-in cursor-wait">
-                {/* Progress Circle */}
-                <div className="relative w-32 h-32 mb-8 flex items-center justify-center">
-                     <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                        <circle className="text-slate-800" strokeWidth="6" stroke="currentColor" fill="transparent" r="42" cx="50" cy="50" />
-                        <circle 
-                            className="text-blue-500 transition-all duration-300 ease-out" 
-                            strokeWidth="6" 
-                            strokeDasharray={264} 
-                            strokeDashoffset={264 - (264 * saveProgress / 100)} 
-                            strokeLinecap="round" 
-                            stroke="currentColor" 
-                            fill="transparent" 
-                            r="42" 
-                            cx="50" 
-                            cy="50" 
-                        />
-                     </svg>
-                     <div className="flex flex-col items-center justify-center">
-                        <span className="text-3xl font-black font-mono tracking-tighter">{Math.round(saveProgress)}%</span>
-                     </div>
-                </div>
-                
-                <h2 className="text-4xl font-black uppercase tracking-widest mb-2 animate-pulse">Syncing Cloud</h2>
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em] mb-8">Do not close this window</p>
-                
-                <div className="w-64 h-1.5 bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                    <div className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-300 ease-out relative" style={{ width: `${saveProgress}%` }}>
-                        <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/50 blur-[2px]"></div>
-                    </div>
-                </div>
-                
-                <div className="mt-8 text-[10px] font-mono text-slate-500">
-                    {saveProgress < 30 ? 'Preparing data payload...' : saveProgress < 80 ? 'Writing to database...' : 'Finalizing consistency check...'}
-                </div>
-            </div>
-        )}
-
-        <header className="bg-slate-900 text-white shrink-0 shadow-xl z-20"><div className="flex items-center justify-between px-4 py-3 border-b border-slate-800"><div className="flex items-center gap-2"><Settings className="text-blue-500" size={24} /><div><h1 className="text-lg font-black uppercase tracking-widest leading-none">Admin Hub</h1></div></div><div className="flex items-center gap-4"><div className="text-xs font-bold text-slate-400 uppercase hidden md:block">Hello, {currentUser.name}</div><button onClick={handleGlobalSave} disabled={!hasUnsavedChanges || isGlobalSaving} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}><SaveAll size={16} />{hasUnsavedChanges ? 'Save Changes' : 'Saved'}</button></div><div className="flex items-center gap-3"><div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>{isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}<span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span></div><button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button><button onClick={logout} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2"><LogOut size={16} /><span className="text-[10px] font-bold uppercase hidden md:inline">Logout</span></button></div></div><div className="flex overflow-x-auto no-scrollbar">{availableTabs.map(tab => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 min-w-[100px] py-4 text-center text-xs font-black uppercase tracking-wider border-b-4 transition-all ${activeTab === tab.id ? 'border-blue-500 text-white bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>{tab.label}</button>))}</div></header>
+    // ... existing JSX structure ...
+    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
+        <header className="bg-slate-900 text-white shrink-0 shadow-xl z-20"><div className="flex items-center justify-between px-4 py-3 border-b border-slate-800"><div className="flex items-center gap-2"><Settings className="text-blue-500" size={24} /><div><h1 className="text-lg font-black uppercase tracking-widest leading-none">Admin Hub</h1></div></div><div className="flex items-center gap-4"><div className="text-xs font-bold text-slate-400 uppercase hidden md:block">Hello, {currentUser.name}</div><button onClick={handleGlobalSave} disabled={!hasUnsavedChanges} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}><SaveAll size={16} />{hasUnsavedChanges ? 'Save Changes' : 'Saved'}</button></div><div className="flex items-center gap-3"><div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>{isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}<span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span></div><button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button><button onClick={logout} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2"><LogOut size={16} /><span className="text-[10px] font-bold uppercase hidden md:inline">Logout</span></button></div></div><div className="flex overflow-x-auto no-scrollbar">{availableTabs.map(tab => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 min-w-[100px] py-4 text-center text-xs font-black uppercase tracking-wider border-b-4 transition-all ${activeTab === tab.id ? 'border-blue-500 text-white bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>{tab.label}</button>))}</div></header>
         {activeTab === 'marketing' && (<div className="bg-white border-b border-slate-200 flex overflow-x-auto no-scrollbar shadow-sm z-10 shrink-0"><button onClick={() => setActiveSubTab('hero')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'hero' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Hero Banner</button><button onClick={() => setActiveSubTab('ads')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'ads' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Ad Zones</button><button onClick={() => setActiveSubTab('catalogues')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'catalogues' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Pamphlets</button></div>)}
 
         <main className="flex-1 overflow-y-auto p-2 md:p-8 relative pb-40 md:pb-8">
