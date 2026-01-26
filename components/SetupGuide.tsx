@@ -8,7 +8,7 @@ import {
   SmartphoneNfc, Container, Split, DatabaseZap, Code2, 
   Wifi, Clock, CloudLightning, FileJson, CheckCircle2, 
   AlertTriangle, Play, Pause, ChevronRight, Calculator,
-  Braces, ShieldCheck, Wrench
+  Braces, ShieldCheck, Wrench, Globe
 } from 'lucide-react';
 
 interface SetupGuideProps {
@@ -522,6 +522,19 @@ NOTIFY pgrst, 'reload schema';`}
                                   <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl">
                                       <div className="text-blue-400 text-xs font-black uppercase mb-2 flex items-center gap-2"><Lock size={14}/> Row Level Security (RLS)</div>
                                       <p className="text-[11px] text-slate-400 leading-relaxed">RLS acts as a firewall at the database row level. Even if the API key is exposed, the policies defined in SQL restrict what actions can be taken.</p>
+                                  </div>
+                                  
+                                  {/* NEW: CORS Warning Section */}
+                                  <div className="bg-blue-950/50 p-4 rounded-xl border border-blue-500/30 mt-6">
+                                      <h4 className="text-blue-400 font-bold uppercase text-xs mb-2 flex items-center gap-2"><Globe size={14}/> Important: Storage CORS Configuration</h4>
+                                      <p className="text-[11px] text-slate-300 leading-relaxed mb-3">
+                                          For the Kiosk to load images/PDFs from the cloud on mobile devices, you must configure CORS headers in your Supabase Dashboard.
+                                      </p>
+                                      <div className="bg-black/30 p-3 rounded-lg font-mono text-[10px] text-green-300">
+                                          Allowed Origins: *<br/>
+                                          Allowed Methods: GET, POST, PUT, HEAD<br/>
+                                          Max Age: 3600
+                                      </div>
                                   </div>
                               </div>
                           </div>

@@ -202,7 +202,28 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
 
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-y-auto animate-fade-in pb-40 md:pb-24">
-      
+      {/* 3D Styles Injection */}
+      <style>{`
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        
+        @media (min-width: 768px) {
+            .perspective-container { perspective: 1000px; }
+            .book-wrapper { transform-style: preserve-3d; transform: rotateY(-20deg) rotateX(5deg); transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+            .book-wrapper:hover { transform: rotateY(0deg) rotateX(0deg) scale(1.05) translateY(-10px); }
+            .book-spine { border-left: 4px solid #cbd5e1; }
+            .book-shadow { box-shadow: 20px 30px 50px -15px rgba(0,0,0,0.5); }
+        }
+        
+        @media (max-width: 767px) {
+            .perspective-container { perspective: none; }
+            .book-wrapper { transform: none !important; }
+            .book-spine { border-left: 1px solid #cbd5e1; }
+            .animate-float { animation: none; }
+            .book-shadow { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        }
+      `}</style>
+
       {/* Hero Section */}
       <div className="bg-slate-900 text-white relative overflow-hidden shrink-0 min-h-[20vh] md:min-h-[35vh] flex flex-col">
         {heroConfig?.backgroundImageUrl ? (
@@ -254,25 +275,25 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
             </div>
 
             {mainPamphlet && (
-                <div className="perspective-1000 shrink-0 w-[35%] md:w-[320px] max-w-[160px] md:max-w-none flex items-center justify-center">
+                <div className="perspective-container shrink-0 w-[35%] md:w-[320px] max-w-[160px] md:max-w-none flex items-center justify-center">
                     <div 
-                        className="relative w-full aspect-[2/3] cursor-pointer animate-float"
+                        className="relative w-full aspect-[2/3] cursor-pointer animate-float book-wrapper"
                         onClick={() => onViewDocument(mainPamphlet)}
                         role="button"
                     >
-                        <div className="book-container absolute inset-0 bg-white rounded-r-sm md:rounded-r-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
+                        <div className="book-container absolute inset-0 bg-white rounded-r-sm md:rounded-r-2xl book-shadow overflow-hidden">
                              {mainPamphlet.thumbnailUrl || (mainPamphlet.pages && mainPamphlet.pages[0]) ? (
                                 <img 
                                     src={mainPamphlet.thumbnailUrl || mainPamphlet.pages[0]} 
-                                    className="w-full h-full object-cover rounded-r-sm md:rounded-r-2xl book-cover border-l-2 md:border-l-[6px] border-slate-200"
+                                    className="w-full h-full object-cover rounded-r-sm md:rounded-r-2xl book-spine"
                                     alt={`${mainPamphlet.title} Cover`}
                                     loading="eager"
                                 />
                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 font-bold uppercase text-[10px]">No Cover</div>
+                                <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 font-bold uppercase text-[10px] book-spine">No Cover</div>
                              )}
-                             <div className="absolute top-0 bottom-0 left-0 w-0.5 md:w-1.5 bg-gradient-to-r from-slate-300 to-slate-100"></div>
-                             <div className="absolute bottom-2 md:bottom-6 left-0 right-0 text-center bg-black/80 text-white py-1 md:py-3">
+                             <div className="absolute top-0 bottom-0 left-0 w-0.5 md:w-1.5 bg-gradient-to-r from-slate-300 to-transparent pointer-events-none"></div>
+                             <div className="absolute bottom-2 md:bottom-6 left-0 right-0 text-center bg-black/80 text-white py-1 md:py-3 backdrop-blur-sm">
                                 <span className="text-[7px] md:text-sm font-black uppercase tracking-[0.2em] block truncate px-2">{mainPamphlet.title}</span>
                              </div>
                         </div>
