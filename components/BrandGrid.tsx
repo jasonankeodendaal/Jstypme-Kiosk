@@ -253,30 +253,33 @@ const BrandGrid: React.FC<BrandGridProps> = ({ brands, heroConfig, allCatalogs, 
                 </div>
             </div>
 
+            {/* SAFE HERO PAMPHLET - Replaced 3D transforms with 2D Shadows to prevent OOM Crashes on Legacy WebViews */}
             {mainPamphlet && (
-                <div className="perspective-1000 shrink-0 w-[35%] md:w-[320px] max-w-[160px] md:max-w-none flex items-center justify-center">
-                    <div 
-                        className="relative w-full aspect-[2/3] cursor-pointer animate-float"
+                <div className="shrink-0 w-[35%] md:w-[320px] max-w-[160px] md:max-w-none flex items-center justify-center">
+                    <button 
+                        className="relative w-full aspect-[2/3] cursor-pointer group transition-transform active:scale-95 hover:scale-105 duration-300"
                         onClick={() => onViewDocument(mainPamphlet)}
-                        role="button"
+                        type="button"
                     >
-                        <div className="book-container absolute inset-0 bg-white rounded-r-sm md:rounded-r-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]">
+                        <div className="absolute inset-0 bg-white rounded-r-lg md:rounded-r-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden border-l-4 md:border-l-8 border-slate-300">
                              {mainPamphlet.thumbnailUrl || (mainPamphlet.pages && mainPamphlet.pages[0]) ? (
                                 <img 
                                     src={mainPamphlet.thumbnailUrl || mainPamphlet.pages[0]} 
-                                    className="w-full h-full object-cover rounded-r-sm md:rounded-r-2xl book-cover border-l-2 md:border-l-[6px] border-slate-200"
+                                    className="w-full h-full object-cover"
                                     alt={`${mainPamphlet.title} Cover`}
                                     loading="eager"
                                 />
                              ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 font-bold uppercase text-[10px]">No Cover</div>
                              )}
-                             <div className="absolute top-0 bottom-0 left-0 w-0.5 md:w-1.5 bg-gradient-to-r from-slate-300 to-slate-100"></div>
-                             <div className="absolute bottom-2 md:bottom-6 left-0 right-0 text-center bg-black/80 text-white py-1 md:py-3">
+                             {/* Gloss Shine Effect (CSS only, GPU safe) */}
+                             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none"></div>
+                             
+                             <div className="absolute bottom-0 left-0 right-0 text-center bg-black/80 text-white py-1 md:py-3">
                                 <span className="text-[7px] md:text-sm font-black uppercase tracking-[0.2em] block truncate px-2">{mainPamphlet.title}</span>
                              </div>
                         </div>
-                    </div>
+                    </button>
                 </div>
             )}
         </div>
