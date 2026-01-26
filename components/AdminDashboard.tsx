@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -644,7 +645,7 @@ const importZip = async (file: File, onProgress?: (msg: string) => void): Promis
 // ... existing downloadZip and AdminDashboard component ...
 const downloadZip = async (data: StoreData | null) => { if (!data) return; const zip = new JSZip(); const dataJson = JSON.stringify(data, null, 2); zip.file("store_config.json", dataJson); const backupFolder = zip.folder("_System_Backup"); if (backupFolder) { backupFolder.file("export_info.txt", `Kiosk Pro Backup\nGenerated: ${new Date().toISOString()}`); } const content = await zip.generateAsync({ type: "blob" }); const url = URL.createObjectURL(content); const link = document.createElement("a"); link.href = url; link.download = `kiosk_backup_${new Date().toISOString().split('T')[0]}.zip`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); };
 
-export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => void, onRefresh: () => void }) => {
+export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeData: StoreData | null, onUpdateData: (d: StoreData) => Promise<void>, onRefresh: () => void }) => {
   // ... existing AdminDashboard logic ...
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [activeTab, setActiveTab] = useState<string>('inventory');
@@ -666,6 +667,9 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [importProcessing, setImportProcessing] = useState(false);
   const [importProgress, setImportProgress] = useState<string>('');
   const [exportProcessing, setExportProcessing] = useState(false);
+  
+  // Prompt 3: Blocking Overlay State
+  const [isGlobalSaving, setIsGlobalSaving] = useState(false);
 
   const logout = useCallback(() => { setCurrentUser(null); }, []);
 
@@ -688,14 +692,36 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
   const handleLocalUpdate = (newData: StoreData, immediate = false) => {
       setLocalData(newData);
-      if (immediate) { onUpdateData(newData); setHasUnsavedChanges(false); } else { setHasUnsavedChanges(true); }
+      if (immediate) { 
+          // Async call, but we don't await here for granular updates to keep UI snappy
+          // Major saves use handleGlobalSave
+          onUpdateData(newData); 
+          setHasUnsavedChanges(false); 
+      } else { 
+          setHasUnsavedChanges(true); 
+      }
       if (selectedBrand) { const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id); if (updatedBrand) setSelectedBrand(updatedBrand); }
       if (selectedCategory && selectedBrand) { const updatedBrand = newData.brands.find(b => b.id === selectedBrand.id); const updatedCat = updatedBrand?.categories.find(c => c.id === selectedCategory.id); if (updatedCat) setSelectedCategory(updatedCat); }
       if (selectedTVBrand && newData.tv) { const updatedTVBrand = newData.tv.brands.find(b => b.id === selectedTVBrand.id); if (updatedTVBrand) setSelectedTVBrand(updatedTVBrand); }
   };
 
   const checkSkuDuplicate = (sku: string, currentId: string) => { if (!sku || !localData) return false; for (const b of localData.brands) { for (const c of b.categories) { for (const p of c.products) { if (p.sku && p.sku.toLowerCase() === sku.toLowerCase() && p.id !== currentId) return true; } } } return false; };
-  const handleGlobalSave = () => { if (localData) { onUpdateData(localData); setHasUnsavedChanges(false); } };
+  
+  // Prompt 3: Async Global Save with Overlay
+  const handleGlobalSave = async () => { 
+      if (localData) { 
+          setIsGlobalSaving(true);
+          try {
+              await onUpdateData(localData); 
+              setHasUnsavedChanges(false); 
+          } catch(e) {
+              alert("Save failed. Please check connection.");
+          } finally {
+              setIsGlobalSaving(false);
+          }
+      } 
+  };
+
   const updateFleetMember = async (kiosk: KioskRegistry): Promise<boolean> => { if(supabase) { const payload = { id: kiosk.id, name: kiosk.name, device_type: kiosk.deviceType, assigned_zone: kiosk.assignedZone, show_pricelists: kiosk.showPricelists ?? true }; try { const { error } = await supabase.from('kiosks').upsert(payload); if (error) throw error; onRefresh(); return true; } catch (e: any) { console.error("Fleet update failed", e); if (e.code === '42703' || e.message?.includes('show_pricelists')) { console.warn("Retrying fleet update without show_pricelists column..."); const { show_pricelists, ...legacyPayload } = payload; try { const { error: secondError } = await supabase.from('kiosks').upsert(legacyPayload); if (!secondError) { alert("Warning: Basic settings saved, but 'Show Pricelists' setting could not be applied.\n\nThe database column 'show_pricelists' is missing or not visible to the API yet. Please run the 'Nuclear Column Reset' script in the Setup Guide."); onRefresh(); return true; } } catch (retryError) { console.error("Retry failed", retryError); } } if (e.code === 'PGRST204') { alert("Update Failed: Database table is missing required columns. Please check Setup Guide > Migration."); } else { alert("Update Failed: " + (e.message || "Unknown error")); } return false; } } return false; };
   const removeFleetMember = async (id: string) => { const kiosk = localData?.fleet?.find(f => f.id === id); if(!kiosk) return; if(confirm(`Archive and remove device "${kiosk.name}" from live monitoring?`) && supabase) { const newArchive = addToArchive('device', kiosk.name, kiosk, 'delete'); const updatedData = { ...localData!, archive: newArchive }; await supabase.from('kiosks').delete().eq('id', id); handleLocalUpdate(updatedData, true); onRefresh(); } };
   const addToArchive = (type: ArchivedItem['type'], name: string, data: any, action: ArchivedItem['action'] = 'delete', method: ArchivedItem['method'] = 'admin_panel') => { if (!localData || !currentUser) return; const now = new Date().toISOString(); const newItem: ArchivedItem = { id: generateId('arch'), type, action, name, userName: currentUser.name, method, data, deletedAt: now }; const currentArchive = localData.archive || { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }; const newArchive = { ...currentArchive, deletedItems: [newItem, ...(currentArchive.deletedItems || [])].slice(0, 1000) }; return newArchive; };
@@ -764,9 +790,17 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
     return (<div className="space-y-6"><div className="flex justify-between items-center mb-4"><h3 className="font-bold uppercase text-slate-500 text-xs tracking-wider">{brandId ? 'Brand Catalogues' : 'Global Pamphlets'}</h3><button onClick={addCatalogue} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold textxs uppercase flex items-center gap-2"><Plus size={14} /> Add New</button></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{localList.map((cat) => (<div key={cat.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col"><div className="h-40 bg-slate-100 relative group flex items-center justify-center overflow-hidden">{cat.thumbnailUrl || (cat.pages && cat.pages[0]) ? (<img src={cat.thumbnailUrl || cat.pages[0]} className="w-full h-full object-contain" />) : (<BookOpen size={32} className="text-slate-300" />)}{cat.pdfUrl && (<div className="absolute top-2 right-2 bg-red-500 text-white text-[8px] font-bold px-2 py-1 rounded shadow-sm">PDF</div>)}</div><div className="p-4 space-y-3 flex-1 flex flex-col"><input value={cat.title} onChange={(e) => updateCatalogue(cat.id, { title: e.target.value })} className="w-full font-black text-slate-900 border-b border-transparent focus:border-blue-500 outline-none text-sm" placeholder="Title" />{cat.type === 'catalogue' || brandId ? (<div><label className="text-[8px] font-bold text-slate-400 uppercase">Catalogue Year</label><input type="number" value={cat.year || new Date().getFullYear()} onChange={(e) => updateCatalogue(cat.id, { year: parseInt(e.target.value) })} className="w-full text-xs border border-slate-200 rounded p-1" /></div>) : (<><div className="grid grid-cols-2 gap-2"><div><label className="text-[8px] font-bold text-slate-400 uppercase">Start Date</label><input type="date" value={cat.startDate || ''} onChange={(e) => updateCatalogue(cat.id, { startDate: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1" /></div><div><label className="text-[8px] font-bold text-slate-400 uppercase">End Date</label><input type="date" value={cat.endDate || ''} onChange={(e) => updateCatalogue(cat.id, { endDate: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1" /></div></div><div><label className="text-[8px] font-bold text-slate-400 uppercase">Promotional Sub-Header</label><textarea value={cat.promoText || ''} onChange={(e) => updateCatalogue(cat.id, { promoText: e.target.value })} className="w-full text-xs border border-slate-200 rounded p-1 resize-none h-12" placeholder="Enter promo text..." /></div></>)}<div className="grid grid-cols-2 gap-2 mt-auto pt-2"><FileUpload label="Thumbnail (Image)" accept="image/*" currentUrl={cat.thumbnailUrl || (cat.pages?.[0])} onUpload={(url: any) => updateCatalogue(cat.id, { thumbnailUrl: url }, true)} /><FileUpload label="Document (PDF)" accept="application/pdf" currentUrl={cat.pdfUrl} icon={<FileText />} onUpload={(url: any) => updateCatalogue(cat.id, { pdfUrl: url }, true)} onRasterize={(urls: string[]) => updateCatalogue(cat.id, { pages: urls }, true)} /></div><div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-2"><button onClick={() => handleUpdate(localList.filter(c => c.id !== cat.id), true)} className="text-red-400 hover:text-red-600 flex items-center gap-1 text-[10px] font-bold uppercase"><Trash2 size={12} /> Delete Catalogue</button></div></div></div>))}</div></div>); };
 
   return (
-    // ... existing JSX structure ...
-    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
-        <header className="bg-slate-900 text-white shrink-0 shadow-xl z-20"><div className="flex items-center justify-between px-4 py-3 border-b border-slate-800"><div className="flex items-center gap-2"><Settings className="text-blue-500" size={24} /><div><h1 className="text-lg font-black uppercase tracking-widest leading-none">Admin Hub</h1></div></div><div className="flex items-center gap-4"><div className="text-xs font-bold text-slate-400 uppercase hidden md:block">Hello, {currentUser.name}</div><button onClick={handleGlobalSave} disabled={!hasUnsavedChanges} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}><SaveAll size={16} />{hasUnsavedChanges ? 'Save Changes' : 'Saved'}</button></div><div className="flex items-center gap-3"><div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>{isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}<span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span></div><button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button><button onClick={logout} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2"><LogOut size={16} /><span className="text-[10px] font-bold uppercase hidden md:inline">Logout</span></button></div></div><div className="flex overflow-x-auto no-scrollbar">{availableTabs.map(tab => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 min-w-[100px] py-4 text-center text-xs font-black uppercase tracking-wider border-b-4 transition-all ${activeTab === tab.id ? 'border-blue-500 text-white bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>{tab.label}</button>))}</div></header>
+    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden relative">
+        {/* PROMPT 3: BLOCKING OVERLAY */}
+        {isGlobalSaving && (
+            <div className="fixed inset-0 z-[200] bg-black/80 flex flex-col items-center justify-center text-white backdrop-blur-sm animate-fade-in cursor-wait">
+                <Loader2 size={64} className="animate-spin text-blue-500 mb-6" />
+                <h2 className="text-3xl font-black uppercase tracking-widest mb-2">Uploading to Cloud...</h2>
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Synchronizing Assets & Database</p>
+            </div>
+        )}
+
+        <header className="bg-slate-900 text-white shrink-0 shadow-xl z-20"><div className="flex items-center justify-between px-4 py-3 border-b border-slate-800"><div className="flex items-center gap-2"><Settings className="text-blue-500" size={24} /><div><h1 className="text-lg font-black uppercase tracking-widest leading-none">Admin Hub</h1></div></div><div className="flex items-center gap-4"><div className="text-xs font-bold text-slate-400 uppercase hidden md:block">Hello, {currentUser.name}</div><button onClick={handleGlobalSave} disabled={!hasUnsavedChanges || isGlobalSaving} className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] animate-pulse' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}><SaveAll size={16} />{hasUnsavedChanges ? 'Save Changes' : 'Saved'}</button></div><div className="flex items-center gap-3"><div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${isCloudConnected ? 'bg-blue-900/50 text-blue-300 border-blue-800' : 'bg-orange-900/50 text-orange-300 border-orange-800'} border`}>{isCloudConnected ? <Cloud size={14} /> : <HardDrive size={14} />}<span className="text-[10px] font-bold uppercase">{isCloudConnected ? 'Cloud Online' : 'Local Mode'}</span></div><button onClick={onRefresh} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-white"><RefreshCw size={16} /></button><button onClick={logout} className="p-2 bg-red-900/50 hover:bg-red-900 text-red-400 hover:text-white rounded-lg flex items-center gap-2"><LogOut size={16} /><span className="text-[10px] font-bold uppercase hidden md:inline">Logout</span></button></div></div><div className="flex overflow-x-auto no-scrollbar">{availableTabs.map(tab => (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 min-w-[100px] py-4 text-center text-xs font-black uppercase tracking-wider border-b-4 transition-all ${activeTab === tab.id ? 'border-blue-500 text-white bg-slate-800' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>{tab.label}</button>))}</div></header>
         {activeTab === 'marketing' && (<div className="bg-white border-b border-slate-200 flex overflow-x-auto no-scrollbar shadow-sm z-10 shrink-0"><button onClick={() => setActiveSubTab('hero')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'hero' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Hero Banner</button><button onClick={() => setActiveSubTab('ads')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'ads' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Ad Zones</button><button onClick={() => setActiveSubTab('catalogues')} className={`px-6 py-3 text-xs font-bold uppercase tracking-wide whitespace-nowrap ${activeSubTab === 'catalogues' ? 'text-purple-600 bg-purple-50' : 'text-slate-500'}`}>Pamphlets</button></div>)}
 
         <main className="flex-1 overflow-y-auto p-2 md:p-8 relative pb-40 md:pb-8">
