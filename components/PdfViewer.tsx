@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip, Download } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -275,8 +276,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
                   </div>
               )}
               {/* Manual Download Button for explicit saving */}
-              <button onClick={handleDownload} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-300 hover:text-white ml-2 hidden md:flex" title="Save PDF">
-                  <Download size={16} />
+              <button onClick={handleDownload} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-black text-xs uppercase shadow-lg transition-all border border-blue-500 ml-2 hidden md:flex items-center gap-2" title="Save PDF">
+                  <Download size={16} /> <span>Save PDF</span>
               </button>
           </div>
           <div className="flex items-center gap-2">
