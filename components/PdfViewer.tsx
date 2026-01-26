@@ -338,8 +338,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
               </div>
           )}
           
-          <div className="min-w-full min-h-full flex items-center justify-center p-8 md:p-12 pointer-events-none">
-             <div className={`relative shadow-2xl transition-opacity duration-500 pointer-events-auto ${loading ? 'opacity-0' : 'opacity-100'}`}>
+          <div className="min-w-full min-h-full flex p-8 md:p-12 pointer-events-none">
+             <div className={`m-auto relative shadow-2xl transition-opacity duration-500 pointer-events-auto ${loading ? 'opacity-0' : 'opacity-100'}`}>
                   <canvas ref={canvasRef} className="bg-white rounded shadow-inner" />
                   {scale > 1.2 && !isDragging && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
