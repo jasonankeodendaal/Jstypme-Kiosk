@@ -556,8 +556,11 @@ export const generateStoreData = async (): Promise<StoreData> => {
 };
 
 export const saveStoreData = async (data: StoreData): Promise<void> => {
+    broadcastSync(1, 'syncing'); // Immediate visual feedback
+    
     // 1. Sanitize Async
     const cleanData = await sanitizeDataAsync(data);
+    broadcastSync(5, 'syncing');
     
     // 2. Yield before Blocking
     await yieldToMain();
@@ -573,8 +576,6 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
 
     if (!supabase) initSupabase();
     if (supabase) {
-        broadcastSync(10, 'syncing');
-        
         try {
             let relationalTablesExist = false;
             try {
