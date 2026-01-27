@@ -128,13 +128,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
         const page = await pdf.getPage(pageNum);
         const viewportUnscaled = page.getViewport({ scale: 1.0 });
         
-        // --- 1. HARDWARE DETECTION (MEMORY SAFETY) ---
+        // --- 1. HARDWARE DETECTION ---
         const isLowSpec = (() => {
             const ua = (navigator.userAgent || '').toLowerCase();
             const isLegacyAndroid = ua.indexOf('android 5') !== -1 || ua.indexOf('android 6') !== -1;
-            const isFirefoxMobile = ua.indexOf('firefox') !== -1 && ua.indexOf('android') !== -1;
             const cores = navigator.hardwareConcurrency || 4;
-            return isLegacyAndroid || isFirefoxMobile || cores <= 4;
+            return isLegacyAndroid || cores <= 4;
         })();
 
         // --- 2. DETERMINE BASE SCALE ---
@@ -153,18 +152,22 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
             renderScale = Math.min(scaleX, scaleY, maxAutoZoom); 
         }
 
-        // --- 3. DYNAMIC PIXEL RATIO (CRASH PREVENTION) ---
-        // Legacy devices and Firefox Mobile get DPR 1.0 to prevent texture overflow
+        // --- 3. DYNAMIC PIXEL RATIO (DPR) CAP ---
+        // If low spec, force 1.0. If high spec, cap at 2.0.
         const dpr = isLowSpec ? 1.0 : Math.min(window.devicePixelRatio || 1, 2.0);
 
         // --- 4. TEXTURE SIZE SAFETY LIMIT ---
-        const projectedW = viewportUnscaled.width * renderScale * dpr;
-        const projectedH = viewportUnscaled.height * renderScale * dpr;
-        const MAX_TEXTURE = isLowSpec ? 2048 : 4096; // Conservatively limit old devices to 2K textures
+        // Legacy GPU limit is typically 4096px
+        const MAX_TEXTURE_SIZE = 4096;
+        let safeScale = renderScale;
+        
+        const projectedW = viewportUnscaled.width * safeScale * dpr;
+        const projectedH = viewportUnscaled.height * safeScale * dpr;
 
-        if (projectedW > MAX_TEXTURE || projectedH > MAX_TEXTURE) {
-            const reductionRatio = Math.min(MAX_TEXTURE / projectedW, MAX_TEXTURE / projectedH);
-            renderScale = renderScale * reductionRatio * 0.9; // 10% safety buffer
+        if (projectedW > MAX_TEXTURE_SIZE || projectedH > MAX_TEXTURE_SIZE) {
+            const reductionRatio = Math.min(MAX_TEXTURE_SIZE / projectedW, MAX_TEXTURE_SIZE / projectedH);
+            safeScale = safeScale * reductionRatio;
+            console.warn(`[PdfViewer] Texture limit exceeded (${Math.round(projectedW)}x${Math.round(projectedH)}), reducing scale by ${reductionRatio.toFixed(2)}`);
         }
 
         const renderContext = (finalScale: number, finalDpr: number) => {
@@ -188,9 +191,9 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
             };
         };
 
-        // --- 5. RENDER EXECUTION ---
+        // --- 5. MEMORY CRASH RECOVERY (TRY/CATCH/RETRY) ---
         try {
-            const ctxConfig = renderContext(renderScale, dpr);
+            const ctxConfig = renderContext(safeScale, dpr);
             if (ctxConfig) {
                 const task = page.render(ctxConfig);
                 renderTaskRef.current = task;
@@ -200,11 +203,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
         } catch (initialErr: any) {
             if (initialErr?.name === 'RenderingCancelledException') return;
             
-            console.warn("[PdfViewer] High-Res Render Failed, attempting Recovery Mode...", initialErr);
+            console.warn("[PdfViewer] Render Failed (Canvas OOM?), attempting Recovery Mode...", initialErr);
             
-            // RECOVERY: Force low-res (Scale 0.6, DPR 1.0)
+            // RECOVERY: Force scale to 0.5 (half quality) and try again immediately
             try {
-                const recoveryCtx = renderContext(0.6, 1.0);
+                // Use a drastically reduced scale and DPR 1.0 to fit in memory
+                const recoveryCtx = renderContext(0.5, 1.0);
                 if (recoveryCtx) {
                     const recoveryTask = page.render(recoveryCtx);
                     renderTaskRef.current = recoveryTask;
@@ -213,7 +217,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
                 }
             } catch (retryErr) {
                 console.error("[PdfViewer] Critical Render Failure", retryErr);
-                setError("Memory Error: Document too complex for this device.");
+                setError("Preview Unavailable - Low Memory");
                 setLoading(false);
             }
         }
@@ -221,10 +225,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
       } catch (err: any) { 
           if (err?.name !== 'RenderingCancelledException') {
               const msg = (err?.message || '').toLowerCase();
-              // Ignore common engine aborts
               if (!msg.includes('cancelled')) {
                   console.error("[PdfViewer] Render Error:", err);
-                  // Don't show error immediately to avoid flickering on rapid navigation
               }
               setLoading(false);
           }
