@@ -82,10 +82,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
   };
 
   const openManual = (manual: any) => {
-      if (manual.pdfUrl) {
-          setViewingPdf({ url: manual.pdfUrl, title: manual.title });
-      } else if (manual.images && manual.images.length > 0) {
+      // Priority: Flipbook (Images) -> PDF
+      if (manual.images && manual.images.length > 0) {
           setFlipbookData({ isOpen: true, pages: manual.images, title: manual.title });
+      } else if (manual.pdfUrl) {
+          // Fallback to PDF Viewer
+          setViewingPdf({ url: manual.pdfUrl, title: manual.title });
       }
   };
 
@@ -282,12 +284,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack }) => {
                                             className="flex items-center gap-4 p-5 bg-white border border-slate-200 rounded-3xl hover:border-blue-500 hover:shadow-xl transition-all group text-left"
                                         >
                                             <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-blue-50 transition-colors">
-                                                {manual.pdfUrl ? <FileText className="text-red-500" size={28} /> : <BookOpen className="text-blue-500" size={28} />}
+                                                {/* If we have rasterized images, show a more dynamic icon color to indicate "Interactive" */}
+                                                {(manual.images && manual.images.length > 0) ? <BookOpen className="text-blue-600" size={28} /> : <FileText className="text-red-500" size={28} />}
                                             </div>
                                             <div className="flex-1 overflow-hidden">
                                                 <div className="text-xs font-black uppercase text-slate-900 truncate">{manual.title}</div>
                                                 <div className="text-[9px] font-bold text-slate-400 uppercase mt-1">
-                                                    {manual.pdfUrl ? 'Digital PDF Document' : 'Flipbook Gallery'}
+                                                    {(manual.images && manual.images.length > 0) ? 'Interactive Flipbook' : 'Digital PDF Document'}
                                                 </div>
                                             </div>
                                             <div className="p-2 bg-slate-50 rounded-lg text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">

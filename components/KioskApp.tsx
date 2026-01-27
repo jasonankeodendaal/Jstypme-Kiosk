@@ -1056,35 +1056,31 @@ export const KioskApp = ({ storeData, lastSyncTime, onSyncRequest }: { storeData
       navigateDeeper();
 
       // Case 1: Manual Pricelist
-      // Check if it's a Pricelist and type is manual
       if ('type' in doc && doc.type === 'manual') {
           setViewingManualList(doc as Pricelist);
           return;
       }
 
-      // Case 2: PDF Document (Catalogue or Pricelist)
-      // Catalogues use 'pdfUrl', Pricelists use 'url'
+      // Case 2: Flipbook (Catalogue with pages) - RASTERIZED CONTENT PRIORITY
+      // We prioritize the pre-rendered images (Flipbook) over the raw PDF for performance
+      if ('pages' in doc && (doc as any).pages && (doc as any).pages.length > 0) {
+          setActiveFlipbook(doc as Catalogue);
+          setShowFlipbook(true);
+          return;
+      }
+
+      // Case 3: PDF Document (Catalogue or Pricelist)
+      // Fallback if no pages are generated
       const pdfUrl = (doc as any).url || (doc as any).pdfUrl;
       
       if (pdfUrl) {
           const docAsAny = doc as any;
-          // Construct the object for PdfViewer state
-          // If it's a Pricelist, it usually has 'kind'
-          // If it's a Catalogue, we default kind to 'promotion' so viewer shows promo headers
           const viewerObj = {
               ...docAsAny,
               url: pdfUrl,
               kind: docAsAny.kind || 'promotion' 
           };
           setViewingPdf(viewerObj);
-          return;
-      }
-
-      // Case 3: Flipbook (Catalogue with pages)
-      // Only Catalogues have 'pages' array
-      if ('pages' in doc && (doc as any).pages && (doc as any).pages.length > 0) {
-          setActiveFlipbook(doc as Catalogue);
-          setShowFlipbook(true);
           return;
       }
   }, []);
