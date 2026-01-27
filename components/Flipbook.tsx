@@ -147,7 +147,7 @@ const Flipbook: React.FC<FlipbookProps> = ({ pages, onClose, catalogueTitle, sta
                  <button onClick={handleZoomIn} className="p-2 hover:bg-white/10 rounded-xl text-white transition-colors"><ZoomIn size={18} /></button>
                  {scale > 1 && (<button onClick={handleResetZoom} className="p-2 hover:bg-white/10 rounded-xl text-blue-400 border-l border-white/10 ml-1 transition-colors"><RotateCcw size={18} /></button>)}
              </div>
-             <button onClick={onClose} className="bg-white text-slate-900 p-2 md:p-3 rounded-full transition-all hover:scale-110 shadow-xl"><X size={24} strokeWidth={3} /></button>
+             <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="bg-white text-slate-900 p-2 md:p-3 rounded-full transition-all hover:scale-110 shadow-xl"><X size={24} strokeWidth={3} /></button>
         </div>
       </div>
 
