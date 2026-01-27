@@ -208,6 +208,7 @@ interface SyncAction {
     data: any;
     id: string;
     timestamp: number;
+    retryCount?: number; // Track retries to prevent infinite loops
 }
 
 class OfflineQueue {
@@ -236,9 +237,15 @@ class OfflineQueue {
         }
     }
 
+    clear() {
+        this.queue = [];
+        this.save();
+        console.log("Offline Queue Cleared Manually");
+    }
+
     add(action: SyncAction) {
         this.queue = this.queue.filter(a => !(a.type === action.type && a.id === action.id));
-        this.queue.push(action);
+        this.queue.push({ ...action, retryCount: 0 });
         this.save();
     }
 
@@ -259,6 +266,12 @@ class OfflineQueue {
         for (let i = 0; i < this.queue.length; i++) {
             const action = this.queue[i];
             
+            // CRITICAL: Infinite Loop Breaker
+            if ((action.retryCount || 0) >= 3) {
+                console.warn(`[OfflineQueue] Discarding stuck item after 3 failed attempts: ${action.type} - ${action.id}`);
+                continue; // Skip adding to remaining, effectively deleting it
+            }
+
             // Yield periodically
             if (i % 5 === 0) await yieldToMain();
 
@@ -288,6 +301,8 @@ class OfflineQueue {
                 successCount++;
             } catch (e) {
                 console.error("Sync action failed", action, e);
+                // Increment retry count and keep in queue
+                action.retryCount = (action.retryCount || 0) + 1;
                 remaining.push(action); 
             }
         }
@@ -298,11 +313,23 @@ class OfflineQueue {
         if (successCount > 0) {
             broadcastSync(100, 'complete');
             setTimeout(() => broadcastSync(0, 'idle'), 2000);
+        } else if (remaining.length > 0) {
+            // Only show error if we still have failing items (and they aren't just exhausted)
+            broadcastSync(0, 'error');
+        } else {
+            // Queue is empty or cleared
+            broadcastSync(0, 'idle');
         }
     }
 }
 
 const offlineQueue = new OfflineQueue();
+
+// Export function to manually clear queue
+export const clearOfflineQueue = () => {
+    offlineQueue.clear();
+    broadcastSync(0, 'idle');
+};
 
 // --- GRANULAR SYNC FUNCTIONS ---
 

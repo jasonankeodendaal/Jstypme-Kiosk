@@ -26,6 +26,16 @@ const SyncStatusPopup = () => {
         return () => window.removeEventListener('kiosk-sync-event', handleSync);
     }, []);
 
+    // Auto-hide error after 5 seconds to prevent permanent blocking
+    useEffect(() => {
+        if (status === 'error') {
+            const timer = setTimeout(() => {
+                setStatus('idle');
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [status]);
+
     if (status === 'idle') return null;
 
     return (
