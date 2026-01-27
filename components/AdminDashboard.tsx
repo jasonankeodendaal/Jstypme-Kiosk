@@ -251,7 +251,7 @@ const SystemDocumentation = () => {
                                 <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
                                     <span className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Step 2</span>
                                     <h4 className="font-bold text-slate-900 uppercase text-xs mb-1">Transition</h4>
-                                    <p className="text-[10px] text-slate-500">Timer expires. CSS `opacity` smoothly cross-fades A (1->0) and B (0->1).</p>
+                                    <p className="text-[10px] text-slate-500">Timer expires. CSS `opacity` smoothly cross-fades A (1-&gt;0) and B (0-&gt;1).</p>
                                 </div>
                                 <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
                                     <span className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Step 3</span>
@@ -301,7 +301,7 @@ const SystemDocumentation = () => {
                                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Watchdog</div>
                                     <p className="text-[10px] text-slate-500 leading-relaxed mb-2">
-                                        Serverless monitoring. If `last_seen` timestamp > 60s, admin dashboard marks device as <span className="text-red-500 font-bold">Offline</span>.
+                                        Serverless monitoring. If `last_seen` timestamp &gt; 60s, admin dashboard marks device as <span className="text-red-500 font-bold">Offline</span>.
                                     </p>
                                 </div>
                             </div>
