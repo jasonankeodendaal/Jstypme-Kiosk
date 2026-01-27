@@ -53,13 +53,324 @@ const SystemDocumentation = () => {
         { id: 'tv', label: '6. TV Protocol', icon: <Tv size={16}/>, desc: 'Display Queue' },
     ];
 
+    const renderContent = () => {
+        switch (activeSection) {
+            case 'architecture':
+                return (
+                    <div className="space-y-8 animate-fade-in">
+                        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">Offline-First <span className="text-blue-500">Pipeline</span></h3>
+                            
+                            {/* Horizontal Flow Diagram */}
+                            <div className="relative h-40 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between px-4 md:px-12 overflow-hidden mb-8">
+                                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(59,130,246,0.05)_50%,transparent_100%)] animate-[shimmer_3s_infinite]"></div>
+                                
+                                <div className="z-10 flex flex-col items-center gap-2">
+                                    <div className="w-16 h-16 bg-white rounded-2xl shadow-lg border border-slate-200 flex items-center justify-center text-blue-500"><Cloud size={32}/></div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Supabase</span>
+                                </div>
+
+                                <div className="flex-1 h-1 bg-slate-200 mx-4 relative overflow-hidden rounded-full">
+                                    <div className="absolute top-0 left-0 h-full w-1/3 bg-blue-400 animate-[slideRight_1.5s_infinite_linear]"></div>
+                                </div>
+
+                                <div className="z-10 flex flex-col items-center gap-2">
+                                    <div className="w-16 h-16 bg-white rounded-2xl shadow-lg border border-slate-200 flex items-center justify-center text-orange-500"><RefreshCw size={32}/></div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sync Service</span>
+                                </div>
+
+                                <div className="flex-1 h-1 bg-slate-200 mx-4 relative overflow-hidden rounded-full">
+                                    <div className="absolute top-0 left-0 h-full w-1/3 bg-orange-400 animate-[slideRight_1.5s_infinite_linear_0.5s]"></div>
+                                </div>
+
+                                <div className="z-10 flex flex-col items-center gap-2">
+                                    <div className="w-16 h-16 bg-white rounded-2xl shadow-lg border border-slate-200 flex items-center justify-center text-green-500"><Database size={32}/></div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">IndexedDB</span>
+                                </div>
+
+                                <div className="flex-1 h-1 bg-slate-200 mx-4 relative overflow-hidden rounded-full">
+                                    <div className="absolute top-0 left-0 h-full w-1/3 bg-green-400 animate-[slideRight_1.5s_infinite_linear_1s]"></div>
+                                </div>
+
+                                <div className="z-10 flex flex-col items-center gap-2">
+                                    <div className="w-16 h-16 bg-slate-900 rounded-2xl shadow-xl border border-slate-800 flex items-center justify-center text-white"><Layout size={32}/></div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">React UI</span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mb-3"><Download size={16}/></div>
+                                    <h4 className="font-bold text-slate-900 text-xs uppercase mb-1">Snapshot Pull</h4>
+                                    <p className="text-[10px] text-slate-500 leading-relaxed">System downloads a full JSON configuration blob on boot to ensure complete data availability.</p>
+                                </div>
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="w-8 h-8 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center mb-3"><Database size={16}/></div>
+                                    <h4 className="font-bold text-slate-900 text-xs uppercase mb-1">Local Hydration</h4>
+                                    <p className="text-[10px] text-slate-500 leading-relaxed">Data persists in IndexedDB. The app works offline immediately after the first successful sync.</p>
+                                </div>
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center mb-3"><Zap size={16}/></div>
+                                    <h4 className="font-bold text-slate-900 text-xs uppercase mb-1">Optimistic UI</h4>
+                                    <p className="text-[10px] text-slate-500 leading-relaxed">Reads from local cache instantly. Writes update UI immediately, then sync to cloud in background.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'inventory':
+                return (
+                    <div className="space-y-8 animate-fade-in">
+                        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">Relational <span className="text-purple-500">Hierarchy</span></h3>
+                            
+                            <div className="flex flex-col items-center relative">
+                                {/* Root */}
+                                <div className="z-10 w-64 p-4 bg-slate-900 text-white rounded-2xl shadow-xl border border-slate-800 text-center relative group cursor-default">
+                                    <div className="text-[10px] font-black uppercase text-purple-400 tracking-widest mb-1">Root Entity</div>
+                                    <div className="text-xl font-black uppercase">Brand</div>
+                                    <div className="text-[10px] text-slate-400 mt-1">e.g. Apple, Samsung</div>
+                                    <div className="absolute -bottom-8 left-1/2 w-0.5 h-8 bg-slate-300"></div>
+                                </div>
+
+                                {/* Branch */}
+                                <div className="mt-8 z-10 w-64 p-4 bg-white text-slate-900 rounded-2xl shadow-lg border-2 border-slate-100 text-center relative group cursor-default">
+                                    <div className="text-[10px] font-black uppercase text-blue-500 tracking-widest mb-1">Branch</div>
+                                    <div className="text-lg font-black uppercase">Category</div>
+                                    <div className="text-[10px] text-slate-400 mt-1">e.g. Smartphones, Tablets</div>
+                                    <div className="absolute -bottom-8 left-1/2 w-0.5 h-8 bg-slate-300"></div>
+                                </div>
+
+                                {/* Leaf */}
+                                <div className="mt-8 z-10 w-64 p-4 bg-slate-50 text-slate-900 rounded-2xl shadow-md border border-slate-200 text-center relative group cursor-default">
+                                    <div className="text-[10px] font-black uppercase text-green-500 tracking-widest mb-1">Leaf</div>
+                                    <div className="text-base font-black uppercase">Product</div>
+                                    <div className="text-[10px] text-slate-400 mt-1">e.g. iPhone 15 Pro</div>
+                                </div>
+
+                                {/* Decorators */}
+                                <div className="absolute top-20 right-20 p-4 bg-yellow-50 border border-yellow-100 rounded-xl max-w-[200px] shadow-sm rotate-3">
+                                    <div className="flex items-center gap-2 mb-2 text-yellow-700 font-bold text-xs uppercase"><FileText size={14}/> Floating Assets</div>
+                                    <p className="text-[10px] text-yellow-800 leading-tight">Pricelists and Pamphlets exist outside this strict tree, linked by Brand ID or Global.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'pricelists':
+                return (
+                    <div className="space-y-8 animate-fade-in">
+                        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">Algorithmic <span className="text-green-500">Pricing</span></h3>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col items-center text-center relative overflow-hidden">
+                                    <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Ceiling Logic</div>
+                                    <div className="text-2xl font-mono text-slate-400 line-through decoration-red-400 decoration-2 opacity-50">129.99</div>
+                                    <ArrowRight className="text-slate-300 my-2 rotate-90 md:rotate-0" />
+                                    <div className="text-4xl font-black text-slate-900">130.00</div>
+                                </div>
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col items-center text-center relative overflow-hidden">
+                                    <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">The "99" Bump</div>
+                                    <div className="text-2xl font-mono text-slate-400 line-through decoration-red-400 decoration-2 opacity-50">799.00</div>
+                                    <ArrowRight className="text-slate-300 my-2 rotate-90 md:rotate-0" />
+                                    <div className="text-4xl font-black text-slate-900">800.00</div>
+                                    <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] font-bold px-2 py-1 rounded-bl-xl">Psychology</div>
+                                </div>
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-col items-center text-center relative overflow-hidden">
+                                    <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Whole Numbers</div>
+                                    <div className="text-2xl font-mono text-slate-400 line-through decoration-red-400 decoration-2 opacity-50">122.50</div>
+                                    <ArrowRight className="text-slate-300 my-2 rotate-90 md:rotate-0" />
+                                    <div className="text-4xl font-black text-slate-900">123.00</div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-900 rounded-xl p-6 border border-slate-800 font-mono text-xs text-blue-300 overflow-x-auto">
+                                <div className="text-slate-500 mb-2">// Core Formatting Logic</div>
+                                {`function formatPrice(val) {
+  let n = parseFloat(val);
+  
+  // 1. Ceiling Decimals
+  if (n % 1 !== 0) n = Math.ceil(n);
+  
+  // 2. Psychological Bump (Avoid 9 ending)
+  if (Math.floor(n) % 10 === 9) n += 1;
+  
+  return "R " + n.toLocaleString();
+}`}
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'screensaver':
+                return (
+                    <div className="space-y-8 animate-fade-in">
+                        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">Double-Buffer <span className="text-pink-500">Engine</span></h3>
+                            
+                            <div className="relative h-64 bg-black rounded-2xl overflow-hidden border-4 border-slate-800 shadow-2xl mb-8 flex items-center justify-center">
+                                {/* Simulated Layers */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-blue-900 opacity-20 animate-pulse">
+                                    <div className="text-blue-400 font-black text-9xl opacity-20">A</div>
+                                </div>
+                                <div className="absolute inset-0 flex items-center justify-center bg-purple-900 opacity-20 animate-pulse" style={{animationDelay: '1s'}}>
+                                    <div className="text-purple-400 font-black text-9xl opacity-20">B</div>
+                                </div>
+                                
+                                <div className="z-10 flex gap-12">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-24 h-32 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-center relative overflow-hidden">
+                                            <div className="absolute inset-0 bg-blue-500/20"></div>
+                                            <span className="font-black text-white text-2xl">A</span>
+                                            <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_lime]"></div>
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase text-blue-400 tracking-widest">Active</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center text-slate-600">
+                                        <RefreshCw size={32} className="animate-spin-slow" />
+                                    </div>
+
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-24 h-32 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-center relative overflow-hidden opacity-50">
+                                            <div className="absolute inset-0 bg-purple-500/10"></div>
+                                            <span className="font-black text-white text-2xl">B</span>
+                                            <div className="absolute bottom-2 right-2 w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase text-yellow-500 tracking-widest">Preloading</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                                    <span className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Step 1</span>
+                                    <h4 className="font-bold text-slate-900 uppercase text-xs mb-1">Preload</h4>
+                                    <p className="text-[10px] text-slate-500">While Slot A is visible, Slot B fetches the next image/video in the background.</p>
+                                </div>
+                                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                                    <span className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Step 2</span>
+                                    <h4 className="font-bold text-slate-900 uppercase text-xs mb-1">Transition</h4>
+                                    <p className="text-[10px] text-slate-500">Timer expires. CSS `opacity` smoothly cross-fades A (1->0) and B (0->1).</p>
+                                </div>
+                                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                                    <span className="text-[10px] font-black uppercase text-slate-400 mb-2 block">Step 3</span>
+                                    <h4 className="font-bold text-slate-900 uppercase text-xs mb-1">Swap & Clean</h4>
+                                    <p className="text-[10px] text-slate-500">Active pointer swaps. Old slot is cleared from DOM to free memory.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'fleet':
+                return (
+                    <div className="space-y-8 animate-fade-in">
+                        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">Fleet <span className="text-red-500">Telemetry</span></h3>
+                            
+                            <div className="bg-slate-950 rounded-3xl p-12 flex items-center justify-center relative overflow-hidden mb-8 border border-slate-800">
+                                {/* Radar Rings */}
+                                <div className="absolute w-96 h-96 border border-red-900/30 rounded-full animate-ping opacity-20"></div>
+                                <div className="absolute w-64 h-64 border border-red-500/20 rounded-full animate-ping opacity-40" style={{animationDelay: '0.5s'}}></div>
+                                <div className="absolute w-32 h-32 bg-red-500/10 rounded-full animate-pulse"></div>
+                                
+                                {/* Center Node */}
+                                <div className="relative z-10 flex flex-col items-center">
+                                    <div className="w-4 h-4 bg-red-500 rounded-full shadow-[0_0_20px_red] animate-pulse"></div>
+                                    <div className="mt-4 bg-slate-900/80 backdrop-blur px-4 py-2 rounded-xl border border-slate-700 text-center">
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Heartbeat</div>
+                                        <div className="text-xs font-mono text-green-400">T-Minus 30s</div>
+                                    </div>
+                                </div>
+
+                                {/* Satellite Nodes */}
+                                <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_10px_blue] animate-pulse"></div>
+                                <div className="absolute bottom-1/3 right-1/4 w-3 h-3 bg-purple-500 rounded-full shadow-[0_0_10px_purple] animate-pulse" style={{animationDelay: '1s'}}></div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Payload</div>
+                                    <ul className="space-y-1 text-[10px] font-mono text-slate-600">
+                                        <li className="flex justify-between"><span>Status</span> <span className="text-green-600">"Online"</span></li>
+                                        <li className="flex justify-between"><span>IP</span> <span>192.168.1.X</span></li>
+                                        <li className="flex justify-between"><span>Ver</span> <span>1.0.5</span></li>
+                                        <li className="flex justify-between"><span>Signal</span> <span>-45dBm</span></li>
+                                    </ul>
+                                </div>
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Watchdog</div>
+                                    <p className="text-[10px] text-slate-500 leading-relaxed mb-2">
+                                        Serverless monitoring. If `last_seen` timestamp > 60s, admin dashboard marks device as <span className="text-red-500 font-bold">Offline</span>.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'tv':
+                return (
+                    <div className="space-y-8 animate-fade-in">
+                        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">TV <span className="text-indigo-500">Protocol</span></h3>
+                            
+                            {/* Film Strip Visual */}
+                            <div className="flex gap-2 overflow-hidden bg-slate-900 p-2 rounded-2xl mb-8 border border-slate-800 relative">
+                                <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-slate-900 to-transparent z-10"></div>
+                                <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-slate-900 to-transparent z-10"></div>
+                                
+                                {[1,2,3,4,5].map(i => (
+                                    <div key={i} className="flex-none w-32 aspect-video bg-slate-800 rounded-lg border border-slate-700 relative overflow-hidden group">
+                                        <div className="absolute top-1 left-1 text-[8px] font-black text-white/50">{i}</div>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <Play size={16} className="text-slate-600 group-hover:text-indigo-400 transition-colors" />
+                                        </div>
+                                        {/* Perforations */}
+                                        <div className="absolute top-0 inset-x-0 h-1 flex justify-between px-1">
+                                            {[...Array(6)].map((_,j)=><div key={j} className="w-0.5 h-full bg-black/50"></div>)}
+                                        </div>
+                                        <div className="absolute bottom-0 inset-x-0 h-1 flex justify-between px-1">
+                                            {[...Array(6)].map((_,j)=><div key={j} className="w-0.5 h-full bg-black/50"></div>)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                    <h4 className="font-bold text-slate-900 uppercase text-xs mb-3 flex items-center gap-2"><List size={14}/> Playlist Logic</h4>
+                                    <div className="space-y-3">
+                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                                            <div className="text-[10px] font-black text-indigo-500 uppercase">Global Loop</div>
+                                            <p className="text-[10px] text-slate-500">Flattens ALL videos from ALL brands into a single randomized array. Used for general signage.</p>
+                                        </div>
+                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                                            <div className="text-[10px] font-black text-indigo-500 uppercase">Brand Loop</div>
+                                            <p className="text-[10px] text-slate-500">Filters playlist to specific Brand ID. Ideal for dedicated brand zones.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-slate-900 uppercase text-xs mb-3 flex items-center gap-2"><Volume size={14}/> Autoplay Policy</h4>
+                                    <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100">
+                                        <p className="text-[10px] text-yellow-800 leading-relaxed font-medium">
+                                            Browsers block unmuted autoplay. The TV module uses a <strong>User Interaction Listener</strong> (touch/click/key) to unlock the `AudioContext` on first interaction, allowing subsequent videos to play with sound.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            default: return null;
+        }
+    };
+
     return (
         <div className="flex flex-col md:flex-row h-[calc(100vh-140px)] bg-slate-50 rounded-3xl border border-slate-200 overflow-hidden shadow-2xl animate-fade-in">
             <style>{`
-                @keyframes flow-horizontal { 0% { transform: translateX(-100%); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateX(400%); opacity: 0; } }
-                .data-flow { animation: flow-horizontal 3s linear infinite; }
-                @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2); opacity: 0; } }
-                .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
+                @keyframes slideRight { 0% { left: -33%; } 100% { left: 100%; } }
+                @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
             `}</style>
 
             <div className="w-full md:w-72 bg-slate-900 border-r border-white/5 p-6 shrink-0 overflow-y-auto hidden md:flex flex-col">
@@ -95,14 +406,8 @@ const SystemDocumentation = () => {
                 </div>
             </div>
             
-            <div className="flex-1 overflow-y-auto bg-white relative p-6 md:p-12 lg:p-20 scroll-smooth">
-                {/* Content omitted for brevity, reusing existing structure from previous file if needed, but keeping placeholder for now to focus on refactor */}
-                <div className="space-y-16 animate-fade-in max-w-5xl">
-                    <div className="bg-blue-50 border border-blue-200 p-8 rounded-2xl text-blue-800">
-                        <h3 className="font-bold text-lg mb-2">Documentation Module Active</h3>
-                        <p>Select a topic from the sidebar to view system architecture details.</p>
-                    </div>
-                </div>
+            <div className="flex-1 overflow-y-auto bg-slate-50/50 relative p-6 md:p-12 scroll-smooth">
+                {renderContent()}
             </div>
         </div>
     );
