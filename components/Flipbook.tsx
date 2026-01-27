@@ -122,6 +122,7 @@ const Flipbook: React.FC<FlipbookProps> = ({ pages, onClose, catalogueTitle, sta
       className="fixed inset-0 z-[60] bg-slate-900/98 flex flex-col items-center justify-center animate-fade-in touch-none" 
       onClick={onClose}
     >
+      {/* Background Blur */}
       <div 
         className="absolute inset-0 z-0 opacity-20 blur-3xl scale-110 pointer-events-none"
         style={{ backgroundImage: `url(${pages[currentIndex]})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
@@ -202,6 +203,8 @@ const Flipbook: React.FC<FlipbookProps> = ({ pages, onClose, catalogueTitle, sta
                     alt={`Page ${currentIndex + 1}`} 
                     className="max-w-full max-h-[85vh] object-contain select-none pointer-events-none"
                     draggable={false}
+                    loading="lazy"
+                    decoding="async"
                 />
                 {scale > 1.2 && !isDragging && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">

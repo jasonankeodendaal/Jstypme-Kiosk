@@ -24,7 +24,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
   const [pageNum, setPageNum] = useState(1);
   const [scale, setScale] = useState(0); 
   const [loading, setLoading] = useState(true);
-  const [loadProgress, setLoadProgress] = useState(0); // Progress tracking
+  const [loadProgress, setLoadProgress] = useState(0); 
   const [error, setError] = useState<string | null>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   
@@ -47,16 +47,14 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
       }
     };
     window.addEventListener('resize', updateSize);
-    updateSize();
+    // Delay initial size check slightly to allow layout to settle
+    setTimeout(updateSize, 100);
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
   useEffect(() => {
     const loadPdf = async () => {
-      console.log(`[PdfViewer] Starting load for URL: "${url}"`);
-      
       if (!url) {
-          console.error('[PdfViewer] No URL provided');
           setError("No document URL provided.");
           setLoading(false);
           return;
@@ -66,43 +64,34 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
         setLoading(true); setError(null); setPageNum(1); setLoadProgress(0);
         
         if (loadingTaskRef.current) {
-            console.log('[PdfViewer] Destroying previous loading task');
-            loadingTaskRef.current.destroy().catch((e: any) => console.warn('[PdfViewer] Destroy warning:', e));
+            loadingTaskRef.current.destroy().catch((e: any) => console.warn('Destroy warning:', e));
         }
         
-        console.log('[PdfViewer] Calling pdfjs.getDocument...');
-        
-        // OPTIMIZED CONFIGURATION FOR FAST OPENING & LEGACY STABILITY
         const loadingTask = pdfjs.getDocument({
             url,
             cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
             cMapPacked: true,
-            disableRange: false, // Range requests allowed (browser handles fallback)
-            disableStream: true, // Use chunked XHR instead of streaming (critical for legacy)
-            disableAutoFetch: true, // Critical: Do NOT download the whole file automatically
-            rangeChunkSize: 65536, // Fetch in 64KB chunks
+            disableRange: false,
+            disableStream: true, // Critical for legacy
+            disableAutoFetch: true, 
+            rangeChunkSize: 65536,
         });
         
         loadingTask.onProgress = (progressData: any) => {
             if (progressData.total) {
                 const percent = Math.round((progressData.loaded / progressData.total) * 100);
                 setLoadProgress(percent);
-                console.debug(`[PdfViewer] Progress: ${percent}% (${progressData.loaded} bytes)`);
             }
         };
 
         loadingTaskRef.current = loadingTask;
         const doc = await loadingTask.promise;
-        console.log(`[PdfViewer] Document loaded successfully. Pages: ${doc.numPages}`);
 
         if (loadingTaskRef.current === loadingTask) { 
             setPdf(doc);
-            // Optimization: Keep loading true until first page render finishes
         }
       } catch (err: any) {
-        console.error('[PdfViewer] Load Error:', err);
-        
-        // CRITICAL FIX: Suppress "Message channel closed", "ResizeObserver", "extension" errors
+        // CRITICAL FIX: Suppress worker/engine errors that don't actually break the app
         const msg = (err?.message || '').toLowerCase();
         if (
             msg.includes('message channel') || 
@@ -111,18 +100,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
             msg.includes('extension')
         ) {
             console.warn('[PdfViewer] Suppressing worker/engine error');
-            // Do not show error UI, try to remain in loading state or fail silently
             return;
         }
 
-        if (err.name === 'MissingPDFException') {
-            console.error('[PdfViewer] File not found or 404');
-        } else if (err.name === 'InvalidPDFException') {
-            console.error('[PdfViewer] Invalid PDF format');
-        }
-
         if (err?.message !== 'Loading aborted') { 
-            setError(`Unable to load document: ${err.message || 'Unknown error'}`); 
+            setError(`Unable to load document. The file might be corrupted or offline.`); 
             setLoading(false); 
         }
       }
@@ -136,61 +118,62 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
     const renderPage = async () => {
       if (!pdf || !canvasRef.current || !containerRef.current) return;
       
-      // Robust Cancellation: Ensure previous render is stopped before starting new one
       if (renderTaskRef.current) {
-          try {
-              await renderTaskRef.current.cancel();
-          } catch(e) {
-              // Expected error when cancelling
-          }
+          try { await renderTaskRef.current.cancel(); } catch(e) {}
       }
 
-      setLoading(true); // Start visual feedback
+      setLoading(true);
 
       try {
         const page = await pdf.getPage(pageNum);
         const viewportUnscaled = page.getViewport({ scale: 1.0 });
         
-        // 1. Hardware Detection
+        // --- 1. HARDWARE DETECTION (MEMORY SAFETY) ---
         const isLowSpec = (() => {
-            const ua = navigator.userAgent || '';
-            const isLegacy = ua.indexOf('Android 5') !== -1 || ua.indexOf('Android 6') !== -1;
-            const cores = navigator.hardwareConcurrency || 4; // Default to 4
-            return isLegacy || cores <= 4;
+            const ua = (navigator.userAgent || '').toLowerCase();
+            const isLegacyAndroid = ua.indexOf('android 5') !== -1 || ua.indexOf('android 6') !== -1;
+            const isFirefoxMobile = ua.indexOf('firefox') !== -1 && ua.indexOf('android') !== -1;
+            const cores = navigator.hardwareConcurrency || 4;
+            return isLegacyAndroid || isFirefoxMobile || cores <= 4;
         })();
 
-        // 2. Determine Base Scale
+        // --- 2. DETERMINE BASE SCALE ---
         let renderScale = scale;
         if (renderScale <= 0) {
-            const padding = 48;
+            const padding = 24;
             const availableWidth = containerSize.width - padding;
             const availableHeight = containerSize.height - padding;
+            
+            if (availableWidth <= 0 || availableHeight <= 0) return; // Wait for layout
+
             const scaleX = availableWidth / viewportUnscaled.width;
             const scaleY = availableHeight / viewportUnscaled.height;
-            renderScale = Math.min(scaleX, scaleY, 2.0); // Cap at 2.0x auto-zoom
+            // Cap auto-zoom to 1.5x on low spec, 2.0x on high spec
+            const maxAutoZoom = isLowSpec ? 1.5 : 2.0;
+            renderScale = Math.min(scaleX, scaleY, maxAutoZoom); 
         }
 
-        // 3. Dynamic DPR Cap (Memory Protection)
-        // Legacy devices force 1.0. Modern devices cap at 2.0.
+        // --- 3. DYNAMIC PIXEL RATIO (CRASH PREVENTION) ---
+        // Legacy devices and Firefox Mobile get DPR 1.0 to prevent texture overflow
         const dpr = isLowSpec ? 1.0 : Math.min(window.devicePixelRatio || 1, 2.0);
 
-        // 4. Texture Size Safety Limit (Legacy GPU Protection)
-        // Check if projected dimensions exceed 4096px (common WebGL/Canvas limit on older chips)
+        // --- 4. TEXTURE SIZE SAFETY LIMIT ---
         const projectedW = viewportUnscaled.width * renderScale * dpr;
         const projectedH = viewportUnscaled.height * renderScale * dpr;
-        const MAX_TEXTURE = 4096;
+        const MAX_TEXTURE = isLowSpec ? 2048 : 4096; // Conservatively limit old devices to 2K textures
 
         if (projectedW > MAX_TEXTURE || projectedH > MAX_TEXTURE) {
             const reductionRatio = Math.min(MAX_TEXTURE / projectedW, MAX_TEXTURE / projectedH);
-            renderScale = renderScale * reductionRatio * 0.95; // 5% safety buffer
-            console.warn(`[SmartRender] Downscaling to fit texture limit. New Scale: ${renderScale.toFixed(2)}`);
+            renderScale = renderScale * reductionRatio * 0.9; // 10% safety buffer
         }
 
         const renderContext = (finalScale: number, finalDpr: number) => {
             const viewport = page.getViewport({ scale: finalScale }); 
             const canvas = canvasRef.current;
             if (!canvas) return null;
-            const ctx = canvas.getContext('2d');
+            
+            // OPTIMIZATION: Disable alpha channel for PDFs (saves 25% RAM)
+            const ctx = canvas.getContext('2d', { alpha: false });
             if (!ctx) return null;
 
             canvas.width = Math.floor(viewport.width * finalDpr);
@@ -205,7 +188,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
             };
         };
 
-        // 5. Render Execution with Crash Recovery
+        // --- 5. RENDER EXECUTION ---
         try {
             const ctxConfig = renderContext(renderScale, dpr);
             if (ctxConfig) {
@@ -217,11 +200,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
         } catch (initialErr: any) {
             if (initialErr?.name === 'RenderingCancelledException') return;
             
-            console.warn("[SmartRender] High-Res Render Failed (OOM?), attempting Recovery Mode...", initialErr);
+            console.warn("[PdfViewer] High-Res Render Failed, attempting Recovery Mode...", initialErr);
             
-            // RECOVERY ATTEMPT: Force low-res (Scale 0.5, DPR 1.0)
+            // RECOVERY: Force low-res (Scale 0.6, DPR 1.0)
             try {
-                const recoveryCtx = renderContext(0.5, 1.0);
+                const recoveryCtx = renderContext(0.6, 1.0);
                 if (recoveryCtx) {
                     const recoveryTask = page.render(recoveryCtx);
                     renderTaskRef.current = recoveryTask;
@@ -229,29 +212,28 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
                     setLoading(false);
                 }
             } catch (retryErr) {
-                console.error("[SmartRender] Critical Render Failure", retryErr);
-                setError("Preview Unavailable - Low Memory");
+                console.error("[PdfViewer] Critical Render Failure", retryErr);
+                setError("Memory Error: Document too complex for this device.");
                 setLoading(false);
             }
         }
 
       } catch (err: any) { 
           if (err?.name !== 'RenderingCancelledException') {
-              // Suppress worker errors
               const msg = (err?.message || '').toLowerCase();
-              if (
-                  !msg.includes('message channel') && 
-                  !msg.includes('channel closed') && 
-                  !msg.includes('resizeobserver')
-              ) {
-                  console.error("[PdfViewer] Setup Error:", err); 
-                  setError("Render Engine Error");
+              // Ignore common engine aborts
+              if (!msg.includes('cancelled')) {
+                  console.error("[PdfViewer] Render Error:", err);
+                  // Don't show error immediately to avoid flickering on rapid navigation
               }
               setLoading(false);
           }
       }
     };
-    renderPage();
+    
+    // Debounce render slightly to allow UI to settle
+    const t = setTimeout(renderPage, 50);
+    return () => clearTimeout(t);
   }, [pdf, pageNum, scale, containerSize]);
 
   const changePage = (delta: number) => {
@@ -261,10 +243,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
   };
 
   const handleZoomIn = () => setScale(prev => {
-      const current = prev <= 0 ? (canvasRef.current?.clientWidth || 0) / (pdf ? 1000 : 1) : prev;
-      return Math.min(5.0, (current || 1) * 1.5);
+      // If auto-scaled (0), calculate current visual scale first
+      const current = prev <= 0 ? 1.0 : prev;
+      return Math.min(3.0, current + 0.5);
   });
-  const handleZoomOut = () => setScale(prev => prev > 0 ? Math.max(0.2, prev / 1.5) : 0);
+  const handleZoomOut = () => setScale(prev => prev > 0 ? Math.max(0.5, prev - 0.5) : 0.5);
   const handleFit = () => setScale(0);
 
   const onStart = (clientX: number, clientY: number) => {
@@ -298,8 +281,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
 
   const handleDownload = async () => {
       try {
-          // Robust binary handling for offline/legacy
-          // We explicitly fetch as blob to ensure binary integrity during save
           const response = await fetch(url);
           if (!response.ok) throw new Error("Network error");
           const blob = await response.blob();
@@ -312,8 +293,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
           document.body.removeChild(link);
           window.URL.revokeObjectURL(blobUrl);
       } catch (e) {
-          console.error("Export failed", e);
-          alert("Unable to download document. Please check your connection.");
+          alert("Unable to download document.");
       }
   };
 
@@ -331,13 +311,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
                       <button onClick={handleZoomIn} className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"><ZoomIn size={16}/></button>
                   </div>
               )}
-              {/* Manual Download Button for explicit saving */}
               <button onClick={handleDownload} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-300 hover:text-white ml-2 hidden md:flex" title="Save PDF">
                   <Download size={16} />
               </button>
           </div>
           <div className="flex items-center gap-2">
-              {/* Mobile Download Button */}
               <button onClick={handleDownload} className="p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors border border-white/5 md:hidden" title="Save">
                   <Download size={20} />
               </button>
@@ -376,7 +354,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
                   <Loader2 size={48} className="animate-spin mb-4 text-blue-500" />
                   <span className="font-bold uppercase tracking-widest text-xs">
-                      {loadProgress > 0 && loadProgress < 100 ? `Loading ${loadProgress}%...` : 'Opening Document...'}
+                      {loadProgress > 0 && loadProgress < 100 ? `Loading ${loadProgress}%...` : 'Rendering...'}
                   </span>
                   {loadProgress > 0 && loadProgress < 100 && (
                       <div className="w-48 h-1 bg-slate-700 rounded-full mt-2 overflow-hidden">
@@ -395,7 +373,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
               </div>
           )}
           
-          <div className="min-w-full min-h-full flex p-8 md:p-12 pointer-events-none">
+          <div className="min-w-full min-h-full flex p-4 md:p-12 pointer-events-none">
              <div className={`m-auto relative shadow-2xl transition-opacity duration-500 pointer-events-auto ${loading ? 'opacity-0' : 'opacity-100'}`}>
                   <canvas ref={canvasRef} className="bg-white rounded shadow-inner" />
                   {scale > 1.2 && !isDragging && (

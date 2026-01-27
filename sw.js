@@ -1,6 +1,6 @@
 
-// Service Worker for Kiosk Pro v6.1 (PDF Exclusion Update)
-const CACHE_NAME = 'kiosk-pro-v6';
+// Service Worker for Kiosk Pro v6.2 (Memory Safety Update)
+const CACHE_NAME = 'kiosk-pro-v6.2';
 
 const PRECACHE_URLS = [
   '/',
@@ -35,29 +35,27 @@ self.addEventListener('activate', (event) => {
 
 /**
  * Enhanced Range Request Handler.
- * Note: PDFs are now excluded entirely from this logic to prevent
- * contention on legacy Android WebViews.
  */
 const handleRangeRequest = async (request) => {
+  // For video/audio, just pass through to network to let browser handle streaming/ranges
   return fetch(request);
 };
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  const lowerUrl = url.href.toLowerCase();
   
-  // CRITICAL: Completely exclude PDF files from Service Worker.
-  // This forces the browser to handle the request natively, avoiding
-  // Service Worker overhead and potential message channel closure issues
-  // on legacy Android WebViews (Chrome 37-50).
-  if (url.pathname.toLowerCase().endsWith('.pdf')) {
+  // CRITICAL SAFETY: Completely exclude PDF files from Service Worker.
+  // Cloning large binary blobs (PDFs) for caching causes OOM crashes on legacy Android/Firefox.
+  if (lowerUrl.includes('.pdf')) {
     return;
   }
 
   // Treat heavy media (Video/Audio) to allow Range Requests
   const isMedia = event.request.destination === 'video' || 
                   event.request.destination === 'audio' || 
-                  url.pathname.toLowerCase().endsWith('.mp4') || 
-                  url.pathname.toLowerCase().endsWith('.webm');
+                  lowerUrl.endsWith('.mp4') || 
+                  lowerUrl.endsWith('.webm');
 
   if (isMedia) {
     event.respondWith(handleRangeRequest(event.request));
@@ -72,8 +70,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Images: Stale-While-Revalidate
-  // Ensures offline availability while updating in background
+  // Images: Stale-While-Revalidate with Memory Safety
   const isImage = event.request.destination === 'image' || 
                   url.pathname.match(/\.(jpg|jpeg|png|webp|gif|svg|ico)$/i);
 
@@ -83,11 +80,17 @@ self.addEventListener('fetch', (event) => {
         const cachedResponse = await cache.match(event.request);
         const fetchPromise = fetch(event.request).then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            cache.put(event.request, networkResponse.clone());
+            // SAFE CLONING: Try/Catch the clone operation
+            try {
+                const copy = networkResponse.clone();
+                cache.put(event.request, copy).catch(e => console.warn("Cache put failed", e));
+            } catch (e) {
+                // If cloning fails (OOM), just return the network response without caching
+                console.warn("Skipping cache for large image to prevent crash");
+            }
           }
           return networkResponse;
         }).catch((e) => {
-           // If offline and no cache, throw error
            if (!cachedResponse) throw e;
         });
 
@@ -101,10 +104,13 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then(res => {
-        // Only cache valid 200 responses
         if (res.status === 200 && event.request.method === 'GET') {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, copy));
+          try {
+              const copy = res.clone();
+              caches.open(CACHE_NAME).then(c => c.put(event.request, copy));
+          } catch(e) {
+              console.warn("Cache clone failed", e);
+          }
         }
         return res;
       });
