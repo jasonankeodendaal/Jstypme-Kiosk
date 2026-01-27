@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Loader2, AlertCircle, Maximize, Grip, Download } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -144,11 +145,21 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
           }
       }
 
+      setLoading(true); // Start visual feedback
+
       try {
-        setLoading(true); // Visual feedback during rendering
         const page = await pdf.getPage(pageNum);
-        
         const viewportUnscaled = page.getViewport({ scale: 1.0 });
+        
+        // 1. Hardware Detection
+        const isLowSpec = (() => {
+            const ua = navigator.userAgent || '';
+            const isLegacy = ua.indexOf('Android 5') !== -1 || ua.indexOf('Android 6') !== -1;
+            const cores = navigator.hardwareConcurrency || 4; // Default to 4
+            return isLegacy || cores <= 4;
+        })();
+
+        // 2. Determine Base Scale
         let renderScale = scale;
         if (renderScale <= 0) {
             const padding = 48;
@@ -156,40 +167,86 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url, title, onClose, pricelist })
             const availableHeight = containerSize.height - padding;
             const scaleX = availableWidth / viewportUnscaled.width;
             const scaleY = availableHeight / viewportUnscaled.height;
-            renderScale = Math.min(scaleX, scaleY, 2.0);
+            renderScale = Math.min(scaleX, scaleY, 2.0); // Cap at 2.0x auto-zoom
         }
-        
-        // Optimization: Cap DPR at 1.5 to prevent memory crashes on tablets with high-res screens
-        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-        
-        const viewport = page.getViewport({ scale: renderScale }); 
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-        if (context) {
-            canvas.width = Math.floor(viewport.width * dpr);
-            canvas.height = Math.floor(viewport.height * dpr);
+
+        // 3. Dynamic DPR Cap (Memory Protection)
+        // Legacy devices force 1.0. Modern devices cap at 2.0.
+        const dpr = isLowSpec ? 1.0 : Math.min(window.devicePixelRatio || 1, 2.0);
+
+        // 4. Texture Size Safety Limit (Legacy GPU Protection)
+        // Check if projected dimensions exceed 4096px (common WebGL/Canvas limit on older chips)
+        const projectedW = viewportUnscaled.width * renderScale * dpr;
+        const projectedH = viewportUnscaled.height * renderScale * dpr;
+        const MAX_TEXTURE = 4096;
+
+        if (projectedW > MAX_TEXTURE || projectedH > MAX_TEXTURE) {
+            const reductionRatio = Math.min(MAX_TEXTURE / projectedW, MAX_TEXTURE / projectedH);
+            renderScale = renderScale * reductionRatio * 0.95; // 5% safety buffer
+            console.warn(`[SmartRender] Downscaling to fit texture limit. New Scale: ${renderScale.toFixed(2)}`);
+        }
+
+        const renderContext = (finalScale: number, finalDpr: number) => {
+            const viewport = page.getViewport({ scale: finalScale }); 
+            const canvas = canvasRef.current;
+            if (!canvas) return null;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return null;
+
+            canvas.width = Math.floor(viewport.width * finalDpr);
+            canvas.height = Math.floor(viewport.height * finalDpr);
             canvas.style.width = Math.floor(viewport.width) + "px";
             canvas.style.height = Math.floor(viewport.height) + "px";
-            const transform = [dpr, 0, 0, dpr, 0, 0];
-            const renderContext = { canvasContext: context, viewport: viewport, transform: transform };
-            const task = page.render(renderContext);
-            renderTaskRef.current = task;
-            await task.promise;
-            setLoading(false); // Only finish loading state when drawing is complete
+            
+            return {
+                canvasContext: ctx,
+                viewport: viewport,
+                transform: [finalDpr, 0, 0, finalDpr, 0, 0]
+            };
+        };
+
+        // 5. Render Execution with Crash Recovery
+        try {
+            const ctxConfig = renderContext(renderScale, dpr);
+            if (ctxConfig) {
+                const task = page.render(ctxConfig);
+                renderTaskRef.current = task;
+                await task.promise;
+                setLoading(false);
+            }
+        } catch (initialErr: any) {
+            if (initialErr?.name === 'RenderingCancelledException') return;
+            
+            console.warn("[SmartRender] High-Res Render Failed (OOM?), attempting Recovery Mode...", initialErr);
+            
+            // RECOVERY ATTEMPT: Force low-res (Scale 0.5, DPR 1.0)
+            try {
+                const recoveryCtx = renderContext(0.5, 1.0);
+                if (recoveryCtx) {
+                    const recoveryTask = page.render(recoveryCtx);
+                    renderTaskRef.current = recoveryTask;
+                    await recoveryTask.promise;
+                    setLoading(false);
+                }
+            } catch (retryErr) {
+                console.error("[SmartRender] Critical Render Failure", retryErr);
+                setError("Preview Unavailable - Low Memory");
+                setLoading(false);
+            }
         }
+
       } catch (err: any) { 
           if (err?.name !== 'RenderingCancelledException') {
-              // Suppress message channel errors during render as well
+              // Suppress worker errors
               const msg = (err?.message || '').toLowerCase();
               if (
-                  msg.includes('message channel') || 
-                  msg.includes('channel closed') || 
-                  msg.includes('resizeobserver')
+                  !msg.includes('message channel') && 
+                  !msg.includes('channel closed') && 
+                  !msg.includes('resizeobserver')
               ) {
-                  console.warn('[PdfViewer] Suppressing render worker error');
-                  return;
+                  console.error("[PdfViewer] Setup Error:", err); 
+                  setError("Render Engine Error");
               }
-              console.error("[PdfViewer] Render Error:", err); 
               setLoading(false);
           }
       }
