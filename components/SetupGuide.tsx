@@ -1,343 +1,773 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { 
-  X, Database, SmartphoneNfc, Bot, Container, Table, 
-  Terminal, Globe, Cloud, ShieldCheck, Zap, Code2, 
-  ChevronRight, Copy, CheckCircle2, Server, Key, FolderSync,
-  HelpCircle, Cpu, Network, Layout, Smartphone, BookOpen, Info
+  X, Database, Settings, Smartphone, Tablet, Tv, Terminal, 
+  Cpu, HardDrive, Layers, Zap, Shield, Activity, Network, 
+  Lock, Binary, Table, RefreshCw, FileText, ArrowRight, 
+  Sparkles, Download, Search, Maximize, Box, Bot, 
+  SmartphoneNfc, Container, Split, DatabaseZap, Code2, 
+  Wifi, Clock, CloudLightning, FileJson, CheckCircle2, 
+  AlertTriangle, Play, Pause, ChevronRight, Calculator,
+  Braces, ShieldCheck, Wrench, Globe
 } from 'lucide-react';
 
 interface SetupGuideProps {
   onClose: () => void;
 }
 
-const WhyBox = ({ children }: { children: React.ReactNode }) => (
-    <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-xl mb-4">
-        <div className="flex items-center gap-2 text-blue-400 font-black text-[10px] uppercase tracking-widest mb-2">
-            <HelpCircle size={14} /> Why do I need this?
-        </div>
-        <p className="text-xs text-slate-300 leading-relaxed italic">
-            {children}
-        </p>
-    </div>
-);
-
 const SetupGuide: React.FC<SetupGuideProps> = ({ onClose }) => {
-  const [activeTab, setActiveTab] = useState<'intro' | 'server' | 'bridge' | 'tunnel' | 'apk'>('intro');
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'supabase' | 'apk' | 'ai' | 'pricelists' | 'build' | 'migration'>('supabase');
+  const [copiedStep, setCopiedStep] = useState<string | null>(null);
 
-  const copy = (text: string, id: string) => {
+  const copyToClipboard = (text: string, stepId: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    setCopiedStep(stepId);
+    setTimeout(() => setCopiedStep(null), 2000);
   };
 
-  const Section = ({ icon: Icon, title, desc, children }: any) => (
-    <div className="animate-fade-in space-y-6">
-        <div className="flex items-center gap-4 mb-8">
-            <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/20 text-white">
-                <Icon size={24} />
+  // --- VISUAL DIAGRAM COMPONENTS ---
+
+  const DiagramCloudSync = () => (
+    <div className="relative h-48 bg-slate-900 rounded-3xl border border-slate-700/50 overflow-hidden mb-8 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
+        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(59,130,246,0.05)_50%,transparent_75%)] bg-[length:250%_250%] animate-[shimmer_8s_infinite]"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg flex items-center justify-between px-8 z-10">
+            {/* Database Node */}
+            <div className="flex flex-col items-center gap-3 relative group">
+                <div className="w-16 h-16 bg-slate-800 rounded-2xl border border-blue-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.2)] group-hover:shadow-blue-500/50 transition-all">
+                    <Database className="text-blue-400" size={32} />
+                </div>
+                <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-900/20 px-2 py-1 rounded border border-blue-500/20">PostgreSQL</div>
+                {/* RLS Shield */}
+                <div className="absolute -top-3 -right-3 bg-slate-900 p-1.5 rounded-full border border-green-500/30 animate-bounce">
+                    <Shield className="text-green-400 w-4 h-4" />
+                </div>
             </div>
-            <div>
-                <h2 className="text-2xl font-black uppercase tracking-tight text-white">{title}</h2>
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{desc}</p>
+
+            {/* Connection Line */}
+            <div className="flex-1 h-0.5 bg-slate-700 relative mx-4">
+                <div className="absolute top-1/2 -translate-y-1/2 left-0 w-2 h-2 bg-blue-400 rounded-full shadow-[0_0_10px_rgba(96,165,250,1)] animate-[travel_2s_infinite_linear]"></div>
+                <div className="absolute top-1/2 -translate-y-1/2 left-0 w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,1)] animate-[travel_2s_infinite_linear_0.5s]"></div>
+            </div>
+
+            {/* Edge Node */}
+            <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 bg-slate-800 rounded-xl border border-slate-600 flex items-center justify-center">
+                    <Network className="text-slate-400" size={24} />
+                </div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Edge API</div>
+            </div>
+
+            {/* Connection Line */}
+            <div className="flex-1 h-0.5 bg-slate-700 relative mx-4">
+                 <div className="absolute top-1/2 -translate-y-1/2 left-0 w-2 h-2 bg-blue-400 rounded-full shadow-[0_0_10px_rgba(96,165,250,1)] animate-[travel_2s_infinite_linear_1s]"></div>
+            </div>
+
+            {/* Local Node */}
+            <div className="flex flex-col items-center gap-3">
+                <div className="w-16 h-16 bg-slate-800 rounded-2xl border border-green-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.2)]">
+                    <Tablet className="text-green-400" size={32} />
+                </div>
+                <div className="text-[10px] font-black text-green-400 uppercase tracking-widest bg-green-900/20 px-2 py-1 rounded border border-green-500/20">Local DB</div>
             </div>
         </div>
-        {children}
+        <style>{`
+            @keyframes travel { 0% { left: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { left: 100%; opacity: 0; } }
+            @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        `}</style>
     </div>
   );
 
-  const CodeBox = ({ label, code, id }: any) => (
-    <div className="group relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-6">
-        <div className="bg-slate-950 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                <Terminal size={12}/> {label}
-            </span>
-            <button 
-                onClick={() => copy(code, id)}
-                className="p-1.5 hover:bg-blue-600 rounded-lg text-slate-400 hover:text-white transition-all"
-            >
-                {copiedId === id ? <CheckCircle2 size={14} className="text-green-400" /> : <Copy size={14} />}
-            </button>
-        </div>
-        <div className="p-5 overflow-x-auto">
-            <pre className="text-xs text-blue-300 font-mono leading-relaxed whitespace-pre">{code}</pre>
+  const DiagramNormalization = () => (
+    <div className="relative h-64 bg-slate-950 rounded-3xl border border-slate-800 overflow-hidden mb-8 flex items-center justify-center p-8">
+        <div className="flex items-center gap-8 md:gap-16 w-full max-w-2xl relative">
+            {/* Monolith */}
+            <div className="flex-1 aspect-video bg-red-900/20 border-2 border-red-500/30 rounded-2xl flex flex-col items-center justify-center relative animate-pulse">
+                <FileJson className="text-red-400 mb-2" size={40} />
+                <span className="text-red-400 text-xs font-black uppercase tracking-widest">Monolith Blob</span>
+                <span className="text-[9px] text-red-500/70 font-mono mt-1">50MB Payload</span>
+                <div className="absolute -right-4 top-1/2 -translate-y-1/2">
+                    <ArrowRight className="text-slate-600" size={24} />
+                </div>
+            </div>
+
+            {/* Process */}
+            <div className="shrink-0 flex flex-col items-center text-slate-500">
+                <Split size={32} className="animate-spin-slow duration-[10s]" />
+            </div>
+
+            {/* Normalized */}
+            <div className="flex-1 grid grid-cols-1 gap-3">
+                <div className="bg-blue-900/20 border border-blue-500/30 p-3 rounded-xl flex items-center gap-3 transform hover:translate-x-2 transition-transform cursor-crosshair">
+                    <Database size={16} className="text-blue-400" />
+                    <div className="h-1 w-full bg-blue-500/20 rounded-full overflow-hidden"><div className="h-full w-2/3 bg-blue-500"></div></div>
+                    <span className="text-[9px] font-black text-blue-400 uppercase">Brands</span>
+                </div>
+                <div className="bg-purple-900/20 border border-purple-500/30 p-3 rounded-xl flex items-center gap-3 transform hover:translate-x-2 transition-transform cursor-crosshair ml-4">
+                    <Layers size={16} className="text-purple-400" />
+                    <div className="h-1 w-full bg-purple-500/20 rounded-full overflow-hidden"><div className="h-full w-1/2 bg-purple-500"></div></div>
+                    <span className="text-[9px] font-black text-purple-400 uppercase">Products</span>
+                </div>
+                <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-xl flex items-center gap-3 transform hover:translate-x-2 transition-transform cursor-crosshair ml-8">
+                    <Box size={16} className="text-green-400" />
+                    <div className="h-1 w-full bg-green-500/20 rounded-full overflow-hidden"><div className="h-full w-3/4 bg-green-500"></div></div>
+                    <span className="text-[9px] font-black text-green-400 uppercase">Stock</span>
+                </div>
+            </div>
         </div>
     </div>
+  );
+
+  const DiagramBuildPipeline = () => (
+    <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 mb-8 overflow-x-auto">
+        <div className="flex items-center min-w-[600px] justify-between gap-4">
+            {[
+                { icon: Code2, label: 'React Source', color: 'text-blue-400', status: 'done' },
+                { icon: Container, label: 'Vite Build', color: 'text-purple-400', status: 'done' },
+                { icon: Braces, label: 'Capacitor', color: 'text-yellow-400', status: 'active' },
+                { icon: SmartphoneNfc, label: 'Android APK', color: 'text-green-400', status: 'pending' }
+            ].map((step, i, arr) => (
+                <div key={i} className="flex-1 flex items-center gap-2 group">
+                    <div className="flex flex-col items-center gap-3 flex-1">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-all duration-500 ${step.status === 'active' ? 'bg-slate-800 border-white text-white shadow-[0_0_15px_rgba(255,255,255,0.3)]' : 'bg-slate-950 border-slate-800 ' + step.color}`}>
+                            <step.icon size={20} className={step.status === 'active' ? 'animate-pulse' : ''} />
+                        </div>
+                        <div className="text-center">
+                            <div className="text-[10px] font-black text-slate-300 uppercase tracking-wider">{step.label}</div>
+                            <div className="text-[9px] font-mono text-slate-500 mt-1">{step.status === 'done' ? 'Compiled' : step.status === 'active' ? 'Processing...' : 'Waiting'}</div>
+                        </div>
+                    </div>
+                    {i < arr.length - 1 && (
+                        <div className="flex-1 h-0.5 bg-slate-800 mx-2 relative overflow-hidden">
+                            {step.status === 'done' && <div className="absolute inset-0 bg-green-500"></div>}
+                            {step.status === 'active' && <div className="absolute inset-0 bg-gradient-to-r from-slate-800 via-white to-slate-800 animate-[shimmer_1s_infinite]"></div>}
+                        </div>
+                    )}
+                </div>
+            ))}
+        </div>
+    </div>
+  );
+
+  const DiagramAIEngine = () => (
+    <div className="relative h-56 bg-slate-950 rounded-3xl border border-purple-500/20 overflow-hidden mb-8 flex items-center justify-center">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(168,85,247,0.1)_0%,_transparent_70%)]"></div>
+        <div className="flex items-center gap-4 md:gap-8 z-10 w-full max-w-3xl px-8">
+            {/* Input */}
+            <div className="w-1/4 bg-slate-900 border border-slate-700 p-3 rounded-xl opacity-60 scale-90">
+                <div className="h-2 w-3/4 bg-slate-700 rounded mb-2"></div>
+                <div className="h-2 w-full bg-slate-700 rounded mb-2"></div>
+                <div className="h-2 w-1/2 bg-slate-700 rounded"></div>
+                <div className="mt-2 text-[8px] font-mono text-slate-500 uppercase text-center">Raw Specs</div>
+            </div>
+
+            <ArrowRight className="text-purple-900" size={20} />
+
+            {/* BRAIN */}
+            <div className="relative w-32 h-32 flex items-center justify-center">
+                <div className="absolute inset-0 bg-purple-500/20 blur-3xl animate-pulse"></div>
+                <div className="w-24 h-24 bg-slate-900 rounded-full border-2 border-purple-500 flex items-center justify-center shadow-[0_0_30px_rgba(168,85,247,0.4)] relative z-10">
+                    <Bot size={40} className="text-purple-400" />
+                    <Sparkles size={20} className="text-white absolute -top-1 -right-1 animate-bounce" />
+                </div>
+                <div className="absolute bottom-0 text-[9px] font-black text-purple-400 uppercase tracking-widest bg-slate-900 px-2 py-0.5 rounded border border-purple-500/50">Gemini 1.5</div>
+            </div>
+
+            <ArrowRight className="text-purple-900" size={20} />
+
+            {/* Output */}
+            <div className="w-1/4 bg-slate-800 border border-green-500/30 p-3 rounded-xl shadow-lg transform hover:scale-105 transition-transform">
+                <div className="flex gap-2 mb-2"><div className="w-2 h-2 rounded-full bg-red-500"></div><div className="w-2 h-2 rounded-full bg-yellow-500"></div><div className="w-2 h-2 rounded-full bg-green-500"></div></div>
+                <div className="space-y-1">
+                    <div className="flex gap-2"><span className="text-purple-400 text-[8px]">{`{`}</span></div>
+                    <div className="flex gap-2 pl-2"><span className="text-blue-400 text-[8px]">"features":</span><span className="text-green-400 text-[8px]">[...]</span></div>
+                    <div className="flex gap-2"><span className="text-purple-400 text-[8px]">{`}`}</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+  );
+
+  const DiagramPricing = () => {
+      const [price, setPrice] = useState(799.99);
+      useEffect(() => {
+          const i = setInterval(() => {
+              setPrice(prev => prev === 799.99 ? 800.00 : 799.99);
+          }, 2000);
+          return () => clearInterval(i);
+      }, []);
+
+      return (
+        <div className="bg-slate-900 rounded-3xl p-8 border border-indigo-500/20 mb-8 flex flex-col md:flex-row items-center justify-center gap-12 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5 text-indigo-500 rotate-12 pointer-events-none"><Calculator size={120} /></div>
+            
+            <div className="flex flex-col items-center gap-2 relative z-10">
+                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Input</div>
+                <div className="text-4xl font-mono text-slate-400 line-through decoration-red-500/50 decoration-4">R 799.99</div>
+            </div>
+
+            <div className="flex flex-col items-center gap-2 z-10">
+                <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.5)]">
+                    <RefreshCw className="text-white animate-spin-slow" size={24} />
+                </div>
+                <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest bg-slate-950 px-2 py-1 rounded">Math Engine</div>
+            </div>
+
+            <div className="flex flex-col items-center gap-2 relative z-10">
+                <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Output</div>
+                <div className="text-6xl font-black font-mono text-green-400 tracking-tighter drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">
+                    R {price.toFixed(2)}
+                </div>
+            </div>
+        </div>
+      );
+  };
+
+  const DiagramTroubleshoot = () => (
+      <div className="bg-slate-950 p-8 rounded-[2rem] border border-red-500/20 relative overflow-hidden my-8">
+          <div className="absolute top-0 left-0 w-full h-1 bg-red-500/50"></div>
+          <h3 className="text-red-400 font-black uppercase tracking-widest text-xs mb-6 flex items-center gap-2"><AlertTriangle size={16}/> Emergency Recovery Protocol</h3>
+          <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+              {[
+                  { title: "Sync Failed?", steps: ["Check WiFi", "Restart App", "Check Cloud"] },
+                  { title: "Media Missing?", steps: ["Storage Quota", "File Type", "Re-upload"] },
+                  { title: "App Frozen?", steps: ["Watchdog Reset", "Clear Cache", "Reboot Device"] }
+              ].map((item, i) => (
+                  <div key={i} className="flex-1 bg-slate-900/50 p-4 rounded-xl border border-slate-800 w-full">
+                      <div className="text-slate-200 font-bold uppercase text-xs mb-3 border-b border-slate-800 pb-2">{item.title}</div>
+                      <div className="space-y-2">
+                          {item.steps.map((step, idx) => (
+                              <div key={idx} className="flex items-center gap-2 text-[10px] font-mono text-slate-500">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-red-500/50"></div>
+                                  {step}
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              ))}
+          </div>
+      </div>
+  );
+
+  // --- CONTENT HELPERS ---
+
+  const ArchitectNote = ({ title, children }: { title: string, children?: React.ReactNode }) => (
+      <div className="my-6 p-6 bg-yellow-950/30 border-l-4 border-yellow-600 rounded-r-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-2 opacity-10 text-yellow-500"><CloudLightning size={40} /></div>
+          <div className="flex items-center gap-2 text-yellow-500 font-black uppercase text-[10px] tracking-widest mb-2">
+              <Cpu size={14} /> Architect's Note: {title}
+          </div>
+          <div className="text-yellow-100/80 text-sm font-medium leading-relaxed font-sans">{children}</div>
+      </div>
+  );
+
+  const SectionHeader = ({ icon: Icon, title, subtitle }: any) => (
+      <div className="mb-12">
+          <div className="flex items-center gap-4 mb-2">
+              <div className="p-3 bg-slate-800 rounded-2xl border border-slate-700 text-blue-400">
+                  <Icon size={32} />
+              </div>
+              <div>
+                  <h2 className="text-3xl font-black text-slate-100 uppercase tracking-tighter">{title}</h2>
+                  <div className="flex items-center gap-2 mt-1">
+                      <div className="h-0.5 w-8 bg-blue-500"></div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{subtitle}</span>
+                  </div>
+              </div>
+          </div>
+      </div>
+  );
+
+  const CodeSnippet = ({ code, label, id }: any) => (
+      <div className="my-6 group relative">
+          <div className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-t-xl px-4 py-2">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Terminal size={12}/> {label}</span>
+              <div className="flex gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-slate-800"></div>
+                  <div className="w-2 h-2 rounded-full bg-slate-800"></div>
+              </div>
+          </div>
+          <div className="bg-slate-900 border-x border-b border-slate-800 rounded-b-xl p-6 overflow-x-auto relative">
+              <code className="font-mono text-xs text-blue-300 whitespace-pre leading-relaxed">{code}</code>
+              <button 
+                onClick={() => copyToClipboard(code, id)}
+                className="absolute top-4 right-4 p-2 bg-slate-800 hover:bg-blue-600 rounded-lg text-white transition-all opacity-0 group-hover:opacity-100 shadow-lg"
+              >
+                  {copiedStep === id ? <CheckCircle2 size={16} className="text-green-400"/> : <FilesIcon size={16} />}
+              </button>
+          </div>
+      </div>
+  );
+
+  // --- ICONS FOR CODE SNIPPET BUTTON ---
+  const FilesIcon = ({ size }: { size: number }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
   );
 
   return (
-    <div className="fixed inset-0 z-[200] bg-slate-950 text-slate-200 flex flex-col animate-fade-in overflow-hidden">
-      {/* Header */}
-      <div className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 shrink-0 shadow-2xl relative">
-          <div className="flex items-center gap-3">
-              <div className="bg-blue-600 p-2 rounded-lg"><ShieldCheck size={20} className="text-white" /></div>
+    <div className="fixed inset-0 z-[100] bg-slate-950 text-slate-200 font-sans flex flex-col animate-fade-in overflow-hidden">
+      {/* Top Bar */}
+      <div className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 shrink-0 z-50 shadow-2xl relative">
+          <div className="absolute inset-0 bg-blue-500/5 pointer-events-none"></div>
+          <div className="flex items-center gap-3 relative z-10">
+              <div className="bg-blue-600 p-2 rounded-lg rotate-3 shadow-lg shadow-blue-500/20"><ShieldCheck size={20} className="text-white" /></div>
               <div>
-                  <div className="text-base font-black uppercase tracking-tight text-white">Kiosk <span className="text-blue-500">Master Guide</span></div>
-                  <div className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">End-to-End Deployment Tutorial</div>
+                  <div className="text-base font-black uppercase tracking-tight text-white leading-none">System <span className="text-blue-500">Blueprint</span></div>
+                  <div className="text-[9px] font-mono text-slate-500 uppercase tracking-widest mt-0.5">Firmware v3.0 // Engineering Manual</div>
               </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={24} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors relative z-10"><X size={24} /></button>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
           {/* Sidebar */}
-          <div className="w-72 bg-slate-900/50 border-r border-slate-800 p-4 space-y-2 overflow-y-auto shrink-0">
-              {[
-                  { id: 'intro', label: '0. The Blueprint', icon: Layout, color: 'text-slate-400' },
-                  { id: 'server', label: '1. The Cloud Brain', icon: Server, color: 'text-blue-400' },
-                  { id: 'tunnel', label: '2. The Global Link', icon: Globe, color: 'text-green-400' },
-                  { id: 'bridge', label: '3. Magic Sync', icon: FolderSync, color: 'text-cyan-400' },
-                  { id: 'apk', label: '4. Native Android', icon: SmartphoneNfc, color: 'text-yellow-400' },
-              ].map(tab => (
-                  <button 
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`w-full p-3 rounded-xl flex items-center gap-4 transition-all ${activeTab === tab.id ? 'bg-slate-800 border border-slate-700 shadow-xl' : 'hover:bg-slate-800/30 border border-transparent'}`}
-                  >
-                      <div className={`p-2 rounded-lg bg-slate-950 ${activeTab === tab.id ? 'shadow-inner' : ''}`}>
-                          <tab.icon size={18} className={tab.color} />
+          <div className="w-80 bg-slate-900/50 backdrop-blur-xl border-r border-slate-800 flex flex-col p-4 overflow-y-auto shrink-0">
+              <div className="space-y-1">
+                  {[
+                      { id: 'supabase', label: 'Cloud Infrastructure', icon: Database, color: 'text-blue-400' },
+                      { id: 'migration', label: 'Migration & Repair', icon: DatabaseZap, color: 'text-orange-400' },
+                      { id: 'apk', label: 'Native Build', icon: SmartphoneNfc, color: 'text-green-400' },
+                      { id: 'ai', label: 'AI Synthesis', icon: Bot, color: 'text-purple-400' },
+                      { id: 'build', label: 'Asset Compiler', icon: Container, color: 'text-yellow-400' },
+                      { id: 'pricelists', label: 'Price Engine', icon: Table, color: 'text-red-400' },
+                  ].map(tab => (
+                      <button 
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`w-full p-3 rounded-xl flex items-center gap-4 transition-all duration-300 border border-transparent ${activeTab === tab.id ? 'bg-slate-800 border-slate-700 shadow-xl' : 'hover:bg-slate-800/50'}`}
+                      >
+                          <div className={`p-2 rounded-lg bg-slate-950 ${activeTab === tab.id ? 'shadow-inner' : ''}`}>
+                              <tab.icon size={18} className={tab.color} />
+                          </div>
+                          <div className="text-left">
+                              <div className={`text-xs font-black uppercase tracking-wide ${activeTab === tab.id ? 'text-white' : 'text-slate-400'}`}>{tab.label}</div>
+                              <div className="text-[9px] font-mono text-slate-600 uppercase">Module 0{['supabase','migration','apk','ai','build','pricelists'].indexOf(tab.id) + 1}</div>
+                          </div>
+                      </button>
+                  ))}
+              </div>
+              
+              <div className="mt-auto pt-6 border-t border-slate-800">
+                  <div className="bg-gradient-to-br from-slate-900 to-black p-4 rounded-2xl border border-slate-800">
+                      <div className="flex items-center gap-3 mb-2">
+                          <Activity size={16} className="text-green-500 animate-pulse" />
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">System Status</span>
                       </div>
-                      <div className="text-left">
-                          <div className={`text-[11px] font-black uppercase tracking-wide ${activeTab === tab.id ? 'text-white' : 'text-slate-500'}`}>{tab.label}</div>
+                      <div className="space-y-2">
+                          <div className="flex justify-between text-[10px] font-mono text-slate-500"><span>Core</span><span className="text-green-400">Online</span></div>
+                          <div className="flex justify-between text-[10px] font-mono text-slate-500"><span>Sync</span><span className="text-blue-400">Active</span></div>
+                          <div className="flex justify-between text-[10px] font-mono text-slate-500"><span>Ver</span><span className="text-slate-300">3.0.1</span></div>
                       </div>
-                  </button>
-              ))}
+                  </div>
+              </div>
           </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto p-8 md:p-12 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
-              <div className="max-w-3xl mx-auto pb-20">
+          {/* Main Content */}
+          <div className="flex-1 overflow-y-auto p-8 md:p-12 scroll-smooth bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+              <div className="max-w-4xl mx-auto pb-20">
                   
-                  {activeTab === 'intro' && (
-                    <Section icon={Layout} title="The Ecosystem Blueprint" desc="Understanding how the parts fit together">
-                        <div className="grid grid-cols-1 gap-6">
-                            <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500"><Network size={120} /></div>
-                                <h3 className="text-xl font-black text-white mb-4 uppercase">The 3 Pillars of your Kiosk</h3>
-                                <div className="space-y-6">
-                                    <div className="flex gap-4">
-                                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shrink-0 font-black">1</div>
-                                        <div>
-                                            <h4 className="font-black text-white uppercase text-sm">The Cloud Server (The Brain)</h4>
-                                            <p className="text-xs text-slate-400 mt-1">A script running on your PC that stores all products, images, and settings. It tells every tablet what to show.</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-4">
-                                        <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center shrink-0 font-black">2</div>
-                                        <div>
-                                            <h4 className="font-black text-white uppercase text-sm">The Global Tunnel (The Bridge)</h4>
-                                            <p className="text-xs text-slate-400 mt-1">A secure connection that allows tablets in any store (even in other cities) to talk to your PC safely.</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-4">
-                                        <div className="w-10 h-10 bg-yellow-600 rounded-full flex items-center justify-center shrink-0 font-black">3</div>
-                                        <div>
-                                            <h4 className="font-black text-white uppercase text-sm">The Android APK (The Face)</h4>
-                                            <p className="text-xs text-slate-400 mt-1">The actual app installed on the tablet. It locks the device into "Kiosk Mode" and looks professional.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setActiveTab('server')}
-                                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase p-5 rounded-2xl flex items-center justify-center gap-3 transition-all"
-                            >
-                                Start Step 1: Set up the Brain <ChevronRight />
-                            </button>
-                        </div>
-                    </Section>
-                  )}
+                  {activeTab === 'supabase' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={Database} title="Cloud Core" subtitle="PostgreSQL Orchestration Layer" />
+                          <DiagramCloudSync />
+                          
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
+                              <div>
+                                  <h3 className="text-xl font-black text-white uppercase tracking-tight mb-4">Master Setup Protocol</h3>
+                                  <div className="p-4 bg-blue-900/30 border-l-4 border-blue-500 mb-6 rounded-r-xl">
+                                      <h4 className="text-blue-400 font-bold uppercase text-xs mb-1 flex items-center gap-2"><ShieldCheck size={14}/> Safe Initialization</h4>
+                                      <p className="text-[11px] text-slate-300">This script creates tables and columns only if they do not exist. It is <strong>non-destructive</strong> and will not wipe existing data.</p>
+                                  </div>
+                                  <CodeSnippet 
+                                    label="SQL Schema Init (Safe)"
+                                    id="sql-boot"
+                                    code={`-- SAFE SCHEMA INITIALIZATION
+-- This script creates tables if they don't exist and adds missing columns.
+-- It preserves existing data.
 
-                  {activeTab === 'server' && (
-                      <Section icon={Server} title="Step 1: The Cloud Brain" desc="Setting up your centralized API server">
-                          <WhyBox>
-                              Without a server, your kiosk is just a static website. You would have to manually update every tablet one-by-one. 
-                              With this server, you update your PC, and 100 tablets update instantly.
-                          </WhyBox>
+-- 1. Store Config
+CREATE TABLE IF NOT EXISTS public.store_config (
+  id bigint PRIMARY KEY DEFAULT 1,
+  data jsonb NOT NULL DEFAULT '{}'::jsonb
+);
 
-                          <div className="space-y-4 mb-8">
-                              <h4 className="font-black uppercase text-xs text-blue-400">Preparation</h4>
-                              <ol className="list-decimal list-inside text-xs text-slate-300 space-y-2 ml-2">
-                                  <li>Download and install <b>Node.js</b> from nodejs.org.</li>
-                                  <li>Create a new folder on your PC named <code className="bg-slate-800 px-1">KioskServer</code>.</li>
-                                  <li>Open a terminal (CMD) in that folder and run: <br/> 
-                                      <code className="bg-black text-green-400 p-2 block mt-2 rounded">npm init -y && npm install express multer cors</code>
-                                  </li>
-                              </ol>
-                          </div>
+-- 2. Fleet Management
+CREATE TABLE IF NOT EXISTS public.kiosks (
+  id text PRIMARY KEY,
+  name text NOT NULL,
+  status text DEFAULT 'online',
+  last_seen timestamptz DEFAULT now()
+);
+-- Add columns safely
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS device_type text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS assigned_zone text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS wifi_strength int;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS ip_address text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS version text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS location_description text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS restart_requested boolean DEFAULT false;
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;
 
-                          <CodeBox 
-                            label="server.js (Save this file inside your folder)"
-                            id="node-server"
-                            code={`const express = require('express');
-const cors = require('cors');
-const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
+-- 3. Inventory System
+CREATE TABLE IF NOT EXISTS public.brands (
+    id text PRIMARY KEY,
+    name text,
+    logo_url text,
+    theme_color text,
+    updated_at timestamptz DEFAULT now()
+);
 
-const app = express();
-const PORT = 3001;
+CREATE TABLE IF NOT EXISTS public.categories (
+    id text PRIMARY KEY,
+    brand_id text REFERENCES public.brands(id) ON DELETE CASCADE,
+    name text,
+    icon text,
+    updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS image_url text;
 
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use('/uploads', express.static('uploads'));
+CREATE TABLE IF NOT EXISTS public.products (
+    id text PRIMARY KEY,
+    category_id text REFERENCES public.categories(id) ON DELETE CASCADE,
+    name text,
+    sku text,
+    description text,
+    specs jsonb DEFAULT '{}'::jsonb,
+    features jsonb DEFAULT '[]'::jsonb,
+    image_url text,
+    gallery_urls jsonb DEFAULT '[]'::jsonb,
+    video_urls jsonb DEFAULT '[]'::jsonb,
+    manuals jsonb DEFAULT '[]'::jsonb,
+    box_contents jsonb DEFAULT '[]'::jsonb,
+    dimensions jsonb DEFAULT '[]'::jsonb,
+    terms text,
+    date_added timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
 
-const CONFIG_FILE = './kiosk_config.json';
-const FLEET_FILE = './fleet_registry.json';
-if (!fs.existsSync('./uploads')) fs.mkdirSync('./uploads');
+-- 4. Pricing Engine
+CREATE TABLE IF NOT EXISTS public.pricelist_brands (
+    id text PRIMARY KEY,
+    name text,
+    logo_url text,
+    updated_at timestamptz DEFAULT now()
+);
 
-app.get('/api/config', (req, res) => {
-    if (!fs.existsSync(CONFIG_FILE)) return res.json({});
-    res.json(JSON.parse(fs.readFileSync(CONFIG_FILE)));
-});
+CREATE TABLE IF NOT EXISTS public.pricelists (
+    id text PRIMARY KEY,
+    brand_id text,
+    title text,
+    month text,
+    year text,
+    url text,
+    thumbnail_url text,
+    type text,
+    kind text,
+    start_date text,
+    end_date text,
+    promo_text text,
+    items jsonb DEFAULT '[]'::jsonb,
+    headers jsonb DEFAULT '{}'::jsonb,
+    date_added timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
 
-app.post('/api/config', (req, res) => {
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(req.body, null, 2));
-    res.json({ success: true });
-});
+-- 5. Security (RLS)
+ALTER TABLE public.store_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kiosks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pricelist_brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pricelists ENABLE ROW LEVEL SECURITY;
 
-const storage = multer.diskStorage({
-    destination: './uploads/',
-    filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
-});
-const upload = multer({ storage });
+-- Create policies (drop first to update definition if needed)
+DROP POLICY IF EXISTS "Public Access" ON public.store_config;
+CREATE POLICY "Public Access" ON public.store_config FOR ALL USING (true) WITH CHECK (true);
 
-app.post('/api/upload', upload.single('file'), (req, res) => {
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['host'];
-    res.json({ url: \`\${protocol}://\${host}/uploads/\${req.file.filename}\` });
-});
+DROP POLICY IF EXISTS "Public Access" ON public.kiosks;
+CREATE POLICY "Public Access" ON public.kiosks FOR ALL USING (true) WITH CHECK (true);
 
-app.post('/api/heartbeat', (req, res) => {
-    let fleet = fs.existsSync(FLEET_FILE) ? JSON.parse(fs.readFileSync(FLEET_FILE)) : [];
-    const idx = fleet.findIndex(k => k.id === req.body.id);
-    if (idx > -1) fleet[idx] = { ...fleet[idx], ...req.body };
-    else fleet.push(req.body);
-    fs.writeFileSync(FLEET_FILE, JSON.stringify(fleet, null, 2));
-    res.json({ success: true });
-});
+DROP POLICY IF EXISTS "Public Access" ON public.brands;
+CREATE POLICY "Public Access" ON public.brands FOR ALL USING (true) WITH CHECK (true);
 
-app.listen(PORT, () => console.log(\`Kiosk Brain Active on Port \${PORT}\`));`}
-                          />
-                          <p className="text-xs text-slate-500 bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-                              Run the server by typing <code className="text-blue-400">node server.js</code> in your terminal. You should see "Kiosk Brain Active".
-                          </p>
-                      </Section>
-                  )}
+DROP POLICY IF EXISTS "Public Access" ON public.categories;
+CREATE POLICY "Public Access" ON public.categories FOR ALL USING (true) WITH CHECK (true);
 
-                  {activeTab === 'tunnel' && (
-                      <Section icon={Globe} title="Step 2: The Global Link" desc="Making your server accessible from anywhere">
-                          <WhyBox>
-                              Your PC is hidden behind your home or store router. If you try to connect a tablet from another WiFi, it won't see your PC. 
-                              Cloudflare creates a secure, encrypted "tunnel" through your router so the tablets can find your PC safely.
-                          </WhyBox>
+DROP POLICY IF EXISTS "Public Access" ON public.products;
+CREATE POLICY "Public Access" ON public.products FOR ALL USING (true) WITH CHECK (true);
 
-                          <div className="space-y-6">
-                              <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
-                                  <h4 className="text-white font-black uppercase text-xs mb-4">The Quick Method</h4>
-                                  <ol className="text-xs text-slate-400 space-y-4 list-decimal list-inside">
-                                      <li>Install <b>Cloudflared</b> (Search "Cloudflare Tunnel download").</li>
-                                      <li>Open a new terminal and type the command below:</li>
-                                  </ol>
-                                  <CodeBox 
-                                    label="Terminal Command"
-                                    id="cf-cmd"
-                                    code={`cloudflared tunnel --url http://localhost:3001`}
+DROP POLICY IF EXISTS "Public Access" ON public.pricelist_brands;
+CREATE POLICY "Public Access" ON public.pricelist_brands FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Access" ON public.pricelists;
+CREATE POLICY "Public Access" ON public.pricelists FOR ALL USING (true) WITH CHECK (true);
+
+-- 6. Storage
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('kiosk-media', 'kiosk-media', true) 
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public Media Access" ON storage.objects;
+CREATE POLICY "Public Media Access" ON storage.objects FOR ALL USING (bucket_id = 'kiosk-media') WITH CHECK (bucket_id = 'kiosk-media');
+
+-- Force Reload
+NOTIFY pgrst, 'reload schema';`}
                                   />
-                                  <div className="p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
-                                      <p className="text-xs text-yellow-500 font-bold">
-                                          Look for a URL ending in <span className="underline">.trycloudflare.com</span> in your terminal output. 
-                                          COPY THIS URL. It is the secret address for your kiosks.
+                              </div>
+                              <div className="space-y-6">
+                                  <ArchitectNote title="Snapshot Strategy">
+                                      We use a "Snapshot-First" architecture. Devices pull a massive JSON blob into local IndexedDB. This ensures <span className="text-white">Zero Latency</span> UI interactions, as the tablet never waits for a network request to render a product page.
+                                  </ArchitectNote>
+                                  <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl">
+                                      <div className="text-blue-400 text-xs font-black uppercase mb-2 flex items-center gap-2"><Lock size={14}/> Row Level Security (RLS)</div>
+                                      <p className="text-[11px] text-slate-400 leading-relaxed">RLS acts as a firewall at the database row level. Even if the API key is exposed, the policies defined in SQL restrict what actions can be taken.</p>
+                                  </div>
+                                  
+                                  {/* NEW: CORS Warning Section */}
+                                  <div className="bg-blue-950/50 p-4 rounded-xl border border-blue-500/30 mt-6">
+                                      <h4 className="text-blue-400 font-bold uppercase text-xs mb-2 flex items-center gap-2"><Globe size={14}/> Important: Storage CORS Configuration</h4>
+                                      <p className="text-[11px] text-slate-300 leading-relaxed mb-3">
+                                          For the Kiosk to load images/PDFs from the cloud on mobile devices, you must configure CORS headers in your Supabase Dashboard.
                                       </p>
+                                      <div className="bg-black/30 p-3 rounded-lg font-mono text-[10px] text-green-300">
+                                          Allowed Origins: *<br/>
+                                          Allowed Methods: GET, POST, PUT, HEAD<br/>
+                                          Max Age: 3600
+                                      </div>
                                   </div>
                               </div>
                           </div>
-                      </Section>
+                          <DiagramTroubleshoot />
+                      </div>
                   )}
 
-                  {activeTab === 'bridge' && (
-                      <Section icon={FolderSync} title="Step 3: Magic Content Sync" desc="Drop a file on your PC, see it on the tablet">
-                          <WhyBox>
-                              Entering product data manually is slow. With the "Sync Bridge", you can create a folder on your Desktop. 
-                              Whenever you drag a video or image into that folder, this script detects it and sends it to your Global Cloud.
-                          </WhyBox>
+                  {activeTab === 'migration' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={DatabaseZap} title="Normalization & Repair" subtitle="Relational Data Migration" />
+                          <DiagramNormalization />
+                          
+                          <div className="mt-12 space-y-8">
+                              <div className="bg-red-900/30 border-l-4 border-red-500 p-6 rounded-r-xl">
+                                  <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><Wrench size={16}/> Emergency Repair</h3>
+                                  <p className="text-slate-300 text-xs mt-2 leading-relaxed">
+                                      If you see <strong>404 Not Found</strong> errors for <code>brands</code> or <strong>400 Bad Request</strong> for <code>kiosks</code> or <code>pricelists</code>, run these scripts immediately. They force creation of all missing columns and refresh the API cache.
+                                  </p>
+                              </div>
 
-                          <CodeBox 
-                            label="bridge.js (Run this on your main PC)"
-                            id="bridge-script"
-                            code={`const chokidar = require('chokidar');
-const axios = require('axios');
-const FormData = require('form-data');
-const fs = require('fs');
-const path = require('path');
+                              <CodeSnippet 
+                                label="Fix Pricelists Table (Safe)"
+                                id="fix-pricelists"
+                                code={`-- FIX PRICELISTS TABLE SCHEMA (SAFE)
+CREATE TABLE IF NOT EXISTS public.pricelists (
+    id text PRIMARY KEY,
+    brand_id text,
+    title text,
+    month text,
+    year text,
+    url text,
+    thumbnail_url text,
+    type text,
+    kind text,
+    start_date text,
+    end_date text,
+    promo_text text,
+    items jsonb DEFAULT '[]'::jsonb,
+    headers jsonb DEFAULT '{}'::jsonb,
+    date_added timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
 
-// Replace this with the URL from your Cloudflare Tunnel in Step 2
-const API_URL = 'https://YOUR_TUNNEL_URL.trycloudflare.com'; 
-const WATCH_FOLDER = './KioskAssets'; 
+-- Ensure all columns exist
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS kind text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS start_date text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS end_date text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS promo_text text;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS items jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE public.pricelists ADD COLUMN IF NOT EXISTS headers jsonb DEFAULT '{}'::jsonb;
 
-if (!fs.existsSync(WATCH_FOLDER)) fs.mkdirSync(WATCH_FOLDER);
+NOTIFY pgrst, 'reload schema';`}
+                              />
 
-console.log('🚀 Sync Bridge Active. Drag files into:', path.resolve(WATCH_FOLDER));
-
-chokidar.watch(WATCH_FOLDER, { persistent: true }).on('add', async (filePath) => {
-  const fileName = path.basename(filePath);
-  if (fileName.startsWith('.')) return;
-
-  console.log('✨ Sending file to Cloud:', fileName);
-  const form = new FormData();
-  form.append('file', fs.createReadStream(filePath));
-
-  try {
-    const res = await axios.post(\`\${API_URL}/api/upload\`, form, { headers: form.getHeaders() });
-    console.log('✅ Global URL:', res.data.url);
-  } catch (err) { console.error('❌ Sync Failed:', err.message); }
-});`}
-                          />
-                      </Section>
+                              <div className="bg-orange-900/30 border-l-4 border-orange-500 p-6 rounded-r-xl mt-8">
+                                  <h3 className="text-white font-bold uppercase text-sm flex items-center gap-2"><RefreshCw size={16}/> Fix "API Cannot See Column" (Safe Refresh)</h3>
+                                  <p className="text-slate-300 text-xs mt-2 leading-relaxed">
+                                      If the "Force API Refresh" above didn't work and you still see errors about <strong>show_pricelists</strong>, run this script. It ensures the column exists and forces a schema reload without deleting data.
+                                  </p>
+                                  <div className="mt-4">
+                                      <CodeSnippet 
+                                          label="Ensure Column Exists & Refresh"
+                                          id="nuclear-reset"
+                                          code={`-- SAFE COLUMN SYNC
+ALTER TABLE public.kiosks ADD COLUMN IF NOT EXISTS show_pricelists boolean DEFAULT true;
+NOTIFY pgrst, 'reload schema';`}
+                                      />
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
                   )}
 
                   {activeTab === 'apk' && (
-                      <Section icon={SmartphoneNfc} title="Step 4: The Android APK" desc="Turning your website into a real App">
-                          <WhyBox>
-                              Web browsers have address bars, refresh buttons, and can be closed by customers. 
-                              An APK (Android Package) makes the app "Native". It fills the whole screen, prevents users from exiting, and performs 2x faster.
-                          </WhyBox>
-
-                          <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 space-y-8">
-                                <div className="flex gap-4">
-                                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0"><Code2 size={16}/></div>
-                                    <div className="flex-1">
-                                        <h5 className="font-black text-white uppercase text-xs mb-1">1. Build the Web Core</h5>
-                                        <p className="text-[11px] text-slate-500 mb-2">Compiles your code into a lightweight bundle.</p>
-                                        <code className="bg-black text-blue-400 p-2 rounded block text-[10px]">npm run build</code>
-                                    </div>
-                                </div>
-                                <div className="flex gap-4">
-                                    <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center shrink-0"><Cpu size={16}/></div>
-                                    <div className="flex-1">
-                                        <h5 className="font-black text-white uppercase text-xs mb-1">2. Inject into Hardware</h5>
-                                        <p className="text-[11px] text-slate-500 mb-2">Moves the bundle into the Android Studio project.</p>
-                                        <code className="bg-black text-purple-400 p-2 rounded block text-[10px]">npx cap sync android</code>
-                                    </div>
-                                </div>
-                                <div className="flex gap-4">
-                                    <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center shrink-0"><Smartphone size={16}/></div>
-                                    <div className="flex-1">
-                                        <h5 className="font-black text-white uppercase text-xs mb-1">3. Generate APK</h5>
-                                        <p className="text-[11px] text-slate-500 mb-2">Opens Android Studio. Click "Build" &rarr; "Build APK".</p>
-                                        <code className="bg-black text-green-400 p-2 rounded block text-[10px]">npx cap open android</code>
-                                    </div>
-                                </div>
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={SmartphoneNfc} title="Native Compilation" subtitle="Android Hardware Bridge" />
+                          <DiagramBuildPipeline />
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
+                              <div>
+                                  <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 mb-6">
+                                      <h4 className="text-green-400 font-black uppercase text-xs mb-4 flex items-center gap-2"><Terminal size={14}/> Build Sequence</h4>
+                                      <ol className="space-y-4 relative border-l border-slate-800 ml-2 pl-6">
+                                          {[
+                                              { title: "Compile Web Assets", cmd: "npm run build" },
+                                              { title: "Sync Capacitor", cmd: "npx cap sync android" },
+                                              { title: "Open Android Studio", cmd: "npx cap open android" }
+                                          ].map((step, i) => (
+                                              <li key={i} className="relative">
+                                                  <div className="absolute -left-[31px] top-1 w-2.5 h-2.5 rounded-full bg-slate-700 border-2 border-slate-900"></div>
+                                                  <div className="text-white font-bold text-sm mb-1">{step.title}</div>
+                                                  <code className="text-[10px] bg-black/50 px-2 py-1 rounded text-slate-400 font-mono">{step.cmd}</code>
+                                              </li>
+                                          ))}
+                                      </ol>
+                                  </div>
+                              </div>
+                              <div>
+                                  <ArchitectNote title="Hardware Acceleration">
+                                      Running as a native APK allows access to the Android <span className="text-yellow-400">WebView Hardware Layer</span>. This unlocks 60FPS scrolling and GPU-accelerated CSS animations that would stutter in a mobile Chrome browser tab.
+                                  </ArchitectNote>
+                                  
+                                  <CodeSnippet 
+                                    label="AndroidManifest.xml"
+                                    id="xml-manifest"
+                                    code={`<application
+  android:hardwareAccelerated="true"
+  android:usesCleartextTraffic="true">
+  
+  <activity 
+    android:screenOrientation="sensorLandscape" 
+    android:theme="@style/FullScreen"
+  />
+</application>`}
+                                  />
+                              </div>
                           </div>
-
-                          <div className="mt-8 p-6 bg-blue-600 rounded-2xl text-center">
-                              <h4 className="font-black uppercase text-lg mb-2">Setup Complete!</h4>
-                              <p className="text-sm font-bold opacity-80 mb-4">Install the APK on your tablet and enter your Tunnel URL in the settings.</p>
-                              <button onClick={onClose} className="bg-white text-blue-600 px-8 py-3 rounded-xl font-black uppercase text-xs">Return to Dashboard</button>
-                          </div>
-                      </Section>
+                      </div>
                   )}
 
+                  {activeTab === 'ai' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={Bot} title="Cognitive Engine" subtitle="Gemini 1.5 Integration" />
+                          <DiagramAIEngine />
+                          
+                          <div className="mt-12">
+                              <h3 className="text-white font-black uppercase text-xl mb-6">System Prompt Engineering</h3>
+                              <div className="flex flex-col md:flex-row gap-8">
+                                  <div className="flex-1">
+                                      <p className="text-slate-400 text-sm mb-4 leading-relaxed">
+                                          The AI layer acts as a <span className="text-purple-400 font-bold">Data Sanitizer</span>. Retail data is often messy. We prompt Gemini to act as a "Luxury Copywriter" to standardize descriptions.
+                                      </p>
+                                      <div className="bg-purple-900/10 border border-purple-500/20 p-4 rounded-xl">
+                                          <div className="text-purple-300 text-[10px] font-black uppercase mb-2">Input Noise</div>
+                                          <code className="text-xs text-slate-500 block">"SAMSUNG TV 65IN QLED 4K MODEL Q80C 2024 VER"</code>
+                                      </div>
+                                      <div className="flex justify-center my-2"><ArrowRight className="text-purple-500/50" /></div>
+                                      <div className="bg-green-900/10 border border-green-500/20 p-4 rounded-xl">
+                                          <div className="text-green-300 text-[10px] font-black uppercase mb-2">Clean Output</div>
+                                          <code className="text-xs text-white block">"Samsung Q80C 65-inch QLED 4K Smart TV"</code>
+                                      </div>
+                                  </div>
+                                  <div className="flex-1">
+                                      <CodeSnippet 
+                                        label="Prompt Payload"
+                                        id="ai-prompt"
+                                        code={`const prompt = \`
+Analyze technical specs: \${rawSpecs}
+
+Output JSON format:
+{
+  "marketing_copy": "Punchy, premium description",
+  "key_features": ["Feature 1", "Feature 2", "Feature 3"],
+  "compatibility": ["Item A", "Item B"]
+}
+\`;`}
+                                      />
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'pricelists' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={Table} title="Price Logic" subtitle="Algorithmic Rounding Engine" />
+                          <DiagramPricing />
+                          
+                          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+                              <div>
+                                  <h3 className="text-white font-black uppercase text-sm mb-4">Psychological Rounding</h3>
+                                  <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                                      To maintain a premium aesthetic, we avoid "messy" prices like <span className="text-red-400 line-through">R 199.99</span>. The engine automatically ceilings decimals and bumps `.9` endings to the next integer.
+                                  </p>
+                                  <ul className="space-y-3">
+                                      {[
+                                          { in: "129.99", out: "130.00" },
+                                          { in: "499.00", out: "500.00" },
+                                          { in: "122.50", out: "123.00" }
+                                      ].map((ex, i) => (
+                                          <li key={i} className="flex items-center justify-between bg-slate-900 p-3 rounded-lg border border-slate-800">
+                                              <span className="font-mono text-slate-500">{ex.in}</span>
+                                              <ArrowRight size={14} className="text-slate-700" />
+                                              <span className="font-mono text-green-400 font-bold">{ex.out}</span>
+                                          </li>
+                                      ))}
+                                  </ul>
+                              </div>
+                              <div>
+                                  <CodeSnippet 
+                                    label="Rounding Algorithm"
+                                    id="price-algo"
+                                    code={`function formatPrice(val) {
+  let n = parseFloat(val);
+  
+  // Ceiling Logic
+  if (n % 1 !== 0) n = Math.ceil(n);
+  
+  // Psycho-Pricing Bump
+  if (Math.floor(n) % 10 === 9) n += 1;
+  
+  return n.toLocaleString();
+}`}
+                                  />
+                              </div>
+                          </div>
+                      </div>
+                  )}
+
+                  {activeTab === 'build' && (
+                      <div className="animate-fade-in">
+                          <SectionHeader icon={Container} title="Asset Compiler" subtitle="Vite + Rollup Pipeline" />
+                          
+                          <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl mb-8">
+                              <h3 className="text-white font-black uppercase text-xl mb-4">Legacy Engine Support</h3>
+                              <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                                  To support Android 5.0 (Lollipop) and Chrome 37 WebViews, the build pipeline injects aggressive polyfills. The <code>@vitejs/plugin-legacy</code> handles the transpilation of modern ES6+ code down to ES5.
+                              </p>
+                              <CodeSnippet 
+                                label="Vite Legacy Config"
+                                id="vite-config"
+                                code={`legacy({
+  targets: ['chrome >= 37', 'android >= 5'],
+  additionalLegacyPolyfills: [
+    'regenerator-runtime/runtime', 
+    'core-js/stable/promise'
+  ],
+  modernPolyfills: true
+})`}
+                              />
+                          </div>
+                      </div>
+                  )}
               </div>
           </div>
       </div>
