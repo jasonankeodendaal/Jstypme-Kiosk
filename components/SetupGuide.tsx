@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   X, Database, SmartphoneNfc, Bot, Container, Table, 
@@ -325,7 +324,7 @@ chokidar.watch(WATCH_FOLDER, { persistent: true }).on('add', async (filePath) =>
                                     <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center shrink-0"><Smartphone size={16}/></div>
                                     <div className="flex-1">
                                         <h5 className="font-black text-white uppercase text-xs mb-1">3. Generate APK</h5>
-                                        <p className="text-[11px] text-slate-500 mb-2">Opens Android Studio. Click "Build" -> "Build APK".</p>
+                                        <p className="text-[11px] text-slate-500 mb-2">Opens Android Studio. Click "Build" &rarr; "Build APK".</p>
                                         <code className="bg-black text-green-400 p-2 rounded block text-[10px]">npx cap open android</code>
                                     </div>
                                 </div>
