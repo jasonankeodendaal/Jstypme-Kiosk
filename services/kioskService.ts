@@ -30,69 +30,6 @@ const SUPABASE_ANON_KEY = getEnv('VITE_SUPABASE_ANON_KEY',
 export let supabase: any = null;
 let localDirHandle: any = null;
 
-// --- IDB PERSISTENCE FOR DIRECTORY HANDLES ---
-const DB_NAME = 'KioskProStorageDB';
-const STORE_NAME = 'handles';
-const HANDLE_KEY = 'master_storage_folder';
-
-async function getStorageDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-  });
-}
-
-export const saveLocalDirHandle = async (handle: any) => {
-    try {
-        const db = await getStorageDB();
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).put(handle, HANDLE_KEY);
-        localDirHandle = handle;
-        return new Promise<void>((res) => { tx.oncomplete = () => res(); });
-    } catch (e) {
-        console.error("Failed to save folder handle", e);
-    }
-};
-
-export const loadLocalDirHandle = async () => {
-    try {
-        const db = await getStorageDB();
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const handle = await new Promise((res) => {
-            const req = tx.objectStore(STORE_NAME).get(HANDLE_KEY);
-            req.onsuccess = () => res(req.result);
-        });
-        if (handle) {
-            localDirHandle = handle;
-            // Verify permission
-            const status = await (handle as any).queryPermission({ mode: 'readwrite' });
-            if (status !== 'granted') {
-                console.warn("Folder handle found but permission not granted yet.");
-            }
-        }
-        return localDirHandle;
-    } catch (e) {
-        console.warn("Failed to load folder handle", e);
-        return null;
-    }
-};
-
-export const clearLocalDirHandle = async () => {
-    try {
-        const db = await getStorageDB();
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).delete(HANDLE_KEY);
-        localDirHandle = null;
-    } catch (e) {}
-};
-
 export const setLocalDirHandle = (handle: any) => {
     localDirHandle = handle;
 };
@@ -103,6 +40,9 @@ export const initSupabase = () => {
   if (supabase) return true;
   if (SUPABASE_URL && SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.length > 10) {
     try {
+      // FIX: Explicitly pass the bound fetch polyfill to the Supabase client.
+      // Chrome 37's native fetch (if any) or missing fetch causes connection failures.
+      // Binding to window ensures we use the whatwg-fetch polyfill injected in index.html.
       supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: {
           fetch: window.fetch.bind(window)
@@ -218,11 +158,12 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
           location_description: 'Newly Registered',
           assigned_zone: 'Unassigned',
           restart_requested: false,
-          show_pricelists: true 
+          show_pricelists: true // Default to visible
         };
         const { error } = await supabase.from('kiosks').upsert(kioskData);
         if (error) throw error;
       } catch(e: any) {
+        // Fallback: If show_pricelists doesn't exist yet, retry without it to prevent crash
         if (e.code === '42703' || e.message?.includes('show_pricelists')) {
             console.warn("Schema mismatch: Retrying setup without show_pricelists column.");
             try {
@@ -234,7 +175,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
                     last_seen: new Date().toISOString()
                 };
                 await supabase.from('kiosks').upsert(legacyData);
-                return true; 
+                return true; // Success on fallback
             } catch (retryError) {
                 console.error("Critical Setup Error", retryError);
                 return false;
@@ -286,6 +227,7 @@ export const sendHeartbeat = async (currentLocalShowPricelists?: boolean): Promi
               
               if (remoteData.show_pricelists !== undefined && remoteData.show_pricelists !== null) {
                   remoteShowPricelists = remoteData.show_pricelists;
+                  // If local state doesn't match remote state, trigger config update
                   if (currentLocalShowPricelists !== undefined && currentLocalShowPricelists !== remoteShowPricelists) {
                       configChanged = true;
                   }
@@ -319,6 +261,7 @@ export const sendHeartbeat = async (currentLocalShowPricelists?: boolean): Promi
               payload.restart_requested = false;
           }
 
+          // Complete the truncated heartbeat update
           const { error: updateError } = await supabase.from('kiosks').upsert(payload);
           if (updateError) throw updateError;
       }
@@ -335,26 +278,10 @@ export const sendHeartbeat = async (currentLocalShowPricelists?: boolean): Promi
   }
 };
 
+/**
+ * Uploads a file to Supabase storage 'kiosk-media' bucket.
+ */
 export const smartUpload = async (file: File): Promise<string> => {
-  // Check if a local master storage folder is linked
-  if (localDirHandle) {
-    try {
-      // Use original filename for local storage to keep master folder organized
-      const fileName = file.name;
-      const fileHandle = await localDirHandle.getFileHandle(fileName, { create: true });
-      const writable = await (fileHandle as any).createWritable();
-      await writable.write(file);
-      await writable.close();
-      
-      // Return a local Blob URL for immediate usage in the app
-      // Note: This URL is session-specific and will be invalid after a page refresh.
-      // In a production environment, the app would resolve 'fileName' relative to the 'localDirHandle' on every load.
-      return URL.createObjectURL(file);
-    } catch (e) {
-      console.warn("Local folder upload failed, falling back to Supabase", e);
-    }
-  }
-
   if (!supabase) initSupabase();
   if (!supabase) throw new Error("Cloud Storage Unavailable (Init Failed)");
 
@@ -378,9 +305,13 @@ export const smartUpload = async (file: File): Promise<string> => {
   return publicUrl;
 };
 
+/**
+ * Converts a PDF file into an array of JPEG image files (rasterization).
+ */
 export const convertPdfToImages = async (file: File, onProgress?: (curr: number, total: number) => void): Promise<File[]> => {
     const arrayBuffer = await file.arrayBuffer();
     
+    // Ensure worker is configured (similar to PdfViewer.tsx)
     const pdfjs: any = pdfjsLib;
     if (pdfjs.GlobalWorkerOptions) {
         pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';

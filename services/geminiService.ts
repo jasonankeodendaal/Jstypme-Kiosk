@@ -1,5 +1,6 @@
+
 import { StoreData, Product, Catalogue, ArchiveData, KioskRegistry, Manual, AdminUser, Brand, Category, Pricelist, PricelistBrand } from "../types";
-import { supabase, getEnv, initSupabase, checkCloudConnection, getLocalDirHandle } from "./kioskService";
+import { supabase, getEnv, initSupabase, checkCloudConnection } from "./kioskService";
 
 const STORAGE_KEY_DATA = 'kiosk_pro_store_data';
 const STORAGE_KEY_OFFLINE_QUEUE = 'kiosk_pro_offline_queue';
@@ -394,7 +395,6 @@ export const upsertPricelist = async (pricelist: Pricelist) => {
 
 export const upsertPricelistBrand = async (pb: PricelistBrand) => {
     if (!supabase) initSupabase();
-    // Fix: access pb.logoUrl (camelCase) instead of pb.logo_url
     const data = { id: pb.id, name: pb.name, logo_url: pb.logoUrl, updated_at: new Date().toISOString() };
     try {
         const { error } = await supabase.from('pricelist_brands').upsert(data);
@@ -443,28 +443,13 @@ export const fetchFleetRegistry = async (): Promise<KioskRegistry[]> => {
     return [];
 };
 
-// Modified: Priority Local Folder -> Cloud -> IDB
+// Modified: Priority Cloud Fetch, fallback to IDB
 export const generateStoreData = async (): Promise<StoreData> => {
-  // 1. Prioritize Local Folder db.json if linked
-  const localHandle = getLocalDirHandle();
-  if (localHandle) {
-      try {
-          const fileHandle = await localHandle.getFileHandle('db.json');
-          const file = await fileHandle.getFile();
-          const text = await file.text();
-          const data = JSON.parse(text);
-          console.log("[Data Orchestration] Loaded StoreData from local db.json");
-          return migrateData(data);
-      } catch (e) {
-          console.warn("[Data Orchestration] Local db.json not found or unreadable, falling back", e);
-      }
-  }
-
   if (!supabase) initSupabase();
   
   const isOnline = await checkCloudConnection();
 
-  // 2. Try Cloud (if online)
+  // 1. Try Cloud First (if online)
   if (isOnline && supabase) {
       try {
           const { data: configRow } = await supabase.from('store_config').select('data').eq('id', 1).single();
@@ -514,7 +499,7 @@ export const generateStoreData = async (): Promise<StoreData> => {
                                   description: p.description,
                                   imageUrl: p.image_url,
                                   galleryUrls: p.gallery_urls,
-                                  video_urls: p.video_urls,
+                                  videoUrls: p.video_urls,
                                   specs: p.specs,
                                   features: p.features,
                                   dimensions: p.dimensions,
@@ -545,7 +530,6 @@ export const generateStoreData = async (): Promise<StoreData> => {
                   // Process Pricelists
                   if (plBrandsRes.data && plRes.data) {
                       const relPricelistBrands = plBrandsRes.data.map((pb: any) => ({
-                          // Fix: map DB 'logo_url' to interface 'logoUrl'
                           id: pb.id, name: pb.name, logoUrl: pb.logo_url
                       }));
                       const relPricelists = plRes.data.map((pl: any) => ({
@@ -555,7 +539,7 @@ export const generateStoreData = async (): Promise<StoreData> => {
                           month: pl.month,
                           year: pl.year,
                           url: pl.url,
-                          thumbnail_url: pl.thumbnail_url,
+                          thumbnailUrl: pl.thumbnail_url,
                           type: pl.type,
                           kind: pl.kind,
                           startDate: pl.start_date,
@@ -590,7 +574,7 @@ export const generateStoreData = async (): Promise<StoreData> => {
       }
   }
   
-  // 3. Fallback to Local IDB Cache
+  // 2. Fallback to Local IDB Cache
   try {
     const stored = await dbGet(STORAGE_KEY_DATA);
     if (stored) return migrateData(stored);
@@ -598,7 +582,7 @@ export const generateStoreData = async (): Promise<StoreData> => {
       console.warn("IDB fetch failed", e);
   }
 
-  // 4. Fallback to LocalStorage (Legacy/Emergency)
+  // 3. Fallback to LocalStorage (Legacy/Emergency)
   try {
     const stored = localStorage.getItem(STORAGE_KEY_DATA);
     if (stored) return migrateData(JSON.parse(stored));
@@ -614,21 +598,7 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
     // 2. Yield before Blocking
     await yieldToMain();
     
-    // 3. Save to Local Master Folder if linked (Orchestration logic)
-    const localHandle = getLocalDirHandle();
-    if (localHandle) {
-        try {
-            const fileHandle = await localHandle.getFileHandle('db.json', { create: true });
-            const writable = await (fileHandle as any).createWritable();
-            await writable.write(JSON.stringify(cleanData, null, 2));
-            await writable.close();
-            console.log("[Data Orchestration] StoreData synced to local db.json");
-        } catch (e) {
-            console.warn("[Data Orchestration] Failed to write db.json to local folder", e);
-        }
-    }
-
-    // 4. Save to IDB (Async)
+    // 3. Save to IDB (Async)
     try {
         await dbPut(STORAGE_KEY_DATA, cleanData);
     } catch (e) {
@@ -690,7 +660,6 @@ export const saveStoreData = async (data: StoreData): Promise<void> => {
                 await yieldToMain();
 
                 const flatPLBrands = (cleanData.pricelistBrands || []).map((pb: PricelistBrand) => ({
-                    // Fix: access pb.logoUrl (camelCase) instead of pb.logo_url
                     id: pb.id, name: pb.name, logo_url: pb.logoUrl, updated_at: new Date().toISOString()
                 }));
 

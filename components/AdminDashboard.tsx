@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LogOut, ArrowLeft, Save, Trash2, Plus, Edit2, Upload, Box, 
@@ -6,7 +7,7 @@ import {
 } from 'lucide-react';
 import { KioskRegistry, StoreData, Brand, Category, Product, AdConfig, AdItem, Catalogue, HeroConfig, ScreensaverSettings, ArchiveData, DimensionSet, Manual, TVBrand, TVConfig, TVModel, AdminUser, AdminPermissions, Pricelist, PricelistBrand, PricelistItem, ArchivedItem } from '../types';
 import { resetStoreData, upsertBrand, upsertCategory, upsertProduct, upsertPricelist, upsertPricelistBrand, deleteItem, clearOfflineQueue } from '../services/geminiService';
-import { smartUpload, supabase, checkCloudConnection, convertPdfToImages, saveLocalDirHandle, loadLocalDirHandle, clearLocalDirHandle } from '../services/kioskService';
+import { smartUpload, supabase, checkCloudConnection, convertPdfToImages } from '../services/kioskService';
 import SetupGuide from './SetupGuide';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
@@ -60,6 +61,7 @@ const SystemDocumentation = () => {
                         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                             <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">Offline-First <span className="text-blue-500">Pipeline</span></h3>
                             
+                            {/* Horizontal Flow Diagram */}
                             <div className="relative h-40 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between px-4 md:px-12 overflow-hidden mb-8">
                                 <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(59,130,246,0.05)_50%,transparent_100%)] animate-[shimmer_3s_infinite]"></div>
                                 
@@ -123,6 +125,7 @@ const SystemDocumentation = () => {
                             <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">Relational <span className="text-purple-500">Hierarchy</span></h3>
                             
                             <div className="flex flex-col items-center relative">
+                                {/* Root */}
                                 <div className="z-10 w-64 p-4 bg-slate-900 text-white rounded-2xl shadow-xl border border-slate-800 text-center relative group cursor-default">
                                     <div className="text-[10px] font-black uppercase text-purple-400 tracking-widest mb-1">Root Entity</div>
                                     <div className="text-xl font-black uppercase">Brand</div>
@@ -130,6 +133,7 @@ const SystemDocumentation = () => {
                                     <div className="absolute -bottom-8 left-1/2 w-0.5 h-8 bg-slate-300"></div>
                                 </div>
 
+                                {/* Branch */}
                                 <div className="mt-8 z-10 w-64 p-4 bg-white text-slate-900 rounded-2xl shadow-lg border-2 border-slate-100 text-center relative group cursor-default">
                                     <div className="text-[10px] font-black uppercase text-blue-500 tracking-widest mb-1">Branch</div>
                                     <div className="text-lg font-black uppercase">Category</div>
@@ -137,12 +141,14 @@ const SystemDocumentation = () => {
                                     <div className="absolute -bottom-8 left-1/2 w-0.5 h-8 bg-slate-300"></div>
                                 </div>
 
+                                {/* Leaf */}
                                 <div className="mt-8 z-10 w-64 p-4 bg-slate-50 text-slate-900 rounded-2xl shadow-md border border-slate-200 text-center relative group cursor-default">
                                     <div className="text-[10px] font-black uppercase text-green-500 tracking-widest mb-1">Leaf</div>
                                     <div className="text-base font-black uppercase">Product</div>
                                     <div className="text-[10px] text-slate-400 mt-1">e.g. iPhone 15 Pro</div>
                                 </div>
 
+                                {/* Decorators */}
                                 <div className="absolute top-20 right-20 p-4 bg-yellow-50 border border-yellow-100 rounded-xl max-w-[200px] shadow-sm rotate-3">
                                     <div className="flex items-center gap-2 mb-2 text-yellow-700 font-bold text-xs uppercase"><FileText size={14}/> Floating Assets</div>
                                     <p className="text-[10px] text-yellow-800 leading-tight">Pricelists and Pamphlets exist outside this strict tree, linked by Brand ID or Global.</p>
@@ -203,6 +209,7 @@ const SystemDocumentation = () => {
                             <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">Double-Buffer <span className="text-pink-500">Engine</span></h3>
                             
                             <div className="relative h-64 bg-black rounded-2xl overflow-hidden border-4 border-slate-800 shadow-2xl mb-8 flex items-center justify-center">
+                                {/* Simulated Layers */}
                                 <div className="absolute inset-0 flex items-center justify-center bg-blue-900 opacity-20 animate-pulse">
                                     <div className="text-blue-400 font-black text-9xl opacity-20">A</div>
                                 </div>
@@ -262,10 +269,12 @@ const SystemDocumentation = () => {
                             <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">Fleet <span className="text-red-500">Telemetry</span></h3>
                             
                             <div className="bg-slate-950 rounded-3xl p-12 flex items-center justify-center relative overflow-hidden mb-8 border border-slate-800">
+                                {/* Radar Rings */}
                                 <div className="absolute w-96 h-96 border border-red-900/30 rounded-full animate-ping opacity-20"></div>
                                 <div className="absolute w-64 h-64 border border-red-500/20 rounded-full animate-ping opacity-40" style={{animationDelay: '0.5s'}}></div>
                                 <div className="absolute w-32 h-32 bg-red-500/10 rounded-full animate-pulse"></div>
                                 
+                                {/* Center Node */}
                                 <div className="relative z-10 flex flex-col items-center">
                                     <div className="w-4 h-4 bg-red-500 rounded-full shadow-[0_0_20px_red] animate-pulse"></div>
                                     <div className="mt-4 bg-slate-900/80 backdrop-blur px-4 py-2 rounded-xl border border-slate-700 text-center">
@@ -274,6 +283,7 @@ const SystemDocumentation = () => {
                                     </div>
                                 </div>
 
+                                {/* Satellite Nodes */}
                                 <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_10px_blue] animate-pulse"></div>
                                 <div className="absolute bottom-1/3 right-1/4 w-3 h-3 bg-purple-500 rounded-full shadow-[0_0_10px_purple] animate-pulse" style={{animationDelay: '1s'}}></div>
                             </div>
@@ -304,6 +314,7 @@ const SystemDocumentation = () => {
                         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
                             <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-6">TV <span className="text-indigo-500">Protocol</span></h3>
                             
+                            {/* Film Strip Visual */}
                             <div className="flex gap-2 overflow-hidden bg-slate-900 p-2 rounded-2xl mb-8 border border-slate-800 relative">
                                 <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-slate-900 to-transparent z-10"></div>
                                 <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-slate-900 to-transparent z-10"></div>
@@ -314,6 +325,7 @@ const SystemDocumentation = () => {
                                         <div className="absolute inset-0 flex items-center justify-center">
                                             <Play size={16} className="text-slate-600 group-hover:text-indigo-400 transition-colors" />
                                         </div>
+                                        {/* Perforations */}
                                         <div className="absolute top-0 inset-x-0 h-1 flex justify-between px-1">
                                             {[...Array(6)].map((_,j)=><div key={j} className="w-0.5 h-full bg-black/50"></div>)}
                                         </div>
@@ -504,7 +516,7 @@ const FileUpload = ({ currentUrl, onUpload, label, accept = "image/*", icon = <I
 
 const InputField = ({ label, val, onChange, placeholder, isArea = false, half = false, type = 'text' }: any) => (<div className={`mb-4 ${half ? 'w-full' : ''}`}><label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 ml-1">{label}</label>{isArea ? <textarea value={val} onChange={onChange} className="w-full p-3 bg-white text-black border border-slate-300 rounded-xl h-24 focus:ring-2 focus:ring-blue-500 outline-none resize-none text-sm" placeholder={placeholder} /> : <input type={type} value={val} onChange={onChange} className="w-full p-3 bg-white text-black border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm" placeholder={placeholder} />}</div>);
 
-// --- EXTRACTED MANAGERS & EDITORS ---
+// --- EXTRACTED MANAGERS & EDITORS (Fixes Focus Bug) ---
 
 const CatalogueManager = ({ catalogues, onSave, brandId }: { catalogues: Catalogue[], onSave: (c: Catalogue[], immediate: boolean) => void, brandId?: string }) => { 
     const [localList, setLocalList] = useState(catalogues || []); 
@@ -649,20 +661,21 @@ const PricelistManager = ({ pricelists, pricelistBrands, onSavePricelists, onSav
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]; 
     const sortedLists = [...filteredLists].sort((a, b) => { const yearA = parseInt(a.year) || 0; const yearB = parseInt(b.year) || 0; if (yearA !== yearB) return yearB - yearA; return months.indexOf(b.month) - months.indexOf(a.month); }); 
     
+    // OPTIMIZED SAVE LOGIC: Use granular updates
     const addBrand = () => { 
         const name = prompt("Enter Brand Name for Pricelists:"); 
         if (!name) return; 
         const newBrand: PricelistBrand = { id: generateId('plb'), name: name, logoUrl: '' }; 
         upsertPricelistBrand(newBrand); 
-        onSaveBrands([...pricelistBrands, newBrand], false); 
+        onSaveBrands([...pricelistBrands, newBrand], false); // Local update only
         setSelectedBrand(newBrand); 
     }; 
     
     const updateBrand = (id: string, updates: Partial<PricelistBrand>, immediate = false) => { 
         const updatedBrands = pricelistBrands.map(b => b.id === id ? { ...b, ...updates } : b); 
         const updatedBrand = updatedBrands.find(b => b.id === id); 
-        if(updatedBrand) upsertPricelistBrand(updatedBrand); 
-        onSaveBrands(updatedBrands, false); 
+        if(updatedBrand) upsertPricelistBrand(updatedBrand); // Granular
+        onSaveBrands(updatedBrands, false); // Local only
         if (selectedBrand?.id === id) { setSelectedBrand({ ...selectedBrand, ...updates }); } 
     }; 
     
@@ -677,14 +690,14 @@ const PricelistManager = ({ pricelists, pricelistBrands, onSavePricelists, onSav
         if (!selectedBrand) return; 
         const newItem: Pricelist = { id: generateId('pl'), brandId: selectedBrand.id, title: 'New Pricelist', url: '', type: 'pdf', month: 'January', year: new Date().getFullYear().toString(), dateAdded: new Date().toISOString(), kind: 'standard' }; 
         upsertPricelist(newItem); 
-        onSavePricelists([...pricelists, newItem], false); 
+        onSavePricelists([...pricelists, newItem], false); // Local only
     }; 
     
     const updatePricelist = (id: string, updates: Partial<Pricelist>, immediate = false) => { 
         const updatedLists = pricelists.map(p => p.id === id ? { ...p, ...updates } : p); 
         const updatedItem = updatedLists.find(p => p.id === id); 
-        if(updatedItem) upsertPricelist(updatedItem); 
-        onSavePricelists(updatedLists, false); 
+        if(updatedItem) upsertPricelist(updatedItem); // Granular
+        onSavePricelists(updatedLists, false); // Local only
     }; 
     
     const handleDeletePricelist = (id: string) => { 
@@ -888,9 +901,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   const [importProcessing, setImportProcessing] = useState(false);
   const [importProgress, setImportProgress] = useState<string>('');
   const [exportProcessing, setExportProcessing] = useState(false);
-  
-  // Storage Folder State
-  const [linkedFolder, setLinkedFolder] = useState<any>(null);
 
   const logout = useCallback(() => { setCurrentUser(null); }, []);
 
@@ -910,36 +920,6 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
   useEffect(() => { if (currentUser && availableTabs.length > 0 && !availableTabs.find(t => t.id === activeTab)) { setActiveTab(availableTabs[0].id); } }, [currentUser, availableTabs, activeTab]);
   useEffect(() => { checkCloudConnection().then(setIsCloudConnected); const interval = setInterval(() => checkCloudConnection().then(setIsCloudConnected), 30000); return () => clearInterval(interval); }, []);
   useEffect(() => { if (!hasUnsavedChanges && storeData) { setLocalData(storeData); } }, [storeData, hasUnsavedChanges]);
-  
-  // Load local storage handle on mount
-  useEffect(() => {
-      loadLocalDirHandle().then(setLinkedFolder);
-  }, []);
-
-  const handleLinkFolder = async () => {
-      try {
-          if ('showDirectoryPicker' in window) {
-              const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
-              await saveLocalDirHandle(handle);
-              setLinkedFolder(handle);
-              alert(`Successfully linked to: ${handle.name}`);
-          } else {
-              alert("Your browser does not support the File System Access API. Please use a modern desktop browser (Chrome/Edge).");
-          }
-      } catch (e: any) {
-          if (e.name !== 'AbortError') {
-              console.error(e);
-              alert("Failed to link folder.");
-          }
-      }
-  };
-
-  const handleUnlinkFolder = async () => {
-      if(confirm("Unlink the Master Storage Folder? This will not delete any files.")) {
-          await clearLocalDirHandle();
-          setLinkedFolder(null);
-      }
-  };
 
   const handleLocalUpdate = (newData: StoreData, immediate = false) => {
       setLocalData(newData);
@@ -951,7 +931,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
 
   const checkSkuDuplicate = (sku: string, currentId: string) => { if (!sku || !localData) return false; for (const b of localData.brands) { for (const c of b.categories) { for (const p of c.products) { if (p.sku && p.sku.toLowerCase() === sku.toLowerCase() && p.id !== currentId) return true; } } } return false; };
   const handleGlobalSave = () => { if (localData) { onUpdateData(localData); setHasUnsavedChanges(false); } };
-  const updateFleetMember = async (kiosk: KioskRegistry): Promise<boolean> => { if(supabase) { const payload = { id: kiosk.id, name: kiosk.name, device_type: kiosk.deviceType, assigned_zone: kiosk.assignedZone, show_pricelists: kiosk.showPricelists ?? true }; try { const { error } = await supabase.from('kiosks').upsert(payload); if (error) throw error; onRefresh(); return true; } catch (e: any) { console.error("Fleet update failed", e); if (e.code === '42703' || e.message?.includes('show_pricelists')) { const { show_pricelists, ...legacyPayload } = payload; try { const { error: secondError } = await supabase.from('kiosks').upsert(legacyPayload); if (!secondError) { alert("Warning: Basic settings saved, but 'Show Pricelists' setting could not be applied.\n\nThe database column 'show_pricelists' is missing or not visible to the API yet. Please run the 'Nuclear Column Reset' script in the Setup Guide."); onRefresh(); return true; } } catch (retryError) { console.error("Retry failed", retryError); } } if (e.code === 'PGRST204') { alert("Update Failed: Database table is missing required columns. Please check Setup Guide > Migration."); } else { alert("Update Failed: " + (e.message || "Unknown error")); } return false; } } return false; };
+  const updateFleetMember = async (kiosk: KioskRegistry): Promise<boolean> => { if(supabase) { const payload = { id: kiosk.id, name: kiosk.name, device_type: kiosk.deviceType, assigned_zone: kiosk.assignedZone, show_pricelists: kiosk.showPricelists ?? true }; try { const { error } = await supabase.from('kiosks').upsert(payload); if (error) throw error; onRefresh(); return true; } catch (e: any) { console.error("Fleet update failed", e); if (e.code === '42703' || e.message?.includes('show_pricelists')) { console.warn("Retrying fleet update without show_pricelists column..."); const { show_pricelists, ...legacyPayload } = payload; try { const { error: secondError } = await supabase.from('kiosks').upsert(legacyPayload); if (!secondError) { alert("Warning: Basic settings saved, but 'Show Pricelists' setting could not be applied.\n\nThe database column 'show_pricelists' is missing or not visible to the API yet. Please run the 'Nuclear Column Reset' script in the Setup Guide."); onRefresh(); return true; } } catch (retryError) { console.error("Retry failed", retryError); } } if (e.code === 'PGRST204') { alert("Update Failed: Database table is missing required columns. Please check Setup Guide > Migration."); } else { alert("Update Failed: " + (e.message || "Unknown error")); } return false; } } return false; };
   const removeFleetMember = async (id: string) => { const kiosk = localData?.fleet?.find(f => f.id === id); if(!kiosk) return; if(confirm(`Archive and remove device "${kiosk.name}" from live monitoring?`) && supabase) { const newArchive = addToArchive('device', kiosk.name, kiosk, 'delete'); const updatedData = { ...localData!, archive: newArchive }; await supabase.from('kiosks').delete().eq('id', id); handleLocalUpdate(updatedData, true); onRefresh(); } };
   const addToArchive = (type: ArchivedItem['type'], name: string, data: any, action: ArchivedItem['action'] = 'delete', method: ArchivedItem['method'] = 'admin_panel') => { if (!localData || !currentUser) return; const now = new Date().toISOString(); const newItem: ArchivedItem = { id: generateId('arch'), type, action, name, userName: currentUser.name, method, data, deletedAt: now }; const currentArchive = localData.archive || { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }; const newArchive = { ...currentArchive, deletedItems: [newItem, ...(currentArchive.deletedItems || [])].slice(0, 1000) }; return newArchive; };
   const restoreBrand = (b: Brand) => { if(!localData) return; const newArchiveBrands = localData.archive?.brands.filter(x => x.id !== b.id) || []; const newBrands = [...localData.brands, b]; const newArchive = addToArchive('brand', b.name, b, 'restore'); handleLocalUpdate({ ...localData, brands: newBrands, archive: { ...localData.archive!, brands: newArchiveBrands, deletedItems: newArchive?.deletedItems } }, true); upsertBrand(b); };
@@ -1045,6 +1025,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                )
             )}
 
+            {/* PRICELISTS TAB */}
             {activeTab === 'pricelists' && (
                 <PricelistManager 
                     pricelists={localData.pricelists || []} 
@@ -1055,6 +1036,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 />
             )}
             
+            {/* TV TAB */}
             {activeTab === 'tv' && (
                 !selectedTVBrand ? (
                     <div className="animate-fade-in max-w-6xl mx-auto"><div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-black text-slate-900 uppercase">TV Video Management</h2></div><div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"><button onClick={() => { const name = prompt("Brand Name:"); if(name) { const newBrand = { id: generateId('tvb'), name, models: [] }; handleLocalUpdate({ ...localData, tv: { ...localData.tv, brands: [...(localData.tv?.brands || []), newBrand] } as TVConfig, archive: addToArchive('brand', name, null, 'create') }, true); }}} className="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center p-4 min-h-[160px] text-indigo-400 hover:border-indigo-500 hover:text-indigo-600 transition-all group"><Plus size={32} className="mb-2" /><span className="font-bold uppercase text-xs tracking-wider text-center">Add TV Brand</span></button>{tvBrands.map(brand => (<div key={brand.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-lg transition-all relative"><div className="flex-1 bg-slate-50 flex items-center justify-center p-4 aspect-square">{brand.logoUrl ? <img src={brand.logoUrl} className="max-full max-h-full object-contain" /> : <Tv size={32} className="text-slate-300" />}</div><div className="p-4 bg-white border-t border-slate-100"><h3 className="font-black text-slate-900 text-sm uppercase truncate mb-1">{brand.name}</h3><p className="text-xs text-slate-500 font-bold">{brand.models?.length || 0} Models</p></div><button onClick={(e) => { e.stopPropagation(); if(confirm("Delete TV Brand?")) { handleLocalUpdate({...localData, tv: { ...localData.tv, brands: tvBrands.filter(b => b.id !== brand.id) } as TVConfig, archive: addToArchive('brand', brand.name, brand, 'delete') }, true); } }} className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-lg shadow-sm hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity z-20"><Trash2 size={14}/></button><button onClick={() => setSelectedTVBrand(brand)} className="absolute inset-0 w-full h-full opacity-0 z-10" /></div>))}</div></div>
@@ -1063,6 +1045,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 )
             )}
 
+            {/* MARKETING TAB */}
             {activeTab === 'marketing' && (
                 <div className="max-w-5xl mx-auto">
                     {activeSubTab === 'catalogues' && (
@@ -1077,6 +1060,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 </div>
             )}
             
+            {/* FLEET TAB */}
             {activeTab === 'fleet' && (
                 <div className="animate-fade-in max-w-7xl mx-auto pb-24">
                    <div className="flex items-center justify-between mb-8"><div className="flex items-center gap-3"><div className="bg-slate-900 p-2.5 rounded-2xl shadow-xl shadow-blue-500/10 border border-slate-800"><Radio className="text-blue-500 animate-pulse" size={24}/></div><div><h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none">Command Center</h2><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Live Fleet Telemetry</p></div></div><div className="flex items-center gap-4 bg-slate-950 p-2 rounded-2xl border border-slate-800 shadow-2xl"><div className="px-4 py-2 border-r border-slate-800"><div className="text-[8px] font-black text-slate-500 uppercase mb-0.5 tracking-widest">Active Units</div><div className="text-lg font-black text-blue-400 font-mono leading-none">{localData.fleet?.length || 0}</div></div><div className="px-4 py-2"><div className="text-[8px] font-black text-slate-500 uppercase mb-0.5 tracking-widest">Health</div><div className="text-lg font-black text-green-400 font-mono leading-none">100%</div></div></div></div>
@@ -1085,6 +1069,7 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 </div>
             )}
             
+            {/* SCREENSAVER TAB */}
             {activeTab === 'screensaver' && (
                 <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1203,12 +1188,14 @@ export const AdminDashboard = ({ storeData, onUpdateData, onRefresh }: { storeDa
                 </div>
             )}
             
+            {/* HISTORY TAB */}
             {activeTab === 'history' && (
                <div className="max-w-7xl mx-auto space-y-6"><div className="flex flex-col md:flex-row md:items-center justify-between gap-4"><div><h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">System Audit Log</h2><p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">Detailed track of administrative actions</p></div><div className="flex gap-2"><button onClick={() => { if(confirm("Permanently clear ALL archived history?")) handleLocalUpdate({...localData, archive: { brands: [], products: [], catalogues: [], deletedItems: [], deletedAt: {} }}, true) }} className="text-red-500 font-bold uppercase text-xs flex items-center gap-2 bg-red-50 hover:bg-red-100 border border-red-100 px-4 py-2 rounded-lg transition-colors"><Trash2 size={14}/> Wipe History</button></div></div><div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-2xl min-h-[600px] flex flex-col"><div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between gap-6"><div className="flex items-center gap-2 bg-slate-200/50 p-1.5 rounded-2xl self-start overflow-x-auto max-w-full">{[{id: 'all', label: 'All Activity', icon: <History size={14}/>},{id: 'create', label: 'Created', icon: <Plus size={14}/>},{id: 'update', label: 'Updated', icon: <Edit2 size={14}/>},{id: 'delete', label: 'Deleted', icon: <Trash2 size={14}/>},{id: 'restore', label: 'Restored', icon: <RotateCcw size={14}/>}].map(tab => (<button key={tab.id} onClick={() => setHistoryTab(tab.id as any)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all whitespace-nowrap flex items-center gap-2 ${historyTab === tab.id ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700'}`}>{tab.icon} {tab.label}</button>))}</div><div className="relative group"><Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" /><input type="text" placeholder="Search actions, users or items..." className="pl-12 pr-6 py-3 bg-white border-2 border-slate-200 rounded-2xl text-xs font-bold w-full md:w-80 focus:border-blue-500 outline-none transition-all shadow-sm" value={historySearch} onChange={(e) => setHistorySearch(e.target.value)}/></div></div><div className="flex-1 overflow-y-auto">{archivedGenericItems.length === 0 ? (<div className="flex flex-col items-center justify-center h-96 text-slate-400"><div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-4 border border-slate-100"><History size={40} className="opacity-20" /></div><span className="text-xs font-black uppercase tracking-widest">No matching activities found</span></div>) : (<table className="w-full text-left border-collapse"><thead className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-md"><tr><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Action & Type</th><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Subject</th><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Executor</th><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Timestamp</th><th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-right">Reference</th></tr></thead><tbody className="divide-y divide-slate-50">{archivedGenericItems.map(item => (<tr key={item.id} className="hover:bg-blue-50/30 transition-colors group"><td className="px-8 py-5"><div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${item.action === 'delete' ? 'bg-red-50 border-red-100 text-red-500' : item.action === 'restore' ? 'bg-green-50 border-green-100 text-green-500' : item.action === 'create' ? 'bg-blue-50 border-blue-100 text-blue-500' : 'bg-orange-50 border-orange-100 text-orange-500'}`}>{item.action === 'delete' ? <Trash2 size={16}/> : item.action === 'restore' ? <RotateCcw size={16}/> : item.action === 'create' ? <Plus size={16}/> : <Edit2 size={16}/>}</div><div><div className="text-[10px] font-black uppercase tracking-tight text-slate-900">{item.action}</div><div className="text-[9px] font-bold text-slate-400 uppercase">{item.type}</div></div></div></td><td className="px-8 py-5"><div className="font-black text-slate-900 uppercase text-xs tracking-tight">{item.name}</div><div className="text-[9px] text-slate-400 font-mono mt-1 opacity-60">ID: {item.id}</div></td><td className="px-8 py-5"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center"><User size={12} /></div><span className="text-xs font-black text-slate-700 uppercase tracking-tight">{item.userName || 'System'}</span></div><div className="text-[9px] font-bold text-slate-400 uppercase mt-1">via {item.method || 'admin_panel'}</div></td><td className="px-8 py-5"><div className="text-xs font-black text-slate-900">{formatRelativeTime(item.deletedAt)}</div><div className="text-[9px] font-bold text-slate-400 mt-1 uppercase">{new Date(item.deletedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></td><td className="px-8 py-5 text-right"><div className="flex items-center justify-end gap-2">{(item.type === 'brand' || item.type === 'catalogue') && item.action === 'delete' && (<button onClick={() => item.type === 'brand' ? restoreBrand(item.data) : restoreCatalogue(item.data)} className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase rounded-lg shadow-lg hover:bg-blue-700 transition-all active:scale-95">Restore</button>)}<button onClick={() => { const json = JSON.stringify(item.data || item, null, 2); const blob = new Blob([json], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${item.name}-audit.json`; a.click(); }} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200" title="Download Audit Payload"><Download size={16} /></button></div></td></tr>))}{archivedGenericItems.length === 0 && (<tr><td colSpan={5} className="py-20 text-center text-slate-400 text-sm font-bold uppercase italic">No history items found.</td></tr>)}</tbody></table>)}</div></div></div>
             )}
 
+            {/* SETTINGS TAB */}
             {activeTab === 'settings' && (
-               <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20"><div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><ImageIcon size={20} className="text-blue-500" /> System Branding</h3><div className="bg-slate-50 p-6 rounded-xl border border-slate-200"><FileUpload label="Main Company Logo (PDFs & Header)" currentUrl={localData.companyLogoUrl} onUpload={(url: string) => handleLocalUpdate({...localData, companyLogoUrl: url, archive: addToArchive('other', 'Company Logo Update', url, 'update')}, true)} /><p className="text-[10px] text-slate-400 mt-2 font-medium">This logo is used at the top of the Kiosk App and as the primary branding on all exported PDF Pricelists.</p></div></div><div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Folder size={20} className="text-yellow-600" /> Local Storage Integration</h3><div className="bg-slate-50 p-6 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center gap-6"><div className="flex-1"><label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Master Storage Folder</label><div className="flex items-center gap-3">{linkedFolder ? (<div className="flex items-center gap-2 bg-white px-4 py-3 rounded-xl border border-blue-200 shadow-sm flex-1"><div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><FolderOpen size={18} /></div><div className="min-w-0"><div className="text-xs font-black text-slate-900 uppercase truncate">{linkedFolder.name}</div><div className="text-[9px] text-green-600 font-bold uppercase">Folder Linked</div></div></div>) : (<div className="flex-1 text-slate-400 text-xs italic bg-white border border-dashed border-slate-300 rounded-xl px-4 py-3">No folder linked...</div>)}<button onClick={linkedFolder ? handleUnlinkFolder : handleLinkFolder} className={`px-6 py-3 rounded-xl font-black text-[10px] uppercase transition-all shadow-md active:scale-95 flex items-center gap-2 ${linkedFolder ? 'bg-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>{linkedFolder ? <X size={14}/> : <FolderInput size={14}/>} {linkedFolder ? 'Unlink' : 'Link Master Folder'}</button></div><p className="text-[10px] text-slate-400 mt-3 font-medium">Link a local folder to browse and import assets directly from your master repository. Permission persists after reloads.</p></div></div></div><div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Lock size={20} className="text-red-500" /> Device Setup Security</h3><div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center gap-4"><div className="flex-1"><label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Global Setup PIN</label><input type="text" value={localData.systemSettings?.setupPin || '0000'} onChange={(e) => handleLocalUpdate({ ...localData, systemSettings: { ...localData.systemSettings, setupPin: e.target.value }, archive: addToArchive('other', 'System PIN Update', '********', 'update') })} className="w-full md:w-64 p-3 border border-slate-300 rounded-xl bg-white font-mono font-bold text-lg tracking-widest text-center" placeholder="0000" maxLength={8} /><p className="text-[10px] text-slate-400 mt-2 font-medium">This PIN is required on all new devices (Kiosk, Mobile, TV) to complete the setup process. Default: 0000.</p></div><div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100 text-yellow-800 text-xs max-w-xs"><strong>Security Note:</strong> Changing this PIN will require all future device setups to use the new code. Existing active devices are not affected.</div></div></div><div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden"><div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500 pointer-events-none"><Database size={120} /></div><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> System Data & Backup</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10"><div className="space-y-4"><div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-xs"><strong>Export System Backup:</strong> Downloads a full archive including Inventory, Marketing, TV Config, Fleet logs, and History.<div className="mt-2 text-blue-600 font-bold">Use this to edit offline or migrate data.</div></div><button onClick={async () => { setExportProcessing(true); try { await downloadZip(localData); } catch (e) { console.error(e); alert("Export Failed: " + (e as Error).message); } finally { setExportProcessing(false); } }} disabled={exportProcessing} className={`w-full py-4 ${exportProcessing ? 'bg-blue-800 cursor-wait' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25`}>{exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} {exportProcessing ? 'Packaging All Assets...' : 'Download Full System Backup (.zip)'}</button></div><div className="space-y-4"><div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-xs"><strong>Import Structure:</strong> Upload a ZIP file to auto-populate the system.<ul className="list-disc pl-4 mt-2 space-y-1 text-[10px] text-slate-500 font-bold"><li>Folder Structure: <code>Brand/Category/Product/</code></li><li>Place images (.jpg/.png) & manuals (.pdf) inside product folders.</li><li>Images & PDFs are uploaded to Cloud Storage sequentially.</li></ul></div><label className={`w-full py-4 ${importProcessing ? 'bg-slate-300 cursor-wait' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl relative overflow-hidden`}>{importProcessing ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16} />} <span className="relative z-10">{importProcessing ? importProgress || 'Processing...' : 'Import Data from ZIP'}</span><input type="file" accept=".zip" className="hidden" disabled={importProcessing} onChange={async (e) => { if(e.target.files && e.target.files[0]) { if(confirm("This will merge imported data into your current inventory. Continue?")) { setImportProcessing(true); setImportProgress('Initializing...'); try { const newBrands = await importZip(e.target.files[0], (msg) => setImportProgress(msg)); let mergedBrands = [...localData.brands]; newBrands.forEach(nb => { const existingBrandIndex = mergedBrands.findIndex(b => b.name === nb.name); if (existingBrandIndex > -1) { if (nb.logoUrl) { mergedBrands[existingBrandIndex].logoUrl = nb.logoUrl; } if (nb.themeColor) { mergedBrands[existingBrandIndex].themeColor = nb.themeColor; } nb.categories.forEach(nc => { const existingCatIndex = mergedBrands[existingBrandIndex].categories.findIndex(c => c.name === nc.name); if (existingCatIndex > -1) { const existingProducts = mergedBrands[existingBrandIndex].categories[existingCatIndex].products; const uniqueNewProducts = nc.products.filter(np => !existingProducts.find(ep => ep.name === np.name)); mergedBrands[existingBrandIndex].categories[existingCatIndex].products = [...existingProducts, ...uniqueNewProducts]; } else { mergedBrands[existingBrandIndex].categories.push(nc); } }); } else { mergedBrands.push(nb); } }); handleLocalUpdate({ ...localData, brands: mergedBrands, archive: addToArchive('other', 'Bulk Import Successful', {brandsCount: newBrands.length}, 'create', 'import') }, true); alert(`Import Successful! Processed ${newBrands.length} brands.`); } catch(err) { console.error(err); alert("Failed to read ZIP file. Ensure structure is correct and Cloud Storage is accessible."); } finally { setImportProcessing(false); setImportProgress(''); } } } }} /></label></div></div></div><div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><UserCog size={20} className="text-blue-500"/> Admin Access Control</h3><AdminManager admins={localData.admins || []} onUpdate={(admins) => handleLocalUpdate({ ...localData, admins, archive: addToArchive('other', 'Admin list updated', null, 'update') }, true)} currentUser={currentUser} /></div><div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg text-white"><div className="flex items-center gap-3 mb-6"><CloudLightning size={24} className="text-yellow-400" /><h3 className="font-black uppercase text-sm tracking-wider">System Operations</h3></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><button onClick={() => setShowGuide(true)} className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors border border-slate-600"><BookOpen size={24} className="text-blue-400"/><div className="text-left"><div className="font-bold text-sm">Setup Guide</div><div className="text-[10px] text-slate-400 font-mono uppercase">Docs & Scripts</div></div></button><button onClick={async () => { if(confirm("WARNING: This will wipe ALL local data and reset to defaults. Continue?")) { const d = await resetStoreData(); setLocalData(d); window.location.reload(); } }} className="p-4 bg-red-900/30 hover:bg-red-900/50 rounded-xl flex items-center gap-3 transition-colors border border-red-900/50 text-red-300"><AlertCircle size={24} /><div className="text-left"><div className="font-bold text-sm">Factory Reset</div><div className="text-[10px] text-red-400 font-mono uppercase">Clear Local Data</div></div></button></div></div></div>
+               <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20"><div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><ImageIcon size={20} className="text-blue-500" /> System Branding</h3><div className="bg-slate-50 p-6 rounded-xl border border-slate-200"><FileUpload label="Main Company Logo (PDFs & Header)" currentUrl={localData.companyLogoUrl} onUpload={(url: string) => handleLocalUpdate({...localData, companyLogoUrl: url, archive: addToArchive('other', 'Company Logo Update', url, 'update')}, true)} /><p className="text-[10px] text-slate-400 mt-2 font-medium">This logo is used at the top of the Kiosk App and as the primary branding on all exported PDF Pricelists.</p></div></div><div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Lock size={20} className="text-red-500" /> Device Setup Security</h3><div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col md:flex-row items-center gap-4"><div className="flex-1"><label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">Global Setup PIN</label><input type="text" value={localData.systemSettings?.setupPin || '0000'} onChange={(e) => handleLocalUpdate({ ...localData, systemSettings: { ...localData.systemSettings, setupPin: e.target.value }, archive: addToArchive('other', 'System PIN Update', '********', 'update') })} className="w-full md:w-64 p-3 border border-slate-300 rounded-xl bg-white font-mono font-bold text-lg tracking-widest text-center" placeholder="0000" maxLength={8} /><p className="text-[10px] text-slate-400 mt-2 font-medium">This PIN is required on all new devices (Kiosk, Mobile, TV) to complete the setup process. Default: 0000.</p></div><div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100 text-yellow-800 text-xs max-w-xs"><strong>Security Note:</strong> Changing this PIN will require all future device setups to use the new code. Existing active devices are not affected.</div></div></div><div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden"><div className="absolute top-0 right-0 p-8 opacity-5 text-blue-500 pointer-events-none"><Database size={120} /></div><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><Database size={20} className="text-blue-500"/> System Data & Backup</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10"><div className="space-y-4"><div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-blue-800 text-xs"><strong>Export System Backup:</strong> Downloads a full archive including Inventory, Marketing, TV Config, Fleet logs, and History.<div className="mt-2 text-blue-600 font-bold">Use this to edit offline or migrate data.</div></div><button onClick={async () => { setExportProcessing(true); try { await downloadZip(localData); } catch (e) { console.error(e); alert("Export Failed: " + (e as Error).message); } finally { setExportProcessing(false); } }} disabled={exportProcessing} className={`w-full py-4 ${exportProcessing ? 'bg-blue-800 cursor-wait' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25`}>{exportProcessing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} {exportProcessing ? 'Packaging All Assets...' : 'Download Full System Backup (.zip)'}</button></div><div className="space-y-4"><div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 text-xs"><strong>Import Structure:</strong> Upload a ZIP file to auto-populate the system.<ul className="list-disc pl-4 mt-2 space-y-1 text-[10px] text-slate-500 font-bold"><li>Folder Structure: <code>Brand/Category/Product/</code></li><li>Place images (.jpg/.png) & manuals (.pdf) inside product folders.</li><li>Images & PDFs are uploaded to Cloud Storage sequentially.</li></ul></div><label className={`w-full py-4 ${importProcessing ? 'bg-slate-300 cursor-wait' : 'bg-slate-800 hover:bg-slate-900 cursor-pointer'} text-white rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl relative overflow-hidden`}>{importProcessing ? <Loader2 size={16} className="animate-spin"/> : <Upload size={16} />} <span className="relative z-10">{importProcessing ? importProgress || 'Processing...' : 'Import Data from ZIP'}</span><input type="file" accept=".zip" className="hidden" disabled={importProcessing} onChange={async (e) => { if(e.target.files && e.target.files[0]) { if(confirm("This will merge imported data into your current inventory. Continue?")) { setImportProcessing(true); setImportProgress('Initializing...'); try { const newBrands = await importZip(e.target.files[0], (msg) => setImportProgress(msg)); let mergedBrands = [...localData.brands]; newBrands.forEach(nb => { const existingBrandIndex = mergedBrands.findIndex(b => b.name === nb.name); if (existingBrandIndex > -1) { if (nb.logoUrl) { mergedBrands[existingBrandIndex].logoUrl = nb.logoUrl; } if (nb.themeColor) { mergedBrands[existingBrandIndex].themeColor = nb.themeColor; } nb.categories.forEach(nc => { const existingCatIndex = mergedBrands[existingBrandIndex].categories.findIndex(c => c.name === nc.name); if (existingCatIndex > -1) { const existingProducts = mergedBrands[existingBrandIndex].categories[existingCatIndex].products; const uniqueNewProducts = nc.products.filter(np => !existingProducts.find(ep => ep.name === np.name)); mergedBrands[existingBrandIndex].categories[existingCatIndex].products = [...existingProducts, ...uniqueNewProducts]; } else { mergedBrands[existingBrandIndex].categories.push(nc); } }); } else { mergedBrands.push(nb); } }); handleLocalUpdate({ ...localData, brands: mergedBrands, archive: addToArchive('other', 'Bulk Import Successful', {brandsCount: newBrands.length}, 'create', 'import') }, true); alert(`Import Successful! Processed ${newBrands.length} brands.`); } catch(err) { console.error(err); alert("Failed to read ZIP file. Ensure structure is correct and Cloud Storage is accessible."); } finally { setImportProcessing(false); setImportProgress(''); } } } }} /></label></div></div></div><div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm"><h3 className="font-black text-slate-900 uppercase text-sm mb-6 flex items-center gap-2"><UserCog size={20} className="text-blue-500"/> Admin Access Control</h3><AdminManager admins={localData.admins || []} onUpdate={(admins) => handleLocalUpdate({ ...localData, admins, archive: addToArchive('other', 'Admin list updated', null, 'update') }, true)} currentUser={currentUser} /></div><div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-lg text-white"><div className="flex items-center gap-3 mb-6"><CloudLightning size={24} className="text-yellow-400" /><h3 className="font-black uppercase text-sm tracking-wider">System Operations</h3></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><button onClick={() => setShowGuide(true)} className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors border border-slate-600"><BookOpen size={24} className="text-blue-400"/><div className="text-left"><div className="font-bold text-sm">Setup Guide</div><div className="text-[10px] text-slate-400 font-mono uppercase">Docs & Scripts</div></div></button><button onClick={async () => { if(confirm("WARNING: This will wipe ALL local data and reset to defaults. Continue?")) { const d = await resetStoreData(); setLocalData(d); window.location.reload(); } }} className="p-4 bg-red-900/30 hover:bg-red-900/50 rounded-xl flex items-center gap-3 transition-colors border border-red-900/50 text-red-300"><AlertCircle size={24} /><div className="text-left"><div className="font-bold text-sm">Factory Reset</div><div className="text-[10px] text-red-400 font-mono uppercase">Clear Local Data</div></div></button></div></div></div>
             )}
         </main>
 
