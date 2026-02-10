@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { KioskRegistry } from '../types';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -29,57 +28,76 @@ const SUPABASE_ANON_KEY = getEnv('VITE_SUPABASE_ANON_KEY',
 );
 
 export let supabase: any = null;
-let localDirHandle: FileSystemDirectoryHandle | null = null;
+let localDirHandle: any = null;
 
-export const setLocalDirHandle = (handle: FileSystemDirectoryHandle | null) => {
+// --- IDB PERSISTENCE FOR DIRECTORY HANDLES ---
+const DB_NAME = 'KioskProStorageDB';
+const STORE_NAME = 'handles';
+const HANDLE_KEY = 'master_storage_folder';
+
+async function getStorageDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+}
+
+export const saveLocalDirHandle = async (handle: any) => {
+    try {
+        const db = await getStorageDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(handle, HANDLE_KEY);
+        localDirHandle = handle;
+        return new Promise<void>((res) => { tx.oncomplete = () => res(); });
+    } catch (e) {
+        console.error("Failed to save folder handle", e);
+    }
+};
+
+export const loadLocalDirHandle = async () => {
+    try {
+        const db = await getStorageDB();
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const handle = await new Promise((res) => {
+            const req = tx.objectStore(STORE_NAME).get(HANDLE_KEY);
+            req.onsuccess = () => res(req.result);
+        });
+        if (handle) {
+            localDirHandle = handle;
+            // Verify permission
+            const status = await (handle as any).queryPermission({ mode: 'readwrite' });
+            if (status !== 'granted') {
+                console.warn("Folder handle found but permission not granted yet.");
+            }
+        }
+        return localDirHandle;
+    } catch (e) {
+        console.warn("Failed to load folder handle", e);
+        return null;
+    }
+};
+
+export const clearLocalDirHandle = async () => {
+    try {
+        const db = await getStorageDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete(HANDLE_KEY);
+        localDirHandle = null;
+    } catch (e) {}
+};
+
+export const setLocalDirHandle = (handle: any) => {
     localDirHandle = handle;
 };
 
 export const getLocalDirHandle = () => localDirHandle;
-
-/**
- * Prompt user to select a local folder for storage (Bypass Supabase)
- */
-export const requestLocalFolder = async (): Promise<string | null> => {
-    try {
-        const handle = await (window as any).showDirectoryPicker({
-            mode: 'readwrite'
-        });
-        localDirHandle = handle;
-        return handle.name;
-    } catch (e) {
-        console.error("User cancelled or browser unsupported", e);
-        return null;
-    }
-};
-
-/**
- * Writes data directly to the local PC folder
- */
-export const writeToLocalDrive = async (filename: string, content: Blob | string) => {
-    if (!localDirHandle) return;
-    try {
-        const fileHandle = await localDirHandle.getFileHandle(filename, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(content);
-        await writable.close();
-    } catch (e) {
-        console.error("Local write failed", e);
-    }
-};
-
-/**
- * Reads data directly from the local PC folder
- */
-export const readFromLocalDrive = async (filename: string): Promise<File | null> => {
-    if (!localDirHandle) return null;
-    try {
-        const fileHandle = await localDirHandle.getFileHandle(filename);
-        return await fileHandle.getFile();
-    } catch (e) {
-        return null;
-    }
-};
 
 export const initSupabase = () => {
   if (supabase) return true;
@@ -99,7 +117,6 @@ export const initSupabase = () => {
 };
 
 export const getCloudProjectName = (): string => {
-    if (localDirHandle) return `DRIVE: ${localDirHandle.name}`;
     if (!SUPABASE_URL) return "Local";
     try {
         const url = new URL(SUPABASE_URL);
@@ -112,7 +129,6 @@ export const getCloudProjectName = (): string => {
 };
 
 export const checkCloudConnection = async (): Promise<boolean> => {
-    if (localDirHandle) return true; // Local drive is "Always Online"
     if (!supabase) {
         initSupabase();
         if(!supabase) return false;
@@ -147,7 +163,6 @@ export const provisionKioskId = async (): Promise<string> => {
 };
 
 export const tryRecoverIdentity = async (id: string): Promise<boolean> => {
-    if (localDirHandle) return true;
     if (!supabase) initSupabase();
     if (!supabase) return false;
 
@@ -188,8 +203,6 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   localStorage.setItem(STORAGE_KEY_NAME, shopName);
   localStorage.setItem(STORAGE_KEY_TYPE, deviceType);
   
-  if (localDirHandle) return true;
-
   initSupabase();
   if (supabase) {
       try {
@@ -211,6 +224,7 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
         if (error) throw error;
       } catch(e: any) {
         if (e.code === '42703' || e.message?.includes('show_pricelists')) {
+            console.warn("Schema mismatch: Retrying setup without show_pricelists column.");
             try {
                 const legacyData = {
                     id,
@@ -220,18 +234,19 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
                     last_seen: new Date().toISOString()
                 };
                 await supabase.from('kiosks').upsert(legacyData);
-                return true;
+                return true; 
             } catch (retryError) {
+                console.error("Critical Setup Error", retryError);
                 return false;
             }
         }
+        console.warn("Cloud registration deferred.", e.message);
       }
   }
   return true;
 };
 
 export const sendHeartbeat = async (currentLocalShowPricelists?: boolean): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean, showPricelists?: boolean } | null> => {
-  if (localDirHandle) return { showPricelists: true };
   const id = getKioskId();
   if (!id) return null;
   if (!supabase) initSupabase();
@@ -315,31 +330,33 @@ export const sendHeartbeat = async (currentLocalShowPricelists?: boolean): Promi
           showPricelists: remoteShowPricelists
       };
   } catch (e) {
+      console.warn("Heartbeat error", e);
       return null;
   }
 };
 
-/**
- * Uploads a file. If local folder is linked, saves to folder. Otherwise Supabase.
- */
 export const smartUpload = async (file: File): Promise<string> => {
+  // Check if a local master storage folder is linked
   if (localDirHandle) {
-      try {
-          const assetsFolder = await localDirHandle.getDirectoryHandle('assets', { create: true });
-          const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, '_')}`;
-          const fileHandle = await assetsFolder.getFileHandle(fileName, { create: true });
-          const writable = await fileHandle.createWritable();
-          await writable.write(file);
-          await writable.close();
-          // We return a unique marker that our drive-rehydration logic understands
-          return `local-drive://${fileName}`;
-      } catch (e) {
-          throw new Error("Local folder write failed.");
-      }
+    try {
+      // Use original filename for local storage to keep master folder organized
+      const fileName = file.name;
+      const fileHandle = await localDirHandle.getFileHandle(fileName, { create: true });
+      const writable = await (fileHandle as any).createWritable();
+      await writable.write(file);
+      await writable.close();
+      
+      // Return a local Blob URL for immediate usage in the app
+      // Note: This URL is session-specific and will be invalid after a page refresh.
+      // In a production environment, the app would resolve 'fileName' relative to the 'localDirHandle' on every load.
+      return URL.createObjectURL(file);
+    } catch (e) {
+      console.warn("Local folder upload failed, falling back to Supabase", e);
+    }
   }
 
   if (!supabase) initSupabase();
-  if (!supabase) throw new Error("Cloud Storage Unavailable");
+  if (!supabase) throw new Error("Cloud Storage Unavailable (Init Failed)");
 
   const fileExt = file.name.split('.').pop();
   const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
@@ -347,54 +364,60 @@ export const smartUpload = async (file: File): Promise<string> => {
 
   const { data, error } = await supabase.storage
     .from('kiosk-media')
-    .upload(filePath, file, { cacheControl: '3600', upsert: false });
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
 
   if (error) throw error;
-  const { data: { publicUrl } } = supabase.storage.from('kiosk-media').getPublicUrl(filePath);
-  return publicUrl;
-};
 
-/**
- * Helper to turn local-drive:// markers into browser-usable URLs
- */
-export const resolveMediaUrl = async (url: string): Promise<string> => {
-    if (!url || !url.startsWith('local-drive://')) return url;
-    if (!localDirHandle) return '';
-    try {
-        const fileName = url.replace('local-drive://', '');
-        const assetsFolder = await localDirHandle.getDirectoryHandle('assets');
-        const fileHandle = await assetsFolder.getFileHandle(fileName);
-        const file = await fileHandle.getFile();
-        return URL.createObjectURL(file);
-    } catch (e) {
-        return '';
-    }
+  const { data: { publicUrl } } = supabase.storage
+    .from('kiosk-media')
+    .getPublicUrl(filePath);
+
+  return publicUrl;
 };
 
 export const convertPdfToImages = async (file: File, onProgress?: (curr: number, total: number) => void): Promise<File[]> => {
     const arrayBuffer = await file.arrayBuffer();
+    
     const pdfjs: any = pdfjsLib;
     if (pdfjs.GlobalWorkerOptions) {
         pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
     }
+
     const pdf = await pdfjs.getDocument({ 
         data: arrayBuffer,
         cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
         cMapPacked: true,
     }).promise;
+    
     const images: File[] = [];
-    for (let i = 1; i <= pdf.numPages; i++) {
+    const numPages = pdf.numPages;
+
+    for (let i = 1; i <= numPages; i++) {
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: 2.0 }); 
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
+        
         if (!context) continue;
+        
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+        await page.render({
+            canvasContext: context,
+            viewport: viewport
+        }).promise;
+
         const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-        if (blob) images.push(new File([blob], `page_${i}.jpg`, { type: 'image/jpeg' }));
-        if (onProgress) onProgress(i, pdf.numPages);
+        if (blob) {
+            images.push(new File([blob], `page_${i}.jpg`, { type: 'image/jpeg' }));
+        }
+        
+        if (onProgress) onProgress(i, numPages);
     }
+    
     return images;
 };
