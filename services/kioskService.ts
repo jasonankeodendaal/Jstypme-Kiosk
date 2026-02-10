@@ -29,14 +29,62 @@ const SUPABASE_ANON_KEY = getEnv('VITE_SUPABASE_ANON_KEY',
 );
 
 export let supabase: any = null;
+let localDirHandle: FileSystemDirectoryHandle | null = null;
+
+export const setLocalDirHandle = (handle: FileSystemDirectoryHandle | null) => {
+    localDirHandle = handle;
+};
+
+export const getLocalDirHandle = () => localDirHandle;
+
+/**
+ * Prompt user to select a local folder for storage (Bypass Supabase)
+ */
+export const requestLocalFolder = async (): Promise<string | null> => {
+    try {
+        const handle = await (window as any).showDirectoryPicker({
+            mode: 'readwrite'
+        });
+        localDirHandle = handle;
+        return handle.name;
+    } catch (e) {
+        console.error("User cancelled or browser unsupported", e);
+        return null;
+    }
+};
+
+/**
+ * Writes data directly to the local PC folder
+ */
+export const writeToLocalDrive = async (filename: string, content: Blob | string) => {
+    if (!localDirHandle) return;
+    try {
+        const fileHandle = await localDirHandle.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(content);
+        await writable.close();
+    } catch (e) {
+        console.error("Local write failed", e);
+    }
+};
+
+/**
+ * Reads data directly from the local PC folder
+ */
+export const readFromLocalDrive = async (filename: string): Promise<File | null> => {
+    if (!localDirHandle) return null;
+    try {
+        const fileHandle = await localDirHandle.getFileHandle(filename);
+        return await fileHandle.getFile();
+    } catch (e) {
+        return null;
+    }
+};
 
 export const initSupabase = () => {
   if (supabase) return true;
   if (SUPABASE_URL && SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.length > 10) {
     try {
-      // FIX: Explicitly pass the bound fetch polyfill to the Supabase client.
-      // Chrome 37's native fetch (if any) or missing fetch causes connection failures.
-      // Binding to window ensures we use the whatwg-fetch polyfill injected in index.html.
       supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: {
           fetch: window.fetch.bind(window)
@@ -51,6 +99,7 @@ export const initSupabase = () => {
 };
 
 export const getCloudProjectName = (): string => {
+    if (localDirHandle) return `DRIVE: ${localDirHandle.name}`;
     if (!SUPABASE_URL) return "Local";
     try {
         const url = new URL(SUPABASE_URL);
@@ -63,6 +112,7 @@ export const getCloudProjectName = (): string => {
 };
 
 export const checkCloudConnection = async (): Promise<boolean> => {
+    if (localDirHandle) return true; // Local drive is "Always Online"
     if (!supabase) {
         initSupabase();
         if(!supabase) return false;
@@ -97,6 +147,7 @@ export const provisionKioskId = async (): Promise<string> => {
 };
 
 export const tryRecoverIdentity = async (id: string): Promise<boolean> => {
+    if (localDirHandle) return true;
     if (!supabase) initSupabase();
     if (!supabase) return false;
 
@@ -137,6 +188,8 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
   localStorage.setItem(STORAGE_KEY_NAME, shopName);
   localStorage.setItem(STORAGE_KEY_TYPE, deviceType);
   
+  if (localDirHandle) return true;
+
   initSupabase();
   if (supabase) {
       try {
@@ -152,14 +205,12 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
           location_description: 'Newly Registered',
           assigned_zone: 'Unassigned',
           restart_requested: false,
-          show_pricelists: true // Default to visible
+          show_pricelists: true 
         };
         const { error } = await supabase.from('kiosks').upsert(kioskData);
         if (error) throw error;
       } catch(e: any) {
-        // Fallback: If show_pricelists doesn't exist yet, retry without it to prevent crash
         if (e.code === '42703' || e.message?.includes('show_pricelists')) {
-            console.warn("Schema mismatch: Retrying setup without show_pricelists column.");
             try {
                 const legacyData = {
                     id,
@@ -169,19 +220,18 @@ export const completeKioskSetup = async (shopName: string, deviceType: 'kiosk' |
                     last_seen: new Date().toISOString()
                 };
                 await supabase.from('kiosks').upsert(legacyData);
-                return true; // Success on fallback
+                return true;
             } catch (retryError) {
-                console.error("Critical Setup Error", retryError);
                 return false;
             }
         }
-        console.warn("Cloud registration deferred.", e.message);
       }
   }
   return true;
 };
 
 export const sendHeartbeat = async (currentLocalShowPricelists?: boolean): Promise<{ deviceType?: string, name?: string, restart?: boolean, deleted?: boolean, showPricelists?: boolean } | null> => {
+  if (localDirHandle) return { showPricelists: true };
   const id = getKioskId();
   if (!id) return null;
   if (!supabase) initSupabase();
@@ -221,7 +271,6 @@ export const sendHeartbeat = async (currentLocalShowPricelists?: boolean): Promi
               
               if (remoteData.show_pricelists !== undefined && remoteData.show_pricelists !== null) {
                   remoteShowPricelists = remoteData.show_pricelists;
-                  // If local state doesn't match remote state, trigger config update
                   if (currentLocalShowPricelists !== undefined && currentLocalShowPricelists !== remoteShowPricelists) {
                       configChanged = true;
                   }
@@ -255,153 +304,97 @@ export const sendHeartbeat = async (currentLocalShowPricelists?: boolean): Promi
               payload.restart_requested = false;
           }
 
-          await supabase.from('kiosks').upsert(payload);
+          const { error: updateError } = await supabase.from('kiosks').upsert(payload);
+          if (updateError) throw updateError;
       }
-
-      if (restartFlag || configChanged) {
-          return { deviceType: currentDeviceType, name: currentName, restart: restartFlag, showPricelists: remoteShowPricelists };
-      }
-
+      
+      return { 
+          name: currentName, 
+          deviceType: currentDeviceType, 
+          restart: restartFlag,
+          showPricelists: remoteShowPricelists
+      };
   } catch (e) {
-      console.warn("Sync cycle failed", e);
+      return null;
+  }
+};
+
+/**
+ * Uploads a file. If local folder is linked, saves to folder. Otherwise Supabase.
+ */
+export const smartUpload = async (file: File): Promise<string> => {
+  if (localDirHandle) {
+      try {
+          const assetsFolder = await localDirHandle.getDirectoryHandle('assets', { create: true });
+          const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi, '_')}`;
+          const fileHandle = await assetsFolder.getFileHandle(fileName, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(file);
+          await writable.close();
+          // We return a unique marker that our drive-rehydration logic understands
+          return `local-drive://${fileName}`;
+      } catch (e) {
+          throw new Error("Local folder write failed.");
+      }
   }
 
-  return null;
-};
+  if (!supabase) initSupabase();
+  if (!supabase) throw new Error("Cloud Storage Unavailable");
 
-// --- SMART UPLOADER WITH CONCURRENCY QUEUE ---
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `${fileName}`;
 
-interface QueueItem {
-    id: string;
-    file: File;
-    resolve: (url: string) => void;
-    reject: (err: any) => void;
-    retries: number;
-}
+  const { data, error } = await supabase.storage
+    .from('kiosk-media')
+    .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
-class UploadQueue {
-    private queue: QueueItem[] = [];
-    private activeCount = 0;
-    private maxConcurrent = 3;
-    private maxRetries = 3;
-
-    add(file: File): Promise<string> {
-        return new Promise((resolve, reject) => {
-            this.queue.push({
-                id: Math.random().toString(36).substr(2, 9),
-                file,
-                resolve,
-                reject,
-                retries: 0
-            });
-            this.process();
-        });
-    }
-
-    private async process() {
-        if (this.activeCount >= this.maxConcurrent || this.queue.length === 0) return;
-
-        const item = this.queue.shift();
-        if (!item) return;
-
-        this.activeCount++;
-        
-        try {
-            const url = await this.uploadWithRetry(item);
-            item.resolve(url);
-        } catch (e) {
-            item.reject(e);
-        } finally {
-            this.activeCount--;
-            this.process(); // Process next item
-        }
-    }
-
-    private async uploadWithRetry(item: QueueItem): Promise<string> {
-        if (!supabase) initSupabase();
-        if (!supabase) throw new Error("Cloud Storage unavailable.");
-
-        const fileExt = item.file.name.split('.').pop();
-        const fileName = Math.random().toString(36).substring(2, 15) + '_' + Date.now() + '.' + fileExt;
-        const filePath = fileName;
-
-        try {
-            const { error } = await supabase.storage.from('kiosk-media').upload(filePath, item.file);
-            if (error) throw error;
-
-            const { data: { publicUrl } } = supabase.storage.from('kiosk-media').getPublicUrl(filePath);
-            return publicUrl;
-        } catch (e) {
-            if (item.retries < this.maxRetries) {
-                console.warn(`Upload failed for ${item.file.name}, retrying (${item.retries + 1}/${this.maxRetries})...`);
-                item.retries++;
-                // Exponential backoff
-                await new Promise(r => setTimeout(r, 1000 * Math.pow(2, item.retries)));
-                return this.uploadWithRetry(item);
-            }
-            throw e;
-        }
-    }
-}
-
-const uploader = new UploadQueue();
-
-export const smartUpload = (file: File): Promise<string> => {
-    return uploader.add(file);
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage.from('kiosk-media').getPublicUrl(filePath);
+  return publicUrl;
 };
 
 /**
- * Legacy upload function kept for backward compatibility, now proxies to smartUpload
+ * Helper to turn local-drive:// markers into browser-usable URLs
  */
-export const uploadFileToStorage = async (file: File): Promise<string> => {
-    return smartUpload(file);
+export const resolveMediaUrl = async (url: string): Promise<string> => {
+    if (!url || !url.startsWith('local-drive://')) return url;
+    if (!localDirHandle) return '';
+    try {
+        const fileName = url.replace('local-drive://', '');
+        const assetsFolder = await localDirHandle.getDirectoryHandle('assets');
+        const fileHandle = await assetsFolder.getFileHandle(fileName);
+        const file = await fileHandle.getFile();
+        return URL.createObjectURL(file);
+    } catch (e) {
+        return '';
+    }
 };
 
-/**
- * PDF Rasterization Service
- * Converts PDF pages to high-quality JPEG images for flipbook display.
- */
-export const convertPdfToImages = async (file: File, onProgress?: (current: number, total: number) => void): Promise<File[]> => {
+export const convertPdfToImages = async (file: File, onProgress?: (curr: number, total: number) => void): Promise<File[]> => {
+    const arrayBuffer = await file.arrayBuffer();
     const pdfjs: any = pdfjsLib;
-    
-    // Ensure worker is set (safe to set multiple times)
-    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    if (pdfjs.GlobalWorkerOptions) {
         pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
     }
-
-    const arrayBuffer = await file.arrayBuffer();
-    // Load document
-    const loadingTask = pdfjs.getDocument({
+    const pdf = await pdfjs.getDocument({ 
         data: arrayBuffer,
         cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
         cMapPacked: true,
-    });
-    
-    const pdf = await loadingTask.promise;
-    const totalPages = pdf.numPages;
+    }).promise;
     const images: File[] = [];
-
-    // Render each page
-    for (let i = 1; i <= totalPages; i++) {
-        if (onProgress) onProgress(i, totalPages);
-        
+    for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
-        // Scale 2.0 provides good quality for tablet retina displays without being excessive
         const viewport = page.getViewport({ scale: 2.0 }); 
-        
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        canvas.width = viewport.width;
+        if (!context) continue;
         canvas.height = viewport.height;
-
-        await page.render({ canvasContext: context!, viewport }).promise;
-
-        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
-        
-        if (blob) {
-            images.push(new File([blob], `page_${i}_${Date.now()}.jpg`, { type: 'image/jpeg' }));
-        }
+        canvas.width = viewport.width;
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+        if (blob) images.push(new File([blob], `page_${i}.jpg`, { type: 'image/jpeg' }));
+        if (onProgress) onProgress(i, pdf.numPages);
     }
-    
     return images;
 };
