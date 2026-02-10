@@ -71,7 +71,7 @@ export const loadLocalDirHandle = async () => {
         });
         if (handle) {
             localDirHandle = handle;
-            // Verify permission
+            // Verify permission (Browsers require user gesture to re-verify)
             const status = await (handle as any).queryPermission({ mode: 'readwrite' });
             if (status !== 'granted') {
                 console.warn("Folder handle found but permission not granted yet.");
@@ -339,7 +339,7 @@ export const smartUpload = async (file: File): Promise<string> => {
   // Check if a local master storage folder is linked
   if (localDirHandle) {
     try {
-      // Use original filename for local storage to keep master folder organized
+      // Use original filename for local storage
       const fileName = file.name;
       const fileHandle = await localDirHandle.getFileHandle(fileName, { create: true });
       const writable = await (fileHandle as any).createWritable();
@@ -347,8 +347,6 @@ export const smartUpload = async (file: File): Promise<string> => {
       await writable.close();
       
       // Return a local Blob URL for immediate usage in the app
-      // Note: This URL is session-specific and will be invalid after a page refresh.
-      // In a production environment, the app would resolve 'fileName' relative to the 'localDirHandle' on every load.
       return URL.createObjectURL(file);
     } catch (e) {
       console.warn("Local folder upload failed, falling back to Supabase", e);
